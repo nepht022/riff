@@ -73,7 +73,7 @@ Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:da
 ### Julgamento e pontuação (`:core:game`)
 
 - **Janelas:** Perfeito se o erro for de até 50 ms, Bom até 100 ms, Erro acima disso. Uma nota que passa da janela sem ser tocada também conta como Erro. Um toque em trilha sem nota próxima quebra o combo.
-- **Pontuação:** Perfeito vale 100 e Bom vale 50, multiplicados pelo multiplicador. Nota longa soma 25 pontos por beat sustentado.
+- **Pontuação:** Perfeito vale 100 e Bom vale 50, multiplicados pelo multiplicador. Nota longa soma 25 pontos a cada 500 ms sustentados (o equivalente a um beat a 120 BPM; o motor trabalha em ms e não conhece o BPM).
 - **Precisão:** `(perfeitos + 0,5 × bons) / total de notas`.
 
 ## 5. Modelo de dados
@@ -152,7 +152,7 @@ Estados obrigatórios em cada tela: carregando, vazio (com orientação do que f
 - **ViewModels:** Turbine + MockK.
 - **UI:** Compose UI Test com testTags nas telas principais. Roborazzi nos componentes de `:core:ui`.
 - **E2E:** Maestro só para fluxos que não dependem do Spotify (biblioteca, configurações e calibração). O fluxo com Spotify é testado manualmente, porque exige o app e uma conta.
-- **Ferramentas:** JUnit 5, MockK, Turbine, kotlinx-coroutines-test, Kover (meta de 70% em `:core:chart`, `:core:game` e `:core:data`), Detekt, ktlint e Android Lint.
+- **Ferramentas:** JUnit 5 (JUnit 4 só nos testes Robolectric e Roborazzi, que exigem o runner dele), MockK, Turbine, kotlinx-coroutines-test, Kover (meta de 70% em `:core:chart`, `:core:game` e `:core:data`), Detekt com as regras do ktlint (wrapper oficial) e Android Lint.
 
 ## 10. CI
 
