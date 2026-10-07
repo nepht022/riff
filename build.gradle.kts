@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
 }
 
 detekt {
@@ -16,4 +17,15 @@ detekt {
 
 dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
+    kover(project(":core:chart"))
+}
+
+kover {
+    reports {
+        verify {
+            rule {
+                minBound(70)
+            }
+        }
+    }
 }

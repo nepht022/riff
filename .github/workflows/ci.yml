@@ -16,4 +16,4 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v5
       - name: Lint, testes e build
-        run: ./gradlew detekt lintDebug test assembleDebug
+        run: ./gradlew detekt lintDebug test koverVerify assembleDebug
