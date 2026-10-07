@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 rootProject.name = "riff"
 include(":app")
 include(":core:ui")
+include(":core:model")
