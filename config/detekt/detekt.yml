@@ -1,0 +1,11 @@
+style:
+  MagicNumber:
+    active: false # parsers de formato de arquivo têm muitos códigos de protocolo
+  ReturnCount:
+    max: 4
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+complexity:
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
