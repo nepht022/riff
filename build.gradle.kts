@@ -18,6 +18,7 @@ detekt {
 dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
     kover(project(":core:chart"))
+    kover(project(":core:game"))
 }
 
 kover {
