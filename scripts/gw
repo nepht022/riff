@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Roda o Gradle do Windows a partir do WSL: o Android SDK e o JDK (JBR do Android Studio) estão instalados no Windows.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+export JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+export WSLENV="${WSLENV:+$WSLENV:}JAVA_HOME/w"
+exec cmd.exe /c gradlew.bat "$@"
