@@ -23,3 +23,24 @@ Jogo de ritmo para Android no estilo Guitar Hero: você toca junto a música que
 No Linux e no macOS, use `./gradlew` no lugar de `./scripts/gw`.
 
 O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codifica o espaço como `%20`). Nesse caso, passe `-Priff.robolectric.mavenRepoLocal=<pasta sem espaço>`, como o `scripts/gw` já faz, ou coloque a propriedade no `gradle.properties` do usuário para o Android Studio.
+
+## Módulos
+
+| Módulo | Conteúdo |
+|---|---|
+| `:app` | Activity; por enquanto mostra o catálogo do design system |
+| `:core:ui` | Tema (claro, escuro e Dynamic Color), cores das trilhas e componentes, com screenshots em `src/test/screenshots` |
+| `:core:model` | Modelos de domínio |
+| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`) |
+| `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
+
+## Screenshots
+
+```bash
+./scripts/gw :core:ui:recordRoborazziDebug   # regrava as referências depois de uma mudança visual intencional
+./scripts/gw :core:ui:verifyRoborazziDebug   # compara com as referências
+```
+
+## Status
+
+Fundação pronta: build, CI, design system, parsers e motor do jogo. Próximos planos: dados e biblioteca, gameplay com relógio local, integração com o Spotify, calibração e configurações.
