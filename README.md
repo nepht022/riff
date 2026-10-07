@@ -21,3 +21,5 @@ Jogo de ritmo para Android no estilo Guitar Hero: você toca junto a música que
 ```
 
 No Linux e no macOS, use `./gradlew` no lugar de `./scripts/gw`.
+
+O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codifica o espaço como `%20`). Nesse caso, passe `-Priff.robolectric.mavenRepoLocal=<pasta sem espaço>`, como o `scripts/gw` já faz, ou coloque a propriedade no `gradle.properties` do usuário para o Android Studio.

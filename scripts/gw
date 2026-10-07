@@ -4,4 +4,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 export WSLENV="${WSLENV:+$WSLENV:}JAVA_HOME/w"
-exec cmd.exe /c gradlew.bat "$@"
+# O usuário do Windows tem espaço no nome, o que quebra o repositório local do Robolectric.
+exec cmd.exe /c gradlew.bat -Priff.robolectric.mavenRepoLocal=C:/Users/Public/robolectric-m2 "$@"

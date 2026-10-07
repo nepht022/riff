@@ -4,6 +4,8 @@ style:
   ReturnCount:
     max: 4
 naming:
+  MatchingDeclarationName:
+    active: false # arquivos Compose agrupam o componente com seus enums e tags de teste
   FunctionNaming:
     ignoreAnnotated: ['Composable']
 complexity:
