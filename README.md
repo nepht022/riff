@@ -28,11 +28,15 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 
 | Módulo | Conteúdo |
 |---|---|
-| `:app` | Activity; por enquanto mostra o catálogo do design system |
+| `:app` | Activity e Application com Hilt; abre na Biblioteca |
 | `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista, com screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
-| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`) |
+| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`), e o casamento entre faixa do Spotify e mapa |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
+| `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify e recordes (esquemas em `schemas/`) |
+| `:core:datastore` | Preferências do jogador e pasta da biblioteca |
+| `:core:data` | Repositório de mapas, acesso a pastas por SAF e importador de mapas |
+| `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 
 ## Screenshots
 
@@ -45,6 +49,6 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 ## Status
 
-Fundação pronta: build, CI, design system, parsers e motor do jogo. Próximos planos: dados e biblioteca, gameplay com relógio local, integração com o Spotify, calibração e configurações.
+Fundação, identidade visual e biblioteca prontas. Próximos planos: gameplay com relógio local, integração com o Spotify (inclui o casamento manual), calibração e configurações.
 
 Identidade visual "Pôster de turnê" aplicada ao design system (`docs/superpowers/specs/2026-10-07-identidade-visual-design.md`).
