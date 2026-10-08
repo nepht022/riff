@@ -95,13 +95,18 @@ fun CatalogScreen(modifier: Modifier = Modifier) {
 private fun StagePreview() {
     Canvas(Modifier.fillMaxWidth().height(320.dp)) {
         val geometry = HighwayGeometry(size)
-        drawHighway(geometry, fretDepths = listOf(0.2f, 0.45f, 0.7f))
-        val radius = size.width / 5 * 0.36f
-        drawGem(geometry.laneCenter(0, 0.3f), radius * geometry.scaleAt(0.3f), LaneColors.forLane(0))
-        drawGem(geometry.laneCenter(3, 0.5f), radius * geometry.scaleAt(0.5f), LaneColors.forLane(3), hopo = true)
+        drawHighway(geometry, fretDistances = listOf(0.6f, 1.6f, 2.6f, 3.6f))
+        val radius = geometry.laneWidthAtStrike * 0.42f
+        drawGem(geometry.laneCenter(0, 2.2f), radius * geometry.scaleAt(2.2f), LaneColors.forLane(0))
+        drawGem(geometry.laneCenter(3, 1.1f), radius * geometry.scaleAt(1.1f), LaneColors.forLane(3), hopo = true)
         for (lane in 0 until 5) {
-            drawFretButton(geometry.laneCenter(lane, 0.84f), radius, LaneColors.forLane(lane), pressed = lane == 1)
+            drawFretButton(geometry.laneCenter(lane, 0f), radius, LaneColors.forLane(lane), pressed = lane == 1)
         }
-        drawFlame(geometry.laneCenter(1, 0.84f), radius * 1.6f, radius * 4f, progress = 0.2f)
+        drawFlame(
+            geometry.laneCenter(1, 0f),
+            geometry.laneWidthAtStrike * 0.62f,
+            geometry.laneWidthAtStrike * 1.7f,
+            progress = 0.2f,
+        )
     }
 }

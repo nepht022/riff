@@ -2,27 +2,47 @@ package com.rodrigomachado.riff.core.ui.stage
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.util.lerp
-
-private const val BOTTOM_WIDTH_FRACTION = 0.94f
 
 /**
- * Geometria da pista em trapézio: estreita no fundo (depth 0) e larga na base da tela (depth 1).
- * As trilhas dividem a largura por igual em qualquer profundidade.
+ * Pista em perspectiva, como vista por uma câmera atrás da linha de acerto.
+ *
+ * As posições são dadas em **distância** à frente da linha de acerto (0 = na linha; positivo = mais longe;
+ * negativo = abaixo dela). A escala cai com `câmera / (câmera + distância)`: notas igualmente espaçadas
+ * no tempo nascem pequenas e juntas no fundo e crescem e se espaçam ao chegar.
  */
-class HighwayGeometry(val size: Size, val laneCount: Int = 5, private val topWidthFraction: Float = 0.4f) {
-    private val bottomWidth = size.width * BOTTOM_WIDTH_FRACTION
-    private val topWidth = bottomWidth * topWidthFraction
+class HighwayGeometry(
+    val size: Size,
+    val laneCount: Int = 5,
+    val cameraDistance: Float = 2.2f,
+    val visibleDistance: Float = 6f,
+    strikeYFraction: Float = 0.82f,
+    strikeWidthFraction: Float = 0.92f,
+    horizonYFraction: Float = 0.02f,
+) {
+    init {
+        require(laneCount > 0) { "laneCount precisa ser positivo: $laneCount" }
+        require(cameraDistance > 0f) { "cameraDistance precisa ser positiva: $cameraDistance" }
+        require(visibleDistance > 0f) { "visibleDistance precisa ser positiva: $visibleDistance" }
+    }
 
-    fun widthAt(depth: Float): Float = lerp(topWidth, bottomWidth, depth)
+    private val strikeY = size.height * strikeYFraction
+    private val horizonY = size.height * horizonYFraction
+    private val strikeWidth = size.width * strikeWidthFraction
 
-    fun leftAt(depth: Float): Float = (size.width - widthAt(depth)) / 2
+    /** Borda de baixo da pista, um pouco abaixo da linha de acerto. */
+    val nearDistance: Float = -0.1f * cameraDistance
 
-    fun yAt(depth: Float): Float = depth * size.height
+    /** Largura de uma trilha na linha de acerto: referência para o tamanho de gemas e alvos. */
+    val laneWidthAtStrike: Float = strikeWidth / laneCount
 
-    fun laneCenter(lane: Int, depth: Float): Offset =
-        Offset(leftAt(depth) + widthAt(depth) * (lane + 0.5f) / laneCount, yAt(depth))
+    fun scaleAt(distance: Float): Float = cameraDistance / (cameraDistance + distance)
 
-    /** Fator de escala de gemas e botões na profundidade [depth] (1 na base da tela). */
-    fun scaleAt(depth: Float): Float = widthAt(depth) / bottomWidth
+    fun yAt(distance: Float): Float = horizonY + (strikeY - horizonY) * scaleAt(distance)
+
+    fun widthAt(distance: Float): Float = strikeWidth * scaleAt(distance)
+
+    fun leftAt(distance: Float): Float = (size.width - widthAt(distance)) / 2
+
+    fun laneCenter(lane: Int, distance: Float): Offset =
+        Offset(leftAt(distance) + widthAt(distance) * (lane + 0.5f) / laneCount, yAt(distance))
 }

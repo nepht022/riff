@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.ui.stage
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -13,8 +14,6 @@ import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
 private val ChromeLight = Color(0xFFF4F4F4)
 private val ChromeMid = Color(0xFF7B7B7B)
-private val ChromeDark = Color(0xFF5A5A5A)
-private val GemBase = Color(0xFF151515)
 private val HighwayFar = Color(0xFF000000)
 private val HighwayNear = Color(0xFF3B1C16)
 private val FlameRed = Color(0xFFFF3D00)
@@ -23,78 +22,99 @@ private val FlameYellow = Color(0xFFFFD44D)
 private val FlameCore = Color(0xFFFFFBE6)
 private const val LINE_ALPHA = 0.18f
 
-private fun chrome(center: Offset) =
-    Brush.sweepGradient(listOf(ChromeLight, ChromeMid, ChromeLight, ChromeDark, ChromeLight), center)
+/** Achatamento vertical de gemas e alvos: eles estão deitados na pista, vistos em ângulo. */
+private const val TILT = 0.42f
+private const val WEAVE_ALPHA = 0.06f
+private const val WEAVE_LONGITUDINAL = 40
+private const val WEAVE_STEP = 0.12f
 
-/** Braço da pista: trapézio escuro com moldura de papel e vermelho, linhas de trilha e de traste. */
-fun DrawScope.drawHighway(geometry: HighwayGeometry, fretDepths: List<Float>) {
+private fun chrome(left: Float, right: Float) =
+    Brush.horizontalGradient(listOf(ChromeLight, ChromeMid, ChromeLight), startX = left, endX = right)
+
+private fun DrawScope.oval(color: Color, center: Offset, rx: Float, ry: Float) =
+    drawOval(color, Offset(center.x - rx, center.y - ry), Size(rx * 2, ry * 2))
+
+private fun DrawScope.oval(brush: Brush, center: Offset, rx: Float, ry: Float) =
+    drawOval(brush, Offset(center.x - rx, center.y - ry), Size(rx * 2, ry * 2))
+
+/** Braço em perspectiva: fundo escuro, trama própria, linhas de trilha e de traste, moldura de papel e vermelho. */
+fun DrawScope.drawHighway(geometry: HighwayGeometry, fretDistances: List<Float>) {
+    val far = geometry.visibleDistance
+    val near = geometry.nearDistance
     val outline = Path().apply {
-        moveTo(geometry.leftAt(0f), 0f)
-        lineTo(geometry.leftAt(0f) + geometry.widthAt(0f), 0f)
-        lineTo(geometry.leftAt(1f) + geometry.widthAt(1f), size.height)
-        lineTo(geometry.leftAt(1f), size.height)
+        moveTo(geometry.leftAt(far), geometry.yAt(far))
+        lineTo(geometry.leftAt(far) + geometry.widthAt(far), geometry.yAt(far))
+        lineTo(geometry.leftAt(near) + geometry.widthAt(near), geometry.yAt(near))
+        lineTo(geometry.leftAt(near), geometry.yAt(near))
         close()
     }
-    drawPath(outline, Brush.verticalGradient(listOf(HighwayFar, HighwayNear)))
+    drawPath(outline, Brush.verticalGradient(listOf(HighwayFar, HighwayNear), geometry.yAt(far), geometry.yAt(near)))
+    fun across(distance: Float, color: Color, width: Float) = drawLine(
+        color,
+        Offset(geometry.leftAt(distance), geometry.yAt(distance)),
+        Offset(geometry.leftAt(distance) + geometry.widthAt(distance), geometry.yAt(distance)),
+        width,
+    )
+    fun along(fraction: Float, color: Color, width: Float) = drawLine(
+        color,
+        Offset(geometry.leftAt(far) + geometry.widthAt(far) * fraction, geometry.yAt(far)),
+        Offset(geometry.leftAt(near) + geometry.widthAt(near) * fraction, geometry.yAt(near)),
+        width,
+    )
+    val weave = RiffColors.Paper.copy(alpha = WEAVE_ALPHA)
+    for (k in 0..WEAVE_LONGITUDINAL) along(k.toFloat() / WEAVE_LONGITUDINAL, weave, 1f)
+    var distance = near
+    while (distance < far) {
+        across(distance, weave, 1f)
+        distance += WEAVE_STEP
+    }
     val line = RiffColors.Paper.copy(alpha = LINE_ALPHA)
-    for (lane in 1 until geometry.laneCount) {
-        val top = Offset(geometry.leftAt(0f) + geometry.widthAt(0f) * lane / geometry.laneCount, 0f)
-        val bottom = Offset(geometry.leftAt(1f) + geometry.widthAt(1f) * lane / geometry.laneCount, size.height)
-        drawLine(line, top, bottom, 1.dp.toPx())
-    }
-    fretDepths.filter { it in 0f..1f }.forEach { depth ->
-        val y = geometry.yAt(depth)
-        drawLine(
-            line,
-            Offset(geometry.leftAt(depth), y),
-            Offset(geometry.leftAt(depth) + geometry.widthAt(depth), y),
-            2.dp.toPx(),
-        )
-    }
+    for (lane in 1 until geometry.laneCount) along(lane.toFloat() / geometry.laneCount, line, 1.dp.toPx())
+    fretDistances.filter { it in near..far }.forEach { across(it, line, 2.dp.toPx()) }
     drawPath(outline, RiffColors.TourRed, style = Stroke(width = 7.dp.toPx()))
     drawPath(outline, RiffColors.Paper, style = Stroke(width = 3.dp.toPx()))
 }
 
-/** Gema 3D: sombra, aro cromado, base preta e domo colorido com reflexo. HOPO tem o centro mais claro. */
+/**
+ * Gema: disco visto de lado, apoiado em [center] (o ponto da trilha). [radius] é o raio horizontal.
+ * Sombra, lateral colorida, aro cromado e tampa com reflexo. HOPO tem o centro da tampa mais claro.
+ */
 fun DrawScope.drawGem(center: Offset, radius: Float, color: Color, hopo: Boolean = false) {
-    drawCircle(Color.Black, radius, center + Offset(0f, radius * 0.14f))
-    drawCircle(chrome(center), radius, center)
-    drawCircle(GemBase, radius * 0.8f, center)
-    val dome = radius * 0.62f
-    drawCircle(
+    val ry = radius * TILT
+    val side = radius * 0.32f
+    val top = center - Offset(0f, side)
+    oval(Color.Black.copy(alpha = 0.6f), center + Offset(0f, side * 0.6f), radius * 1.05f, ry * 1.05f)
+    oval(lerp(color, Color.Black, 0.35f), center, radius, ry)
+    drawRect(color, Offset(center.x - radius, top.y), Size(radius * 2, side))
+    oval(chrome(center.x - radius, center.x + radius), top, radius, ry)
+    oval(
         Brush.radialGradient(
             0f to Color.White,
-            0.35f to color,
-            1f to lerp(color, Color.Black, 0.45f),
-            center = center + Offset(-dome * 0.25f, -dome * 0.35f),
-            radius = dome * 1.4f,
+            0.45f to color,
+            1f to lerp(color, Color.Black, 0.6f),
+            center = top + Offset(-radius * 0.25f, -ry * 0.3f),
+            radius = radius * 0.8f,
         ),
-        dome,
-        center,
+        top,
+        radius * 0.72f,
+        ry * 0.72f,
     )
-    if (hopo) drawCircle(Color.White.copy(alpha = 0.85f), dome * 0.45f, center)
-    drawCircle(Color.White.copy(alpha = 0.7f), dome * 0.18f, center + Offset(-dome * 0.35f, -dome * 0.4f))
+    if (hopo) oval(Color.White.copy(alpha = 0.85f), top, radius * 0.32f, ry * 0.32f)
 }
 
-/** Botão da linha de acerto. Pressionado, desce e acende na cor da trilha. */
+/** Alvo deitado na linha de acerto: anel com aro cromado e centro escuro; pressionado, acende na cor da trilha. */
 fun DrawScope.drawFretButton(center: Offset, radius: Float, color: Color, pressed: Boolean) {
-    val drop = radius * 0.14f
-    val c = if (pressed) center + Offset(0f, drop * 0.7f) else center
-    if (pressed) {
-        drawCircle(color.copy(alpha = 0.35f), radius * 1.3f, c)
+    val ry = radius * TILT
+    if (pressed) oval(color.copy(alpha = 0.35f), center, radius * 1.35f, ry * 1.6f)
+    oval(Color.Black, center + Offset(0f, ry * 0.35f), radius, ry)
+    oval(chrome(center.x - radius, center.x + radius), center, radius, ry)
+    oval(color, center, radius * 0.82f, ry * 0.82f)
+    val inner = if (pressed) {
+        Brush.radialGradient(0f to Color.White, 1f to color, center = center, radius = radius * 0.6f)
     } else {
-        drawCircle(Color.Black, radius, center + Offset(0f, drop))
+        Brush.radialGradient(0f to Color(0xFF222222), 1f to Color(0xFF0C0C0C), center = center, radius = radius * 0.6f)
     }
-    drawCircle(chrome(c), radius, c)
-    drawCircle(color, radius * 0.8f, c)
-    drawCircle(GemBase, radius * 0.55f, c)
-    if (pressed) {
-        drawCircle(
-            Brush.radialGradient(0f to Color.White, 0.5f to color, 1f to color, center = c, radius = radius * 0.5f),
-            radius * 0.5f,
-            c,
-        )
-    }
+    oval(inner, center, radius * 0.6f, ry * 0.6f)
 }
 
 /** Rastro da nota longa. Brilha enquanto está sendo segurada. */

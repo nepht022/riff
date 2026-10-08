@@ -27,8 +27,6 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h640dp-xhdpi")
 class StageScreenshotTest {
-    private val strikeDepth = 0.86f
-
     @Test
     fun stageWithGemsButtonsFlameAndHud() {
         captureRoboImage("src/test/screenshots/Stage.png") {
@@ -36,31 +34,44 @@ class StageScreenshotTest {
                 StageBackground(Modifier.fillMaxSize()) {
                     Canvas(Modifier.fillMaxSize()) {
                         val geometry = HighwayGeometry(size)
-                        drawHighway(geometry, fretDepths = listOf(0.12f, 0.34f, 0.56f, 0.78f))
-                        val baseRadius = size.width / 5 * 0.36f
-                        val trailStart = geometry.laneCenter(3, 0.55f)
-                        val trailEnd = geometry.laneCenter(3, 0.25f)
+                        drawHighway(geometry, fretDistances = listOf(0.6f, 1.6f, 2.6f, 3.6f, 4.6f))
+                        val gemRadius = geometry.laneWidthAtStrike * 0.42f
                         drawSustainTrail(
-                            trailStart,
-                            trailEnd,
-                            baseRadius * 0.35f,
+                            geometry.laneCenter(3, 1.65f),
+                            geometry.laneCenter(3, 3.3f),
+                            gemRadius * 0.35f,
                             LaneColors.forLane(3),
                             active = false,
                         )
-                        listOf(0 to 0.2f, 2 to 0.35f, 1 to 0.5f, 3 to 0.55f, 4 to 0.7f).forEach { (lane, depth) ->
-                            val r = baseRadius * geometry.scaleAt(depth)
-                            drawGem(geometry.laneCenter(lane, depth), r, LaneColors.forLane(lane), hopo = lane == 1)
-                        }
+                        // Notas igualmente espaçadas no tempo, do fundo para a frente.
+                        listOf(
+                            4 to 4.95f, 0 to 4.4f, 2 to 3.85f, 1 to 3.3f, 3 to 1.65f, 4 to 2.2f, 0 to 2.75f,
+                            2 to 1.1f, 1 to 0.55f,
+                        )
+                            .sortedByDescending { it.second }
+                            .forEach { (lane, distance) ->
+                                drawGem(
+                                    geometry.laneCenter(lane, distance),
+                                    gemRadius * geometry.scaleAt(distance),
+                                    LaneColors.forLane(lane),
+                                    hopo = lane == 1,
+                                )
+                            }
                         for (lane in 0 until 5) {
                             drawFretButton(
-                                geometry.laneCenter(lane, strikeDepth),
-                                baseRadius,
+                                geometry.laneCenter(lane, 0f),
+                                gemRadius,
                                 LaneColors.forLane(lane),
                                 pressed = lane == 2,
                             )
                         }
-                        val hit = geometry.laneCenter(2, strikeDepth)
-                        drawFlame(hit, baseRadius * 1.6f, baseRadius * 4f, progress = 0.2f)
+                        val hit = geometry.laneCenter(2, 0f)
+                        drawFlame(
+                            hit,
+                            geometry.laneWidthAtStrike * 0.62f,
+                            geometry.laneWidthAtStrike * 1.7f,
+                            progress = 0.2f,
+                        )
                     }
                     Row(
                         Modifier.fillMaxSize().padding(Spacing.md),

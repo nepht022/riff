@@ -68,11 +68,12 @@ A API pública dos componentes existentes não muda; muda a aparência.
 
 As peças de desenho ficam em `:core:ui` como funções de `DrawScope`, testadas por screenshot; a pista em movimento é montada no plano do gameplay.
 
-- **Pista:** braço escuro em perspectiva (gradiente do preto ao marrom-avermelhado), moldura de papel (3dp) e vermelho (4dp), linhas de trilha e de traste em papel a baixa opacidade.
-- **Gema:** base preta, aro cromado (gradiente cônico prata), domo da cor da trilha com reflexo branco e sombra inferior.
-- **Gema HOPO:** mesma gema com o centro do domo mais claro.
+- **Perspectiva real:** a pista é vista por uma câmera atrás da linha de acerto. As posições são dadas em distância à frente da linha, e a escala é `câmera / (câmera + distância)`: notas igualmente espaçadas no tempo nascem pequenas e juntas no fundo e crescem e se espaçam ao chegar.
+- **Pista:** braço escuro (gradiente do preto ao marrom-avermelhado) com trama própria em papel a 6% de opacidade, moldura de papel (3dp) e vermelho (4dp), linhas de trilha e de traste em papel a baixa opacidade.
+- **Gema:** disco deitado na pista, visto de lado: sombra, lateral da cor da trilha, aro cromado e tampa com reflexo branco.
+- **Gema HOPO:** mesma gema com o centro da tampa mais claro.
 - **Nota longa:** rastro da cor da trilha atrás da gema; brilha enquanto está sendo segurada.
-- **Botão da linha de acerto:** aro cromado, anel da cor da trilha e centro preto. Pressionado: desce e o centro acende na cor da trilha, mesmo sem nota para acertar.
+- **Alvo da linha de acerto:** anel deitado na pista, com aro cromado, anel da cor da trilha e centro escuro. Pressionado: o centro acende na cor da trilha, com um halo, mesmo sem nota para acertar.
 - **Chama no acerto:** jato de fogo de cerca de 250 ms saindo do botão, com 3 faíscas. No máximo uma chama por trilha (5 simultâneas). Nenhuma alocação por frame.
 - **Placar:** New Rocker em papel com sombras duras vermelha e preta. **Multiplicador:** carimbo vermelho inclinado −4°.
 - **Julgamento:** "PERFEITO!" e "BOM!" em New Rocker, com brilho laranja e salto curto de escala. O erro não mostra texto: só som e quebra de combo.
