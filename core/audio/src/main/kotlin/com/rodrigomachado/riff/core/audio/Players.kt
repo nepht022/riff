@@ -20,7 +20,8 @@ interface SongPlayer {
 
 /** Sons de acerto e erro, tocados no instante do toque. */
 interface SfxPlayer {
-    fun hit()
+    /** Acerto na [lane] (0 a 4): cada trilha tem a sua nota. */
+    fun hit(lane: Int)
 
     fun miss()
 

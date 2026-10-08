@@ -81,7 +81,7 @@ class GameSession(
             sfx.miss()
             return
         }
-        sfx.hit()
+        sfx.hit(lane)
         val now = timeSource.nowMs()
         flameStartedAt[lane] = now
         lastJudgment = judgment

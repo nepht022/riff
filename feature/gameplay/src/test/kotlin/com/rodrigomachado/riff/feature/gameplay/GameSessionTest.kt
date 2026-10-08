@@ -21,7 +21,7 @@ class GameSessionTest {
 
         session.press(2)
 
-        assertEquals(1, sfx.hits)
+        assertEquals(listOf(2), sfx.hitLanes) // o som da trilha tocada
         assertEquals(Judgment.PERFECT, session.lastJudgment)
         assertEquals(0f, session.flameProgress(2), 0.001f)
         time.now = 125

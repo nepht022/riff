@@ -14,11 +14,11 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
                 .build(),
         )
         .build()
-    private val hitSound = pool.load(context, R.raw.sfx_hit, 1)
+    private val hitSounds = HIT_SOUNDS.map { pool.load(context, it, 1) }
     private val missSound = pool.load(context, R.raw.sfx_miss, 1)
     private var volume = DEFAULT_VOLUME
 
-    override fun hit() = play(hitSound)
+    override fun hit(lane: Int) = play(hitSounds[lane.coerceIn(hitSounds.indices)])
 
     override fun miss() = play(missSound)
 
@@ -35,5 +35,6 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
     private companion object {
         const val MAX_STREAMS = 6
         const val DEFAULT_VOLUME = 0.6f
+        val HIT_SOUNDS = listOf(R.raw.sfx_hit_1, R.raw.sfx_hit_2, R.raw.sfx_hit_3, R.raw.sfx_hit_4, R.raw.sfx_hit_5)
     }
 }

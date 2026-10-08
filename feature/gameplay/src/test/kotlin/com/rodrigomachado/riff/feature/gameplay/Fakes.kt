@@ -47,13 +47,14 @@ class FakeSongPlayer : SongPlayer {
 }
 
 class FakeSfxPlayer : SfxPlayer {
-    var hits = 0
+    val hitLanes = mutableListOf<Int>()
+    val hits: Int get() = hitLanes.size
     var misses = 0
     var lastVolume = -1f
     var released = false
 
-    override fun hit() {
-        hits++
+    override fun hit(lane: Int) {
+        hitLanes += lane
     }
 
     override fun miss() {
