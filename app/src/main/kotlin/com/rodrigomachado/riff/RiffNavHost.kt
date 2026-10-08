@@ -43,7 +43,7 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                         GameplayRoute(chartId, difficulty.name),
                     ) { popUpTo<ResultsRoute> { inclusive = true } }
                 },
-                onBackToLibrary = dropUnlessResumed { navController.popBackStack<LibraryRoute>(inclusive = false) },
+                onDone = dropUnlessResumed { navController.popBackStack() },
             )
         }
     }

@@ -6,6 +6,6 @@
     <string name="results_good">Good</string>
     <string name="results_miss">Misses</string>
     <string name="results_play_again">Play again</string>
-    <string name="results_library">Library</string>
+    <string name="results_back">Back</string>
     <string name="results_missing">This result no longer exists.</string>
 </resources>

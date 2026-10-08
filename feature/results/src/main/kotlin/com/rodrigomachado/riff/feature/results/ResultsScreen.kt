@@ -36,19 +36,19 @@ import java.text.NumberFormat
 @Composable
 fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
-    onBackToLibrary: () -> Unit,
+    onDone: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ResultsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ResultsContent(state, onPlayAgain, onBackToLibrary, modifier)
+    ResultsContent(state, onPlayAgain, onDone, modifier)
 }
 
 @Composable
 fun ResultsContent(
     state: ResultsUiState,
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
-    onBackToLibrary: () -> Unit,
+    onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -57,12 +57,12 @@ fun ResultsContent(
         ResultsUiState.Missing -> EmptyState(
             title = stringResource(R.string.results_missing),
             message = "",
-            actionLabel = stringResource(R.string.results_library),
-            onAction = onBackToLibrary,
+            actionLabel = stringResource(R.string.results_back),
+            onAction = onDone,
             modifier = modifier,
         )
 
-        is ResultsUiState.Ready -> ReadyResults(state, onPlayAgain, onBackToLibrary, modifier)
+        is ResultsUiState.Ready -> ReadyResults(state, onPlayAgain, onDone, modifier)
     }
 }
 
@@ -70,7 +70,7 @@ fun ResultsContent(
 private fun ReadyResults(
     state: ResultsUiState.Ready,
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
-    onBackToLibrary: () -> Unit,
+    onDone: () -> Unit,
     modifier: Modifier,
 ) {
     val record = state.record
@@ -104,8 +104,8 @@ private fun ReadyResults(
             onClick = { onPlayAgain(record.chartId, record.difficulty) },
         )
         TextButton(
-            onClick = onBackToLibrary,
-        ) { Text(stringResource(R.string.results_library), color = RiffColors.Paper) }
+            onClick = onDone,
+        ) { Text(stringResource(R.string.results_back), color = RiffColors.Paper) }
     }
 }
 

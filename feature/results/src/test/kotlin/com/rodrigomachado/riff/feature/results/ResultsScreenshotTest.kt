@@ -28,7 +28,7 @@ class ResultsScreenshotTest {
                             isNewBest = true,
                         ),
                         onPlayAgain = { _, _ -> },
-                        onBackToLibrary = {},
+                        onDone = {},
                     )
                 }
             }
