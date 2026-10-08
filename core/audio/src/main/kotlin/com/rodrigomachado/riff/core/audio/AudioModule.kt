@@ -11,6 +11,7 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 object AudioModule {
     @Provides
+    @LocalSong
     fun songPlayers(@ApplicationContext context: Context): SongPlayerFactory = SongPlayerFactory {
         MediaSongPlayer(
             context,

@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rodrigomachado.riff.core.audio.LocalSong
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.audio.SongPlayer
@@ -51,7 +52,7 @@ class GameplayViewModel @Inject constructor(
     private val loader: ChartTrackLoader,
     private val settingsRepository: SettingsRepository,
     private val scores: ScoreRepository,
-    private val songPlayers: SongPlayerFactory,
+    @LocalSong private val songPlayers: SongPlayerFactory,
     private val sfxPlayers: SfxPlayerFactory,
     private val timeSource: TimeSource,
 ) : ViewModel() {
