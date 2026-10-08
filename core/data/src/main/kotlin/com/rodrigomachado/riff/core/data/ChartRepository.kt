@@ -7,6 +7,8 @@ interface ChartRepository {
     /** Mapas da biblioteca, ordenados por artista e título. */
     fun observeCharts(): Flow<List<Chart>>
 
+    suspend fun getChart(id: String): Chart?
+
     /** Grava (ou atualiza) um mapa encontrado na importação [scanId]. */
     suspend fun saveScanned(chart: Chart, scanId: Long)
 

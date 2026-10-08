@@ -32,6 +32,10 @@ abstract class ChartDao {
     )
     abstract suspend fun keepFolder(folderUri: String, scanId: Long)
 
+    @Transaction
+    @Query("SELECT * FROM charts WHERE id = :id")
+    abstract suspend fun get(id: String): ChartWithDifficulties?
+
     @Query("DELETE FROM charts WHERE lastSeenScanId != :scanId")
     abstract suspend fun deleteNotSeenIn(scanId: Long)
 

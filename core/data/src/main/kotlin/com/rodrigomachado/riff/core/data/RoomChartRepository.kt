@@ -14,6 +14,8 @@ import javax.inject.Inject
 class RoomChartRepository @Inject constructor(private val dao: ChartDao) : ChartRepository {
     override fun observeCharts(): Flow<List<Chart>> = dao.observeAll().map { rows -> rows.mapNotNull { it.toModel() } }
 
+    override suspend fun getChart(id: String): Chart? = dao.get(id)?.toModel()
+
     override suspend fun saveScanned(chart: Chart, scanId: Long) {
         dao.replace(chart.toEntity(scanId), chart.difficulties.map { ChartDifficultyEntity(chart.id, it.name) })
     }

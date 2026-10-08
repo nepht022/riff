@@ -1,6 +1,5 @@
 package com.rodrigomachado.riff.core.data.importer
 
-import com.rodrigomachado.riff.core.chart.ChartLoader
 import com.rodrigomachado.riff.core.chart.ChartParseException
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.folder.FileTooLargeException
@@ -104,13 +103,7 @@ class FolderChartImporter(
     }
 
     private suspend fun load(folder: FolderEntry, children: List<FolderEntry>): Chart {
-        val contents = mutableMapOf<String, ByteArray>()
-        for (name in READ_FILES) {
-            val entry = children.firstOrNull { !it.isDirectory && it.name.equals(name, ignoreCase = true) } ?: continue
-            if (entry.sizeBytes > maxFileBytes) throw FileTooLargeException(entry.name, maxFileBytes)
-            contents[name] = source.read(entry, maxFileBytes)
-        }
-        val loaded = ChartLoader.load { name -> contents[name.lowercase()] }
+        val loaded = ChartFolderReader.read(source, children, maxFileBytes)
         return Chart(
             id = loaded.id,
             title = loaded.info.title ?: folder.name,
@@ -128,7 +121,6 @@ class FolderChartImporter(
         const val MAX_FILE_BYTES = 16L * 1024 * 1024
         const val MAX_DEPTH = 8
         private val NOTES_FILES = setOf("notes.chart", "notes.mid")
-        private val READ_FILES = listOf("notes.chart", "notes.mid", "song.ini")
 
         /** Nome legível da raiz a partir do URI do SAF (`.../tree/primary%3ACharts` vira `Charts`). */
         private fun folderNameOf(uri: String): String =

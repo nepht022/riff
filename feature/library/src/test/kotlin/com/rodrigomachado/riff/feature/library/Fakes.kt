@@ -26,6 +26,8 @@ class FakeChartRepository : ChartRepository {
 
     override fun observeCharts(): Flow<List<Chart>> = charts
 
+    override suspend fun getChart(id: String): Chart? = charts.value.firstOrNull { it.id == id }
+
     override suspend fun saveScanned(chart: Chart, scanId: Long) {
         charts.value = charts.value + chart
     }

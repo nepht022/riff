@@ -4,6 +4,8 @@ import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.data.folder.SafFolderAccess
 import com.rodrigomachado.riff.core.data.folder.SafFolderSource
+import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
+import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
 import dagger.Binds
@@ -27,6 +29,15 @@ abstract class DataBindsModule {
 
     @Binds
     abstract fun libraryFolderStore(impl: PreferencesLibraryFolderStore): LibraryFolderStore
+
+    @Binds
+    abstract fun chartTrackLoader(impl: FolderChartTrackLoader): ChartTrackLoader
+
+    @Binds
+    abstract fun scoreRepository(impl: RoomScoreRepository): ScoreRepository
+
+    @Binds
+    abstract fun settingsRepository(impl: PreferencesSettingsRepository): SettingsRepository
 
     @Binds
     abstract fun folderSource(impl: SafFolderSource): FolderSource
