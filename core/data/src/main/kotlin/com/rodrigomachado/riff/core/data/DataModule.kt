@@ -4,6 +4,8 @@ import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.data.folder.SafFolderAccess
 import com.rodrigomachado.riff.core.data.folder.SafFolderSource
+import com.rodrigomachado.riff.core.data.importer.ChartImporter
+import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -39,4 +41,11 @@ object DataProvidesModule {
     @Provides
     @IoDispatcher
     fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    fun chartImporter(
+        source: FolderSource,
+        repository: ChartRepository,
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+    ): ChartImporter = FolderChartImporter(source, repository, dispatcher, System::currentTimeMillis)
 }
