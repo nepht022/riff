@@ -27,19 +27,13 @@ import org.robolectric.annotation.GraphicsMode
 class ComponentScreenshotTest {
 
     @Test
-    fun trackCardDark() = snapshot("TrackCard_dark", darkTheme = true) { SampleTrackCard() }
+    fun trackCard() = snapshot("TrackCard") { SampleTrackCard() }
 
     @Test
-    fun trackCardLight() = snapshot("TrackCard_light", darkTheme = false) { SampleTrackCard() }
+    fun statusBadges() = snapshot("StatusBadge") { AllBadges() }
 
     @Test
-    fun statusBadgesDark() = snapshot("StatusBadge_dark", darkTheme = true) { AllBadges() }
-
-    @Test
-    fun statusBadgesLight() = snapshot("StatusBadge_light", darkTheme = false) { AllBadges() }
-
-    @Test
-    fun emptyState() = snapshot("EmptyState_dark", darkTheme = true) {
+    fun emptyState() = snapshot("EmptyState") {
         EmptyState(
             title = "Nenhum mapa importado",
             message = "Importe uma pasta com mapas do Clone Hero para começar.",
@@ -49,7 +43,7 @@ class ComponentScreenshotTest {
     }
 
     @Test
-    fun errorState() = snapshot("ErrorState_dark", darkTheme = true) {
+    fun errorState() = snapshot("ErrorState") {
         ErrorState(message = "Não foi possível conectar ao Spotify.", onRetry = {})
     }
 
@@ -70,9 +64,9 @@ class ComponentScreenshotTest {
         }
     }
 
-    private fun snapshot(name: String, darkTheme: Boolean, content: @Composable () -> Unit) {
+    private fun snapshot(name: String, content: @Composable () -> Unit) {
         captureRoboImage("src/test/screenshots/$name.png") {
-            RiffTheme(darkTheme = darkTheme, dynamicColor = false) {
+            RiffTheme {
                 Surface {
                     Box(Modifier.padding(Spacing.md)) { content() }
                 }

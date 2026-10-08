@@ -21,7 +21,7 @@ class ErrorStateTest {
     fun retryButtonCallsOnRetry() {
         var retries = 0
         composeRule.setContent {
-            RiffTheme(dynamicColor = false) { ErrorState(message = "Falhou", onRetry = { retries++ }) }
+            RiffTheme { ErrorState(message = "Falhou", onRetry = { retries++ }) }
         }
 
         composeRule.onNodeWithTag(StatusViewsTestTags.RETRY).performClick()
