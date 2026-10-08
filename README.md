@@ -41,6 +41,8 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 ./scripts/gw :core:ui:verifyRoborazziDebug   # compara com as referências
 ```
 
+A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de commitar mudanças de UI. O CI não compara as imagens, porque o Robolectric desenha as fontes de forma diferente no Linux e no Windows (veja `docs/pendencias.md`).
+
 ## Status
 
 Fundação pronta: build, CI, design system, parsers e motor do jogo. Próximos planos: dados e biblioteca, gameplay com relógio local, integração com o Spotify, calibração e configurações.
