@@ -26,6 +26,7 @@ class LibraryViewModelTest {
     private val folderStore = FakeLibraryFolderStore()
     private val folderAccess = FakeFolderAccess()
     private val importer = FakeChartImporter()
+    private val matches = FakeTrackMatchRepository()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -34,7 +35,7 @@ class LibraryViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.viewModel(): LibraryViewModel {
-        val viewModel = LibraryViewModel(repository, folderStore, importer, folderAccess)
+        val viewModel = LibraryViewModel(repository, folderStore, importer, folderAccess, matches)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -138,5 +139,15 @@ class LibraryViewModelTest {
         assertTrue(viewModel.uiState.value.importFailed)
         assertFalse(viewModel.uiState.value.isImporting)
         assertEquals(listOf("a"), viewModel.uiState.value.charts.map { it.id })
+    }
+
+    @Test
+    fun choosingAChartForATrackSavesAManualMatch() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.chooseChartFor("spotify:track:x", "a")
+
+        assertEquals(listOf(Triple("spotify:track:x", "a", true)), matches.saved)
+        assertTrue(viewModel.uiState.value.matchSaved)
     }
 }

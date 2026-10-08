@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
+import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
@@ -30,6 +31,7 @@ data class LibraryUiState(
     val report: ImportReport? = null,
     val folderAccessLost: Boolean = false,
     val importFailed: Boolean = false,
+    val matchSaved: Boolean = false,
 )
 
 private data class ImportState(
@@ -46,11 +48,18 @@ class LibraryViewModel @Inject constructor(
     private val folderStore: LibraryFolderStore,
     private val importer: ChartImporter,
     private val folderAccess: FolderAccess,
+    private val matches: TrackMatchRepository,
 ) : ViewModel() {
     private val importState = MutableStateFlow(ImportState())
+    private val matchSaved = MutableStateFlow(false)
 
     val uiState: StateFlow<LibraryUiState> =
-        combine(chartRepository.observeCharts(), folderStore.rootUri, importState) { charts, rootUri, import ->
+        combine(
+            chartRepository.observeCharts(),
+            folderStore.rootUri,
+            importState,
+            matchSaved,
+        ) { charts, rootUri, import, saved ->
             LibraryUiState(
                 isLoading = false,
                 hasFolder = rootUri != null,
@@ -60,8 +69,17 @@ class LibraryViewModel @Inject constructor(
                 report = import.report,
                 folderAccessLost = import.folderAccessLost,
                 importFailed = import.importFailed,
+                matchSaved = saved,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
+
+    /** Escolha manual do mapa da música do Spotify (spec §5: salva e tem prioridade). */
+    fun chooseChartFor(trackUri: String, chartId: String) {
+        viewModelScope.launch {
+            matches.save(trackUri, chartId, confidence = 1f, isManual = true)
+            matchSaved.value = true
+        }
+    }
 
     @Suppress("SwallowedException") // a exceção vira o estado de erro da tela
     fun onFolderPicked(uri: String) {

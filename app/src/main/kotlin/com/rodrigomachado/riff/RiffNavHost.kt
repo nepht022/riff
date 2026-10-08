@@ -20,7 +20,7 @@ import com.rodrigomachado.riff.feature.results.ResultsScreen
 @Composable
 fun RiffNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = LibraryRoute, modifier = modifier) {
+    NavHost(navController, startDestination = LibraryRoute(), modifier = modifier) {
         composable<LibraryRoute> {
             LibraryScreen(
                 onPlay = dropUnlessResumed { chartId, difficulty ->
@@ -43,7 +43,7 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                         GameplayRoute(chartId, difficulty.name),
                     ) { popUpTo<ResultsRoute> { inclusive = true } }
                 },
-                onBackToLibrary = dropUnlessResumed { navController.popBackStack(LibraryRoute, inclusive = false) },
+                onBackToLibrary = dropUnlessResumed { navController.popBackStack<LibraryRoute>(inclusive = false) },
             )
         }
     }

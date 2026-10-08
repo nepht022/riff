@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,12 +47,15 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 fun LibraryScreen(
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
     modifier: Modifier = Modifier,
+    match: TrackToMatch? = null,
+    onMatched: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let { viewModel.onFolderPicked(it.toString()) }
     }
+    if (state.matchSaved) LaunchedEffect(Unit) { onMatched() }
     LibraryContent(
         state = state,
         onPickFolder = { pickFolder.launch(null) },
@@ -59,6 +63,8 @@ fun LibraryScreen(
         onReportDismissed = viewModel::onReportDismissed,
         onPlay = onPlay,
         modifier = modifier,
+        matchingTitle = match?.title,
+        onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
     )
 }
 
@@ -70,6 +76,8 @@ fun LibraryContent(
     onReportDismissed: () -> Unit,
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
     modifier: Modifier = Modifier,
+    matchingTitle: String? = null,
+    onChartMatched: (String) -> Unit = {},
 ) {
     var choosing by remember { mutableStateOf<Chart?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
@@ -78,6 +86,14 @@ fun LibraryContent(
             Modifier.padding(top = Spacing.md),
             style = MaterialTheme.typography.displaySmall,
         )
+        matchingTitle?.let { title ->
+            Text(
+                stringResource(R.string.library_match_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = RiffColors.Paper,
+            )
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = RiffColors.PaperDim)
+        }
         when {
             state.isLoading -> LoadingState()
 
@@ -103,7 +119,9 @@ fun LibraryContent(
                 onAction = onPickFolder,
             )
 
-            else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { choosing = it }
+            else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { chart ->
+                if (matchingTitle != null) onChartMatched(chart.id) else choosing = chart
+            }
         }
     }
     choosing?.let { chart ->

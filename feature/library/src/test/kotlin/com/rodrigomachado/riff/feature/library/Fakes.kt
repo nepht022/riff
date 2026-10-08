@@ -69,3 +69,15 @@ class FakeChartImporter : ChartImporter {
         return nextResult()
     }
 }
+
+class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
+    val saved = mutableListOf<Triple<String, String, Boolean>>()
+    override val changes = MutableStateFlow(0)
+
+    override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
+        com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
+
+    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
+        saved += Triple(spotifyTrackUri, chartId, isManual)
+    }
+}
