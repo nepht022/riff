@@ -15,6 +15,9 @@ object MidiChartParser {
     private const val FORCE_HOPO_OFFSET = 5
     private const val FORCE_STRUM_OFFSET = 6
 
+    // Marcador de tap: uma tecla só, válida para todas as dificuldades.
+    private const val TAP_KEY = 104
+
     // Limite do HOPO natural do Clone Hero para MIDI: 170/480 de semínima.
     private const val HOPO_THRESHOLD_NUMERATOR = 170L
     private const val HOPO_THRESHOLD_DENOMINATOR = 480L
@@ -78,6 +81,7 @@ object MidiChartParser {
     private fun chordsFor(spans: List<Span>, base: Int, sustainCutoff: Long): List<RawChord> {
         val hopoMarkers = spans.filter { it.key == base + FORCE_HOPO_OFFSET }
         val strumMarkers = spans.filter { it.key == base + FORCE_STRUM_OFFSET }
+        val tapMarkers = spans.filter { it.key == TAP_KEY }
         return spans
             .filter { it.key in base until base + Note.LANE_COUNT }
             .groupBy { it.startTick }
@@ -91,7 +95,7 @@ object MidiChartParser {
                     strumMarkers.any { it.covers(tick) } -> Forcing.STRUM
                     else -> Forcing.NONE
                 }
-                RawChord(tick, lengths, forcing)
+                RawChord(tick, lengths, forcing, isTap = tapMarkers.any { it.covers(tick) })
             }
     }
 }
