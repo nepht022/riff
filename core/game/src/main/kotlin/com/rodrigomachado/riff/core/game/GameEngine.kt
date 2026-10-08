@@ -51,6 +51,9 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
 
     fun judgmentOf(index: Int): Judgment? = judgments[index]
 
+    /** Quantas notas já receberam [judgment]. Não aloca: pode ser chamado a cada frame. */
+    fun count(judgment: Judgment): Int = counts[judgment.ordinal]
+
     fun accuracy(): Float = if (notes.isEmpty()) {
         0f
     } else {

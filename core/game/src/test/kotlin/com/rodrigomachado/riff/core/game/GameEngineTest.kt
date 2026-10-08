@@ -142,4 +142,14 @@ class GameEngineTest {
         assertTrue(engine.isFinished)
         assertEquals(0f, engine.accuracy())
     }
+
+    @Test
+    fun countReadsJudgmentsWithoutBuildingState() {
+        val engine = GameEngine(listOf(note(1_000), note(2_000), note(3_000)))
+        engine.onPress(0, 1_000)
+        engine.update(2_200)
+        assertEquals(1, engine.count(Judgment.PERFECT))
+        assertEquals(1, engine.count(Judgment.MISS))
+        assertEquals(0, engine.count(Judgment.GOOD))
+    }
 }
