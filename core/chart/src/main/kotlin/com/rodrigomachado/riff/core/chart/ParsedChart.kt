@@ -17,5 +17,5 @@ data class SongInfo(
 /** Resultado de um parser. As notas ainda não incluem [SongInfo.offsetMs]. */
 data class ParsedChart(val info: SongInfo, val tracks: Map<Difficulty, List<Note>>)
 
-class ChartParseException(message: String, val line: Int? = null) :
-    Exception(if (line != null) "linha $line: $message" else message)
+class ChartParseException(message: String, val line: Int? = null, cause: Throwable? = null) :
+    Exception(if (line != null) "linha $line: $message" else message, cause)

@@ -25,6 +25,7 @@ object ChartFileParser {
         val sections = readSections(text)
         val song = sections["Song"].orEmpty().associate { it.key to it.value.removeSurrounding("\"") }
         val resolution = song["Resolution"]?.toIntOrNull() ?: DEFAULT_RESOLUTION
+        if (resolution <= 0) throw ChartParseException("resolução inválida: $resolution")
         val tempoMap = TempoMap(resolution, readTempos(sections["SyncTrack"].orEmpty()))
         val threshold = resolution * HOPO_THRESHOLD_NUMERATOR / HOPO_THRESHOLD_DENOMINATOR
         val tracks = TRACK_SECTIONS.mapNotNull { (name, difficulty) ->
@@ -73,7 +74,8 @@ object ChartFileParser {
     private fun readTempos(entries: List<Entry>): List<TempoMap.TempoChange> = entries.mapNotNull { entry ->
         val parts = entry.value.split(WHITESPACE)
         if (parts.first() != "B") return@mapNotNull null
-        val tick = entry.key.toLongOrNull() ?: throw ChartParseException("tick inválido: ${entry.key}", entry.line)
+        val tick = entry.key.toLongOrNull()?.takeIf { it >= 0 }
+            ?: throw ChartParseException("tick inválido: ${entry.key}", entry.line)
         val milliBpm = parts.getOrNull(1)?.toLongOrNull()?.takeIf { it > 0 }
             ?: throw ChartParseException("andamento inválido: ${entry.value}", entry.line)
         TempoMap.TempoChange(tick, TempoMap.microsPerQuarterFromMilliBpm(milliBpm))
@@ -94,7 +96,7 @@ object ChartFileParser {
                 "nota inválida: ${entry.key} = ${entry.value}",
                 entry.line,
             )
-            val tick = entry.key.toLongOrNull() ?: invalid()
+            val tick = entry.key.toLongOrNull()?.takeIf { it >= 0 } ?: invalid()
             val fret = parts.getOrNull(1)?.toIntOrNull() ?: invalid()
             val length = parts.getOrNull(2)?.toLongOrNull()?.takeIf { it >= 0 } ?: invalid()
             val chord = byTick.getOrPut(tick) { ChordBuilder() }

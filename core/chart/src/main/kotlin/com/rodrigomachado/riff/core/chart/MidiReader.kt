@@ -28,19 +28,22 @@ internal object MidiReader {
 
     fun read(bytes: ByteArray): MidiFile {
         val input = ByteReader(bytes)
-        if (input.readAscii(4) != "MThd") throw ChartParseException("arquivo MIDI inválido: cabeçalho MThd ausente")
+        ensureMidi(input.readAscii(4) == "MThd") { "arquivo MIDI inválido: cabeçalho MThd ausente" }
         val headerLength = input.readInt32()
         input.readUInt16() // formato 0 ou 1: tratados igual
         val trackCount = input.readUInt16()
         val division = input.readUInt16()
-        if (division and 0x8000 != 0) throw ChartParseException("MIDI com divisão SMPTE não é suportado")
+        ensureMidi(division and 0x8000 == 0) { "MIDI com divisão SMPTE não é suportado" }
+        ensureMidi(division != 0) { "MIDI inválido: divisão zero" }
         input.skip(headerLength - 6)
         return MidiFile(division, List(trackCount) { readTrack(input) })
     }
 
     private fun readTrack(input: ByteReader): MidiTrack {
-        if (input.readAscii(4) != "MTrk") throw ChartParseException("arquivo MIDI inválido: trilha sem MTrk")
-        val end = input.readInt32() + input.position
+        ensureMidi(input.readAscii(4) == "MTrk") { "arquivo MIDI inválido: trilha sem MTrk" }
+        val length = input.readInt32()
+        ensureMidi(length >= 0) { "MIDI inválido: tamanho de trilha negativo" }
+        val end = length + input.position
         val state = TrackState()
         while (input.position < end) {
             state.tick += input.readVarLen()
@@ -88,7 +91,7 @@ internal object MidiReader {
     }
 
     private fun readTempo(data: ByteArray): Long {
-        if (data.size < 3) throw ChartParseException("MIDI inválido: evento de andamento curto")
+        ensureMidi(data.size >= 3) { "MIDI inválido: evento de andamento curto" }
         return ((data[0].toLong() and 0xFF) shl 16) or ((data[1].toLong() and 0xFF) shl 8) or
             (data[2].toLong() and 0xFF)
     }
@@ -98,7 +101,7 @@ internal class ByteReader(private val bytes: ByteArray) {
     var position = 0
 
     fun readUInt8(): Int {
-        if (position >= bytes.size) throw ChartParseException("arquivo MIDI truncado")
+        ensureMidi(position < bytes.size) { "arquivo MIDI truncado" }
         return bytes[position++].toInt() and 0xFF
     }
 
@@ -117,7 +120,7 @@ internal class ByteReader(private val bytes: ByteArray) {
     }
 
     fun readBytes(count: Int): ByteArray {
-        if (count < 0 || position + count > bytes.size) throw ChartParseException("arquivo MIDI truncado")
+        ensureMidi(count >= 0 && position >= 0 && position + count <= bytes.size) { "arquivo MIDI truncado" }
         return bytes.copyOfRange(position, position + count).also { position += count }
     }
 
@@ -126,4 +129,9 @@ internal class ByteReader(private val bytes: ByteArray) {
     fun skip(count: Int) {
         readBytes(count)
     }
+}
+
+/** Lança [ChartParseException] quando [condition] é falsa. */
+internal inline fun ensureMidi(condition: Boolean, message: () -> String) {
+    if (!condition) throw ChartParseException(message())
 }

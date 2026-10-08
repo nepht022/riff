@@ -20,7 +20,17 @@ data class LoadedChart(
 )
 
 object ChartLoader {
-    fun load(files: ChartFiles): LoadedChart {
+    /** Lança só [ChartParseException] para arquivos inválidos, para a importação poder pular a pasta e seguir. */
+    @Suppress("TooGenericExceptionCaught") // rede de segurança: qualquer falha de parsing vira ChartParseException
+    fun load(files: ChartFiles): LoadedChart = try {
+        loadUnchecked(files)
+    } catch (e: ChartParseException) {
+        throw e
+    } catch (e: RuntimeException) {
+        throw ChartParseException("arquivo inválido: ${e.message ?: e.javaClass.simpleName}", cause = e)
+    }
+
+    private fun loadUnchecked(files: ChartFiles): LoadedChart {
         val chartBytes = files.read("notes.chart")
         val notesBytes: ByteArray
         val format: ChartFormat
@@ -28,7 +38,7 @@ object ChartLoader {
         if (chartBytes != null) {
             notesBytes = chartBytes
             format = ChartFormat.CHART
-            parsed = ChartFileParser.parse(chartBytes.decodeToString())
+            parsed = ChartFileParser.parse(TextDecoding.decode(chartBytes))
         } else {
             notesBytes = files.read("notes.mid") ?: throw ChartParseException("pasta sem notes.chart ou notes.mid")
             format = ChartFormat.MIDI
@@ -36,7 +46,7 @@ object ChartLoader {
         }
         if (parsed.tracks.isEmpty()) throw ChartParseException("nenhuma dificuldade de guitarra encontrada")
 
-        val ini = files.read("song.ini")?.let { SongIniParser.parse(it.decodeToString()) } ?: SongInfo()
+        val ini = files.read("song.ini")?.let { SongIniParser.parse(TextDecoding.decode(it)) } ?: SongInfo()
         val info = SongInfo(
             title = ini.title ?: parsed.info.title,
             artist = ini.artist ?: parsed.info.artist,

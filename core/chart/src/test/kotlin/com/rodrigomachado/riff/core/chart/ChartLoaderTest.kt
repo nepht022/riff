@@ -84,4 +84,39 @@ class ChartLoaderTest {
         val noNotes = "[Song]\n{\n  Name = \"Vazio\"\n}"
         assertThrows<ChartParseException> { ChartLoader.load(folder("notes.chart" to noNotes.toByteArray())) }
     }
+
+    @Test
+    fun readsUtf16ChartWithBom() {
+        val bytes = byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + chartText.toByteArray(Charsets.UTF_16LE)
+        val loaded = ChartLoader.load(folder("notes.chart" to bytes))
+        assertEquals("Do Chart", loaded.info.title)
+        assertEquals(600L, loaded.tracks.getValue(Difficulty.EXPERT).single().timeMs)
+    }
+
+    @Test
+    fun readsLatin1SongIni() {
+        val ini = "[song]\nartist = Motörhead".toByteArray(Charsets.ISO_8859_1)
+        val loaded = ChartLoader.load(folder("notes.chart" to chartText.toByteArray(), "song.ini" to ini))
+        assertEquals("Motörhead", loaded.info.artist)
+    }
+
+    @Test
+    fun negativeTickBecomesParseError() {
+        val chart = "[ExpertSingle]\n{\n  -5 = N 0 0\n}"
+        assertThrows<ChartParseException> { ChartLoader.load(folder("notes.chart" to chart.toByteArray())) }
+    }
+
+    @Test
+    fun zeroResolutionBecomesParseError() {
+        val chart = "[Song]\n{\n  Resolution = 0\n}\n[ExpertSingle]\n{\n  0 = N 0 0\n}"
+        assertThrows<ChartParseException> { ChartLoader.load(folder("notes.chart" to chart.toByteArray())) }
+    }
+
+    @Test
+    fun corruptMidiChunkLengthBecomesParseError() {
+        val bytes = midiBytes.copyOf()
+        val trackLength = 14 + 4 // cabeçalho MThd (14 bytes) + "MTrk"
+        bytes[trackLength] = 0x80.toByte() // tamanho com o bit mais alto ligado: vira negativo
+        assertThrows<ChartParseException> { ChartLoader.load(folder("notes.mid" to bytes)) }
+    }
 }
