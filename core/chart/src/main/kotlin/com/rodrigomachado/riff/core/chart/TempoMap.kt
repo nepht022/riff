@@ -30,8 +30,20 @@ class TempoMap(private val resolution: Int, changes: List<TempoChange>) {
     }
 
     fun tickToMs(tick: Long): Double {
-        val segment = segments.last { it.startTick <= tick }
+        require(tick >= 0) { "tick negativo: $tick" }
+        val segment = segments[lastSegmentStartingAtOrBefore(tick)]
         return segment.startMs + ticksToMs(tick - segment.startTick, segment.microsPerQuarter)
+    }
+
+    /** Busca binária pelo último trecho com início <= [tick]. O primeiro trecho sempre começa no tick 0. */
+    private fun lastSegmentStartingAtOrBefore(tick: Long): Int {
+        var low = 0
+        var high = segments.lastIndex
+        while (low < high) {
+            val mid = (low + high + 1) ushr 1
+            if (segments[mid].startTick <= tick) low = mid else high = mid - 1
+        }
+        return low
     }
 
     private fun ticksToMs(ticks: Long, microsPerQuarter: Long): Double =
