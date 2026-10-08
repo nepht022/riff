@@ -81,7 +81,7 @@ As peças de desenho ficam em `:core:ui` como funções de `DrawScope`, testadas
 
 ## 6. Sons
 
-- **Acerto:** estalo curto. **Erro:** ruído de corda abafada.
+- **Acerto:** nota de guitarra com distorção leve, uma por trilha (veja `2026-10-08-guitarra-separada-som-acerto-design.md`); com a guitarra separada, a própria guitarra. **Erro:** ruído de corda abafada.
 - **Origem:** sintetizados por um script nosso versionado no repositório, ou arquivos CC0 com a origem registrada. Nada copiado do jogo.
 - **Reprodução:** `SoundPool` (baixa latência), disparado no instante do toque. Os sons não usam o offset de calibração: são resposta ao dedo, não à música.
 - **Volume:** `Settings.sfxVolume`, de 0 a 1 (0 desliga), padrão 0,6, ajustável nas Configurações.

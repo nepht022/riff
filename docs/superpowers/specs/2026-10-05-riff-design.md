@@ -71,6 +71,7 @@ Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:da
 
 - **Desenho:** Compose `Canvas` dentro de um loop `withFrameNanos`. Só as notas na janela visível são desenhadas, encontradas por busca binária no tempo.
 - **Input:** `pointerInput` detecta toques com vários dedos. Cada toque gera `Hit(lane, songTimeMs)`, entregue ao motor do jogo. Nota longa conta enquanto o dedo fica pressionado.
+- **Áudio da pasta:** com a guitarra separada (`guitar.*` + outras faixas do Clone Hero), as faixas tocam juntas por um mixer próprio (`StemSongPlayer`, uma saída e um relógio) e a guitarra é cortada no erro, como no Guitar Hero; sem ela, o som de acerto é uma nota de guitarra por trilha (`docs/superpowers/specs/2026-10-08-guitarra-separada-som-acerto-design.md`).
 
 ### Julgamento e pontuação (`:core:game`)
 
