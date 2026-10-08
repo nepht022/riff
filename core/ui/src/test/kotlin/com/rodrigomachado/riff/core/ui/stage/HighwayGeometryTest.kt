@@ -54,4 +54,11 @@ class HighwayGeometryTest {
             ThrowingRunnable { HighwayGeometry(size, cameraDistance = 0f) },
         )
     }
+
+    @Test
+    fun laneAtMapsTouchesToTheLaneUnderTheFingerAndClampsOutside() {
+        (0 until 5).forEach { lane -> assertEquals(lane, geometry.laneAt(geometry.laneCenter(lane, 0f).x)) }
+        assertEquals(0, geometry.laneAt(-50f))
+        assertEquals(4, geometry.laneAt(5_000f))
+    }
 }

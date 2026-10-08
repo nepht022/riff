@@ -45,4 +45,10 @@ class HighwayGeometry(
 
     fun laneCenter(lane: Int, distance: Float): Offset =
         Offset(leftAt(distance) + widthAt(distance) * (lane + 0.5f) / laneCount, yAt(distance))
+
+    /** Trilha (na tela) sob o [x] na linha de acerto; fora da pista vale a trilha mais próxima. */
+    fun laneAt(x: Float): Int {
+        val fraction = (x - leftAt(0f)) / widthAt(0f)
+        return (fraction * laneCount).toInt().coerceIn(0, laneCount - 1)
+    }
 }
