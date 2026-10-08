@@ -29,7 +29,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | Módulo | Conteúdo |
 |---|---|
 | `:app` | Activity; por enquanto mostra o catálogo do design system |
-| `:core:ui` | Tema (claro, escuro e Dynamic Color), cores das trilhas e componentes, com screenshots em `src/test/screenshots` |
+| `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista, com screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`) |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
@@ -46,3 +46,5 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 ## Status
 
 Fundação pronta: build, CI, design system, parsers e motor do jogo. Próximos planos: dados e biblioteca, gameplay com relógio local, integração com o Spotify, calibração e configurações.
+
+Identidade visual "Pôster de turnê" aplicada ao design system (`docs/superpowers/specs/2026-10-07-identidade-visual-design.md`).
