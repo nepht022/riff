@@ -1,0 +1,15 @@
+<resources>
+    <string name="gameplay_judgment_perfect">PERFECT!</string>
+    <string name="gameplay_judgment_good">GOOD!</string>
+    <string name="gameplay_combo">COMBO %1$d</string>
+    <string name="gameplay_pause">Pause</string>
+    <string name="gameplay_paused">Paused</string>
+    <string name="gameplay_resume">Resume</string>
+    <string name="gameplay_exit">Quit</string>
+    <string name="gameplay_back">Back</string>
+    <string name="gameplay_unavailable_title">Can\'t play</string>
+    <string name="gameplay_no_audio">This folder has no audio (song.ogg, song.mp3…). For now the game plays the folder\'s own audio; that changes with Spotify.</string>
+    <string name="gameplay_chart_missing">This chart is no longer in the library or doesn\'t have this difficulty.</string>
+    <string name="gameplay_folder_lost">Lost access to this chart\'s folder. Choose the folder again in the library.</string>
+    <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
+</resources>

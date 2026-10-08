@@ -1,0 +1,15 @@
+<resources>
+    <string name="gameplay_judgment_perfect">PERFEITO!</string>
+    <string name="gameplay_judgment_good">BOM!</string>
+    <string name="gameplay_combo">COMBO %1$d</string>
+    <string name="gameplay_pause">Pausar</string>
+    <string name="gameplay_paused">Pausado</string>
+    <string name="gameplay_resume">Continuar</string>
+    <string name="gameplay_exit">Sair</string>
+    <string name="gameplay_back">Voltar</string>
+    <string name="gameplay_unavailable_title">Não dá para jogar</string>
+    <string name="gameplay_no_audio">Esta pasta não tem áudio (song.ogg, song.mp3…). Por enquanto o jogo toca o áudio da própria pasta; com o Spotify, isso muda.</string>
+    <string name="gameplay_chart_missing">Este mapa não está mais na biblioteca ou não tem esta dificuldade.</string>
+    <string name="gameplay_folder_lost">Perdi o acesso à pasta deste mapa. Escolha a pasta de novo na biblioteca.</string>
+    <string name="gameplay_audio_failed">Não consegui tocar o áudio desta pasta.</string>
+</resources>
