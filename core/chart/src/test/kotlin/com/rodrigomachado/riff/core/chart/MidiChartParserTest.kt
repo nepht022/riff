@@ -108,4 +108,18 @@ class MidiChartParserTest {
         val valid = midi { note(0, 96, 60) }
         assertThrows<ChartParseException> { MidiChartParser.parse(valid.copyOf(valid.size - 6)) }
     }
+
+    @Test
+    fun noteOffAfterRetriggerOnSameTickClosesThePreviousNote() {
+        // Alguns exportadores gravam o note-on da nota seguinte antes do note-off da anterior, no mesmo tick.
+        val notes = expert(
+            midi {
+                raw(0, 0x90, 96, 100)
+                raw(480, 0x90, 96, 100)
+                raw(480, 0x80, 96, 0)
+                raw(960, 0x80, 96, 0)
+            },
+        )
+        assertEquals(listOf(Note(0, 0, 500, false), Note(500, 0, 500, false)), notes)
+    }
 }

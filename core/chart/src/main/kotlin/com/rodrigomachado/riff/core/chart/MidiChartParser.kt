@@ -48,15 +48,25 @@ object MidiChartParser {
 
     private fun noteSpans(events: List<MidiReader.MidiEvent>): List<Span> {
         val open = mutableMapOf<Int, Long>()
+        // Teclas cuja nota anterior foi fechada por um note-on no tick indicado. Um note-off nesse mesmo
+        // tick pertence à nota anterior (alguns exportadores gravam o note-on da próxima antes do note-off).
+        val retriggeredAt = mutableMapOf<Int, Long>()
         val spans = mutableListOf<Span>()
         for (event in events) {
             when (event) {
                 is MidiReader.NoteOn -> {
-                    open.remove(event.key)?.let { spans += Span(event.key, it, event.tick) }
+                    retriggeredAt.remove(event.key)
+                    open.remove(event.key)?.let {
+                        spans += Span(event.key, it, event.tick)
+                        retriggeredAt[event.key] = event.tick
+                    }
                     open[event.key] = event.tick
                 }
 
-                is MidiReader.NoteOff -> open.remove(event.key)?.let { spans += Span(event.key, it, event.tick) }
+                is MidiReader.NoteOff -> {
+                    if (retriggeredAt.remove(event.key) == event.tick) continue
+                    open.remove(event.key)?.let { spans += Span(event.key, it, event.tick) }
+                }
 
                 is MidiReader.Tempo -> Unit
             }
