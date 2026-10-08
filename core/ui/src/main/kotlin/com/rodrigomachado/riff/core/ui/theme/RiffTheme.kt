@@ -6,5 +6,5 @@ import androidx.compose.runtime.Composable
 /** Tema único e escuro, sem Dynamic Color: a identidade não muda com o papel de parede. */
 @Composable
 fun RiffTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = RiffColorScheme, content = content)
+    MaterialTheme(colorScheme = RiffColorScheme, typography = RiffTypography, shapes = RiffShapes, content = content)
 }
