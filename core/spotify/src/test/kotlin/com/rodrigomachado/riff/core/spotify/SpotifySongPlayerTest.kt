@@ -182,4 +182,118 @@ class SpotifySongPlayerTest {
         assertFalse(player.isPlaying)
         assertEquals(listOf("play:$ours"), remote.commands)
     }
+
+    private fun TestScope.loseConnection(error: SpotifyError = SpotifyError.DISCONNECTED) {
+        remote.connection.value = SpotifyConnection.Failed(error)
+        emit(null)
+    }
+
+    private fun TestScope.reconnect(state: PlaybackState) {
+        remote.connection.value = SpotifyConnection.Connected
+        emit(state)
+    }
+
+    @Test
+    fun afterReconnectingTheGameKeepsItsPositionUntilResumed() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 30_000))
+        now += 400
+        loseConnection()
+
+        reconnect(state(position = 0, isPaused = true)) // o Spotify voltou do zero
+
+        assertEquals(30_400L, player.positionMs)
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun spotifyComingBackOnAnotherTrackDoesNotEndTheGame() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 30_000))
+        loseConnection()
+
+        reconnect(state(position = 5_000, isPaused = true, uri = "spotify:track:outra"))
+
+        assertFalse(player.isCompleted)
+    }
+
+    @Test
+    fun resumingAfterReconnectingPutsOurTrackBackWhereTheGameStopped() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 30_000))
+        now += 400
+        loseConnection()
+        reconnect(state(position = 5_000, isPaused = true, uri = "spotify:track:outra"))
+        remote.commands.clear()
+
+        player.play()
+
+        assertEquals(listOf("play:$ours", "seek:30400"), remote.commands)
+        assertTrue(player.isPlaying)
+    }
+
+    @Test
+    fun resumingAfterReconnectingOnTheSamePointJustResumes() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 30_000))
+        now += 400
+        loseConnection()
+        reconnect(state(position = 30_300, isPaused = true))
+        remote.commands.clear()
+
+        player.play()
+
+        assertEquals(listOf("resume"), remote.commands)
+    }
+
+    @Test
+    fun resumingAfterAnUnrecoverableDropAsksToConnectAgain() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 1_000))
+        loseConnection(SpotifyError.UNKNOWN)
+        val connectsBefore = remote.connects
+        remote.connectTo = SpotifyConnection.Connecting
+
+        player.play()
+
+        assertEquals(connectsBefore + 1, remote.connects)
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun ourTrackNeverStartingPausesTheGame() = runTest {
+        val player = prepared()
+        player.play() // o Spotify recusou ou não achou a faixa: nenhum estado dela chega
+
+        now += SpotifySongPlayer.START_TIMEOUT_MS + SpotifySongPlayer.REFRESH_INTERVAL_MS
+        advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
+
+        assertFalse(player.isPlaying)
+        remote.commands.clear()
+        player.play() // "Continuar" tenta de novo do começo
+        assertEquals(listOf("play:$ours"), remote.commands)
+    }
+
+    @Test
+    fun stoppingAtTheStartOfOurTrackAfterItsEndCompletesTheSong() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 198_500, duration = 200_000))
+
+        now += 2_000
+        emit(state(position = 0, isPaused = true, duration = 200_000)) // sem autoplay: volta ao começo parado
+
+        assertTrue(player.isCompleted)
+    }
 }

@@ -23,4 +23,6 @@ interface SpotifyRemote {
     fun pause()
 
     fun resume()
+
+    fun seekTo(positionMs: Long)
 }

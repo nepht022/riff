@@ -129,7 +129,8 @@ private fun Playing(
     onChooseChart: (trackUri: String, title: String) -> Unit,
 ) {
     val track = nowPlaying.playback
-    var choosing by remember { mutableStateOf<MatchStatus.Matched?>(null) }
+    // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
+    var choosing by remember(track.trackUri) { mutableStateOf<MatchStatus.Matched?>(null) }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -145,6 +146,9 @@ private fun Playing(
                     color = RiffColors.Paper,
                 )
                 PosterButton(stringResource(R.string.nowplaying_play), onClick = { choosing = match })
+                TextButton(onClick = { onChooseChart(track.trackUri, track.title) }) {
+                    Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
+                }
             }
 
             is MatchStatus.Suggested -> {

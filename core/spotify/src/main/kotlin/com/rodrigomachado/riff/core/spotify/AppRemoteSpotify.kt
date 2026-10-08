@@ -160,10 +160,12 @@ class AppRemoteSpotify @Inject constructor(
 
     override suspend fun refresh(): PlaybackState? {
         val appRemote = remote ?: return null
+        // A hora do pedido, não a da resposta: uma resposta lenta não pode parecer mais nova que um comando.
+        val requestedAt = SystemClock.elapsedRealtime()
         return suspendCancellableCoroutine { continuation ->
             appRemote.playerApi.playerState
                 .setResultCallback { state ->
-                    val playback = state.toPlaybackState(SystemClock.elapsedRealtime())
+                    val playback = state.toPlaybackState(requestedAt)
                     playbackState.value = playback
                     if (continuation.isActive) continuation.resume(playback)
                 }
@@ -181,6 +183,10 @@ class AppRemoteSpotify @Inject constructor(
 
     override fun resume() {
         remote?.playerApi?.resume()
+    }
+
+    override fun seekTo(positionMs: Long) {
+        remote?.playerApi?.seekTo(positionMs)
     }
 
     private companion object {

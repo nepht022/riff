@@ -65,6 +65,8 @@ class SpotifyNowPlayingRepositoryTest {
         override fun pause() = Unit
 
         override fun resume() = Unit
+
+        override fun seekTo(positionMs: Long) = Unit
     }
 
     private class FakeMatches : TrackMatchRepository {

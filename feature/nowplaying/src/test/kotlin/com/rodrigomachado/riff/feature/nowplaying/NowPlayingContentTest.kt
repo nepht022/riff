@@ -1,10 +1,14 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
+import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
@@ -93,5 +97,34 @@ class NowPlayingContentTest {
         composeRule.onNodeWithText("Tentar de novo").performClick()
 
         assertEquals(1, retries)
+    }
+
+    @Test
+    fun aMatchedChartCanBeReplaced() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+
+        composeRule.onNodeWithText("Escolher outro").performClick()
+
+        assertEquals("spotify:track:x" to "Bohemian Rhapsody - Remastered 2011", chooseFor)
+    }
+
+    @Test
+    fun trackChangingWhileChoosingTheDifficultyDoesNotMixTheTracks() {
+        var state by mutableStateOf<NowPlayingUiState>(
+            NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))),
+        )
+        composeRule.setContent {
+            RiffTheme {
+                NowPlayingContent(state, {}, { played = it }, { _, _, _ -> }, { _, _ -> }, {})
+            }
+        }
+        composeRule.onNodeWithText("Jogar").performClick()
+
+        val next = track().copy(trackUri = "spotify:track:y", title = "Outra")
+        state = NowPlayingUiState.Playing(NowPlaying(next, MatchStatus.Matched(chart("b", title = "Outra"), 0)))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Escolha a dificuldade").assertDoesNotExist()
+        assertEquals(null, played)
     }
 }

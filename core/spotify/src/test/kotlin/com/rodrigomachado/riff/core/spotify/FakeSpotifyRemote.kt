@@ -8,10 +8,12 @@ class FakeSpotifyRemote : SpotifyRemote {
     var connectTo: SpotifyConnection = SpotifyConnection.Connected
     val commands = mutableListOf<String>()
     var refreshes = 0
+    var connects = 0
     override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
     override val playback = MutableStateFlow<PlaybackState?>(null)
 
     override fun connect() {
+        connects++
         connection.value = connectTo
     }
 
@@ -30,5 +32,9 @@ class FakeSpotifyRemote : SpotifyRemote {
 
     override fun resume() {
         commands += "resume"
+    }
+
+    override fun seekTo(positionMs: Long) {
+        commands += "seek:$positionMs"
     }
 }
