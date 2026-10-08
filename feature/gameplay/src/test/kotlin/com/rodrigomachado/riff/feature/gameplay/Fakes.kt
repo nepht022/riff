@@ -59,3 +59,27 @@ class FakeSfxPlayer : SfxPlayer {
         released = true
     }
 }
+
+class FakeChartTrackLoader : com.rodrigomachado.riff.core.data.game.ChartTrackLoader {
+    var result: () -> com.rodrigomachado.riff.core.data.game.PlayableChart = { error("defina o resultado") }
+
+    override suspend fun load(chartId: String, difficulty: com.rodrigomachado.riff.core.model.Difficulty) = result()
+}
+
+class FakeSettingsRepository(settings: com.rodrigomachado.riff.core.model.Settings) :
+    com.rodrigomachado.riff.core.data.SettingsRepository {
+    override val settings = kotlinx.coroutines.flow.MutableStateFlow(settings)
+}
+
+class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {
+    val saved = mutableListOf<com.rodrigomachado.riff.core.model.ScoreRecord>()
+
+    override suspend fun save(record: com.rodrigomachado.riff.core.model.ScoreRecord): Long {
+        saved += record
+        return saved.size.toLong()
+    }
+
+    override suspend fun get(id: Long) = saved.getOrNull(id.toInt() - 1)?.copy(id = id)
+
+    override suspend fun best(chartId: String, difficulty: com.rodrigomachado.riff.core.model.Difficulty) = null
+}
