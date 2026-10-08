@@ -37,13 +37,22 @@ class ChartLoaderTest {
     }
 
     @Test
-    fun songIniOverridesMetadataAndAddsDelay() {
+    fun songIniOverridesMetadataAndItsDelayReplacesChartOffset() {
+        // Como no YARG/Clone Hero: o delay do song.ini, quando diferente de zero, substitui o Offset do .chart.
         val ini = "[Song]\nName = Do Ini\nDelay = 50"
         val loaded = ChartLoader.load(folder("NOTES.CHART" to chartText.toByteArray(), "Song.ini" to ini.toByteArray()))
         assertEquals("Do Ini", loaded.info.title)
         assertEquals("Banda do Chart", loaded.info.artist)
-        assertEquals(150L, loaded.info.offsetMs)
-        assertEquals(650L, loaded.tracks.getValue(Difficulty.EXPERT).single().timeMs)
+        assertEquals(50L, loaded.info.offsetMs)
+        assertEquals(550L, loaded.tracks.getValue(Difficulty.EXPERT).single().timeMs)
+    }
+
+    @Test
+    fun zeroDelayInSongIniFallsBackToChartOffset() {
+        val ini = "[song]\nname = Do Ini\ndelay = 0"
+        val loaded = ChartLoader.load(folder("notes.chart" to chartText.toByteArray(), "song.ini" to ini.toByteArray()))
+        assertEquals(100L, loaded.info.offsetMs)
+        assertEquals(600L, loaded.tracks.getValue(Difficulty.EXPERT).single().timeMs)
     }
 
     @Test

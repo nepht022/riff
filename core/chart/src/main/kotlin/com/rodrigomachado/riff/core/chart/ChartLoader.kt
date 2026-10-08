@@ -53,7 +53,8 @@ object ChartLoader {
             album = ini.album ?: parsed.info.album,
             charter = ini.charter ?: parsed.info.charter,
             songLengthMs = ini.songLengthMs ?: parsed.info.songLengthMs,
-            offsetMs = parsed.info.offsetMs + ini.offsetMs,
+            // Como no YARG/Clone Hero: o delay do song.ini, se diferente de zero, substitui o Offset do .chart.
+            offsetMs = if (ini.offsetMs != 0L) ini.offsetMs else parsed.info.offsetMs,
         )
         val tracks = if (info.offsetMs == 0L) {
             parsed.tracks

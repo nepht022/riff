@@ -10,7 +10,7 @@ data class SongInfo(
     val album: String? = null,
     val charter: String? = null,
     val songLengthMs: Long? = null,
-    /** Deslocamento a somar no tempo de todas as notas. */
+    /** Deslocamento somado ao tempo de todas as notas; positivo atrasa as notas em relação ao áudio. */
     val offsetMs: Long = 0,
 )
 
