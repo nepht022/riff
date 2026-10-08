@@ -24,13 +24,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
+import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
@@ -108,35 +108,15 @@ fun LibraryContent(
     }
     choosing?.let { chart ->
         DifficultyDialog(
-            chart = chart,
+            title = chart.title,
+            options = chart.difficulties.sorted(),
+            label = { stringResource(difficultyLabel(it.ordinal)) },
             onChoose = { difficulty ->
                 choosing = null
                 onPlay(chart.id, difficulty)
             },
             onDismiss = { choosing = null },
         )
-    }
-}
-
-@Composable
-private fun DifficultyDialog(chart: Chart, onChoose: (Difficulty) -> Unit, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.background(RiffColors.StageBlack, MaterialTheme.shapes.large).padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(chart.title, style = MaterialTheme.typography.titleLarge, color = RiffColors.Paper)
-            Text(
-                stringResource(R.string.library_choose_difficulty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = RiffColors.PaperDim,
-            )
-            chart.difficulties.sorted().forEach { difficulty ->
-                PosterButton(stringResource(difficultyLabel(difficulty.ordinal)), onClick = { onChoose(difficulty) })
-            }
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.library_cancel), color = RiffColors.Paper) }
-        }
     }
 }
 

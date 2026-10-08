@@ -9,8 +9,6 @@
     <string name="library_importing">Reading folders… %1$d</string>
     <string name="library_access_lost">Lost access to the folder. Please choose it again.</string>
     <string name="library_import_failed">Couldn\'t import the folder.</string>
-    <string name="library_choose_difficulty">Choose difficulty</string>
-    <string name="library_cancel">Cancel</string>
     <string name="library_rescan">Rescan</string>
     <string name="library_change_folder">Change folder</string>
     <plurals name="library_report_imported">

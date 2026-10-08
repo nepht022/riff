@@ -1,3 +1,5 @@
 <resources>
     <string name="core_ui_retry">Tentar de novo</string>
+    <string name="ui_choose_difficulty">Escolha a dificuldade</string>
+    <string name="ui_cancel">Cancelar</string>
 </resources>
