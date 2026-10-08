@@ -111,4 +111,42 @@ class GameSessionTest {
     private companion object {
         const val SYNC = GameSession.SYNC_INTERVAL_MS
     }
+
+    private val stems = FakeStemPlayer()
+
+    private fun stemSession(vararg notes: com.rodrigomachado.riff.core.model.Note) =
+        GameSession(notes.toList(), stems, sfx, time, audioOffsetMs = 0).also { it.start() }
+
+    @Test
+    fun withTheSeparateGuitarAHitBringsItBackWithoutTheHitSound() {
+        stems.song.positionMs = 1_000
+        val session = stemSession(note(1_000, lane = 1))
+
+        session.press(1)
+
+        assertEquals(listOf(true), stems.audible)
+        assertEquals(0, sfx.hits)
+    }
+
+    @Test
+    fun withTheSeparateGuitarATapWithoutANoteCutsItAndPlaysTheMissSound() {
+        val session = stemSession(note(5_000))
+
+        session.press(0)
+
+        assertEquals(listOf(false), stems.audible)
+        assertEquals(1, sfx.misses)
+    }
+
+    @Test
+    fun withTheSeparateGuitarANoteThatPassesCutsIt() {
+        val session = stemSession(note(1_000))
+        stems.song.positionMs = 1_500
+        time.now = SYNC
+
+        session.tick()
+
+        assertEquals(listOf(false), stems.audible)
+        assertEquals(1, sfx.misses)
+    }
 }

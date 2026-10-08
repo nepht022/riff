@@ -102,3 +102,13 @@ class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {
 
     override suspend fun best(chartId: String, difficulty: com.rodrigomachado.riff.core.model.Difficulty) = null
 }
+
+class FakeStemPlayer(val song: FakeSongPlayer = FakeSongPlayer()) :
+    com.rodrigomachado.riff.core.audio.StemPlayer,
+    SongPlayer by song {
+    val audible = mutableListOf<Boolean>()
+
+    override fun setGuitarAudible(audible: Boolean) {
+        this.audible += audible
+    }
+}

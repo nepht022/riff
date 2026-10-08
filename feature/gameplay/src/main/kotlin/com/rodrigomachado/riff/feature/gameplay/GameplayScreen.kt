@@ -61,6 +61,7 @@ private const val JUDGMENT_BOUNCE_MS = 120f
 private const val JUDGMENT_BOUNCE_SCALE = 0.25f
 private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
+private const val NOTICE_MS = 4_000L
 
 @Composable
 fun GameplayScreen(
@@ -147,7 +148,7 @@ internal fun GameStage(
             frame // lê o contador para redesenhar a cada frame
             drawStage(session, msPerUnit, leftHanded, reducedMotion)
         }
-        Hud(session, frame, reducedMotion, onPause, Modifier.fillMaxSize())
+        Hud(session, frame, reducedMotion, state.withoutSeparateGuitar, onPause, Modifier.fillMaxSize())
         if (state.isPaused) PauseOverlay(onResume, onExit)
     }
 }
@@ -177,7 +178,14 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
 }
 
 @Composable
-private fun Hud(session: GameSession, frame: Long, reducedMotion: Boolean, onPause: () -> Unit, modifier: Modifier) {
+private fun Hud(
+    session: GameSession,
+    frame: Long,
+    reducedMotion: Boolean,
+    withoutSeparateGuitar: Boolean,
+    onPause: () -> Unit,
+    modifier: Modifier,
+) {
     frame // recompõe o placar a cada frame
     val engine = session.engine
     Box(modifier.padding(Spacing.md)) {
@@ -228,7 +236,21 @@ private fun Hud(session: GameSession, frame: Long, reducedMotion: Boolean, onPau
                 },
             )
         }
+        if (withoutSeparateGuitar && session.songTimeMs < NOTICE_MS) {
+            NoSeparateGuitarNotice(Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.xl * 3))
+        }
     }
+}
+
+/** As faixas separadas falharam: a partida segue com um arquivo só (spec da guitarra separada §4). */
+@Composable
+private fun NoSeparateGuitarNotice(modifier: Modifier) {
+    Text(
+        stringResource(R.string.gameplay_no_separate_guitar),
+        style = MaterialTheme.typography.bodyMedium,
+        color = RiffColors.PaperDim,
+        modifier = modifier,
+    )
 }
 
 @Composable

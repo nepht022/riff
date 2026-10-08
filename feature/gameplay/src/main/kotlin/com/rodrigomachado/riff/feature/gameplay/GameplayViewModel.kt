@@ -9,9 +9,11 @@ import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayerFactory
 import com.rodrigomachado.riff.core.audio.SpotifySong
+import com.rodrigomachado.riff.core.audio.StemSongPlayerFactory
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
+import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -40,6 +42,7 @@ sealed interface GameplayUiState {
         val session: GameSession,
         val settings: Settings,
         val isPaused: Boolean = false,
+        val withoutSeparateGuitar: Boolean = false,
     ) : GameplayUiState
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
@@ -55,6 +58,7 @@ class GameplayViewModel @Inject constructor(
     private val scores: ScoreRepository,
     @LocalSong private val songPlayers: SongPlayerFactory,
     @SpotifySong private val spotifyPlayers: SongPlayerFactory,
+    private val stemPlayers: StemSongPlayerFactory,
     private val sfxPlayers: SfxPlayerFactory,
     private val timeSource: TimeSource,
 ) : ViewModel() {
@@ -79,17 +83,8 @@ class GameplayViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // cada falha vira uma explicação na tela
     private suspend fun load(): GameplayUiState = try {
         val playable = loader.load(chartId, difficulty)
-        val songUri = spotifyTrackUri ?: playable.audio?.singleUri ?: throw NoAudioException()
         val settings = settingsRepository.settings.first()
-        val factory = if (spotifyTrackUri != null) spotifyPlayers else songPlayers
-        val songPlayer = factory.create().also { player = it }
-        try {
-            songPlayer.prepare(songUri)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            throw if (spotifyTrackUri != null) SpotifyFailedException(e) else AudioFailedException(e)
-        }
+        val (songPlayer, withoutSeparateGuitar) = prepareSong(playable.audio)
         val effects = sfxPlayers.create().also {
             sfx = it
             it.setVolume(settings.sfxVolume)
@@ -104,12 +99,47 @@ class GameplayViewModel @Inject constructor(
             session,
             settings,
             pauseRequested,
+            withoutSeparateGuitar,
         )
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         release()
         GameplayUiState.Unavailable(reasonFor(e))
+    }
+
+    /** Spotify, faixas separadas ou um arquivo só; se as faixas falharem, cai no arquivo só (com aviso). */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException") // a falha das faixas vira o modo de um arquivo
+    private suspend fun prepareSong(audio: ChartAudio?): Pair<SongPlayer, Boolean> {
+        spotifyTrackUri?.let { return prepared(spotifyPlayers.create(), it, ::SpotifyFailedException) to false }
+        val chartAudio = audio ?: throw NoAudioException()
+        if (chartAudio !is ChartAudio.Stems) {
+            return prepared(songPlayers.create(), chartAudio.singleUri, ::AudioFailedException) to false
+        }
+        val stems = stemPlayers.create(chartAudio.guitarUri, chartAudio.backingUris).also { player = it }
+        try {
+            stems.prepare(chartAudio.guitarUri)
+            return stems to false
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            stems.release()
+            player = null
+        }
+        return prepared(songPlayers.create(), chartAudio.singleUri, ::AudioFailedException) to true
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun prepared(created: SongPlayer, uri: String, wrap: (Throwable) -> Exception): SongPlayer {
+        player = created
+        try {
+            created.prepare(uri)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw wrap(e)
+        }
+        return created
     }
 
     private fun reasonFor(error: Exception): UnavailableReason = when (error) {

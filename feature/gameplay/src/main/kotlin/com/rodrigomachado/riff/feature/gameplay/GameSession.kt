@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.gameplay
 
+import com.rodrigomachado.riff.core.audio.GuitarTrackControl
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.GameEngine
@@ -24,6 +25,7 @@ class GameSession(
     val engine = GameEngine(notes)
     private val clock = SongClock(timeSource, audioOffsetMs)
     private val pressed = BooleanArray(Note.LANE_COUNT)
+    private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
     private val lastNoteEndMs = engine.notes.maxOfOrNull { it.timeMs + it.sustainMs } ?: 0L
     private var lastSyncAt = NEVER
@@ -68,7 +70,7 @@ class GameSession(
         val misses = engine.count(Judgment.MISS)
         if (misses > missesHeard) {
             missesHeard = misses
-            sfx.miss()
+            onMiss()
         }
         return songTimeMs
     }
@@ -78,14 +80,20 @@ class GameSession(
         pressed[lane] = true
         val judgment = engine.onPress(lane, clock.positionMs())
         if (judgment == null) {
-            sfx.miss()
+            onMiss()
             return
         }
-        sfx.hit(lane)
+        // Com a guitarra separada, ela mesma é a resposta do acerto (como no Guitar Hero).
+        if (guitar != null) guitar.setGuitarAudible(true) else sfx.hit(lane)
         val now = timeSource.nowMs()
         flameStartedAt[lane] = now
         lastJudgment = judgment
         lastJudgmentAt = now
+    }
+
+    private fun onMiss() {
+        sfx.miss()
+        guitar?.setGuitarAudible(false)
     }
 
     fun release(lane: Int) {

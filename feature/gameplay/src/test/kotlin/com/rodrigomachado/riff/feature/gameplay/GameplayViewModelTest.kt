@@ -33,6 +33,8 @@ class GameplayViewModelTest {
     private var playersCreated = 0
     private val spotifyPlayer = FakeSongPlayer()
     private var spotifyPlayersCreated = 0
+    private val stemPlayer = FakeStemPlayer()
+    private var stemsCreated: Pair<String, List<String>>? = null
     private val time = FakeTime()
 
     private val chart = Chart(
@@ -67,6 +69,10 @@ class GameplayViewModelTest {
         {
             spotifyPlayersCreated++
             spotifyPlayer
+        },
+        { guitar, backing ->
+            stemsCreated = guitar to backing
+            stemPlayer
         },
         { sfx },
         time,
@@ -242,5 +248,36 @@ class GameplayViewModelTest {
 
         viewModel.onPlaybackChanged(paused = false)
         assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).isPaused)
+    }
+
+    private fun stems() = ChartAudio.Stems(
+        "raiz/a/guitar.ogg",
+        listOf("raiz/a/song.ogg"),
+        fallbackUri = "raiz/a/song.ogg",
+    )
+
+    @Test
+    fun separateGuitarPlaysEveryTrackWithTheStemPlayer() = runTest {
+        loader.result = { playable().copy(audio = stems()) }
+
+        val state = viewModel().uiState.value as GameplayUiState.Ready
+
+        assertEquals("raiz/a/guitar.ogg" to listOf("raiz/a/song.ogg"), stemsCreated)
+        assertEquals(0, playersCreated)
+        assertTrue(stemPlayer.isPlaying)
+        assertEquals(false, state.withoutSeparateGuitar)
+    }
+
+    @Test
+    fun stemsThatFailToPrepareFallBackToTheSingleFileWithANotice() = runTest {
+        loader.result = { playable().copy(audio = stems()) }
+        stemPlayer.song.prepareFailure = java.io.IOException("faixas com taxas diferentes")
+
+        val state = viewModel().uiState.value as GameplayUiState.Ready
+
+        assertTrue(stemPlayer.song.released)
+        assertEquals("raiz/a/song.ogg", player.preparedUri)
+        assertTrue(player.isPlaying)
+        assertTrue(state.withoutSeparateGuitar)
     }
 }
