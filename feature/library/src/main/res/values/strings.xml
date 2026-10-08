@@ -1,0 +1,27 @@
+<resources>
+    <string name="library_title">Biblioteca</string>
+    <string name="library_no_folder_title">Nenhuma pasta escolhida</string>
+    <string name="library_no_folder_message">Escolha a pasta onde ficam seus mapas do Clone Hero.</string>
+    <string name="library_choose_folder">Escolher pasta</string>
+    <string name="library_empty_title">Nenhum mapa encontrado</string>
+    <string name="library_empty_message">A pasta não tem subpastas com notes.chart ou notes.mid.</string>
+    <string name="library_choose_another_folder">Escolher outra pasta</string>
+    <string name="library_importing">Lendo pastas… %1$d</string>
+    <string name="library_access_lost">Perdi o acesso à pasta. Escolha-a de novo.</string>
+    <string name="library_rescan">Reimportar</string>
+    <string name="library_change_folder">Trocar pasta</string>
+    <plurals name="library_report_imported">
+        <item quantity="one">%d mapa importado</item>
+        <item quantity="other">%d mapas importados</item>
+    </plurals>
+    <plurals name="library_report_failed">
+        <item quantity="one">%d pasta com erro</item>
+        <item quantity="other">%d pastas com erro</item>
+    </plurals>
+    <string name="library_report_ok">OK</string>
+    <string name="library_unknown_artist">Artista desconhecido</string>
+    <string name="library_difficulty_easy">Fácil</string>
+    <string name="library_difficulty_medium">Médio</string>
+    <string name="library_difficulty_hard">Difícil</string>
+    <string name="library_difficulty_expert">Expert</string>
+</resources>

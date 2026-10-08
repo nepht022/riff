@@ -6,3 +6,8 @@ plugins {
 android {
     namespace = "com.rodrigomachado.riff.feature.library"
 }
+
+dependencies {
+    // Seletor de pasta do sistema (OpenDocumentTree) via rememberLauncherForActivityResult.
+    implementation(libs.androidx.activity.compose)
+}

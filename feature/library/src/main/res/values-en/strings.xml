@@ -1,0 +1,27 @@
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_no_folder_title">No folder chosen</string>
+    <string name="library_no_folder_message">Choose the folder that holds your Clone Hero charts.</string>
+    <string name="library_choose_folder">Choose folder</string>
+    <string name="library_empty_title">No charts found</string>
+    <string name="library_empty_message">The folder has no subfolders with notes.chart or notes.mid.</string>
+    <string name="library_choose_another_folder">Choose another folder</string>
+    <string name="library_importing">Reading folders… %1$d</string>
+    <string name="library_access_lost">Lost access to the folder. Please choose it again.</string>
+    <string name="library_rescan">Rescan</string>
+    <string name="library_change_folder">Change folder</string>
+    <plurals name="library_report_imported">
+        <item quantity="one">%d chart imported</item>
+        <item quantity="other">%d charts imported</item>
+    </plurals>
+    <plurals name="library_report_failed">
+        <item quantity="one">%d folder with errors</item>
+        <item quantity="other">%d folders with errors</item>
+    </plurals>
+    <string name="library_report_ok">OK</string>
+    <string name="library_unknown_artist">Unknown artist</string>
+    <string name="library_difficulty_easy">Easy</string>
+    <string name="library_difficulty_medium">Medium</string>
+    <string name="library_difficulty_hard">Hard</string>
+    <string name="library_difficulty_expert">Expert</string>
+</resources>
