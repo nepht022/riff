@@ -1,0 +1,36 @@
+package com.rodrigomachado.riff.core.ui.stage
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.dp
+import com.rodrigomachado.riff.core.ui.theme.LaneColors
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
+
+/** Raio zero ou NaN (Canvas ainda sem tamanho, profundidade fora da pista) não pode derrubar o app. */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class StageDrawingTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun gemAndButtonWithZeroOrNaNRadiusDrawNothingWithoutCrashing() {
+        composeRule.setContent {
+            Canvas(Modifier.size(100.dp)) {
+                listOf(0f, -1f, Float.NaN).forEach { radius ->
+                    drawGem(Offset(50f, 50f), radius, LaneColors.forLane(0))
+                    drawFretButton(Offset(50f, 50f), radius, LaneColors.forLane(1), pressed = true)
+                    drawFretButton(Offset(50f, 50f), radius, LaneColors.forLane(1), pressed = false)
+                }
+            }
+        }
+        composeRule.waitForIdle()
+    }
+}
