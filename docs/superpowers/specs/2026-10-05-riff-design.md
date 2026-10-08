@@ -64,7 +64,7 @@ Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:da
 1. `:core:spotify` assina `PlayerApi.subscribeToPlayerState()`. A cada evento, emite `PlaybackState(positionMs, isPaused, trackUri, capturedAtElapsedMs = SystemClock.elapsedRealtime())`.
 2. O `SongClock` (em `:core:game`) calcula a cada frame: `songTimeMs = positionMs + (agora − capturedAt) + audioOffsetMs + trackOffsetMs`. Se a música estiver pausada, o tempo congela.
 3. A cada 2 segundos, uma releitura do estado gera uma nova referência. Desvios menores que 80 ms são corrigidos aos poucos (no máximo 5 ms por frame), para as notas não pularem. Desvios maiores são aplicados de uma vez, porque indicam que o usuário mexeu na barra de progresso.
-4. Se a faixa trocar, a partida termina e volta para "Tocando agora".
+4. Se a faixa trocar, a partida termina e o resultado é salvo (vale o que foi jogado); "Voltar" leva para "Tocando agora".
 5. O relógio recebe a fonte de tempo como interface (`TimeSource`), o que permite testar com um relógio falso.
 
 ### Renderização e input
@@ -123,11 +123,11 @@ data class Settings(val audioOffsetMs: Int, val noteSpeed: Float, val leftHanded
 ## 6. Telas e navegação
 
 ```
-ConnectSpotify ─► NowPlaying ──[Jogar]──► Gameplay ──► Results ─► NowPlaying
-                     ├─ (sem mapa ou confiança média) ─► Library (casar)
-                     ├─► Library ─► Importar pasta (SAF)
-                     ├─► Calibration
-                     └─► Settings
+ConnectSpotify/NowPlaying ──[Jogar]──► Gameplay ──► Results ─[Voltar]─► NowPlaying
+        ├─ (sem mapa ou confiança média) ─► Library (escolher o mapa) ─► NowPlaying
+        ├─► Library ─[Jogar com o áudio da pasta]─► Gameplay ──► Results ─[Voltar]─► Library
+        ├─► Calibration
+        └─► Settings
 ```
 
 Estados obrigatórios em cada tela: carregando, vazio (com orientação do que fazer) e erro (com botão de tentar de novo). Exemplos de erro: Spotify não instalado, autorização negada, pasta inacessível, mapa inválido.
@@ -167,7 +167,7 @@ GitHub Actions a cada PR: ktlint, Detekt, Lint, testes unitários, Kover e `asse
 3. `:core:game` (relógio, julgamento, pontuação), com testes.
 4. `:core:database`, `:core:datastore`, importação e casamento em `:core:data`, e a tela `:feature:library`.
 5. `:feature:gameplay` + `:feature:results`, jogáveis com um relógio local (sem Spotify), para validar a sensação do jogo. Implementado com o áudio da pasta do mapa (`song.*` ou `guitar.*`); a partida termina no fim do áudio ou 3 s depois da última nota julgada.
-6. `:core:spotify` + `:feature:nowplaying`: sincronização real.
+6. `:core:spotify` + `:feature:nowplaying`: sincronização real. Implementado. A conexão é do App Remote SDK 0.8.0 (AAR em `third_party/maven`); "Tocando agora" é a tela inicial. Decisão de 2026-10-08: o modo com o áudio da pasta continua na biblioteca. Validado num Galaxy S25 (Android 16, Spotify 9.1): o pedido de autorização do próprio SDK é bloqueado pelo Android atual, então a autorização usa a biblioteca oficial de login (`com.spotify.android:auth` 5.0.0, escopo `app-remote-control`), aberta a partir da tela do Riff; a conexão parte da Activity em primeiro plano. O app no Developer Dashboard precisa da plataforma Android com o package e o SHA-1 da chave.
 7. `:feature:calibration` + `:feature:settings`.
 8. Polimento: Baseline Profile e README final.
 

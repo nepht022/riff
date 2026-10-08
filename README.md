@@ -28,7 +28,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 
 | Módulo | Conteúdo |
 |---|---|
-| `:app` | Activity, Application com Hilt e navegação Biblioteca → Jogo → Resultado |
+| `:app` | Activity, Application com Hilt e navegação Tocando agora → Jogo → Resultado (e a Biblioteca) |
 | `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista, com screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`), e o casamento entre faixa do Spotify e mapa |
@@ -36,10 +36,24 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:audio` | Player da música (MediaPlayer) e sons de acerto e erro (SoundPool), gerados por `scripts/gerar_sfx.py` |
 | `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify e recordes (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
+| `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
 | `:core:data` | Repositório de mapas, acesso a pastas por SAF e importador de mapas |
 | `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa e fim |
 | `:feature:results` | Resultado da partida e recorde |
+| `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
+
+## Spotify
+
+1. Crie um app em https://developer.spotify.com/dashboard com o redirect URI `riff://callback` e a plataforma **Android**, com o package `com.rodrigomachado.riff` e o SHA-1 da sua chave de debug (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`). Em modo de desenvolvimento, a conta do Spotify usada no aparelho precisa estar em "User Management".
+2. No `local.properties` (fora do git):
+   ```
+   spotify.clientId=<Client ID do Dashboard>
+   spotify.redirectUri=riff://callback
+   ```
+3. O aparelho precisa do app do Spotify instalado e logado numa conta Premium. Na primeira conexão o Riff abre o login do Spotify pedindo o controle remoto; aceite.
+
+Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a biblioteca continua jogando com o áudio das pastas. O AAR do SDK está em `third_party/maven` (veja `third_party/README.md`). Falhas de conexão aparecem no logcat com a tag `RiffSpotify`.
 
 ## Screenshots
 
@@ -52,6 +66,6 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 ## Status
 
-Fundação, identidade visual, biblioteca e gameplay com o áudio da pasta prontos. Próximos planos: integração com o Spotify (inclui o casamento manual), calibração e configurações.
+Fundação, identidade visual, biblioteca, gameplay e integração com o Spotify prontos. Próximos planos: calibração e configurações.
 
 Identidade visual "Pôster de turnê" aplicada ao design system (`docs/superpowers/specs/2026-10-07-identidade-visual-design.md`).
