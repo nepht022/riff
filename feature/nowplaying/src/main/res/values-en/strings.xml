@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nowplaying_title">Now playing</string>
+    <string name="nowplaying_library">Library</string>
+    <string name="nowplaying_connecting">Connecting to Spotify…</string>
+    <string name="nowplaying_not_installed_title">Spotify not installed</string>
+    <string name="nowplaying_not_installed_message">Install the Spotify app to play along with what\'s playing. Meanwhile, the library plays with the folders\' audio.</string>
+    <string name="nowplaying_not_configured_title">Spotify not configured</string>
+    <string name="nowplaying_not_configured_message">This build has no spotify.clientId in local.properties.</string>
+    <string name="nowplaying_open_library">Open library</string>
+    <string name="nowplaying_error_not_logged_in">Log in to the Spotify app and try again.</string>
+    <string name="nowplaying_error_not_authorized">Riff wasn\'t authorized on Spotify. Try again and accept the access request.</string>
+    <string name="nowplaying_error_offline">Spotify is in offline mode.</string>
+    <string name="nowplaying_error_disconnected">The connection to Spotify dropped. Reconnecting…</string>
+    <string name="nowplaying_error_unknown">Couldn\'t connect to Spotify.</string>
+    <string name="nowplaying_nothing_title">Nothing playing</string>
+    <string name="nowplaying_nothing_message">Play a song on Spotify and it shows up here.</string>
+    <string name="nowplaying_paused">Paused on Spotify</string>
+    <string name="nowplaying_chart">Chart: %1$s — %2$s</string>
+    <string name="nowplaying_play">Play</string>
+    <string name="nowplaying_suggestion">This chart looks like this song: %1$s — %2$s</string>
+    <string name="nowplaying_confirm">Confirm chart</string>
+    <string name="nowplaying_choose_other">Choose another</string>
+    <string name="nowplaying_no_match">No chart in the library matches this song.</string>
+    <string name="nowplaying_choose">Choose chart</string>
+    <string name="nowplaying_badge_matched">Chart found</string>
+    <string name="nowplaying_badge_suggested">Confirm chart</string>
+    <string name="nowplaying_badge_none">No chart</string>
+</resources>
