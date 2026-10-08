@@ -12,4 +12,5 @@
     <string name="gameplay_chart_missing">This chart is no longer in the library or doesn\'t have this difficulty.</string>
     <string name="gameplay_folder_lost">Lost access to this chart\'s folder. Choose the folder again in the library.</string>
     <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
+    <string name="gameplay_unavailable_spotify">Couldn\'t play through Spotify. Check that the Spotify app is open and connected.</string>
 </resources>

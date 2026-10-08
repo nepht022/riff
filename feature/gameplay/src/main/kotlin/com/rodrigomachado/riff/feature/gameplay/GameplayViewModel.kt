@@ -8,6 +8,7 @@ import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayerFactory
+import com.rodrigomachado.riff.core.audio.SpotifySong
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
@@ -27,7 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class UnavailableReason { NO_AUDIO, CHART_MISSING, FOLDER_ACCESS_LOST, AUDIO_FAILED }
+enum class UnavailableReason { NO_AUDIO, CHART_MISSING, FOLDER_ACCESS_LOST, AUDIO_FAILED, SPOTIFY_UNAVAILABLE }
 
 sealed interface GameplayUiState {
     data object Loading : GameplayUiState
@@ -53,11 +54,14 @@ class GameplayViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val scores: ScoreRepository,
     @LocalSong private val songPlayers: SongPlayerFactory,
+    @SpotifySong private val spotifyPlayers: SongPlayerFactory,
     private val sfxPlayers: SfxPlayerFactory,
     private val timeSource: TimeSource,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
+    private val spotifyTrackUri: String? = savedStateHandle["spotifyTrackUri"]
+    private val trackOffsetMs: Int = savedStateHandle["trackOffsetMs"] ?: 0
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
 
@@ -75,21 +79,23 @@ class GameplayViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // cada falha vira uma explicação na tela
     private suspend fun load(): GameplayUiState = try {
         val playable = loader.load(chartId, difficulty)
-        val audioUri = playable.audioUri ?: throw NoAudioException()
+        val songUri = spotifyTrackUri ?: playable.audioUri ?: throw NoAudioException()
         val settings = settingsRepository.settings.first()
-        val songPlayer = songPlayers.create().also { player = it }
+        val factory = if (spotifyTrackUri != null) spotifyPlayers else songPlayers
+        val songPlayer = factory.create().also { player = it }
         try {
-            songPlayer.prepare(audioUri)
+            songPlayer.prepare(songUri)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            throw AudioFailedException(e)
+            throw if (spotifyTrackUri != null) SpotifyFailedException(e) else AudioFailedException(e)
         }
         val effects = sfxPlayers.create().also {
             sfx = it
             it.setVolume(settings.sfxVolume)
         }
-        val session = GameSession(playable.notes, songPlayer, effects, timeSource, settings.audioOffsetMs.toLong())
+        val offset = settings.audioOffsetMs.toLong() + trackOffsetMs
+        val session = GameSession(playable.notes, songPlayer, effects, timeSource, offset)
         if (!pauseRequested) session.start()
         GameplayUiState.Ready(
             playable.chart.title,
@@ -109,6 +115,7 @@ class GameplayViewModel @Inject constructor(
     private fun reasonFor(error: Exception): UnavailableReason = when (error) {
         is NoAudioException -> UnavailableReason.NO_AUDIO
         is AudioFailedException -> UnavailableReason.AUDIO_FAILED
+        is SpotifyFailedException -> UnavailableReason.SPOTIFY_UNAVAILABLE
         is FolderAccessLostException -> UnavailableReason.FOLDER_ACCESS_LOST
         else -> UnavailableReason.CHART_MISSING
     }
@@ -116,6 +123,8 @@ class GameplayViewModel @Inject constructor(
     private class NoAudioException : Exception("pasta sem áudio")
 
     private class AudioFailedException(cause: Throwable) : Exception("áudio não pôde ser preparado", cause)
+
+    private class SpotifyFailedException(cause: Throwable) : Exception("Spotify não pôde tocar", cause)
 
     fun pause() {
         if (state.value is GameplayUiState.Loading) pauseRequested = true
@@ -131,6 +140,15 @@ class GameplayViewModel @Inject constructor(
         val ready = state.value as? GameplayUiState.Ready ?: return
         ready.session.resume()
         state.update { ready.copy(isPaused = false) }
+    }
+
+    /** A música pausou ou voltou fora do jogo (notificação do Spotify, conexão caiu e voltou). */
+    fun onPlaybackChanged(paused: Boolean) {
+        if (player == null) return
+        val ready = state.value as? GameplayUiState.Ready ?: return
+        if (ready.isPaused == paused) return
+        if (paused) ready.session.pause()
+        state.update { ready.copy(isPaused = paused) }
     }
 
     fun onSessionFinished() {

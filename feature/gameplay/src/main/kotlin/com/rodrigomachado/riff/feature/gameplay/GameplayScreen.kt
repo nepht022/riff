@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -89,6 +90,7 @@ fun GameplayScreen(
             onResume = viewModel::resume,
             onExit = onExit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
+            onPlaybackChanged = viewModel::onPlaybackChanged,
             modifier = modifier,
         )
 
@@ -108,6 +110,7 @@ internal fun GameStage(
     onExit: () -> Unit,
     onSessionFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    onPlaybackChanged: (Boolean) -> Unit = {},
     animate: Boolean = true,
 ) {
     val session = state.session
@@ -116,6 +119,8 @@ internal fun GameStage(
     var frame by remember { mutableLongStateOf(0L) }
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
     BackHandler(enabled = !state.isPaused, onBack = onPause)
+    val currentPaused by rememberUpdatedState(state.isPaused)
+    val playbackChanged by rememberUpdatedState(onPlaybackChanged)
     if (animate) {
         LaunchedEffect(session) {
             while (isActive) {
@@ -127,6 +132,8 @@ internal fun GameStage(
                     onSessionFinished()
                     break
                 }
+                // Pausa ou retomada fora do jogo (notificação do Spotify): a tela acompanha a música.
+                if (session.isPaused != currentPaused) playbackChanged(session.isPaused)
             }
         }
     }
@@ -258,4 +265,5 @@ private fun UnavailableReason.message(): Int = when (this) {
     UnavailableReason.CHART_MISSING -> R.string.gameplay_chart_missing
     UnavailableReason.FOLDER_ACCESS_LOST -> R.string.gameplay_folder_lost
     UnavailableReason.AUDIO_FAILED -> R.string.gameplay_audio_failed
+    UnavailableReason.SPOTIFY_UNAVAILABLE -> R.string.gameplay_unavailable_spotify
 }

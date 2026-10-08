@@ -30,6 +30,8 @@ class GameplayViewModelTest {
     private val player = FakeSongPlayer()
     private val sfx = FakeSfxPlayer()
     private var playersCreated = 0
+    private val spotifyPlayer = FakeSongPlayer()
+    private var spotifyPlayersCreated = 0
     private val time = FakeTime()
 
     private val chart = Chart(
@@ -45,14 +47,25 @@ class GameplayViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = GameplayViewModel(
-        SavedStateHandle(mapOf("chartId" to "a", "difficulty" to "EXPERT")),
+    private fun viewModel(spotifyTrackUri: String? = null, trackOffsetMs: Int = 0) = GameplayViewModel(
+        SavedStateHandle(
+            buildMap {
+                put("chartId", "a")
+                put("difficulty", "EXPERT")
+                spotifyTrackUri?.let { put("spotifyTrackUri", it) }
+                put("trackOffsetMs", trackOffsetMs)
+            },
+        ),
         loader,
         settings,
         scores,
         {
             playersCreated++
             player
+        },
+        {
+            spotifyPlayersCreated++
+            spotifyPlayer
         },
         { sfx },
         time,
@@ -183,5 +196,50 @@ class GameplayViewModelTest {
         assertEquals(false, player.isPlaying)
         viewModel.resume()
         assertTrue(player.isPlaying)
+    }
+
+    @Test
+    fun spotifyModePlaysTheTrackWithItsOffsetAndNeedsNoAudioInTheFolder() = runTest {
+        loader.result = { playable(audio = null) }
+
+        val state = viewModel(
+            spotifyTrackUri = "spotify:track:x",
+            trackOffsetMs = 25,
+        ).uiState.value as GameplayUiState.Ready
+
+        assertEquals("spotify:track:x", spotifyPlayer.preparedUri)
+        assertEquals(0, playersCreated)
+        assertTrue(spotifyPlayer.isPlaying)
+        spotifyPlayer.positionMs = 1_000
+        time.now = GameSession.SYNC_INTERVAL_MS
+        assertEquals(985L, state.session.tick()) // 1000 − 40 (calibração global) + 25 (ajuste da música)
+    }
+
+    @Test
+    fun spotifyThatCannotPlayIsExplained() = runTest {
+        loader.result = { playable() }
+        spotifyPlayer.prepareFailure = java.io.IOException("Spotify indisponível")
+
+        assertEquals(
+            GameplayUiState.Unavailable(UnavailableReason.SPOTIFY_UNAVAILABLE),
+            viewModel(spotifyTrackUri = "spotify:track:x").uiState.value,
+        )
+        assertTrue(spotifyPlayer.released)
+    }
+
+    @Test
+    fun pausedOutsideTheGameShowsThePauseScreenAndReleasesTheLanes() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+        val session = (viewModel.uiState.value as GameplayUiState.Ready).session
+        session.press(0)
+
+        viewModel.onPlaybackChanged(paused = true)
+
+        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).isPaused)
+        assertEquals(false, session.isPressed(0))
+
+        viewModel.onPlaybackChanged(paused = false)
+        assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).isPaused)
     }
 }

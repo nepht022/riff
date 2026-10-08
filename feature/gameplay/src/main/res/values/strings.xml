@@ -12,4 +12,5 @@
     <string name="gameplay_chart_missing">Este mapa não está mais na biblioteca ou não tem esta dificuldade.</string>
     <string name="gameplay_folder_lost">Perdi o acesso à pasta deste mapa. Escolha a pasta de novo na biblioteca.</string>
     <string name="gameplay_audio_failed">Não consegui tocar o áudio desta pasta.</string>
+    <string name="gameplay_unavailable_spotify">Não deu para tocar pelo Spotify. Confira se o app do Spotify está aberto e conectado.</string>
 </resources>
