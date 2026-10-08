@@ -73,9 +73,10 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         val note = notes[index]
         val judgment = if (abs(note.timeMs - timeMs) <= windows.perfectMs) Judgment.PERFECT else Judgment.GOOD
         record(index, judgment)
+        // Como no Guitar Hero: o acerto vale o multiplicador de antes dele; o x2 começa no 11º acerto seguido.
+        hitScore += (if (judgment == Judgment.PERFECT) PERFECT_POINTS else GOOD_POINTS) * multiplier
         combo++
         maxCombo = max(maxCombo, combo)
-        hitScore += (if (judgment == Judgment.PERFECT) PERFECT_POINTS else GOOD_POINTS) * multiplier
         if (note.sustainMs > 0) {
             sustains[lane] = ActiveSustain(note.timeMs + note.sustainMs, max(timeMs, note.timeMs))
         }

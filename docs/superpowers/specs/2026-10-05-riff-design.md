@@ -73,7 +73,7 @@ Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:da
 ### Julgamento e pontuação (`:core:game`)
 
 - **Janelas:** Perfeito se o erro for de até 50 ms, Bom até 100 ms, Erro acima disso. Uma nota que passa da janela sem ser tocada também conta como Erro. Um toque em trilha sem nota próxima quebra o combo.
-- **Pontuação:** Perfeito vale 100 e Bom vale 50, multiplicados pelo multiplicador. Nota longa soma 25 pontos a cada 500 ms sustentados (o equivalente a um beat a 120 BPM; o motor trabalha em ms e não conhece o BPM).
+- **Pontuação:** Perfeito vale 100 e Bom vale 50, multiplicados pelo multiplicador. Como no Guitar Hero, os 10 primeiros acertos seguidos valem x1, do 11º ao 20º valem x2, do 21º ao 30º x3 e daí em diante x4. Nota longa soma 25 pontos a cada 500 ms sustentados (o equivalente a um beat a 120 BPM; o motor trabalha em ms e não conhece o BPM).
 - **Precisão:** `(perfeitos + 0,5 × bons) / total de notas`.
 
 ## 5. Modelo de dados

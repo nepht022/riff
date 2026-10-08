@@ -60,10 +60,13 @@ class GameEngineTest {
     @Test
     fun multiplierGrowsEveryTenHitsUpToFour() {
         val engine = GameEngine(List(40) { note(it * 1_000L) })
+        // Como no Guitar Hero: os 10 primeiros acertos valem x1; o indicador já mostra x2 para o 11º.
         repeat(10) { engine.onPress(0, it * 1_000L) }
         assertEquals(2, engine.multiplier)
-        assertEquals(9 * 100L + 200L, engine.score)
-        repeat(30) { engine.onPress(0, (it + 10) * 1_000L) }
+        assertEquals(10 * 100L, engine.score)
+        engine.onPress(0, 10_000L)
+        assertEquals(10 * 100L + 200L, engine.score)
+        repeat(29) { engine.onPress(0, (it + 11) * 1_000L) }
         assertEquals(4, engine.multiplier)
     }
 
