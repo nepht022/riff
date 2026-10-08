@@ -23,6 +23,7 @@ class LibraryContentTest {
     private var picks = 0
     private var rescans = 0
     private var dismissals = 0
+    private var played: Pair<String, Difficulty>? = null
 
     private fun show(state: LibraryUiState) = composeRule.setContent {
         RiffTheme {
@@ -31,6 +32,7 @@ class LibraryContentTest {
                 onPickFolder = { picks++ },
                 onRescan = { rescans++ },
                 onReportDismissed = { dismissals++ },
+                onPlay = { id, difficulty -> played = id to difficulty },
             )
         }
     }
@@ -113,5 +115,23 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Não foi possível importar a pasta.").assertExists()
         composeRule.onNodeWithText("Tentar de novo").performClick()
         assertEquals(1, rescans)
+    }
+
+    @Test
+    fun tappingAChartOffersItsDifficultiesAndPlaysTheChosenOne() {
+        show(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música", difficulties = setOf(Difficulty.EASY, Difficulty.EXPERT))),
+            ),
+        )
+
+        composeRule.onNodeWithText("Música").performClick()
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+        composeRule.onNodeWithText("Médio").assertDoesNotExist()
+        composeRule.onNodeWithText("Expert").performClick()
+
+        assertEquals("a" to Difficulty.EXPERT, played)
     }
 }

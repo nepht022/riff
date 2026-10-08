@@ -35,12 +35,19 @@ class LibraryScreenshotTest {
             onPickFolder = {},
             onRescan = {},
             onReportDismissed = {},
+            onPlay = { _, _ -> },
         )
     }
 
     @Test
     fun noFolder() = snapshot("Library_no_folder") {
-        LibraryContent(LibraryUiState(isLoading = false), onPickFolder = {}, onRescan = {}, onReportDismissed = {})
+        LibraryContent(
+            LibraryUiState(isLoading = false),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+        )
     }
 
     private fun snapshot(name: String, content: @Composable () -> Unit) {

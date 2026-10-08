@@ -17,10 +17,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.importer.ImportReport
@@ -39,7 +43,11 @@ import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 @Composable
-fun LibraryScreen(modifier: Modifier = Modifier, viewModel: LibraryViewModel = hiltViewModel()) {
+fun LibraryScreen(
+    onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LibraryViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let { viewModel.onFolderPicked(it.toString()) }
@@ -49,6 +57,7 @@ fun LibraryScreen(modifier: Modifier = Modifier, viewModel: LibraryViewModel = h
         onPickFolder = { pickFolder.launch(null) },
         onRescan = viewModel::onRescan,
         onReportDismissed = viewModel::onReportDismissed,
+        onPlay = onPlay,
         modifier = modifier,
     )
 }
@@ -59,8 +68,10 @@ fun LibraryContent(
     onPickFolder: () -> Unit,
     onRescan: () -> Unit,
     onReportDismissed: () -> Unit,
+    onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var choosing by remember { mutableStateOf<Chart?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
             stringResource(R.string.library_title),
@@ -92,7 +103,39 @@ fun LibraryContent(
                 onAction = onPickFolder,
             )
 
-            else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed)
+            else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { choosing = it }
+        }
+    }
+    choosing?.let { chart ->
+        DifficultyDialog(
+            chart = chart,
+            onChoose = { difficulty ->
+                choosing = null
+                onPlay(chart.id, difficulty)
+            },
+            onDismiss = { choosing = null },
+        )
+    }
+}
+
+@Composable
+private fun DifficultyDialog(chart: Chart, onChoose: (Difficulty) -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.background(RiffColors.StageBlack, MaterialTheme.shapes.large).padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(chart.title, style = MaterialTheme.typography.titleLarge, color = RiffColors.Paper)
+            Text(
+                stringResource(R.string.library_choose_difficulty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = RiffColors.PaperDim,
+            )
+            chart.difficulties.sorted().forEach { difficulty ->
+                PosterButton(stringResource(difficultyLabel(difficulty.ordinal)), onClick = { onChoose(difficulty) })
+            }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.library_cancel), color = RiffColors.Paper) }
         }
     }
 }
@@ -104,6 +147,7 @@ private fun ChartList(
     onPickFolder: () -> Unit,
     onRescan: () -> Unit,
     onReportDismissed: () -> Unit,
+    onChartClick: (Chart) -> Unit,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -125,6 +169,7 @@ private fun ChartList(
             TrackCard(
                 title = chart.title,
                 artist = chart.artist.ifBlank { stringResource(R.string.library_unknown_artist) },
+                onClick = { onChartClick(chart) },
                 badge = chart.difficulties.maxOrNull()?.let { highest -> difficultyBadge(highest) },
             )
         }

@@ -9,6 +9,8 @@
     <string name="library_importing">Lendo pastas… %1$d</string>
     <string name="library_access_lost">Perdi o acesso à pasta. Escolha-a de novo.</string>
     <string name="library_import_failed">Não foi possível importar a pasta.</string>
+    <string name="library_choose_difficulty">Escolha a dificuldade</string>
+    <string name="library_cancel">Cancelar</string>
     <string name="library_rescan">Reimportar</string>
     <string name="library_change_folder">Trocar pasta</string>
     <plurals name="library_report_imported">
