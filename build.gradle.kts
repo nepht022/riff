@@ -22,10 +22,19 @@ dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
     kover(project(":core:chart"))
     kover(project(":core:game"))
+    kover(project(":core:data"))
 }
 
 kover {
     reports {
+        filters {
+            excludes {
+                // Código gerado e cola com o Android, verificada no aparelho e não em teste unitário.
+                classes("*_Factory", "*_Factory\$*", "*_Impl", "*_Impl\$*", "*Module", "*Module_*", "Hilt_*", "*_HiltModules*")
+                classes("com.rodrigomachado.riff.core.data.folder.SafFolderSource", "com.rodrigomachado.riff.core.data.folder.SafFolderAccess")
+                annotatedBy("dagger.Module")
+            }
+        }
         verify {
             rule {
                 minBound(70)
