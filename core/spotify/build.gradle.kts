@@ -27,8 +27,12 @@ dependencies {
     api(project(":core:model"))
     implementation(project(":core:audio"))
     implementation(libs.spotify.app.remote)
+    implementation(libs.spotify.auth)
+    implementation(libs.androidx.activity)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }

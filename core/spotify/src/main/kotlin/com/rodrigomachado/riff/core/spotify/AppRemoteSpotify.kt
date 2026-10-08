@@ -1,7 +1,12 @@
 package com.rodrigomachado.riff.core.spotify
 
 import android.content.Context
+import android.content.Intent
 import android.os.SystemClock
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.model.SpotifyError
@@ -10,6 +15,9 @@ import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.protocol.client.Subscription
 import com.spotify.protocol.types.PlayerState
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +32,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 
-/** [SpotifyRemote] com o App Remote SDK. Uma conexão por processo; reconecta sozinho se ela cair. */
+/**
+ * [SpotifyRemote] com o App Remote SDK. Uma conexão por processo; reconecta sozinho se ela cair.
+ * O pedido de autorização do Spotify só abre a partir de uma tela: a conexão usa a Activity em primeiro
+ * plano e, se nenhuma estiver aberta, espera a próxima. O `showAuthView` do App Remote não abre mais o pedido
+ * nas versões atuais do Spotify; sem autorização, o login da biblioteca de auth abre uma vez e, na volta,
+ * a conexão é refeita.
+ */
 @Singleton
 class AppRemoteSpotify @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -36,6 +50,15 @@ class AppRemoteSpotify @Inject constructor(
     private var remote: SpotifyAppRemote? = null
     private var subscription: Subscription<PlayerState>? = null
     private var reconnectAttempt = 0
+    private var connectWhenVisible = false
+    private var triedAuthorization = false
+
+    init {
+        ForegroundActivity.onResumed = { activity ->
+            // As telas do próprio login do Spotify também passam por aqui: espera voltar para o Riff.
+            if (connectWhenVisible && !activity.javaClass.name.startsWith(SPOTIFY_SDK_PACKAGE)) startConnecting()
+        }
+    }
 
     override val connection: StateFlow<SpotifyConnection> = connectionState.asStateFlow()
     override val playback: StateFlow<PlaybackState?> = playbackState.asStateFlow()
@@ -43,6 +66,7 @@ class AppRemoteSpotify @Inject constructor(
     override fun connect() {
         val current = connectionState.value
         if (current == SpotifyConnection.Connecting || current == SpotifyConnection.Connected) return
+        triedAuthorization = false
         when {
             !config.isConfigured -> connectionState.value = SpotifyConnection.Failed(SpotifyError.NOT_CONFIGURED)
 
@@ -55,12 +79,18 @@ class AppRemoteSpotify @Inject constructor(
 
     private fun startConnecting() {
         connectionState.value = SpotifyConnection.Connecting
+        val activity = ForegroundActivity.current
+        if (activity == null) {
+            connectWhenVisible = true
+            return
+        }
+        connectWhenVisible = false
         val params = ConnectionParams.Builder(config.clientId)
             .setRedirectUri(config.redirectUri)
             .showAuthView(true)
             .build()
         SpotifyAppRemote.connect(
-            context,
+            activity,
             params,
             object : Connector.ConnectionListener {
                 override fun onConnected(appRemote: SpotifyAppRemote) {
@@ -70,9 +100,35 @@ class AppRemoteSpotify @Inject constructor(
                     subscribe(appRemote)
                 }
 
-                override fun onFailure(error: Throwable) = onLost(error.toSpotifyError())
+                override fun onFailure(error: Throwable) {
+                    // O motivo exato só aparece aqui (Dashboard, autorização, app do Spotify): vai para o logcat.
+                    Log.w(TAG, "Falha ao conectar ao Spotify", error)
+                    val reason = error.toSpotifyError()
+                    if (reason == SpotifyError.NOT_AUTHORIZED && !triedAuthorization) authorize() else onLost(reason)
+                }
             },
         )
+    }
+
+    /** Abre o login do Spotify pedindo o controle remoto; a conexão é refeita quando o Riff volta à tela. */
+    private fun authorize() {
+        val activity = ForegroundActivity.current as? ComponentActivity ?: return onLost(SpotifyError.NOT_AUTHORIZED)
+        triedAuthorization = true
+        connectWhenVisible = true
+        val request = AuthorizationRequest.Builder(
+            config.clientId,
+            AuthorizationResponse.Type.TOKEN,
+            config.redirectUri,
+        ).setScopes(arrayOf(APP_REMOTE_SCOPE)).build()
+        var launcher: ActivityResultLauncher<Intent>? = null
+        launcher = activity.activityResultRegistry.register(AUTH_RESULT_KEY, StartActivityForResult()) { result ->
+            launcher?.unregister()
+            val response = AuthorizationClient.getResponse(result.resultCode, result.data)
+            if (response.type != AuthorizationResponse.Type.TOKEN) {
+                Log.w(TAG, "Autorização do Spotify não concluída: ${response.type} ${response.error.orEmpty()}")
+            }
+        }
+        launcher.launch(AuthorizationClient.createLoginActivityIntent(activity, request))
     }
 
     private fun subscribe(appRemote: SpotifyAppRemote) {
@@ -121,5 +177,12 @@ class AppRemoteSpotify @Inject constructor(
 
     override fun resume() {
         remote?.playerApi?.resume()
+    }
+
+    private companion object {
+        const val TAG = "RiffSpotify"
+        const val APP_REMOTE_SCOPE = "app-remote-control"
+        const val AUTH_RESULT_KEY = "riff-spotify-auth"
+        const val SPOTIFY_SDK_PACKAGE = "com.spotify.sdk"
     }
 }

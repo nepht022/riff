@@ -1,5 +1,6 @@
 [versions]
 spotifyAppRemote = "0.8.0"
+spotifyAuth = "5.0.0"
 gson = "2.14.0"
 agp = "9.4.1"
 kotlin = "2.4.20"
@@ -27,8 +28,10 @@ kotlinxSerialization = "1.11.0"
 
 [libraries]
 spotify-app-remote = { module = "com.spotify.android:spotify-app-remote", version.ref = "spotifyAppRemote" }
+spotify-auth = { module = "com.spotify.android:auth", version.ref = "spotifyAuth" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity = { module = "androidx.activity:activity", version.ref = "activityCompose" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
