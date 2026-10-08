@@ -23,7 +23,9 @@ object ChartFileParser {
 
     fun parse(text: String): ParsedChart {
         val sections = readSections(text)
-        val song = sections["Song"].orEmpty().associate { it.key to it.value.removeSurrounding("\"") }
+        val song = sections["Song"].orEmpty()
+            .associate { it.key to it.value.removeSurrounding("\"") }
+            .filterValues { it.isNotBlank() } // valor vazio conta como ausente, igual ao song.ini
         val resolution = song["Resolution"]?.toIntOrNull() ?: DEFAULT_RESOLUTION
         if (resolution <= 0) throw ChartParseException("resolução inválida: $resolution")
         val tempoMap = TempoMap(resolution, readTempos(sections["SyncTrack"].orEmpty()))

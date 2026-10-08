@@ -109,4 +109,13 @@ class ChartFileParserTest {
         val chart = "[SyncTrack]\n{\n  0 = B 0\n}\n[ExpertSingle]\n{\n  0 = N 0 0\n}"
         assertEquals(3, assertThrows<ChartParseException> { ChartFileParser.parse(chart) }.line)
     }
+
+    @Test
+    fun treatsBlankSongValuesAsMissing() {
+        val chart = "[Song]\n{\n  Name = \"\"\n  Artist = \"  \"\n  Album = \n}\n[ExpertSingle]\n{\n  0 = N 0 0\n}"
+        val info = ChartFileParser.parse(chart).info
+        assertNull(info.title)
+        assertNull(info.artist)
+        assertNull(info.album)
+    }
 }
