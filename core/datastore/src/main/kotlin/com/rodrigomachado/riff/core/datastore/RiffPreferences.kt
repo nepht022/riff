@@ -4,19 +4,27 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 /** Preferências do jogador e pasta da biblioteca. Valores inválidos no disco viram o padrão, nunca um crash. */
 class RiffPreferences(private val dataStore: DataStore<Preferences>) {
-    val settings: Flow<Settings> = dataStore.data.map { it.toSettings() }
+    /** Arquivo ilegível vira preferências vazias (valores padrão) em vez de derrubar quem observa. */
+    private val safeData: Flow<Preferences> = dataStore.data.catch { error ->
+        if (error is IOException) emit(emptyPreferences()) else throw error
+    }
 
-    val libraryRootUri: Flow<String?> = dataStore.data.map { it[LIBRARY_ROOT_URI] }
+    val settings: Flow<Settings> = safeData.map { it.toSettings() }
+
+    val libraryRootUri: Flow<String?> = safeData.map { it[LIBRARY_ROOT_URI] }
 
     suspend fun updateSettings(transform: (Settings) -> Settings) {
         dataStore.edit { prefs ->

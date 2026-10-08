@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ data class LibraryUiState(
     val scannedFolders: Int = 0,
     val report: ImportReport? = null,
     val folderAccessLost: Boolean = false,
+    val importFailed: Boolean = false,
 )
 
 private data class ImportState(
@@ -35,6 +37,7 @@ private data class ImportState(
     val scannedFolders: Int = 0,
     val report: ImportReport? = null,
     val folderAccessLost: Boolean = false,
+    val importFailed: Boolean = false,
 )
 
 @HiltViewModel
@@ -56,6 +59,7 @@ class LibraryViewModel @Inject constructor(
                 scannedFolders = import.scannedFolders,
                 report = import.report,
                 folderAccessLost = import.folderAccessLost,
+                importFailed = import.importFailed,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
@@ -81,15 +85,19 @@ class LibraryViewModel @Inject constructor(
         importState.update { it.copy(report = null) }
     }
 
-    @Suppress("SwallowedException") // a exceção vira o estado de erro da tela
+    @Suppress("SwallowedException", "TooGenericExceptionCaught") // qualquer erro vira o estado de erro da tela
     private suspend fun runImport(uri: String) {
         if (importState.value.isImporting) return
         importState.value = ImportState(isImporting = true)
         importState.value = try {
             val report = importer.import(uri) { scanned -> importState.update { it.copy(scannedFolders = scanned) } }
             ImportState(report = report)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: FolderAccessLostException) {
             ImportState(folderAccessLost = true)
+        } catch (e: Exception) {
+            ImportState(importFailed = true)
         }
     }
 

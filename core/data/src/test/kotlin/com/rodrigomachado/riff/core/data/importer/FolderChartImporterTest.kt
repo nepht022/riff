@@ -15,8 +15,8 @@ class FolderChartImporterTest {
     private val repository = FakeChartRepository()
     private var clock = 0L
 
-    private fun TestScope.importer() =
-        FolderChartImporter(source, repository, StandardTestDispatcher(testScheduler)) { ++clock }
+    private fun TestScope.importer(maxFileBytes: Long = FolderChartImporter.MAX_FILE_BYTES) =
+        FolderChartImporter(source, repository, StandardTestDispatcher(testScheduler), maxFileBytes) { ++clock }
 
     @Test
     fun importsEveryChartFolderInTheTreeAndReportsProgress() = runTest {
@@ -112,5 +112,52 @@ class FolderChartImporterTest {
         source.file("raiz/notes.chart", chartText("Direto", "Banda"))
 
         assertEquals(1, importer().import("raiz").importedCount)
+    }
+
+    @Test
+    fun unexpectedErrorReadingAFileBecomesAFailureAndTheOthersStillImport() = runTest {
+        source.file("raiz/A/notes.chart", chartText("A", "Banda"))
+        source.file("raiz/B/notes.chart", chartText("B", "Banda"))
+        source.readFailures["raiz/A/notes.chart"] = SecurityException("permissão revogada no meio")
+
+        val report = importer().import("raiz")
+
+        assertEquals(listOf("B"), repository.charts.map { it.title })
+        assertEquals("A", report.failures.single().folderName)
+    }
+
+    @Test
+    fun subfolderThatCannotBeListedKeepsItsChartsInsteadOfDeletingThem() = runTest {
+        source.file("raiz/A/notes.chart", chartText("A", "Banda"))
+        source.file("raiz/B/notes.chart", chartText("B", "Banda"))
+        importer().import("raiz")
+        source.revoked += "raiz/B"
+
+        val report = importer().import("raiz")
+
+        assertEquals("B", report.failures.single().folderName)
+        assertEquals(listOf("A", "B"), repository.charts.map { it.title })
+    }
+
+    @Test
+    fun fileWithUnknownSizeIsStillCappedWhileReading() = runTest {
+        source.file("raiz/Sem Tamanho/notes.chart", ByteArray(200), declaredSize = 0)
+
+        val report = importer(maxFileBytes = 100).import("raiz")
+
+        assertEquals(0, report.importedCount)
+        assertTrue(report.failures.single().reason.contains("grande demais"))
+    }
+
+    @Test
+    fun previouslyImportedChartSurvivesATemporaryReadFailure() = runTest {
+        source.file("raiz/A/notes.chart", chartText("A", "Banda"))
+        source.file("raiz/B/notes.chart", chartText("B", "Banda"))
+        importer().import("raiz")
+        source.readFailures["raiz/A/notes.chart"] = java.io.IOException("cartão SD desconectou")
+
+        importer().import("raiz")
+
+        assertEquals(listOf("A", "B"), repository.charts.map { it.title })
     }
 }

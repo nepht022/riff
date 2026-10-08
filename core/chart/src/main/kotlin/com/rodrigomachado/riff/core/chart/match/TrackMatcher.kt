@@ -20,11 +20,8 @@ object TrackMatcher {
     private const val DURATION_TOLERANCE_MS = 5_000
 
     fun score(query: TrackQuery, chart: Chart): Float {
-        val title = JaroWinkler.similarity(TextNormalizer.normalize(query.title), TextNormalizer.normalize(chart.title))
-        val artist = JaroWinkler.similarity(
-            TextNormalizer.normalize(query.artist),
-            TextNormalizer.normalize(chart.artist),
-        )
+        val title = similarity(query.title, chart.title)
+        val artist = similarity(query.artist, chart.artist)
         var score = TITLE_WEIGHT * title + ARTIST_WEIGHT * artist
         val queryDuration = query.durationMs
         val chartDuration = chart.durationMs
@@ -35,6 +32,13 @@ object TrackMatcher {
             score -= DURATION_PENALTY
         }
         return score.coerceIn(0.0, 1.0).toFloat()
+    }
+
+    /** Texto que some na normalização (só pontuação) não conta como igual a nada. */
+    private fun similarity(a: String, b: String): Double {
+        val left = TextNormalizer.normalize(a)
+        val right = TextNormalizer.normalize(b)
+        return if (left.isEmpty() || right.isEmpty()) 0.0 else JaroWinkler.similarity(left, right)
     }
 
     fun bestMatch(query: TrackQuery, charts: List<Chart>): MatchCandidate? {

@@ -8,8 +8,12 @@ interface FolderSource {
     /** @throws FolderAccessLostException se a pasta não puder mais ser lida (permissão revogada ou pasta apagada). */
     suspend fun listChildren(folderUri: String): List<FolderEntry>
 
-    suspend fun read(file: FolderEntry): ByteArray
+    /** Lê no máximo [maxBytes]; acima disso lança [FileTooLargeException] sem carregar o resto. */
+    suspend fun read(file: FolderEntry, maxBytes: Long): ByteArray
 }
+
+class FileTooLargeException(name: String, maxBytes: Long) :
+    java.io.IOException("$name grande demais (mais de ${maxBytes / (1024 * 1024)} MB)")
 
 /** Guarda a permissão de leitura da pasta escolhida para valer depois que o app reiniciar. */
 interface FolderAccess {

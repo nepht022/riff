@@ -32,4 +32,10 @@ class TextNormalizerTest {
     fun keepsWordsThatOnlyLookLikeQualifiers() {
         assertEquals("live and let die", n("Live and Let Die"))
     }
+
+    @Test
+    fun keepsLettersFromAnyScript() {
+        assertEquals("米津玄師", n("米津玄師"))
+        assertEquals("кино", n("Кино"))
+    }
 }

@@ -19,6 +19,8 @@ class RoomChartRepository @Inject constructor(private val dao: ChartDao) : Chart
     }
 
     override suspend fun removeNotSeenIn(scanId: Long) = dao.deleteNotSeenIn(scanId)
+
+    override suspend fun keepFolder(folderUri: String, scanId: Long) = dao.keepFolder(folderUri, scanId)
 }
 
 private fun Chart.toEntity(scanId: Long) =

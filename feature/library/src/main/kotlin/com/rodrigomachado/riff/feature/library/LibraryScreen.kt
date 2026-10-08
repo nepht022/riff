@@ -71,6 +71,8 @@ fun LibraryContent(
 
             state.folderAccessLost -> ErrorState(stringResource(R.string.library_access_lost), onRetry = onPickFolder)
 
+            state.importFailed -> ErrorState(stringResource(R.string.library_import_failed), onRetry = onRescan)
+
             !state.hasFolder -> EmptyState(
                 title = stringResource(R.string.library_no_folder_title),
                 message = stringResource(R.string.library_no_folder_message),

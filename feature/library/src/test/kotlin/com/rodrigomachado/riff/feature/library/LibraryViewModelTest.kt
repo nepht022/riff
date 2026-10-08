@@ -125,4 +125,18 @@ class LibraryViewModelTest {
 
         assertNull(viewModel.uiState.value.report)
     }
+
+    @Test
+    fun unexpectedImportErrorShowsErrorInsteadOfCrashing() = runTest {
+        folderStore.rootUri.value = "content://pasta"
+        repository.charts.value = listOf(chart("a"))
+        importer.nextResult = { throw IllegalStateException("disco cheio") }
+        val viewModel = viewModel()
+
+        viewModel.onRescan()
+
+        assertTrue(viewModel.uiState.value.importFailed)
+        assertFalse(viewModel.uiState.value.isImporting)
+        assertEquals(listOf("a"), viewModel.uiState.value.charts.map { it.id })
+    }
 }

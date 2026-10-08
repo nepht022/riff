@@ -66,4 +66,22 @@ class RiffPreferencesTest {
         assertEquals(Settings.DEFAULT.noteSpeed, settings.noteSpeed)
         assertEquals(Settings.DEFAULT.defaultDifficulty, settings.defaultDifficulty)
     }
+
+    @Test
+    fun unreadableStoreGivesDefaultsInsteadOfCrashing() = runTest {
+        val broken = object : DataStore<Preferences> {
+            override val data: Flow<Preferences> = kotlinx.coroutines.flow.flow {
+                throw java.io.IOException(
+                    "arquivo corrompido",
+                )
+            }
+
+            override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences = error(
+                "não usado",
+            )
+        }
+        val preferences = RiffPreferences(broken)
+        assertEquals(Settings.DEFAULT, preferences.settings.first())
+        assertNull(preferences.libraryRootUri.first())
+    }
 }

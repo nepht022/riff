@@ -105,4 +105,13 @@ class LibraryContentTest {
 
         composeRule.onNodeWithText("Lendo pastas… 12").assertExists()
     }
+
+    @Test
+    fun failedImportOffersToTryAgain() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, importFailed = true))
+
+        composeRule.onNodeWithText("Não foi possível importar a pasta.").assertExists()
+        composeRule.onNodeWithText("Tentar de novo").performClick()
+        assertEquals(1, rescans)
+    }
 }

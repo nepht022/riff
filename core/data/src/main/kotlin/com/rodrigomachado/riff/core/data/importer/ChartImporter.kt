@@ -3,10 +3,12 @@ package com.rodrigomachado.riff.core.data.importer
 import com.rodrigomachado.riff.core.chart.ChartLoader
 import com.rodrigomachado.riff.core.chart.ChartParseException
 import com.rodrigomachado.riff.core.data.ChartRepository
+import com.rodrigomachado.riff.core.data.folder.FileTooLargeException
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.folder.FolderEntry
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.model.Chart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -30,6 +32,7 @@ class FolderChartImporter(
     private val source: FolderSource,
     private val repository: ChartRepository,
     private val dispatcher: CoroutineDispatcher,
+    private val maxFileBytes: Long,
     private val now: () -> Long,
 ) : ChartImporter {
 
@@ -57,26 +60,45 @@ class FolderChartImporter(
             }
             if (depth >= MAX_DEPTH) return
             for (child in children.filter { it.isDirectory }) {
-                val grandChildren = try {
-                    source.listChildren(child.uri)
-                } catch (e: FolderAccessLostException) {
-                    failures += ImportFailure(child.name, "sem acesso à pasta: ${e.message}")
-                    continue
-                }
+                val grandChildren = listOrKeep(child) ?: continue
                 visit(child, grandChildren, depth + 1)
             }
         }
 
+        /** Lista a subpasta; se não der, registra a falha, mantém o que já existia dela e devolve null. */
+        private suspend fun listOrKeep(folder: FolderEntry): List<FolderEntry>? = try {
+            source.listChildren(folder.uri)
+        } catch (e: FolderAccessLostException) {
+            keep(folder, "sem acesso à pasta: ${e.message}")
+            null
+        } catch (e: IOException) {
+            keep(folder, "não foi possível listar: ${e.message}")
+            null
+        }
+
+        /** Pasta que falhou: registra no relatório e mantém o que já estava importado dela. */
+        private suspend fun keep(folder: FolderEntry, reason: String) {
+            failures += ImportFailure(folder.name, reason)
+            repository.keepFolder(folder.uri, scanId)
+        }
+
+        @Suppress("TooGenericExceptionCaught") // qualquer erro de uma pasta vira falha no relatório, não crash
         private suspend fun importSong(folder: FolderEntry, children: List<FolderEntry>) {
             scanned++
             onProgress(scanned)
             try {
                 repository.saveScanned(load(folder, children), scanId)
                 imported++
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: ChartParseException) {
-                failures += ImportFailure(folder.name, e.message ?: "mapa inválido")
+                keep(folder, e.message ?: "mapa inválido")
+            } catch (e: FileTooLargeException) {
+                keep(folder, e.message ?: "arquivo grande demais")
             } catch (e: IOException) {
-                failures += ImportFailure(folder.name, "não foi possível ler: ${e.message}")
+                keep(folder, "não foi possível ler: ${e.message}")
+            } catch (e: Exception) {
+                keep(folder, "erro inesperado: ${e.javaClass.simpleName}: ${e.message}")
             }
         }
     }
@@ -85,10 +107,8 @@ class FolderChartImporter(
         val contents = mutableMapOf<String, ByteArray>()
         for (name in READ_FILES) {
             val entry = children.firstOrNull { !it.isDirectory && it.name.equals(name, ignoreCase = true) } ?: continue
-            checkSize(entry.name, entry.sizeBytes)
-            val bytes = source.read(entry)
-            checkSize(entry.name, bytes.size.toLong())
-            contents[name] = bytes
+            if (entry.sizeBytes > maxFileBytes) throw FileTooLargeException(entry.name, maxFileBytes)
+            contents[name] = source.read(entry, maxFileBytes)
         }
         val loaded = ChartLoader.load { name -> contents[name.lowercase()] }
         return Chart(
@@ -104,17 +124,9 @@ class FolderChartImporter(
         )
     }
 
-    private fun checkSize(name: String, sizeBytes: Long) {
-        if (sizeBytes > MAX_FILE_BYTES) {
-            val megabytes = sizeBytes / BYTES_PER_MB
-            throw ChartParseException("$name grande demais ($megabytes MB)")
-        }
-    }
-
     companion object {
         const val MAX_FILE_BYTES = 16L * 1024 * 1024
         const val MAX_DEPTH = 8
-        private const val BYTES_PER_MB = 1024L * 1024
         private val NOTES_FILES = setOf("notes.chart", "notes.mid")
         private val READ_FILES = listOf("notes.chart", "notes.mid", "song.ini")
 

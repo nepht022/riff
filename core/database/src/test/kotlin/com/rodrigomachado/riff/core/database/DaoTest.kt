@@ -115,4 +115,17 @@ class DaoTest {
         miss = 0,
         playedAtEpochMs = 0,
     )
+
+    @Test
+    fun keepFolderRenewsTheFolderAndItsSubfoldersOnly() = runTest {
+        val base = "content://tree/primary%3ACharts/document/primary%3ACharts%2FB"
+        db.chartDao().replace(chart("b").copy(folderUri = base, lastSeenScanId = 1), emptyList())
+        db.chartDao().replace(chart("b-sub").copy(folderUri = "$base%2FDentro", lastSeenScanId = 1), emptyList())
+        db.chartDao().replace(chart("b2").copy(folderUri = "${base}2", lastSeenScanId = 1), emptyList())
+
+        db.chartDao().keepFolder(base, scanId = 2)
+        db.chartDao().deleteNotSeenIn(scanId = 2)
+
+        assertEquals(setOf("b", "b-sub"), db.chartDao().observeAll().first().map { it.chart.id }.toSet())
+    }
 }

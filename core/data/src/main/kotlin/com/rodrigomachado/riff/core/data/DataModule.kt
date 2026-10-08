@@ -47,5 +47,11 @@ object DataProvidesModule {
         source: FolderSource,
         repository: ChartRepository,
         @IoDispatcher dispatcher: CoroutineDispatcher,
-    ): ChartImporter = FolderChartImporter(source, repository, dispatcher, System::currentTimeMillis)
+    ): ChartImporter = FolderChartImporter(
+        source,
+        repository,
+        dispatcher,
+        FolderChartImporter.MAX_FILE_BYTES,
+        System::currentTimeMillis,
+    )
 }

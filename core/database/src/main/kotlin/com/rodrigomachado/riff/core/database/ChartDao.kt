@@ -21,6 +21,17 @@ abstract class ChartDao {
         insertDifficulties(difficulties)
     }
 
+    /**
+     * Renova os mapas da pasta e das subpastas. Prefixo exato (sem LIKE, porque o URI do SAF tem `%`);
+     * a subpasta começa com `/` ou com `%2F` (barra codificada do SAF).
+     */
+    @Query(
+        "UPDATE charts SET lastSeenScanId = :scanId WHERE folderUri = :folderUri " +
+            "OR substr(folderUri, 1, length(:folderUri) + 1) = :folderUri || '/' " +
+            "OR substr(folderUri, 1, length(:folderUri) + 3) = :folderUri || '%2F'",
+    )
+    abstract suspend fun keepFolder(folderUri: String, scanId: Long)
+
     @Query("DELETE FROM charts WHERE lastSeenScanId != :scanId")
     abstract suspend fun deleteNotSeenIn(scanId: Long)
 

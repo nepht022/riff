@@ -16,7 +16,10 @@ object TextNormalizer {
     )
     private val QUALIFIER_AFTER_DASH = Regex("""\s+-\s+.*\b(?:$QUALIFIERS)\b.*$""", RegexOption.IGNORE_CASE)
     private val DIACRITICS = Regex("\\p{Mn}+")
-    private val NOT_ALPHANUMERIC = Regex("[^a-z0-9]+")
+
+    // Letras e números de qualquer escrita (japonês, cirílico...), para nomes não latinos não sumirem.
+    // Letras e números de qualquer escrita (japonês, cirílico...), para nomes não latinos não sumirem.
+    private val NOT_ALPHANUMERIC = Regex("[^\\p{L}\\p{N}]+")
 
     fun normalize(text: String): String {
         val withoutExtras = text

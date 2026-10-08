@@ -87,4 +87,20 @@ class TrackMatcherTest {
         )
         assertEquals("b", TrackMatcher.bestMatch(TrackQuery("Bohemian Rhapsody", "Queen", null), charts)?.chart?.id)
     }
+
+    @Test
+    fun nonLatinNamesAreComparedInsteadOfVanishing() {
+        // Mesmo título, artistas diferentes em japonês: não pode casar como se os artistas fossem iguais.
+        val result = TrackMatcher.bestMatch(TrackQuery("Lemon", "米津玄師", null), listOf(chart("a", "Lemon", "ヨルシカ")))
+        assertNotEquals(MatchKind.AUTOMATIC, result?.kind)
+        assertEquals(
+            MatchKind.AUTOMATIC,
+            TrackMatcher.bestMatch(TrackQuery("Lemon", "米津玄師", null), listOf(chart("b", "Lemon", "米津玄師")))?.kind,
+        )
+    }
+
+    @Test
+    fun namesThatNormalizeToNothingNeverMatch() {
+        assertNull(TrackMatcher.bestMatch(TrackQuery("!!!", "???", null), listOf(chart("a", "...", "---"))))
+    }
 }

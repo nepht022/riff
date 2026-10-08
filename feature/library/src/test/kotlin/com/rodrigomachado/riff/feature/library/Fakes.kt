@@ -31,6 +31,8 @@ class FakeChartRepository : ChartRepository {
     }
 
     override suspend fun removeNotSeenIn(scanId: Long) = Unit
+
+    override suspend fun keepFolder(folderUri: String, scanId: Long) = Unit
 }
 
 class FakeLibraryFolderStore(initial: String? = null) : LibraryFolderStore {

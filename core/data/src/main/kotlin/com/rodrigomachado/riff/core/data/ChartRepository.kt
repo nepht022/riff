@@ -12,4 +12,10 @@ interface ChartRepository {
 
     /** Apaga os mapas que não apareceram na importação [scanId] (pastas que sumiram). */
     suspend fun removeNotSeenIn(scanId: Long)
+
+    /**
+     * Marca como vistos na importação [scanId] os mapas da pasta [folderUri] e das subpastas.
+     * Usado quando a pasta não pôde ser lida, para a limpeza não apagar o que já estava importado.
+     */
+    suspend fun keepFolder(folderUri: String, scanId: Long)
 }

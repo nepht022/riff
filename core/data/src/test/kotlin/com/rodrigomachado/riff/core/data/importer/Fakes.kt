@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.data.importer
 
 import com.rodrigomachado.riff.core.data.ChartRepository
+import com.rodrigomachado.riff.core.data.folder.FileTooLargeException
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.folder.FolderEntry
 import com.rodrigomachado.riff.core.data.folder.FolderSource
@@ -14,6 +15,7 @@ class FakeFolderSource : FolderSource {
     private val files = mutableMapOf<String, ByteArray>()
     private val declaredSizes = mutableMapOf<String, Long>()
     val revoked = mutableSetOf<String>()
+    val readFailures = mutableMapOf<String, Exception>()
     val reads = mutableListOf<String>()
 
     fun file(path: String, content: String) = file(path, content.toByteArray())
@@ -41,9 +43,12 @@ class FakeFolderSource : FolderSource {
         }
     }
 
-    override suspend fun read(file: FolderEntry): ByteArray {
+    override suspend fun read(file: FolderEntry, maxBytes: Long): ByteArray {
         reads += file.uri
-        return files.getValue(file.uri)
+        readFailures[file.uri]?.let { throw it }
+        val content = files.getValue(file.uri)
+        if (content.size > maxBytes) throw FileTooLargeException(file.name, maxBytes)
+        return content
     }
 }
 
@@ -57,6 +62,14 @@ class FakeChartRepository : ChartRepository {
 
     override suspend fun saveScanned(chart: Chart, scanId: Long) {
         stored.value = stored.value + (chart.id to (chart to scanId))
+    }
+
+    override suspend fun keepFolder(folderUri: String, scanId: Long) {
+        stored.value = stored.value.mapValues { (_, entry) ->
+            val (chart, seen) = entry
+            val inside = chart.folderUri == folderUri || chart.folderUri.startsWith("$folderUri/")
+            chart to if (inside) scanId else seen
+        }
     }
 
     override suspend fun removeNotSeenIn(scanId: Long) {
