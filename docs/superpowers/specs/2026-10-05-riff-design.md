@@ -2,6 +2,8 @@
 
 Data: 2026-10-05 · Status: aprovado em conversa, aguardando revisão do documento
 
+> **Identidade visual:** definida em `2026-10-07-identidade-visual-design.md` (tema escuro único "Pôster de turnê", sem Dynamic Color). Ela prevalece sobre qualquer menção a tema claro ou Dynamic Color neste documento.
+
 ## 1. Objetivo
 
 App Android de ritmo, no estilo Guitar Hero, em que o jogador toca junto a música que está tocando no Spotify. As notas vêm de mapas do Clone Hero que o próprio usuário importa.
@@ -14,10 +16,10 @@ App Android de ritmo, no estilo Guitar Hero, em que o jogador toca junto a músi
 ### MVP
 1. **Conexão com o Spotify** via App Remote SDK e tela "Tocando agora" com a faixa atual.
 2. **Importação de mapas do Clone Hero:** o usuário escolhe uma pasta pelo seletor do Android (Storage Access Framework). Cada subpasta com `song.ini` e `notes.chart` ou `notes.mid` vira um mapa. O casamento com a faixa do Spotify é automático, com confirmação ou escolha manual quando a confiança é baixa.
-3. **Gameplay:** 5 trilhas, o jogador toca a trilha na linha de acerto. O jogo julga cada toque como Perfeito, Bom ou Erro, conta combo, aplica multiplicador (1x a 4x, sobe a cada 10 acertos seguidos) e suporta notas longas. Segue pausa e troca de faixa do Spotify.
+3. **Gameplay:** 5 trilhas, o jogador toca a trilha na linha de acerto. O jogo julga cada toque como Perfeito, Bom ou Erro, conta combo, aplica multiplicador (1x a 4x, sobe a cada 10 acertos seguidos) e suporta notas longas. Segue pausa e troca de faixa do Spotify. Visual de palco com gemas e botões 3D, chama no acerto e sons de acerto e erro (veja `2026-10-07-identidade-visual-design.md`).
 4. **Calibração:** um offset global de áudio, medido com uma batida de referência tocada pelo próprio app, mais um ajuste fino opcional por música.
 5. **Resultado e histórico:** a melhor pontuação por música e dificuldade.
-6. **Configurações:** velocidade das notas, modo canhoto (trilhas espelhadas) e dificuldade padrão.
+6. **Configurações:** velocidade das notas, modo canhoto (trilhas espelhadas), dificuldade padrão e volume dos efeitos sonoros.
 
 ### Fora do MVP
 Star power, multiplayer, download de mapas da internet, geração automática de notas, input de deslizar ou palhetar, iOS, conta e nuvem, Crashlytics e publicação na Play Store.
@@ -50,7 +52,7 @@ Clean Architecture (data / domain / ui) com MVVM e estado unidirecional: cada te
 | `:core:data` | Android lib | Repositórios, importação e casamento entre faixa e mapa |
 | `:core:database` | Android lib | Room |
 | `:core:datastore` | Android lib | DataStore de preferências |
-| `:core:ui` | Android lib | Design system (tema, cores, tipografia, componentes) |
+| `:core:ui` | Android lib | Design system "Pôster de turnê" (tema escuro único, tipografia, componentes e peças de desenho da pista) |
 | `build-logic/` | Gradle | Convention plugins |
 
 `:core:chart` e `:core:game` são Kotlin puro: a lógica crítica de tempo roda em testes JVM rápidos, sem emulador.
@@ -100,7 +102,7 @@ data class ScoreRecord(val id: Long, val chartId: String, val difficulty: Diffic
                        val accuracy: Float, val maxCombo: Int, val perfect: Int, val good: Int,
                        val miss: Int, val playedAtEpochMs: Long)
 data class Settings(val audioOffsetMs: Int, val noteSpeed: Float, val leftHanded: Boolean,
-                    val defaultDifficulty: Difficulty)
+                    val defaultDifficulty: Difficulty, val sfxVolume: Float /* 0..1, padrão 0,6 */)
 ```
 
 `Chart.id` é o hash SHA-1 do arquivo de notas, então reimportar o mesmo mapa não duplica nada.
