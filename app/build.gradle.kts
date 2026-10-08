@@ -21,7 +21,10 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(project(":core:model"))
     implementation(project(":core:ui"))
     implementation(project(":feature:library"))
+    implementation(project(":feature:gameplay"))
+    implementation(project(":feature:results"))
     implementation(libs.androidx.navigation.compose)
 }
