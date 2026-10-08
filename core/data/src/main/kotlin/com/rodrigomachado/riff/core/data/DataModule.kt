@@ -44,6 +44,12 @@ abstract class DataBindsModule {
 
     @Binds
     abstract fun folderAccess(impl: SafFolderAccess): FolderAccess
+
+    @Binds
+    abstract fun trackMatchRepository(impl: RoomTrackMatchRepository): TrackMatchRepository
+
+    @Binds
+    abstract fun nowPlayingRepository(impl: SpotifyNowPlayingRepository): NowPlayingRepository
 }
 
 @Module

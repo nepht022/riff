@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":core:chart"))
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
+    implementation(project(":core:spotify"))
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)
