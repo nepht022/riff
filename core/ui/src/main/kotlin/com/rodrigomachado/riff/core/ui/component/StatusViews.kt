@@ -4,10 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +14,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.rodrigomachado.riff.core.ui.R
+import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 object StatusViewsTestTags {
@@ -25,9 +24,14 @@ object StatusViewsTestTags {
 @Composable
 fun LoadingState(modifier: Modifier = Modifier, message: String? = null) {
     CenteredColumn(modifier) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = RiffColors.Paper)
         if (message != null) {
-            Text(message, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = RiffColors.PaperDim,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -41,15 +45,15 @@ fun EmptyState(
     onAction: (() -> Unit)? = null,
 ) {
     CenteredColumn(modifier) {
-        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = RiffColors.Paper, textAlign = TextAlign.Center)
         Text(
             message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = RiffColors.PaperDim,
             textAlign = TextAlign.Center,
         )
         if (actionLabel != null && onAction != null) {
-            Button(onClick = onAction) { Text(actionLabel) }
+            PosterButton(actionLabel, onClick = onAction)
         }
     }
 }
@@ -57,10 +61,17 @@ fun EmptyState(
 @Composable
 fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     CenteredColumn(modifier) {
-        Text(message, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-        OutlinedButton(onClick = onRetry, modifier = Modifier.testTag(StatusViewsTestTags.RETRY)) {
-            Text(stringResource(R.string.core_ui_retry))
-        }
+        Text(
+            message,
+            style = MaterialTheme.typography.titleMedium,
+            color = RiffColors.Paper,
+            textAlign = TextAlign.Center,
+        )
+        PosterButton(
+            stringResource(R.string.core_ui_retry),
+            onClick = onRetry,
+            modifier = Modifier.testTag(StatusViewsTestTags.RETRY),
+        )
     }
 }
 
