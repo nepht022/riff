@@ -30,7 +30,8 @@ class SongClock(private val timeSource: TimeSource, private val offsetMs: Long =
     fun sync(positionMs: Long, isPaused: Boolean, capturedAtMs: Long) {
         val shownAtCapture = rawAt(capturedAtMs) + residualMs
         val drift = positionMs - shownAtCapture
-        val hardReset = !synced || isPaused != paused || abs(drift) >= HARD_RESET_THRESHOLD_MS
+        // Pausado, o tempo fica congelado: qualquer posição nova vale na hora, sem suavização.
+        val hardReset = !synced || isPaused || isPaused != paused || abs(drift) >= HARD_RESET_THRESHOLD_MS
         anchorPositionMs = positionMs
         anchorAtMs = capturedAtMs
         paused = isPaused

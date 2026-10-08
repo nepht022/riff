@@ -80,4 +80,14 @@ class SongClockTest {
         assertEquals(1_520L, clock.positionMs())
         assertEquals(true, clock.isPaused)
     }
+
+    @Test
+    fun newPositionWhilePausedAppliesImmediatelyAndStaysFrozen() {
+        clock.sync(positionMs = 1_000, isPaused = true, capturedAtMs = 0)
+        time.now = 500
+        clock.sync(positionMs = 1_040, isPaused = true, capturedAtMs = 500) // desvio pequeno, ainda pausado
+        assertEquals(1_040L, clock.positionMs())
+        time.now = 2_000
+        assertEquals(1_040L, clock.positionMs())
+    }
 }
