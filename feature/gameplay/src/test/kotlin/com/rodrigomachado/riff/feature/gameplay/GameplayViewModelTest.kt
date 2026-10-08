@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.gameplay
 
 import androidx.lifecycle.SavedStateHandle
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
+import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.PlayableChart
 import com.rodrigomachado.riff.core.model.Chart
@@ -72,7 +73,7 @@ class GameplayViewModelTest {
     )
 
     private fun playable(audio: String? = "raiz/a/song.ogg") =
-        PlayableChart(chart, Difficulty.EXPERT, listOf(note(1_000), note(2_000)), audio)
+        PlayableChart(chart, Difficulty.EXPERT, listOf(note(1_000), note(2_000)), audio?.let { ChartAudio.Single(it) })
 
     @Test
     fun loadsPreparesTheSongAndStartsPlaying() = runTest {

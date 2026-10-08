@@ -37,25 +37,62 @@ class FolderChartTrackLoaderTest {
         val playable = loader().load("id", Difficulty.EXPERT)
 
         assertEquals(listOf(600L), playable.notes.map { it.timeMs })
-        assertEquals("raiz/M/song.ogg", playable.audioUri)
+        assertEquals(ChartAudio.Single("raiz/M/song.ogg"), playable.audio)
     }
 
     @Test
-    fun findsTheAudioIgnoringCaseAndPrefersTheFullSong() = runTest {
+    fun guitarWithTheRestOfTheBandBecomesStemsIgnoringCase() = runTest {
         source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
         source.file("raiz/M/Guitar.ogg", "guitarra")
         source.file("raiz/M/SONG.MP3", "música")
+        source.file("raiz/M/drums_1.ogg", "bateria")
+        source.file("raiz/M/bass.opus", "baixo")
         registerChart("raiz/M")
 
-        assertEquals("raiz/M/SONG.MP3", loader().load("id", Difficulty.EXPERT).audioUri)
+        assertEquals(
+            ChartAudio.Stems(
+                guitarUri = "raiz/M/Guitar.ogg",
+                backingUris = listOf("raiz/M/SONG.MP3", "raiz/M/bass.opus", "raiz/M/drums_1.ogg"),
+                fallbackUri = "raiz/M/SONG.MP3",
+            ),
+            loader().load("id", Difficulty.EXPERT).audio,
+        )
     }
 
     @Test
-    fun folderWithoutAudioHasNoAudioUri() = runTest {
+    fun stemsWithoutSongFallBackToTheGuitar() = runTest {
+        source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/M/guitar.ogg", "guitarra")
+        source.file("raiz/M/rhythm.ogg", "base")
+        registerChart("raiz/M")
+
+        assertEquals("raiz/M/guitar.ogg", loader().load("id", Difficulty.EXPERT).audio?.singleUri)
+    }
+
+    @Test
+    fun onlyTheSongIsASingleFile() = runTest {
+        source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/M/song.wav", "música")
+        registerChart("raiz/M")
+
+        assertEquals(ChartAudio.Single("raiz/M/song.wav"), loader().load("id", Difficulty.EXPERT).audio)
+    }
+
+    @Test
+    fun theGuitarAloneIsASingleFile() = runTest {
+        source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/M/guitar.mp3", "guitarra")
+        registerChart("raiz/M")
+
+        assertEquals(ChartAudio.Single("raiz/M/guitar.mp3"), loader().load("id", Difficulty.EXPERT).audio)
+    }
+
+    @Test
+    fun folderWithoutAudioHasNoAudio() = runTest {
         source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
         registerChart("raiz/M")
 
-        assertNull(loader().load("id", Difficulty.EXPERT).audioUri)
+        assertNull(loader().load("id", Difficulty.EXPERT).audio)
     }
 
     @Test

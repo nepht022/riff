@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.data.game
 
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.IoDispatcher
+import com.rodrigomachado.riff.core.data.folder.FolderEntry
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.data.importer.ChartFolderReader
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
@@ -12,8 +13,22 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/** Áudio da pasta do mapa: um arquivo só, ou a guitarra separada do resto da banda. */
+sealed interface ChartAudio {
+    /** O que tocar sem as faixas separadas: song.* (ou a guitarra, se for a única). */
+    val singleUri: String
+
+    data class Single(val uri: String) : ChartAudio {
+        override val singleUri: String get() = uri
+    }
+
+    data class Stems(val guitarUri: String, val backingUris: List<String>, val fallbackUri: String) : ChartAudio {
+        override val singleUri: String get() = fallbackUri
+    }
+}
+
 /** Mapa pronto para jogar: notas da dificuldade escolhida e o áudio da pasta, se houver. */
-data class PlayableChart(val chart: Chart, val difficulty: Difficulty, val notes: List<Note>, val audioUri: String?)
+data class PlayableChart(val chart: Chart, val difficulty: Difficulty, val notes: List<Note>, val audio: ChartAudio?)
 
 class ChartNotFoundException(message: String) : Exception(message)
 
@@ -35,22 +50,46 @@ class FolderChartTrackLoader @Inject constructor(
         val children = source.listChildren(chart.folderUri)
         val loaded = ChartFolderReader.read(source, children, FolderChartImporter.MAX_FILE_BYTES)
         val notes = loaded.tracks[difficulty] ?: throw ChartNotFoundException("mapa $chartId sem $difficulty")
-        val audio = AUDIO_NAMES.firstNotNullOfOrNull { name ->
-            children.firstOrNull { !it.isDirectory && it.name.equals(name, ignoreCase = true) }
+        PlayableChart(chart, difficulty, notes, audioOf(children.filter { !it.isDirectory }))
+    }
+
+    private fun audioOf(files: List<FolderEntry>): ChartAudio? {
+        fun find(name: String) = EXTENSIONS.firstNotNullOfOrNull { extension ->
+            files.firstOrNull { it.name.equals("$name.$extension", ignoreCase = true) }
         }
-        PlayableChart(chart, difficulty, notes, audio?.uri)
+        val song = find("song")
+        val guitar = find("guitar")
+        val backing = BACKING_NAMES.mapNotNull(::find)
+        return when {
+            guitar != null && backing.isNotEmpty() ->
+                ChartAudio.Stems(guitar.uri, backing.map { it.uri }, fallbackUri = song?.uri ?: guitar.uri)
+
+            song != null -> ChartAudio.Single(song.uri)
+
+            guitar != null -> ChartAudio.Single(guitar.uri)
+
+            else -> null
+        }
     }
 
     private companion object {
-        /** Música completa primeiro; a faixa da guitarra serve se não houver outra. */
-        val AUDIO_NAMES = listOf(
-            "song.ogg",
-            "song.opus",
-            "song.mp3",
-            "song.wav",
-            "guitar.ogg",
-            "guitar.opus",
-            "guitar.mp3",
+        val EXTENSIONS = listOf("ogg", "opus", "mp3", "wav")
+
+        /** Nomes das faixas do Clone Hero, menos a guitarra; `song` primeiro. */
+        val BACKING_NAMES = listOf(
+            "song",
+            "rhythm",
+            "bass",
+            "drums",
+            "drums_1",
+            "drums_2",
+            "drums_3",
+            "drums_4",
+            "vocals",
+            "vocals_1",
+            "vocals_2",
+            "keys",
+            "crowd",
         )
     }
 }

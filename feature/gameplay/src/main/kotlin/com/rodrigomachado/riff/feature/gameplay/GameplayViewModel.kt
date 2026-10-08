@@ -79,7 +79,7 @@ class GameplayViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // cada falha vira uma explicação na tela
     private suspend fun load(): GameplayUiState = try {
         val playable = loader.load(chartId, difficulty)
-        val songUri = spotifyTrackUri ?: playable.audioUri ?: throw NoAudioException()
+        val songUri = spotifyTrackUri ?: playable.audio?.singleUri ?: throw NoAudioException()
         val settings = settingsRepository.settings.first()
         val factory = if (spotifyTrackUri != null) spotifyPlayers else songPlayers
         val songPlayer = factory.create().also { player = it }
