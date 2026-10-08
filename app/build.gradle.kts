@@ -26,5 +26,6 @@ dependencies {
     implementation(project(":feature:library"))
     implementation(project(":feature:gameplay"))
     implementation(project(":feature:results"))
+    implementation(project(":feature:nowplaying"))
     implementation(libs.androidx.navigation.compose)
 }

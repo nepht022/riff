@@ -20,3 +20,10 @@ fun dropUnlessResumed(block: () -> Unit): () -> Unit {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     return { if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) block() }
 }
+
+/** Igual ao de dois parâmetros, para ações com um parâmetro. */
+@Composable
+fun <A> dropUnlessResumed(block: (A) -> Unit): (A) -> Unit {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    return { a -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) block(a) }
+}

@@ -39,4 +39,22 @@ class DropUnlessResumedTest {
 
         assertEquals(listOf("a" to 1), calls)
     }
+
+    @Test
+    fun singleParameterActionsAreDroppedToo() {
+        val calls = mutableListOf<String>()
+        lateinit var action: (String) -> Unit
+        owner.registry.currentState = Lifecycle.State.RESUMED
+        composeRule.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides owner) {
+                action = dropUnlessResumed { a: String -> calls += a }
+            }
+        }
+
+        composeRule.runOnIdle { action("a") }
+        owner.registry.currentState = Lifecycle.State.STARTED
+        composeRule.runOnIdle { action("b") }
+
+        assertEquals(listOf("a"), calls)
+    }
 }
