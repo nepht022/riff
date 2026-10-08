@@ -85,6 +85,7 @@ class AppRemoteSpotify @Inject constructor(
             return
         }
         connectWhenVisible = false
+        Log.i(TAG, "Conectando ao Spotify")
         val params = ConnectionParams.Builder(config.clientId)
             .setRedirectUri(config.redirectUri)
             // O pedido do próprio SDK sai do Spotify em segundo plano e o Android 14+ bloqueia; sem ele a falha
@@ -96,6 +97,7 @@ class AppRemoteSpotify @Inject constructor(
             params,
             object : Connector.ConnectionListener {
                 override fun onConnected(appRemote: SpotifyAppRemote) {
+                    Log.i(TAG, "Conectado ao Spotify")
                     remote = appRemote
                     reconnectAttempt = 0
                     connectionState.value = SpotifyConnection.Connected

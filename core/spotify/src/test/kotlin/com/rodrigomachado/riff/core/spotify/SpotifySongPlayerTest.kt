@@ -167,4 +167,19 @@ class SpotifySongPlayerTest {
         finished.release()
         assertEquals(listOf("play:$ours"), remote.commands)
     }
+
+    @Test
+    fun resumingWhileSpotifyReconnectsStaysPaused() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 30_000))
+        remote.connection.value = SpotifyConnection.Failed(SpotifyError.DISCONNECTED)
+        emit(null)
+
+        player.play() // "Continuar" antes de a conexão voltar
+
+        assertFalse(player.isPlaying)
+        assertEquals(listOf("play:$ours"), remote.commands)
+    }
 }

@@ -64,6 +64,8 @@ class SpotifySongPlayer(
 
     override fun play() {
         val uri = trackUri ?: return
+        // Sem conexão o comando se perderia e o jogo andaria sem música: continua pausado até ela voltar.
+        if (remote.connection.value != SpotifyConnection.Connected) return
         val now = nowMs()
         lastCommandAtMs = now
         if (!started) {
