@@ -7,6 +7,7 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("riff.android.library.compose")
             pluginManager.apply("riff.android.hilt")
+            pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
             dependencies {
                 add("implementation", project(":core:ui"))
                 add("implementation", project(":core:model"))
@@ -14,6 +15,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", lib("androidx-lifecycle-viewmodel-compose"))
                 add("implementation", lib("androidx-lifecycle-runtime-compose"))
                 add("implementation", lib("androidx-hilt-lifecycle-viewmodel-compose"))
+                add("implementation", lib("androidx-navigation-compose"))
+                add("implementation", lib("kotlinx-serialization-core"))
                 add("testImplementation", lib("junit4"))
                 add("testImplementation", lib("kotlinx-coroutines-test"))
                 add("testImplementation", lib("turbine"))
