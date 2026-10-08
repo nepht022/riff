@@ -34,6 +34,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
+import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
@@ -161,12 +162,5 @@ private fun ImportReportCard(report: ImportReport, onDismiss: () -> Unit) {
 
 /** Carimbo com a dificuldade mais alta do mapa. */
 private fun difficultyBadge(difficulty: Difficulty): @Composable () -> Unit = {
-    StatusBadge(stringResource(difficulty.label()), BadgeTone.NEUTRAL)
-}
-
-private fun Difficulty.label(): Int = when (this) {
-    Difficulty.EASY -> R.string.library_difficulty_easy
-    Difficulty.MEDIUM -> R.string.library_difficulty_medium
-    Difficulty.HARD -> R.string.library_difficulty_hard
-    Difficulty.EXPERT -> R.string.library_difficulty_expert
+    StatusBadge(stringResource(difficultyLabel(difficulty.ordinal)), BadgeTone.NEUTRAL)
 }

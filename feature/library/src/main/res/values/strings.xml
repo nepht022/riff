@@ -21,8 +21,4 @@
     </plurals>
     <string name="library_report_ok">OK</string>
     <string name="library_unknown_artist">Artista desconhecido</string>
-    <string name="library_difficulty_easy">Fácil</string>
-    <string name="library_difficulty_medium">Médio</string>
-    <string name="library_difficulty_hard">Difícil</string>
-    <string name="library_difficulty_expert">Expert</string>
 </resources>

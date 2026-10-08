@@ -1,0 +1,11 @@
+<resources>
+    <string name="results_new_best">NEW BEST</string>
+    <string name="results_accuracy">Accuracy</string>
+    <string name="results_max_combo">Best combo</string>
+    <string name="results_perfect">Perfect</string>
+    <string name="results_good">Good</string>
+    <string name="results_miss">Misses</string>
+    <string name="results_play_again">Play again</string>
+    <string name="results_library">Library</string>
+    <string name="results_missing">This result no longer exists.</string>
+</resources>
