@@ -1,0 +1,66 @@
+package com.rodrigomachado.riff.core.database
+
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.Relation
+
+@Entity(tableName = "charts")
+data class ChartEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val artist: String,
+    val album: String?,
+    val charter: String?,
+    val durationMs: Long?,
+    val folderUri: String,
+    val format: String,
+    /** Importação em que o mapa foi visto por último; os não vistos na mais recente são apagados. */
+    val lastSeenScanId: Long,
+)
+
+@Entity(
+    tableName = "chart_difficulties",
+    primaryKeys = ["chartId", "difficulty"],
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("chartId")],
+)
+data class ChartDifficultyEntity(val chartId: String, val difficulty: String)
+
+data class ChartWithDifficulties(
+    @Embedded val chart: ChartEntity,
+    @Relation(parentColumn = "id", entityColumn = "chartId") val difficulties: List<ChartDifficultyEntity>,
+)
+
+@Entity(
+    tableName = "track_matches",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("chartId")],
+)
+data class TrackMatchEntity(
+    @PrimaryKey val spotifyTrackUri: String,
+    val chartId: String,
+    val confidence: Float,
+    val isManual: Boolean,
+    val trackOffsetMs: Int,
+)
+
+@Entity(
+    tableName = "scores",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("chartId", "difficulty")],
+)
+data class ScoreEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val chartId: String,
+    val difficulty: String,
+    val score: Long,
+    val accuracy: Float,
+    val maxCombo: Int,
+    val perfect: Int,
+    val good: Int,
+    val miss: Int,
+    val playedAtEpochMs: Long,
+)
