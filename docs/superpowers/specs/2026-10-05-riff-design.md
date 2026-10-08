@@ -57,7 +57,7 @@ Clean Architecture (data / domain / ui) com MVVM e estado unidirecional: cada te
 
 `:core:chart` e `:core:game` são Kotlin puro: a lógica crítica de tempo roda em testes JVM rápidos, sem emulador.
 
-Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:data → core:database, core:datastore, core:spotify, core:chart, core:model`. Uma feature nunca depende de outra feature.
+Dependências permitidas: `feature → core:data, core:ui, core:model`. `core:data → core:database, core:datastore, core:spotify, core:chart, core:model`. Uma feature nunca depende de outra feature. `:feature:gameplay` também depende de `:core:game` (motor) e `:core:audio` (player e sons).
 
 ### Sincronização (a parte crítica)
 
@@ -166,7 +166,7 @@ GitHub Actions a cada PR: ktlint, Detekt, Lint, testes unitários, Kover e `asse
 2. `:core:model` e `:core:chart` (parsers), com testes.
 3. `:core:game` (relógio, julgamento, pontuação), com testes.
 4. `:core:database`, `:core:datastore`, importação e casamento em `:core:data`, e a tela `:feature:library`.
-5. `:feature:gameplay` + `:feature:results`, jogáveis com um relógio local (sem Spotify), para validar a sensação do jogo.
+5. `:feature:gameplay` + `:feature:results`, jogáveis com um relógio local (sem Spotify), para validar a sensação do jogo. Implementado com o áudio da pasta do mapa (`song.*` ou `guitar.*`); a partida termina no fim do áudio ou 3 s depois da última nota julgada.
 6. `:core:spotify` + `:feature:nowplaying`: sincronização real.
 7. `:feature:calibration` + `:feature:settings`.
 8. Polimento: Baseline Profile e README final.
