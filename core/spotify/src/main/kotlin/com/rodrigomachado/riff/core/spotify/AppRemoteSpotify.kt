@@ -35,9 +35,9 @@ import kotlin.coroutines.resume
 /**
  * [SpotifyRemote] com o App Remote SDK. Uma conexão por processo; reconecta sozinho se ela cair.
  * O pedido de autorização do Spotify só abre a partir de uma tela: a conexão usa a Activity em primeiro
- * plano e, se nenhuma estiver aberta, espera a próxima. O `showAuthView` do App Remote não abre mais o pedido
- * nas versões atuais do Spotify; sem autorização, o login da biblioteca de auth abre uma vez e, na volta,
- * a conexão é refeita.
+ * plano e, se nenhuma estiver aberta, espera a próxima. O pedido de autorização do próprio App Remote é
+ * bloqueado pelo Android atual; sem autorização, o login da biblioteca de auth abre uma vez a partir da tela
+ * do Riff e, na volta, a conexão é refeita.
  */
 @Singleton
 class AppRemoteSpotify @Inject constructor(
@@ -87,7 +87,9 @@ class AppRemoteSpotify @Inject constructor(
         connectWhenVisible = false
         val params = ConnectionParams.Builder(config.clientId)
             .setRedirectUri(config.redirectUri)
-            .showAuthView(true)
+            // O pedido do próprio SDK sai do Spotify em segundo plano e o Android 14+ bloqueia; sem ele a falha
+            // volta na hora e o login abre a partir da tela do Riff (authorize).
+            .showAuthView(false)
             .build()
         SpotifyAppRemote.connect(
             activity,
