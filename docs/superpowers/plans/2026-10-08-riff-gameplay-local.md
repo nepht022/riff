@@ -978,7 +978,7 @@ class FakeSongPlayer : SongPlayer {
 class FakeSfxPlayer : SfxPlayer {
     var hits = 0
     var misses = 0
-    var volume = -1f
+    var lastVolume = -1f
     var released = false
 
     override fun hit() {
@@ -990,7 +990,7 @@ class FakeSfxPlayer : SfxPlayer {
     }
 
     override fun setVolume(volume: Float) {
-        this.volume = volume
+        lastVolume = volume
     }
 
     override fun release() {
@@ -1371,7 +1371,7 @@ class GameplayViewModelTest {
         assertTrue(state is GameplayUiState.Ready)
         assertEquals("raiz/a/song.ogg", player.preparedUri)
         assertTrue(player.isPlaying)
-        assertEquals(0.3f, sfx.volume)
+        assertEquals(0.3f, sfx.lastVolume)
     }
 
     @Test
