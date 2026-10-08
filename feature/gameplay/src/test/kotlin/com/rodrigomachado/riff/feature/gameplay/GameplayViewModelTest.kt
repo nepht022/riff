@@ -8,6 +8,7 @@ import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -142,5 +143,45 @@ class GameplayViewModelTest {
         assertTrue(player.released)
         assertTrue(sfx.released)
         assertNull(scores.saved.firstOrNull())
+    }
+
+    @Test
+    fun pauseAndResumeAfterLeavingDoNotTouchTheReleasedPlayer() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        viewModel.release()
+        viewModel.pause()
+        viewModel.resume()
+
+        assertTrue(player.released)
+    }
+
+    @Test
+    fun goingToBackgroundWhileTheScoreIsSavedDoesNotTouchTheReleasedPlayer() = runTest {
+        loader.result = { playable() }
+        scores.gate = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.onSessionFinished()
+        viewModel.pause()
+        scores.gate!!.complete(Unit)
+
+        assertEquals(GameplayUiState.Finished(1), viewModel.uiState.value)
+    }
+
+    @Test
+    fun goingToBackgroundWhileLoadingStartsTheGamePaused() = runTest {
+        loader.result = { playable() }
+        loader.gate = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.pause()
+        loader.gate!!.complete(Unit)
+
+        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).isPaused)
+        assertEquals(false, player.isPlaying)
+        viewModel.resume()
+        assertTrue(player.isPlaying)
     }
 }

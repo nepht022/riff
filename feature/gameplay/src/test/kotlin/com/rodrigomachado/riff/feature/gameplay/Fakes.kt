@@ -15,9 +15,16 @@ class FakeSongPlayer : SongPlayer {
     var preparedUri: String? = null
     var prepareFailure: Exception? = null
     var released = false
-    override var positionMs: Long = 0
-    override var isPlaying: Boolean = false
     override var isCompleted: Boolean = false
+
+    // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
+    override var positionMs: Long = 0
+        get() = field.also { checkNotReleased() }
+
+    override var isPlaying: Boolean = false
+        get() = field.also { checkNotReleased() }
+
+    private fun checkNotReleased() = check(!released) { "player usado depois de liberado" }
 
     override suspend fun prepare(uri: String) {
         prepareFailure?.let { throw it }
@@ -25,10 +32,12 @@ class FakeSongPlayer : SongPlayer {
     }
 
     override fun play() {
+        checkNotReleased()
         isPlaying = true
     }
 
     override fun pause() {
+        checkNotReleased()
         isPlaying = false
     }
 
@@ -62,8 +71,15 @@ class FakeSfxPlayer : SfxPlayer {
 
 class FakeChartTrackLoader : com.rodrigomachado.riff.core.data.game.ChartTrackLoader {
     var result: () -> com.rodrigomachado.riff.core.data.game.PlayableChart = { error("defina o resultado") }
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
-    override suspend fun load(chartId: String, difficulty: com.rodrigomachado.riff.core.model.Difficulty) = result()
+    override suspend fun load(
+        chartId: String,
+        difficulty: com.rodrigomachado.riff.core.model.Difficulty,
+    ): com.rodrigomachado.riff.core.data.game.PlayableChart {
+        gate?.await()
+        return result()
+    }
 }
 
 class FakeSettingsRepository(settings: com.rodrigomachado.riff.core.model.Settings) :
@@ -73,8 +89,10 @@ class FakeSettingsRepository(settings: com.rodrigomachado.riff.core.model.Settin
 
 class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {
     val saved = mutableListOf<com.rodrigomachado.riff.core.model.ScoreRecord>()
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
     override suspend fun save(record: com.rodrigomachado.riff.core.model.ScoreRecord): Long {
+        gate?.await()
         saved += record
         return saved.size.toLong()
     }

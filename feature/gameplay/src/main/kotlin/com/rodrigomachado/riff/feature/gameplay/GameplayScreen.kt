@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import android.provider.Settings.Global
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -86,10 +87,7 @@ fun GameplayScreen(
             reducedMotion = rememberReducedMotion(),
             onPause = viewModel::pause,
             onResume = viewModel::resume,
-            onExit = {
-                viewModel.release()
-                onExit()
-            },
+            onExit = onExit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
             modifier = modifier,
         )
@@ -116,6 +114,8 @@ internal fun GameStage(
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
+    // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
+    BackHandler(enabled = !state.isPaused, onBack = onPause)
     if (animate) {
         LaunchedEffect(session) {
             while (isActive) {

@@ -7,11 +7,16 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class MediaSongPlayer(private val context: Context) : SongPlayer {
-    private val player = MediaPlayer()
+class MediaSongPlayer(private val context: Context, private val player: MediaPlayer = MediaPlayer()) : SongPlayer {
 
     @Volatile
     private var completed = false
+
+    // Depois de liberado o MediaPlayer lança exceção em qualquer chamada; a tela ainda pode
+    // desenhar alguns frames enquanto sai, então tudo aqui vira inofensivo.
+    @Volatile
+    private var released = false
+    private var positionAtRelease = 0L
 
     override suspend fun prepare(uri: String) = withContext(Dispatchers.IO) {
         player.setAudioAttributes(
@@ -25,17 +30,24 @@ class MediaSongPlayer(private val context: Context) : SongPlayer {
         player.prepare()
     }
 
-    override fun play() = player.start()
-
-    override fun pause() {
-        if (player.isPlaying) player.pause()
+    override fun play() {
+        if (!released) player.start()
     }
 
-    override fun release() = player.release()
+    override fun pause() {
+        if (isPlaying) player.pause()
+    }
 
-    override val positionMs: Long get() = player.currentPosition.toLong()
+    override fun release() {
+        if (released) return
+        positionAtRelease = runCatching { player.currentPosition.toLong() }.getOrDefault(0L)
+        released = true
+        player.release()
+    }
 
-    override val isPlaying: Boolean get() = player.isPlaying
+    override val positionMs: Long get() = if (released) positionAtRelease else player.currentPosition.toLong()
+
+    override val isPlaying: Boolean get() = !released && player.isPlaying
 
     override val isCompleted: Boolean get() = completed
 }

@@ -64,6 +64,9 @@ class GameplayViewModel @Inject constructor(
     private var sfx: SfxPlayer? = null
     private var finishing = false
 
+    // O app pode ir para segundo plano enquanto a música carrega: a partida começa pausada.
+    private var pauseRequested = false
+
     init {
         viewModelScope.launch { state.value = load() }
     }
@@ -86,8 +89,15 @@ class GameplayViewModel @Inject constructor(
             it.setVolume(settings.sfxVolume)
         }
         val session = GameSession(playable.notes, songPlayer, effects, timeSource, settings.audioOffsetMs.toLong())
-        session.start()
-        GameplayUiState.Ready(playable.chart.title, playable.chart.artist, difficulty, session, settings)
+        if (!pauseRequested) session.start()
+        GameplayUiState.Ready(
+            playable.chart.title,
+            playable.chart.artist,
+            difficulty,
+            session,
+            settings,
+            pauseRequested,
+        )
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -107,12 +117,16 @@ class GameplayViewModel @Inject constructor(
     private class AudioFailedException(cause: Throwable) : Exception("áudio não pôde ser preparado", cause)
 
     fun pause() {
+        if (state.value is GameplayUiState.Loading) pauseRequested = true
+        if (player == null) return // já liberado: saindo ou terminando
         val ready = state.value as? GameplayUiState.Ready ?: return
         ready.session.pause()
         state.update { ready.copy(isPaused = true) }
     }
 
     fun resume() {
+        if (state.value is GameplayUiState.Loading) pauseRequested = false
+        if (player == null) return
         val ready = state.value as? GameplayUiState.Ready ?: return
         ready.session.resume()
         state.update { ready.copy(isPaused = false) }
@@ -139,7 +153,7 @@ class GameplayViewModel @Inject constructor(
         viewModelScope.launch { state.value = GameplayUiState.Finished(scores.save(record)) }
     }
 
-    /** Para e libera o áudio. Também chamado ao sair do jogo. */
+    /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
         player?.release()
         sfx?.release()

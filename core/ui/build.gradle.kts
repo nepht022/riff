@@ -8,6 +8,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.lifecycle.runtime.compose)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)
