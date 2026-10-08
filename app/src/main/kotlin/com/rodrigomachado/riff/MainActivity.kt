@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.Modifier
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.feature.library.LibraryScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,7 +27,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
-                    CatalogScreen(Modifier.safeDrawingPadding())
+                    LibraryScreen(Modifier.safeDrawingPadding())
                 }
             }
         }

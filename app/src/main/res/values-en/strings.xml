@@ -1,11 +1,1 @@
-<resources>
-    <string name="catalog_badge_matched">Chart found</string>
-    <string name="catalog_badge_confirm">Confirm chart</string>
-    <string name="catalog_badge_no_chart">No chart</string>
-    <string name="catalog_empty_title">No charts imported</string>
-    <string name="catalog_empty_message">Import a folder with Clone Hero charts to get started.</string>
-    <string name="catalog_empty_action">Import folder</string>
-    <string name="catalog_error_message">Couldn\'t connect to Spotify.</string>
-    <string name="catalog_now_playing">Now playing on Spotify</string>
-    <string name="catalog_play">Play</string>
-</resources>
+<resources />

@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.riff.android.application.compose)
+    alias(libs.plugins.riff.android.hilt)
 }
 
 android {
@@ -21,4 +22,5 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(project(":core:ui"))
+    implementation(project(":feature:library"))
 }

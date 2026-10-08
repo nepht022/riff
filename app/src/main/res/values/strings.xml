@@ -1,12 +1,3 @@
 <resources>
     <string name="app_name" translatable="false">Riff</string>
-    <string name="catalog_badge_matched">Mapa encontrado</string>
-    <string name="catalog_badge_confirm">Confirmar mapa</string>
-    <string name="catalog_badge_no_chart">Sem mapa</string>
-    <string name="catalog_empty_title">Nenhum mapa importado</string>
-    <string name="catalog_empty_message">Importe uma pasta com mapas do Clone Hero para começar.</string>
-    <string name="catalog_empty_action">Importar pasta</string>
-    <string name="catalog_error_message">Não foi possível conectar ao Spotify.</string>
-    <string name="catalog_now_playing">Tocando agora no Spotify</string>
-    <string name="catalog_play">Jogar</string>
 </resources>
