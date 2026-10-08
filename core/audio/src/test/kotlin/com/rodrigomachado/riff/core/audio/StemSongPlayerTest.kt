@@ -1,0 +1,215 @@
+package com.rodrigomachado.riff.core.audio
+
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.IOException
+
+class StemSongPlayerTest {
+    private class FakeSource(
+        override val sampleRate: Int = 44_100,
+        override val channelCount: Int = 1,
+        private val value: Float = 0.25f,
+        private val frames: Int = 4_000,
+        private val failAfterFrames: Int = Int.MAX_VALUE,
+    ) : PcmSource {
+        var position = 0
+        var closed = false
+
+        override fun read(buffer: FloatArray, maxFrames: Int): Int {
+            if (position >= failAfterFrames) throw IllegalStateException("arquivo corrompido")
+            val count = minOf(maxFrames, frames - position)
+            for (i in 0 until count * channelCount) buffer[i] = value
+            position += count
+            return count
+        }
+
+        override fun close() {
+            closed = true
+        }
+    }
+
+    private class FakeSink : AudioSink {
+        var started = false
+        var paused = false
+        var stopped = false
+        var released = false
+        var written = 0L
+        var lastBlock = FloatArray(0)
+        override var playedFrames = 0L
+
+        override fun start() {
+            started = true
+            paused = false
+        }
+
+        override fun pause() {
+            paused = true
+        }
+
+        override fun stop() {
+            stopped = true
+        }
+
+        override fun write(buffer: FloatArray, frames: Int) {
+            lastBlock = buffer.copyOf(frames * 2)
+            written += frames
+        }
+
+        override fun release() {
+            released = true
+        }
+    }
+
+    private val sources = mutableMapOf<String, FakeSource>()
+    private val sink = FakeSink()
+    private val logged = mutableListOf<String>()
+
+    private fun player(startThread: Boolean = false) = StemSongPlayer(
+        guitarUri = "guitar.ogg",
+        backingUris = listOf("song.ogg"),
+        opener = { uri -> sources.getValue(uri) },
+        sinks = { sink },
+        log = { message, _ -> logged += message },
+        startThread = startThread,
+    )
+
+    private fun prepared(startThread: Boolean = false) = player(
+        startThread,
+    ).also { runBlocking { it.prepare("guitar.ogg") } }
+
+    @Test
+    fun guitarAndBandAreMixedIntoOneOutput() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+
+        player.play()
+        assertTrue(player.renderOnce())
+
+        assertEquals(StemSongPlayer.BLOCK_FRAMES.toLong(), sink.written)
+        assertEquals(0.5f, sink.lastBlock[0], 1e-6f)
+    }
+
+    @Test
+    fun cuttingTheGuitarLeavesTheBandAfterTheRamp() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+
+        player.setGuitarAudible(false)
+        player.renderOnce()
+        player.renderOnce() // 2.048 quadros > rampa de 1.323
+
+        assertEquals(0.25f, sink.lastBlock[sink.lastBlock.size - 2], 1e-6f)
+    }
+
+    @Test
+    fun differentSampleRatesAreRejectedAndEveryTrackIsClosed() {
+        sources["guitar.ogg"] = FakeSource(sampleRate = 44_100)
+        sources["song.ogg"] = FakeSource(sampleRate = 48_000)
+        val player = player()
+
+        assertThrows(IOException::class.java) { runBlocking { player.prepare("guitar.ogg") } }
+        assertTrue(sources.values.all { it.closed })
+        assertEquals(1, logged.size)
+    }
+
+    @Test
+    fun positionComesFromTheFramesThatWerePlayed() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+
+        sink.playedFrames = 44_100
+
+        assertEquals(1_000L, player.positionMs)
+    }
+
+    @Test
+    fun aShorterTrackEndsInSilenceAndTheSongEndsWithTheLongest() {
+        sources["guitar.ogg"] = FakeSource(frames = 100)
+        sources["song.ogg"] = FakeSource(frames = 50)
+        val player = prepared()
+        player.play()
+
+        assertTrue(player.renderOnce())
+        assertEquals(100L, sink.written)
+        assertEquals(0.5f, sink.lastBlock[10 * 2], 1e-6f)
+        assertEquals(0.25f, sink.lastBlock[70 * 2], 1e-6f)
+        assertFalse(player.renderOnce())
+        assertFalse(player.isCompleted) // escrito, mas ainda não tocado
+
+        sink.playedFrames = 100
+        assertTrue(player.isCompleted)
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun aTrackThatFailsMidSongGoesSilentAndTheRestKeepsPlaying() {
+        sources["guitar.ogg"] = FakeSource(failAfterFrames = StemSongPlayer.BLOCK_FRAMES)
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+
+        player.renderOnce()
+        assertTrue(player.renderOnce())
+
+        assertEquals(0.25f, sink.lastBlock[0], 1e-6f)
+        assertEquals(1, logged.size)
+    }
+
+    @Test
+    fun playAndPauseDriveTheOutput() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+
+        player.play()
+        assertTrue(sink.started)
+        assertTrue(player.isPlaying)
+
+        player.pause()
+        assertTrue(sink.paused)
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun releaseWhilePausedStopsTheAudioThread() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared(startThread = true)
+        player.play()
+        player.pause()
+        val thread = checkNotNull(player.audioThread)
+
+        player.release()
+
+        assertFalse(thread.isAlive)
+        assertTrue(sink.stopped)
+        assertTrue(sink.released)
+        assertTrue(sources.values.all { it.closed })
+    }
+
+    @Test
+    fun everythingIsHarmlessAfterRelease() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        sink.playedFrames = 4_410
+
+        player.release()
+        player.release()
+        player.play()
+        player.pause()
+        player.setGuitarAudible(false)
+
+        assertEquals(100L, player.positionMs)
+        assertFalse(player.isPlaying)
+        assertFalse(player.renderOnce())
+    }
+}

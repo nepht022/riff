@@ -24,4 +24,15 @@ object AudioModule {
             context,
         )
     }
+
+    @Provides
+    fun stemPlayers(@ApplicationContext context: Context): StemSongPlayerFactory =
+        StemSongPlayerFactory { guitarUri, backingUris ->
+            StemSongPlayer(
+                guitarUri,
+                backingUris,
+                opener = { uri -> MediaCodecPcmSource.open(context, uri) },
+                sinks = ::AudioTrackSink,
+            )
+        }
 }
