@@ -22,6 +22,8 @@ class GameSession(
     private val sfx: SfxPlayer,
     private val timeSource: TimeSource,
     audioOffsetMs: Long,
+    /** Falso no modo Spotify: a música inteira já está tocando, então o acerto fica em silêncio. */
+    private val hitSounds: Boolean = true,
 ) {
     val engine = GameEngine(notes)
     private val clock = SongClock(timeSource, audioOffsetMs)
@@ -91,7 +93,10 @@ class GameSession(
             return
         }
         // Com a guitarra separada, ela mesma é a resposta do acerto (como no Guitar Hero).
-        if (guitar != null) guitar.setGuitarAudible(true) else sfx.hit(lane)
+        when {
+            guitar != null -> guitar.setGuitarAudible(true)
+            hitSounds -> sfx.hit(lane)
+        }
         val now = timeSource.nowMs()
         flameStartedAt[lane] = now
         lastJudgment = judgment

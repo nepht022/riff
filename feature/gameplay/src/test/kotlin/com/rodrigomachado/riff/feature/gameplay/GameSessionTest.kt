@@ -161,4 +161,18 @@ class GameSessionTest {
 
         assertEquals(980L, session.tick())
     }
+
+    @Test
+    fun withoutHitSoundsAHitIsSilentButMissesStillSound() {
+        player.positionMs = 1_000
+        val session = GameSession(listOf(note(1_000)), player, sfx, time, audioOffsetMs = 0, hitSounds = false)
+            .also { it.start() }
+
+        session.press(0)
+        session.press(1)
+
+        assertEquals(emptyList<Int>(), sfx.hitLanes)
+        assertEquals(Judgment.PERFECT, session.lastJudgment)
+        assertEquals(1, sfx.misses)
+    }
 }

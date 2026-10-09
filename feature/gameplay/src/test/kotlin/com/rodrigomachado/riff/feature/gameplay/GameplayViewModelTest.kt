@@ -344,4 +344,32 @@ class GameplayViewModelTest {
         assertEquals(500, chartOffsets.offsets["a"])
         assertEquals(before + 5, ready.session.tick())
     }
+
+    @Test
+    fun spotifyModeHasNoHitSoundBecauseTheWholeSongIsPlaying() = runTest {
+        loader.result = { playable(audio = null) }
+        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
+        spotifyPlayer.positionMs = 1_040
+        time.now = GameSession.SYNC_INTERVAL_MS
+        state.session.tick()
+
+        state.session.press(0)
+
+        assertTrue(state.session.lastJudgment != null)
+        assertEquals(0, sfx.hits)
+    }
+
+    @Test
+    fun libraryModeKeepsTheHitSound() = runTest {
+        loader.result = { playable() }
+        val state = viewModel().uiState.value as GameplayUiState.Ready
+        player.positionMs = 1_040
+        time.now = GameSession.SYNC_INTERVAL_MS
+        state.session.tick()
+
+        state.session.press(0)
+
+        assertTrue(state.session.lastJudgment != null)
+        assertEquals(1, sfx.hits)
+    }
 }

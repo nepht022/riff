@@ -8,13 +8,13 @@ Complementa: `2026-10-05-riff-design.md` (§4 Renderização e input, áudio) e 
 O jogador não gostou do estalo de acerto. Duas mudanças:
 
 1. **Guitarra separada, como no Guitar Hero:** no modo biblioteca, quando a pasta do mapa trouxer a faixa da guitarra separada, todas as faixas tocam juntas; a guitarra some no erro e volta no acerto seguinte.
-2. **Som de acerto novo:** nos outros casos (pasta sem faixa separada e modo Spotify), o estalo vira uma nota de guitarra elétrica com distorção leve, uma nota por trilha, num volume que fica atrás da música.
+2. **Som de acerto novo:** na pasta sem faixa separada, o estalo vira uma nota de guitarra elétrica com distorção leve, uma nota por trilha, num volume que fica atrás da música.
 
-O Spotify não expõe o áudio nem faixas separadas (spec principal §3), então no modo Spotify vale só o item 2.
+O Spotify não expõe o áudio nem faixas separadas (spec principal §3). No modo Spotify o acerto fica em silêncio (decisão do usuário em 2026-10-09: a música inteira já está tocando).
 
 ## 2. Comportamento
 
-### Som de acerto (modo de um arquivo e Spotify)
+### Som de acerto (modo de um arquivo)
 
 - Timbre "crunch leve" (candidato D3 escolhido pelo usuário): corda sintetizada (Karplus-Strong), distorção leve (`tanh` com ganho 2,5) e filtro de caixa de amplificador (passa-baixas em ~4 kHz e ~5,5 kHz, passa-altas em 120 Hz e 70 Hz).
 - Uma nota por trilha, pentatônica de Mi menor: verde Mi3 (164,81 Hz), vermelha Sol3 (196,00 Hz), amarela Lá3 (220,00 Hz), azul Si3 (246,94 Hz), laranja Ré4 (293,66 Hz).

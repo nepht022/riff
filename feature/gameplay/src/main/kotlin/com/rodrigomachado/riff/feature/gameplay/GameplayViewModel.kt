@@ -100,7 +100,14 @@ class GameplayViewModel @Inject constructor(
         songOffsetMs = spotifyTrackUri?.let { trackMatches.offsetFor(it, chartId) ?: trackOffsetMs }
             ?: chartOffsets.get(chartId)
         val offset = settings.audioOffsetMs.toLong() + songOffsetMs
-        val session = GameSession(playable.notes, songPlayer, effects, timeSource, offset)
+        val session = GameSession(
+            playable.notes,
+            songPlayer,
+            effects,
+            timeSource,
+            offset,
+            hitSounds = spotifyTrackUri == null,
+        )
         if (!pauseRequested) session.start()
         GameplayUiState.Ready(
             playable.chart.title,
