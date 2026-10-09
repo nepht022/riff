@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Configurações</string>
+    <string name="settings_back">Voltar</string>
+    <string name="settings_sounds">Sons</string>
+    <string name="settings_master_volume">Volume geral</string>
+    <string name="settings_master_volume_hint">Não muda o volume do Spotify; use o volume do celular.</string>
+    <string name="settings_hit_volume">Som de acerto</string>
+    <string name="settings_miss_volume">Som de erro</string>
+    <string name="settings_game">Jogo</string>
+    <string name="settings_note_speed">Velocidade das notas</string>
+    <string name="settings_left_handed">Modo canhoto</string>
+    <string name="settings_left_handed_hint">Espelha as trilhas: a verde fica à direita.</string>
+</resources>
