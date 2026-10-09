@@ -45,4 +45,15 @@ class StageCacheTest {
         assertEquals(21f, cache.outerStroke.width) // 7 dp
         assertEquals(3f, cache.laneLineWidth) // 1 dp
     }
+
+    @Test
+    fun everyLaneHasItsGemAndButtonBrushesReadyAhead() {
+        val cache = StageCache()
+
+        for (lane in 0 until 5) {
+            assertNotSame(cache.gemCap(lane, missed = false), cache.gemCap(lane, missed = true))
+            assertNotSame(cache.fretInner(lane, pressed = true), cache.fretInner(lane, pressed = false))
+            assertSame(cache.gemCap(lane, missed = false), cache.gemCap(lane, missed = false))
+        }
+    }
 }

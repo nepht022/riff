@@ -1,15 +1,30 @@
 package com.rodrigomachado.riff.core.ui.stage
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import com.rodrigomachado.riff.core.ui.theme.LaneColors
 
 /** Trastes que cabem no array: com a velocidade mínima (0,5×) aparecem uns 11. */
 private const val MAX_FRETS = 32
 private const val OUTER_STROKE_DP = 7f
 private const val INNER_STROKE_DP = 3f
 private const val FRET_LINE_DP = 2f
+
+private const val LANES = 5
+
+/** Tampa da gema em tamanho 1: o mesmo degradê de antes, com o centro do brilho no canto de cima. */
+private fun unitGemCap(color: Color) = Brush.radialGradient(
+    0f to Color.White,
+    0.45f to color,
+    1f to lerp(color, Color.Black, 0.6f),
+    center = Offset(-0.25f, -GEM_SIDE - TILT * 0.3f),
+    radius = 0.8f,
+)
 
 /**
  * Formas e pincéis da pista prontos, para desenhar cada quadro sem alocar (spec do polimento §3). O que
@@ -64,4 +79,22 @@ class StageCache {
         fretLineWidth = FRET_LINE_DP * density
         return g
     }
+
+    private val gemCaps = Array(LANES * 2) { i ->
+        val color = LaneColors.forLane(i / 2)
+        unitGemCap(if (i % 2 == 1) color.copy(alpha = MISSED_GEM_ALPHA) else color)
+    }
+    private val fretLit = Array(LANES) {
+        Brush.radialGradient(0f to Color.White, 1f to LaneColors.forLane(it), center = Offset.Zero, radius = FRET_INNER)
+    }
+    private val fretIdle = Brush.radialGradient(
+        0f to Color(0xFF222222),
+        1f to Color(0xFF0C0C0C),
+        center = Offset.Zero,
+        radius = FRET_INNER,
+    )
+
+    internal fun gemCap(lane: Int, missed: Boolean): Brush = gemCaps[lane * 2 + if (missed) 1 else 0]
+
+    internal fun fretInner(lane: Int, pressed: Boolean): Brush = if (pressed) fretLit[lane] else fretIdle
 }

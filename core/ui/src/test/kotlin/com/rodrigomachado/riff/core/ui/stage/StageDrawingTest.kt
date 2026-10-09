@@ -6,7 +6,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
-import com.rodrigomachado.riff.core.ui.theme.LaneColors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,10 +23,11 @@ class StageDrawingTest {
     fun gemAndButtonWithZeroOrNaNRadiusDrawNothingWithoutCrashing() {
         composeRule.setContent {
             Canvas(Modifier.size(100.dp)) {
+                val cache = StageCache()
                 listOf(0f, -1f, Float.NaN).forEach { radius ->
-                    drawGem(Offset(50f, 50f), radius, LaneColors.forLane(0))
-                    drawFretButton(Offset(50f, 50f), radius, LaneColors.forLane(1), pressed = true)
-                    drawFretButton(Offset(50f, 50f), radius, LaneColors.forLane(1), pressed = false)
+                    drawGem(cache, Offset(50f, 50f), radius, lane = 0)
+                    drawFretButton(cache, Offset(50f, 50f), radius, lane = 1, pressed = true)
+                    drawFretButton(cache, Offset(50f, 50f), radius, lane = 1, pressed = false)
                 }
             }
         }

@@ -7,7 +7,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
+import com.rodrigomachado.riff.core.ui.theme.LaneColors
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
 internal val ChromeLight = Color(0xFFF4F4F4)
@@ -26,8 +28,10 @@ internal const val WEAVE_ALPHA = 0.06f
 internal const val WEAVE_LONGITUDINAL = 40
 internal const val WEAVE_STEP = 0.12f
 
-private fun chrome(left: Float, right: Float) =
-    Brush.horizontalGradient(listOf(ChromeLight, ChromeMid, ChromeLight), startX = left, endX = right)
+/** Gema perdida: só as partes coloridas esmaecem (sombra e aro cromado não). */
+const val MISSED_GEM_ALPHA = 0.4f
+internal const val GEM_SIDE = 0.32f
+internal const val FRET_INNER = 0.6f
 
 private fun DrawScope.oval(color: Color, center: Offset, rx: Float, ry: Float) =
     drawOval(color, Offset(center.x - rx, center.y - ry), Size(rx * 2, ry * 2))
@@ -79,45 +83,48 @@ private fun DrawScope.along(geometry: HighwayGeometry, fraction: Float, color: C
 }
 
 /**
- * Gema: disco visto de lado, apoiado em [center] (o ponto da trilha). [radius] é o raio horizontal.
- * Sombra, lateral colorida, aro cromado e tampa com reflexo. HOPO tem o centro da tampa mais claro.
+ * Gema: disco visto de lado, apoiado em [center] (o ponto da trilha). [radius] é o raio horizontal. Desenhada
+ * em tamanho 1 e escalada, com os pincéis prontos do [cache]: nada é criado por quadro.
  */
-fun DrawScope.drawGem(center: Offset, radius: Float, color: Color, hopo: Boolean = false) {
-    val ry = radius * TILT
-    val side = radius * 0.32f
-    val top = center - Offset(0f, side)
-    oval(Color.Black.copy(alpha = 0.6f), center + Offset(0f, side * 0.6f), radius * 1.05f, ry * 1.05f)
-    oval(lerp(color, Color.Black, 0.35f), center, radius, ry)
-    drawRect(color, Offset(center.x - radius, top.y), Size(radius * 2, side))
-    oval(chrome(center.x - radius, center.x + radius), top, radius, ry)
-    oval(
-        Brush.radialGradient(
-            0f to Color.White,
-            0.45f to color,
-            1f to lerp(color, Color.Black, 0.6f),
-            center = top + Offset(-radius * 0.25f, -ry * 0.3f),
-            radius = radius * 0.8f,
-        ),
-        top,
-        radius * 0.72f,
-        ry * 0.72f,
-    )
-    if (hopo) oval(Color.White.copy(alpha = 0.85f), top, radius * 0.32f, ry * 0.32f)
+fun DrawScope.drawGem(
+    cache: StageCache,
+    center: Offset,
+    radius: Float,
+    lane: Int,
+    missed: Boolean = false,
+    hopo: Boolean = false,
+) {
+    if (!(radius > 0f)) return // zero, negativo ou NaN: nada a desenhar
+    val base = LaneColors.forLane(lane)
+    val color = if (missed) base.copy(alpha = MISSED_GEM_ALPHA) else base
+    val top = Offset(0f, -GEM_SIDE)
+    withTransform({
+        translate(center.x, center.y)
+        scale(radius, radius, Offset.Zero)
+    }) {
+        oval(Color.Black.copy(alpha = 0.6f), Offset(0f, GEM_SIDE * 0.6f), 1.05f, TILT * 1.05f)
+        oval(lerp(color, Color.Black, 0.35f), Offset.Zero, 1f, TILT)
+        drawRect(color, Offset(-1f, top.y), Size(2f, GEM_SIDE))
+        oval(cache.chrome, top, 1f, TILT)
+        oval(cache.gemCap(lane, missed), top, 0.72f, TILT * 0.72f)
+        if (hopo) oval(Color.White.copy(alpha = 0.85f), top, 0.32f, TILT * 0.32f)
+    }
 }
 
 /** Alvo deitado na linha de acerto: anel com aro cromado e centro escuro; pressionado, acende na cor da trilha. */
-fun DrawScope.drawFretButton(center: Offset, radius: Float, color: Color, pressed: Boolean) {
-    val ry = radius * TILT
-    if (pressed) oval(color.copy(alpha = 0.35f), center, radius * 1.35f, ry * 1.6f)
-    oval(Color.Black, center + Offset(0f, ry * 0.35f), radius, ry)
-    oval(chrome(center.x - radius, center.x + radius), center, radius, ry)
-    oval(color, center, radius * 0.82f, ry * 0.82f)
-    val inner = if (pressed) {
-        Brush.radialGradient(0f to Color.White, 1f to color, center = center, radius = radius * 0.6f)
-    } else {
-        Brush.radialGradient(0f to Color(0xFF222222), 1f to Color(0xFF0C0C0C), center = center, radius = radius * 0.6f)
+fun DrawScope.drawFretButton(cache: StageCache, center: Offset, radius: Float, lane: Int, pressed: Boolean) {
+    if (!(radius > 0f)) return
+    val color = LaneColors.forLane(lane)
+    withTransform({
+        translate(center.x, center.y)
+        scale(radius, radius, Offset.Zero)
+    }) {
+        if (pressed) oval(color.copy(alpha = 0.35f), Offset.Zero, 1.35f, TILT * 1.6f)
+        oval(Color.Black, Offset(0f, TILT * 0.35f), 1f, TILT)
+        oval(cache.chrome, Offset.Zero, 1f, TILT)
+        oval(color, Offset.Zero, 0.82f, TILT * 0.82f)
+        oval(cache.fretInner(lane, pressed), Offset.Zero, FRET_INNER, TILT * FRET_INNER)
     }
-    oval(inner, center, radius * 0.6f, ry * 0.6f)
 }
 
 /** Rastro da nota longa. Brilha enquanto está sendo segurada. */

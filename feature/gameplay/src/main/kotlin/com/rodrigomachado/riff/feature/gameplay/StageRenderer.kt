@@ -17,7 +17,6 @@ import kotlin.math.min
 internal const val BASE_MS_PER_DISTANCE = 450f
 private const val GEM_RADIUS_FRACTION = 0.42f
 private const val TRAIL_WIDTH_FRACTION = 0.35f
-private const val MISSED_ALPHA = 0.4f
 private const val FRET_SPACING_MS = 500L
 private const val FLAME_WIDTH_FRACTION = 0.62f
 private const val FLAME_HEIGHT_FRACTION = 1.7f
@@ -43,12 +42,13 @@ internal fun DrawScope.drawStage(
     val range = NoteTimeline.visibleRange(notes, t - session.lookBehindMs, t + visibleMs)
     // Do fundo para a frente, para as notas mais próximas ficarem por cima.
     for (i in range.last downTo range.first) {
-        drawNote(geometry, session, i, (notes[i].timeMs - t) / msPerUnit, msPerUnit, radius, leftHanded)
+        drawNote(cache, geometry, session, i, (notes[i].timeMs - t) / msPerUnit, msPerUnit, radius, leftHanded)
     }
-    drawTargetsAndFlames(geometry, session, radius, leftHanded, reducedMotion)
+    drawTargetsAndFlames(cache, geometry, session, radius, leftHanded, reducedMotion)
 }
 
 private fun DrawScope.drawNote(
+    cache: StageCache,
     geometry: HighwayGeometry,
     session: GameSession,
     index: Int,
@@ -76,11 +76,19 @@ private fun DrawScope.drawNote(
         }
     }
     if (wasHit || head !in geometry.nearDistance..geometry.visibleDistance) return
-    val gemColor = if (judgment == Judgment.MISS) color.copy(alpha = MISSED_ALPHA) else color
-    drawGem(geometry.laneCenter(lane, head), radius * geometry.scaleAt(head), gemColor, note.isHopo)
+    // Cor pela trilha lógica (note.lane), posição pela trilha da tela (lane): no canhoto elas diferem.
+    drawGem(
+        cache,
+        geometry.laneCenter(lane, head),
+        radius * geometry.scaleAt(head),
+        note.lane,
+        missed = judgment == Judgment.MISS,
+        hopo = note.isHopo,
+    )
 }
 
 private fun DrawScope.drawTargetsAndFlames(
+    cache: StageCache,
     geometry: HighwayGeometry,
     session: GameSession,
     radius: Float,
@@ -89,7 +97,7 @@ private fun DrawScope.drawTargetsAndFlames(
 ) {
     for (lane in 0 until Note.LANE_COUNT) {
         val center = geometry.laneCenter(screenLane(lane, leftHanded), 0f)
-        drawFretButton(center, radius, LaneColors.forLane(lane), session.isPressed(lane))
+        drawFretButton(cache, center, radius, lane, session.isPressed(lane))
     }
     if (reducedMotion) return
     for (lane in 0 until Note.LANE_COUNT) {

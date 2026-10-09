@@ -54,19 +54,15 @@ class StageScreenshotTest {
                             .sortedByDescending { it.second }
                             .forEach { (lane, distance) ->
                                 drawGem(
+                                    cache,
                                     geometry.laneCenter(lane, distance),
                                     gemRadius * geometry.scaleAt(distance),
-                                    LaneColors.forLane(lane),
+                                    lane,
                                     hopo = lane == 1,
                                 )
                             }
                         for (lane in 0 until 5) {
-                            drawFretButton(
-                                geometry.laneCenter(lane, 0f),
-                                gemRadius,
-                                LaneColors.forLane(lane),
-                                pressed = lane == 2,
-                            )
+                            drawFretButton(cache, geometry.laneCenter(lane, 0f), gemRadius, lane, pressed = lane == 2)
                         }
                         val hit = geometry.laneCenter(2, 0f)
                         drawFlame(
@@ -98,11 +94,11 @@ class StageScreenshotTest {
                     Canvas(Modifier.size(360.dp, 140.dp)) {
                         val r = 34.dp.toPx()
                         val y = size.height / 2
-                        val red = LaneColors.forLane(1)
-                        drawGem(Offset(size.width * 0.14f, y), r, red)
-                        drawGem(Offset(size.width * 0.38f, y), r, red, hopo = true)
-                        drawFretButton(Offset(size.width * 0.62f, y), r, red, pressed = false)
-                        drawFretButton(Offset(size.width * 0.86f, y), r, red, pressed = true)
+                        val cache = StageCache()
+                        drawGem(cache, Offset(size.width * 0.14f, y), r, lane = 1)
+                        drawGem(cache, Offset(size.width * 0.38f, y), r, lane = 1, hopo = true)
+                        drawFretButton(cache, Offset(size.width * 0.62f, y), r, lane = 1, pressed = false)
+                        drawFretButton(cache, Offset(size.width * 0.86f, y), r, lane = 1, pressed = true)
                     }
                 }
             }
