@@ -26,8 +26,11 @@ interface AudioSink {
     /** Para de vez e desbloqueia um [write] em andamento. */
     fun stop()
 
-    /** Bloqueia até caber; [buffer] é estéreo intercalado. */
-    fun write(buffer: FloatArray, frames: Int)
+    /**
+     * Grava [frames] quadros de [buffer] (estéreo intercalado) a partir de [offsetFrames], bloqueando até caber.
+     * Devolve quantos foram gravados: menos que [frames] quando um [pause] ou [stop] interrompe a escrita.
+     */
+    fun write(buffer: FloatArray, offsetFrames: Int, frames: Int): Int
 
     val playedFrames: Long
 

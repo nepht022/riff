@@ -2,11 +2,17 @@ package com.rodrigomachado.riff.core.audio
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 
-/** Saída estéreo em PCM float. A posição da cabeça de leitura é o relógio da música. */
-class AudioTrackSink(sampleRate: Int) : AudioSink {
+/**
+ * Saída estéreo em PCM float. O relógio da música são os quadros que já saíram no alto-falante
+ * (`getTimestamp`, que desconta a latência de saída, como o MediaPlayer faz); sem timestamp, a cabeça de leitura.
+ */
+class AudioTrackSink(private val sampleRate: Int) : AudioSink {
     private val track: AudioTrack
+    private val timestamp = AudioTimestamp()
+    private var presented = 0L
 
     init {
         val format = AudioFormat.Builder()
@@ -40,16 +46,26 @@ class AudioTrackSink(sampleRate: Int) : AudioSink {
         runCatching { track.stop() }
     }
 
-    override fun write(buffer: FloatArray, frames: Int) {
-        track.write(buffer, 0, frames * 2, AudioTrack.WRITE_BLOCKING)
-    }
+    override fun write(buffer: FloatArray, offsetFrames: Int, frames: Int): Int =
+        maxOf(0, track.write(buffer, offsetFrames * 2, frames * 2, AudioTrack.WRITE_BLOCKING)) / 2
 
-    override val playedFrames: Long get() = track.playbackHeadPosition.toLong() and UINT_MASK
+    override val playedFrames: Long
+        get() {
+            val head = track.playbackHeadPosition.toLong() and UINT_MASK
+            if (track.playState == AudioTrack.PLAYSTATE_PLAYING && track.getTimestamp(timestamp)) {
+                val sinceNs = System.nanoTime() - timestamp.nanoTime
+                presented = (timestamp.framePosition + sinceNs * sampleRate / NANOS_PER_SECOND).coerceIn(0, head)
+            } else if (track.playState != AudioTrack.PLAYSTATE_PAUSED) {
+                presented = head
+            }
+            return presented
+        }
 
     override fun release() = track.release()
 
     private companion object {
         const val BUFFER_MULTIPLIER = 2
         const val UINT_MASK = 0xFFFF_FFFFL
+        const val NANOS_PER_SECOND = 1_000_000_000L
     }
 }

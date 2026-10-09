@@ -39,6 +39,10 @@ class StemSongPlayerTest {
         var released = false
         var written = 0L
         var lastBlock = FloatArray(0)
+        val writes = mutableListOf<Int>()
+
+        /** Quantos quadros a próxima escrita aceita (o AudioTrack pausado no meio devolve menos). */
+        var acceptNext: Int? = null
         override var playedFrames = 0L
 
         override fun start() {
@@ -54,9 +58,13 @@ class StemSongPlayerTest {
             stopped = true
         }
 
-        override fun write(buffer: FloatArray, frames: Int) {
-            lastBlock = buffer.copyOf(frames * 2)
-            written += frames
+        override fun write(buffer: FloatArray, offsetFrames: Int, frames: Int): Int {
+            val accepted = minOf(frames, acceptNext ?: frames)
+            acceptNext = null
+            lastBlock = buffer.copyOfRange(offsetFrames * 2, (offsetFrames + accepted) * 2)
+            written += accepted
+            writes += accepted
+            return accepted
         }
 
         override fun release() {
@@ -67,6 +75,7 @@ class StemSongPlayerTest {
     private val sources = mutableMapOf<String, FakeSource>()
     private val sink = FakeSink()
     private val logged = mutableListOf<String>()
+    private var now = 0L
 
     private fun player(startThread: Boolean = false) = StemSongPlayer(
         guitarUri = "guitar.ogg",
@@ -75,6 +84,7 @@ class StemSongPlayerTest {
         sinks = { sink },
         log = { message, _ -> logged += message },
         startThread = startThread,
+        nowMs = { now },
     )
 
     private fun prepared(startThread: Boolean = false) = player(
@@ -211,5 +221,55 @@ class StemSongPlayerTest {
         assertEquals(100L, player.positionMs)
         assertFalse(player.isPlaying)
         assertFalse(player.renderOnce())
+    }
+
+    @Test
+    fun aWriteCutShortByAPauseIsFinishedBeforeReadingMore() {
+        val guitar = FakeSource().also { sources["guitar.ogg"] = it }
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+        sink.acceptNext = 300 // o jogador pausou no meio da escrita
+
+        assertTrue(player.renderOnce())
+        assertTrue(player.renderOnce())
+
+        assertEquals(listOf(300, StemSongPlayer.BLOCK_FRAMES - 300), sink.writes)
+        assertEquals(StemSongPlayer.BLOCK_FRAMES, guitar.position) // o resto do bloco veio do mesmo bloco
+        player.renderOnce()
+        assertEquals(2L * StemSongPlayer.BLOCK_FRAMES, sink.written)
+    }
+
+    @Test
+    fun theEndIsPushedOutWithSilenceThatDoesNotCountAsMusic() {
+        sources["guitar.ogg"] = FakeSource(frames = 100)
+        sources["song.ogg"] = FakeSource(frames = 100)
+        val player = prepared()
+        player.play()
+
+        player.renderOnce()
+        assertFalse(player.renderOnce())
+
+        assertTrue("o fim precisa ser empurrado para a saída", sink.written > 100)
+        assertTrue(sink.lastBlock.all { it == 0f })
+        sink.playedFrames = 100
+        assertTrue(player.isCompleted)
+    }
+
+    @Test
+    fun aPlaybackHeadThatStopsShortOfTheEndStillEndsTheSong() {
+        sources["guitar.ogg"] = FakeSource(frames = 100)
+        sources["song.ogg"] = FakeSource(frames = 100)
+        val player = prepared()
+        player.play()
+        player.renderOnce()
+        player.renderOnce()
+
+        sink.playedFrames = 60
+        assertFalse(player.isCompleted)
+        now += StemSongPlayer.STALL_MS - 1
+        assertFalse(player.isCompleted)
+        now += 2
+        assertTrue(player.isCompleted)
     }
 }

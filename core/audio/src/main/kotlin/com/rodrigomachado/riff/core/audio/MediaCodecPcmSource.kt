@@ -136,17 +136,16 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
             extractor.selectTrack(track)
             val format = extractor.getTrackFormat(track)
             val codec = MediaCodec.createDecoderByType(checkNotNull(format.getString(MediaFormat.KEY_MIME)))
-            codec.configure(format, null, null, 0)
-            codec.start()
-            val source = MediaCodecPcmSource(extractor, codec)
             try {
-                source.prime()
-            } catch (e: IOException) {
+                codec.configure(format, null, null, 0)
+                codec.start()
+                return MediaCodecPcmSource(extractor, codec).also { it.prime() }
+            } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
+                // Formato não suportado ou decodificador quebrado: o codec não pode ficar vivo até o GC.
                 runCatching { codec.stop() }
                 runCatching { codec.release() }
                 throw e
             }
-            return source
         }
     }
 }

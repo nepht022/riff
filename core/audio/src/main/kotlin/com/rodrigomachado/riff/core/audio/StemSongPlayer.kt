@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.audio
 
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +12,7 @@ import java.io.IOException
  * faixa, mistura ([StemMixer]) e escreve numa saída só, cujos quadros tocados são o relógio. A guitarra é a
  * faixa 0 do mixer.
  */
+@Suppress("TooManyFunctions") // ciclo de vida da thread de áudio, mistura e relógio ficam juntos de propósito
 class StemSongPlayer(
     private val guitarUri: String,
     private val backingUris: List<String>,
@@ -18,6 +20,7 @@ class StemSongPlayer(
     private val sinks: AudioSinkFactory,
     private val log: (String, Throwable?) -> Unit = { message, error -> Log.w(TAG, message, error) },
     private val startThread: Boolean = true,
+    private val nowMs: () -> Long = { SystemClock.uptimeMillis() },
 ) : StemPlayer {
     private val lock = Object()
     private var sources: List<PcmSource> = emptyList()
@@ -28,6 +31,15 @@ class StemSongPlayer(
     private var available = IntArray(0)
     private var ended = BooleanArray(0)
     private val out = FloatArray(BLOCK_FRAMES * 2)
+    private val silence = FloatArray(BLOCK_FRAMES * 2)
+
+    // Parte do último bloco que a saída ainda não aceitou (a escrita foi interrompida por uma pausa).
+    private var pendingOffset = 0
+    private var pendingFrames = 0
+
+    // Cabeça de leitura parada antes do fim: o sistema às vezes segura o último pedaço do áudio.
+    private var stalledHead = -1L
+    private var stalledSinceMs = 0L
     private var sampleRate = 0
     private var writtenFrames = 0L
     private var positionAtRelease = 0L
@@ -90,29 +102,53 @@ class StemSongPlayer(
     private fun loop() {
         while (!released) {
             synchronized(lock) {
-                while (!released && (!playing || allEnded)) lock.wait()
+                while (!released && !hasWork()) lock.wait()
             }
             if (!released) renderOnce()
         }
     }
 
-    /** Lê um bloco de cada faixa, mistura e escreve. `false` quando todas as faixas acabaram. */
+    private fun hasWork(): Boolean = playing && (pendingFrames > 0 || !allEnded)
+
+    /**
+     * Grava o que sobrou do bloco anterior ou mistura um bloco novo e o grava. `false` quando não há mais nada:
+     * todas as faixas acabaram e tudo foi entregue à saída.
+     */
     internal fun renderOnce(): Boolean {
-        if (released || allEnded) return false
         val output = sink ?: return false
-        val mix = mixer ?: return false
+        if (released) return false
+        if (pendingFrames == 0 && !allEnded) mixNextBlock(output)
+        if (pendingFrames > 0) flushPending(output)
+        return pendingFrames > 0 || !allEnded
+    }
+
+    private fun mixNextBlock(output: AudioSink) {
+        val mix = mixer ?: return
         var frames = 0
         for (track in sources.indices) {
             available[track] = if (ended[track]) 0 else read(track)
             frames = maxOf(frames, available[track])
         }
-        allEnded = frames == 0
-        if (!allEnded) {
-            mix.mix(inputs, channels, available, frames, out)
-            output.write(out, frames)
-            writtenFrames += frames
+        if (frames == 0) {
+            allEnded = true
+            pushOutTheEnd(output)
+            return
         }
-        return !allEnded
+        mix.mix(inputs, channels, available, frames, out)
+        pendingOffset = 0
+        pendingFrames = frames
+    }
+
+    private fun flushPending(output: AudioSink) {
+        val written = output.write(out, pendingOffset, pendingFrames)
+        pendingOffset += written
+        pendingFrames -= written
+        writtenFrames += written
+    }
+
+    /** Silêncio depois da música, que não conta como música: empurra o último pedaço para o alto-falante. */
+    private fun pushOutTheEnd(output: AudioSink) {
+        repeat(END_SILENCE_BLOCKS) { output.write(silence, 0, BLOCK_FRAMES) }
     }
 
     @Suppress("TooGenericExceptionCaught") // decodificador quebrado no meio: a faixa vira silêncio
@@ -171,10 +207,22 @@ class StemSongPlayer(
     override val isPlaying: Boolean get() = playing && !released && !isCompleted
 
     override val isCompleted: Boolean
-        get() = allEnded && (sink?.playedFrames ?: 0) >= writtenFrames
+        get() {
+            val played = sink?.playedFrames ?: return false
+            if (!allEnded || pendingFrames > 0) return false
+            if (played >= writtenFrames) return true
+            val now = nowMs()
+            if (played != stalledHead) {
+                stalledHead = played
+                stalledSinceMs = now
+            }
+            return playing && now - stalledSinceMs >= STALL_MS
+        }
 
     companion object {
         const val BLOCK_FRAMES = 1_024
+        const val STALL_MS = 500L
+        private const val END_SILENCE_BLOCKS = 4
         private const val GUITAR = 0
         private const val JOIN_TIMEOUT_MS = 1_000L
         private const val TAG = "RiffAudio"
