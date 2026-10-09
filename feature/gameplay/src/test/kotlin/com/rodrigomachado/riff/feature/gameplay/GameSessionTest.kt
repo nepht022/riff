@@ -295,4 +295,18 @@ class GameSessionTest {
 
         assertEquals(31_000L, session.tick())
     }
+
+    @Test
+    fun withTwoFingersOnALaneLiftingOneKeepsTheLongNote() {
+        player.positionMs = 1_000
+        val session = session(note(1_000, sustainMs = 2_000))
+        session.press(0)
+        session.press(0) // segundo dedo na mesma trilha
+
+        session.release(0)
+        assertTrue(session.isPressed(0)) // ainda há um dedo: a nota longa continua
+
+        session.release(0)
+        assertFalse(session.isPressed(0))
+    }
 }

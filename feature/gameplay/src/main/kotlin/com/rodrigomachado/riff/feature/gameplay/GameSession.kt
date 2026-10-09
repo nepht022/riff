@@ -30,7 +30,9 @@ class GameSession(
 ) {
     val engine = GameEngine(notes)
     private val clock = SongClock(timeSource, audioOffsetMs)
-    private val pressed = BooleanArray(Note.LANE_COUNT)
+
+    /** Dedos em cada trilha: a trilha só é solta quando o último sai. */
+    private val fingers = IntArray(Note.LANE_COUNT)
     private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
     private val lastNoteEndMs = engine.notes.maxOfOrNull { it.timeMs + it.sustainMs } ?: 0L
@@ -69,7 +71,11 @@ class GameSession(
         rewind = null
         player.pause()
         syncClock()
-        for (lane in pressed.indices) release(lane)
+        for (lane in fingers.indices) {
+            if (fingers[lane] == 0) continue
+            fingers[lane] = 1 // pausar solta a trilha de vez, com quantos dedos estiverem nela
+            release(lane)
+        }
     }
 
     fun resume() {
@@ -135,7 +141,7 @@ class GameSession(
 
     fun press(lane: Int) {
         if (isPaused || rewind != null) return
-        pressed[lane] = true
+        fingers[lane]++
         val judgment = engine.onPress(lane, clock.positionMs())
         if (judgment == null) {
             onMiss()
@@ -165,12 +171,12 @@ class GameSession(
     }
 
     fun release(lane: Int) {
-        if (!pressed[lane]) return
-        pressed[lane] = false
-        engine.onRelease(lane, clock.positionMs())
+        if (fingers[lane] == 0) return
+        fingers[lane]--
+        if (fingers[lane] == 0) engine.onRelease(lane, clock.positionMs())
     }
 
-    fun isPressed(lane: Int): Boolean = pressed[lane]
+    fun isPressed(lane: Int): Boolean = fingers[lane] > 0
 
     /** Progresso da chama da [lane] de 0 a 1 (acima de 1 já apagou); negativo se nunca acendeu. */
     fun flameProgress(lane: Int): Float {
