@@ -7,26 +7,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
-private val ChromeLight = Color(0xFFF4F4F4)
-private val ChromeMid = Color(0xFF7B7B7B)
-private val HighwayFar = Color(0xFF000000)
-private val HighwayNear = Color(0xFF3B1C16)
-private val FlameRed = Color(0xFFFF3D00)
-private val FlameOrange = Color(0xFFFF9D00)
-private val FlameYellow = Color(0xFFFFD44D)
-private val FlameCore = Color(0xFFFFFBE6)
-private const val LINE_ALPHA = 0.18f
+internal val ChromeLight = Color(0xFFF4F4F4)
+internal val ChromeMid = Color(0xFF7B7B7B)
+internal val HighwayFar = Color(0xFF000000)
+internal val HighwayNear = Color(0xFF3B1C16)
+internal val FlameRed = Color(0xFFFF3D00)
+internal val FlameOrange = Color(0xFFFF9D00)
+internal val FlameYellow = Color(0xFFFFD44D)
+internal val FlameCore = Color(0xFFFFFBE6)
+internal const val LINE_ALPHA = 0.18f
 
 /** Achatamento vertical de gemas e alvos: eles estão deitados na pista, vistos em ângulo. */
-private const val TILT = 0.42f
-private const val WEAVE_ALPHA = 0.06f
-private const val WEAVE_LONGITUDINAL = 40
-private const val WEAVE_STEP = 0.12f
+internal const val TILT = 0.42f
+internal const val WEAVE_ALPHA = 0.06f
+internal const val WEAVE_LONGITUDINAL = 40
+internal const val WEAVE_STEP = 0.12f
 
 private fun chrome(left: Float, right: Float) =
     Brush.horizontalGradient(listOf(ChromeLight, ChromeMid, ChromeLight), startX = left, endX = right)
@@ -37,42 +35,47 @@ private fun DrawScope.oval(color: Color, center: Offset, rx: Float, ry: Float) =
 private fun DrawScope.oval(brush: Brush, center: Offset, rx: Float, ry: Float) =
     drawOval(brush, Offset(center.x - rx, center.y - ry), Size(rx * 2, ry * 2))
 
-/** Braço em perspectiva: fundo escuro, trama própria, linhas de trilha e de traste, moldura de papel e vermelho. */
-fun DrawScope.drawHighway(geometry: HighwayGeometry, fretDistances: List<Float>) {
+/** Braço em perspectiva: fundo escuro, trama, trilhas e trastes do [cache], moldura de papel e vermelho. */
+fun DrawScope.drawHighway(cache: StageCache) {
+    val geometry = cache.geometry
     val far = geometry.visibleDistance
     val near = geometry.nearDistance
-    val outline = Path().apply {
-        moveTo(geometry.leftAt(far), geometry.yAt(far))
-        lineTo(geometry.leftAt(far) + geometry.widthAt(far), geometry.yAt(far))
-        lineTo(geometry.leftAt(near) + geometry.widthAt(near), geometry.yAt(near))
-        lineTo(geometry.leftAt(near), geometry.yAt(near))
-        close()
+    drawPath(cache.outline, cache.highwayBrush)
+    val weave = RiffColors.Paper.copy(alpha = WEAVE_ALPHA)
+    for (k in 0..WEAVE_LONGITUDINAL) along(geometry, k.toFloat() / WEAVE_LONGITUDINAL, weave, 1f)
+    var distance = near
+    while (distance < far) {
+        across(geometry, distance, weave, 1f)
+        distance += WEAVE_STEP
     }
-    drawPath(outline, Brush.verticalGradient(listOf(HighwayFar, HighwayNear), geometry.yAt(far), geometry.yAt(near)))
-    fun across(distance: Float, color: Color, width: Float) = drawLine(
-        color,
-        Offset(geometry.leftAt(distance), geometry.yAt(distance)),
-        Offset(geometry.leftAt(distance) + geometry.widthAt(distance), geometry.yAt(distance)),
-        width,
-    )
-    fun along(fraction: Float, color: Color, width: Float) = drawLine(
+    val line = RiffColors.Paper.copy(alpha = LINE_ALPHA)
+    for (lane in 1 until geometry.laneCount) {
+        along(geometry, lane.toFloat() / geometry.laneCount, line, cache.laneLineWidth)
+    }
+    for (i in 0 until cache.fretCount) {
+        val fret = cache.fretDistances[i]
+        if (fret in near..far) across(geometry, fret, line, cache.fretLineWidth)
+    }
+    drawPath(cache.outline, RiffColors.TourRed, style = cache.outerStroke)
+    drawPath(cache.outline, RiffColors.Paper, style = cache.innerStroke)
+}
+
+private fun DrawScope.across(geometry: HighwayGeometry, distance: Float, color: Color, width: Float) = drawLine(
+    color,
+    Offset(geometry.leftAt(distance), geometry.yAt(distance)),
+    Offset(geometry.leftAt(distance) + geometry.widthAt(distance), geometry.yAt(distance)),
+    width,
+)
+
+private fun DrawScope.along(geometry: HighwayGeometry, fraction: Float, color: Color, width: Float) {
+    val far = geometry.visibleDistance
+    val near = geometry.nearDistance
+    drawLine(
         color,
         Offset(geometry.leftAt(far) + geometry.widthAt(far) * fraction, geometry.yAt(far)),
         Offset(geometry.leftAt(near) + geometry.widthAt(near) * fraction, geometry.yAt(near)),
         width,
     )
-    val weave = RiffColors.Paper.copy(alpha = WEAVE_ALPHA)
-    for (k in 0..WEAVE_LONGITUDINAL) along(k.toFloat() / WEAVE_LONGITUDINAL, weave, 1f)
-    var distance = near
-    while (distance < far) {
-        across(distance, weave, 1f)
-        distance += WEAVE_STEP
-    }
-    val line = RiffColors.Paper.copy(alpha = LINE_ALPHA)
-    for (lane in 1 until geometry.laneCount) along(lane.toFloat() / geometry.laneCount, line, 1.dp.toPx())
-    fretDistances.filter { it in near..far }.forEach { across(it, line, 2.dp.toPx()) }
-    drawPath(outline, RiffColors.TourRed, style = Stroke(width = 7.dp.toPx()))
-    drawPath(outline, RiffColors.Paper, style = Stroke(width = 3.dp.toPx()))
 }
 
 /**

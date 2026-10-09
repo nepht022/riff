@@ -33,8 +33,11 @@ class StageScreenshotTest {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
                     Canvas(Modifier.fillMaxSize()) {
-                        val geometry = HighwayGeometry(size)
-                        drawHighway(geometry, fretDistances = listOf(0.6f, 1.6f, 2.6f, 3.6f, 4.6f))
+                        val cache = StageCache()
+                        val geometry = cache.update(size, density)
+                        floatArrayOf(0.6f, 1.6f, 2.6f, 3.6f, 4.6f).copyInto(cache.fretDistances)
+                        cache.fretCount = 5
+                        drawHighway(cache)
                         val gemRadius = geometry.laneWidthAtStrike * 0.42f
                         drawSustainTrail(
                             geometry.laneCenter(3, 1.65f),

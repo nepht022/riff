@@ -48,6 +48,7 @@ import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
 import com.rodrigomachado.riff.core.ui.stage.JudgmentText
 import com.rodrigomachado.riff.core.ui.stage.MultiplierStamp
 import com.rodrigomachado.riff.core.ui.stage.ScoreText
+import com.rodrigomachado.riff.core.ui.stage.StageCache
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import kotlinx.coroutines.isActive
@@ -124,6 +125,7 @@ internal fun GameStage(
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
+    val stageCache = remember { StageCache() }
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
     BackHandler(enabled = !state.isPaused, onBack = onPause)
     val currentPaused by rememberUpdatedState(state.isPaused)
@@ -152,7 +154,7 @@ internal fun GameStage(
                 .pointerInput(session, leftHanded) { handleLanes(session, leftHanded) },
         ) {
             frame // lê o contador para redesenhar a cada frame
-            drawStage(session, msPerUnit, leftHanded, reducedMotion)
+            drawStage(stageCache, session, msPerUnit, leftHanded, reducedMotion)
         }
         Hud(session, frame, reducedMotion, state.withoutSeparateGuitar, onPause, Modifier.fillMaxSize())
         if (state.isPaused) PauseOverlay(state.songOffsetMs, onAdjustOffset, onResume, onExit)

@@ -1,0 +1,48 @@
+package com.rodrigomachado.riff.core.ui.stage
+
+import androidx.compose.ui.geometry.Size
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class StageCacheTest {
+    @Test
+    fun theSameSizeKeepsTheSameObjects() {
+        val cache = StageCache()
+        val geometry = cache.update(Size(720f, 1280f), density = 2f)
+        val brush = cache.highwayBrush
+        val stroke = cache.outerStroke
+
+        assertSame(geometry, cache.update(Size(720f, 1280f), density = 2f))
+        assertSame(brush, cache.highwayBrush)
+        assertSame(stroke, cache.outerStroke)
+    }
+
+    @Test
+    fun aNewSizeRebuildsTheGeometryAndTheHighway() {
+        val cache = StageCache()
+        val portrait = cache.update(Size(720f, 1280f), density = 2f)
+        val brush = cache.highwayBrush
+
+        val landscape = cache.update(Size(1280f, 720f), density = 2f)
+
+        assertNotSame(portrait, landscape)
+        assertNotSame(brush, cache.highwayBrush)
+        assertEquals(1280f, landscape.size.width)
+    }
+
+    @Test
+    fun aNewDensityRebuildsTheStrokes() {
+        val cache = StageCache()
+        cache.update(Size(720f, 1280f), density = 2f)
+
+        cache.update(Size(720f, 1280f), density = 3f)
+
+        assertEquals(21f, cache.outerStroke.width) // 7 dp
+        assertEquals(3f, cache.laneLineWidth) // 1 dp
+    }
+}

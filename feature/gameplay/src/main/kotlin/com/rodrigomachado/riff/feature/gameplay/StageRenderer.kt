@@ -5,6 +5,7 @@ import com.rodrigomachado.riff.core.game.NoteTimeline
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.Note
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
+import com.rodrigomachado.riff.core.ui.stage.StageCache
 import com.rodrigomachado.riff.core.ui.stage.drawFlame
 import com.rodrigomachado.riff.core.ui.stage.drawFretButton
 import com.rodrigomachado.riff.core.ui.stage.drawGem
@@ -24,12 +25,19 @@ private const val FLAME_HEIGHT_FRACTION = 1.7f
 /** Trilha na tela para a trilha lógica [lane] (canhoto espelha). Vale nos dois sentidos. */
 internal fun screenLane(lane: Int, leftHanded: Boolean): Int = if (leftHanded) Note.LANE_COUNT - 1 - lane else lane
 
-/** Desenha a pista no instante atual da [session]. */
-internal fun DrawScope.drawStage(session: GameSession, msPerUnit: Float, leftHanded: Boolean, reducedMotion: Boolean) {
-    val geometry = HighwayGeometry(size)
+/** Desenha a pista no instante atual da [session], com formas e pincéis do [cache]. */
+internal fun DrawScope.drawStage(
+    cache: StageCache,
+    session: GameSession,
+    msPerUnit: Float,
+    leftHanded: Boolean,
+    reducedMotion: Boolean,
+) {
+    val geometry = cache.update(size, density)
     val t = session.songTimeMs
     val visibleMs = (geometry.visibleDistance * msPerUnit).toLong()
-    drawHighway(geometry, fretDistances(t, visibleMs, msPerUnit))
+    fillFretDistances(cache, t, visibleMs, msPerUnit)
+    drawHighway(cache)
     val radius = geometry.laneWidthAtStrike * GEM_RADIUS_FRACTION
     val notes = session.engine.notes
     val range = NoteTimeline.visibleRange(notes, t - session.lookBehindMs, t + visibleMs)
@@ -96,11 +104,13 @@ private fun DrawScope.drawTargetsAndFlames(
     }
 }
 
-/** Trastes a cada [FRET_SPACING_MS] de música, rolando junto com as notas. */
-private fun fretDistances(t: Long, visibleMs: Long, msPerUnit: Float): List<Float> {
-    val first = (t / FRET_SPACING_MS + 1) * FRET_SPACING_MS
-    return generateSequence(first) { it + FRET_SPACING_MS }
-        .takeWhile { it - t <= visibleMs }
-        .map { (it - t) / msPerUnit }
-        .toList()
+/** Trastes a cada [FRET_SPACING_MS] de música, rolando junto com as notas, no array do [cache] (sem listas). */
+internal fun fillFretDistances(cache: StageCache, t: Long, visibleMs: Long, msPerUnit: Float) {
+    var fret = (t / FRET_SPACING_MS + 1) * FRET_SPACING_MS
+    var count = 0
+    while (fret - t <= visibleMs && count < cache.fretDistances.size) {
+        cache.fretDistances[count++] = (fret - t) / msPerUnit
+        fret += FRET_SPACING_MS
+    }
+    cache.fretCount = count
 }
