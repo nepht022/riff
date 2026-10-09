@@ -95,7 +95,7 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 O **Baseline Profile** diz ao Android quais partes do app compilar antes da primeira execução, para a abertura e a partida já começarem rápidas. Ele é gerado no celular por percursos automáticos (abrir o app, rolar a biblioteca, jogar 20 s de uma música e sair).
 
-**Vale só para o build release.** O Android ignora o perfil em apps de debug, que é o build usado no dia a dia (o release ainda não conecta ao Spotify; veja `docs/pendencias.md`). Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois.
+**Vale só para o build release** (`./scripts/gw :app:assembleRelease`, assinado com a chave de debug): o Android ignora o perfil em apps de debug. Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois. Depois de mexer nas regras do R8 (`app/proguard-rules.pro`), rode `scripts/conferir_r8_spotify.sh`: ele confere que o SDK do Spotify continua achando o app no release.
 
 ```bash
 scripts/desempenho.sh perfil    # gera o perfil de novo
@@ -131,6 +131,6 @@ Medido em 2026-10-09 num Galaxy S25 (Android 16, tela a 120 Hz), depois de tirar
 
 O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify, guitarra separada, configurações, calibração e polimento.
 
-Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais; no build release, o "Tocando agora" diz "Spotify não instalado" (o debug funciona). Ideias para depois: ler mapas `.sng` e separar a guitarra dentro do app.
+Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: ler mapas `.sng` e separar a guitarra dentro do app.
 
 Cada mudança no uso do app atualiza a seção correspondente deste README.

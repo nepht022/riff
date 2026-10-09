@@ -20,12 +20,6 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **Efeito:** é raro na prática. Nesses casos, vale o `Offset` do `.chart`.
 - **Quando retomar:** se aparecer um mapa real que use esse campo.
 
-## Spotify no build release
-
-- **O que é:** no build release (o medido pelo `:baselineprofile`), o "Tocando agora" diz "Spotify não instalado". O debug, que é o usado no dia a dia, funciona.
-- **Provável causa:** o R8 tira algo que o SDK do App Remote usa por reflexão, além dos tipos do protocolo já mantidos em `app/proguard-rules.pro`.
-- **Quando retomar:** se o release passar a ser instalado para jogar, ou se o Spotify entrar nas medições de desempenho.
-
 ## Pontos menores da revisão da calibração (2026-10-09)
 
 - Pausar durante a animação de retrocesso e continuar volta mais 0,5 s a cada vez.
