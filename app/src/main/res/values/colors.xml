@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cores da identidade "Pôster de turnê" (as mesmas de RiffColors, em :core:ui) para o ícone e a abertura. -->
+<resources>
+    <color name="riff_stage_black">#FF120D0B</color>
+    <color name="riff_tour_red">#FFB3121B</color>
+    <color name="riff_paper">#FFE8D9B8</color>
+</resources>

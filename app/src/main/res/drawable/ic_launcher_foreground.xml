@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palheta vermelha com contorno de papel, dentro da área segura do ícone adaptativo (66 dp centrais de 108). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/riff_tour_red"
+        android:strokeColor="@color/riff_paper"
+        android:strokeWidth="3"
+        android:strokeLineJoin="round"
+        android:pathData="M54,82 C46,72 28,53 28,41 C28,31 40,26 54,26 C68,26 80,31 80,41 C80,53 62,72 54,82 Z" />
+    <path
+        android:fillColor="@color/riff_paper"
+        android:fillAlpha="0.35"
+        android:pathData="M40,38 C40,33 46,31 52,31 C46,33 43,36 42,41 Z" />
+</vector>

@@ -11,6 +11,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -36,4 +39,12 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
+    testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+}
+
+// O Robolectric codifica espaços do caminho do ~/.m2 como %20 (veja o AndroidLibraryConventionPlugin).
+providers.gradleProperty("riff.robolectric.mavenRepoLocal").orNull?.let { repo ->
+    tasks.withType<Test>().configureEach { systemProperty("maven.repo.local", repo) }
 }

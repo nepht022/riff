@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone temático do Android 13+: só a forma da palheta, na cor do sistema. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,82 C46,72 28,53 28,41 C28,31 40,26 54,26 C68,26 80,31 80,41 C80,53 62,72 54,82 Z" />
+</vector>

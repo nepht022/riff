@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A janela já abre no preto do palco: nada de tela cinza antes do Compose desenhar. -->
+    <style name="Theme.Riff" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/riff_stage_black</item>
+    </style>
+</resources>
