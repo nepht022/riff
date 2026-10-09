@@ -9,6 +9,9 @@ interface SongPlayer {
 
     fun pause()
 
+    /** Volume geral do app, de 0 a 1. Quem não controla o volume (o Spotify, pelo SDK) ignora. */
+    fun setVolume(volume: Float) = Unit
+
     fun release()
 
     val positionMs: Long
@@ -25,8 +28,8 @@ interface SfxPlayer {
 
     fun miss()
 
-    /** De 0 (desligado) a 1. */
-    fun setVolume(volume: Float)
+    /** Volumes de acerto e de erro, de 0 (desligado) a 1, já multiplicados pelo volume geral. */
+    fun setVolumes(hit: Float, miss: Float)
 
     fun release()
 }

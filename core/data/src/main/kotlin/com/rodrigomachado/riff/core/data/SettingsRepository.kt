@@ -7,8 +7,14 @@ import javax.inject.Inject
 
 interface SettingsRepository {
     val settings: Flow<Settings>
+
+    /** Grava na hora; a próxima partida já usa o valor novo. */
+    suspend fun update(transform: (Settings) -> Settings)
 }
 
-class PreferencesSettingsRepository @Inject constructor(preferences: RiffPreferences) : SettingsRepository {
+class PreferencesSettingsRepository @Inject constructor(private val preferences: RiffPreferences) :
+    SettingsRepository {
     override val settings: Flow<Settings> = preferences.settings
+
+    override suspend fun update(transform: (Settings) -> Settings) = preferences.updateSettings(transform)
 }

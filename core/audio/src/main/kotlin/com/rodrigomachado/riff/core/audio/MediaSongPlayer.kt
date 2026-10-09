@@ -38,6 +38,10 @@ class MediaSongPlayer(private val context: Context, private val player: MediaPla
         if (isPlaying) player.pause()
     }
 
+    override fun setVolume(volume: Float) {
+        if (!released) volume.coerceIn(0f, 1f).let { player.setVolume(it, it) }
+    }
+
     override fun release() {
         if (released) return
         positionAtRelease = runCatching { player.currentPosition.toLong() }.getOrDefault(0L)

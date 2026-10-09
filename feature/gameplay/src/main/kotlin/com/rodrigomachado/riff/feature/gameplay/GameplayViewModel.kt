@@ -85,9 +85,10 @@ class GameplayViewModel @Inject constructor(
         val playable = loader.load(chartId, difficulty)
         val settings = settingsRepository.settings.first()
         val (songPlayer, withoutSeparateGuitar) = prepareSong(playable.audio)
+        songPlayer.setVolume(settings.masterVolume)
         val effects = sfxPlayers.create().also {
             sfx = it
-            it.setVolume(settings.effectiveHitVolume)
+            it.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         }
         val offset = settings.audioOffsetMs.toLong() + trackOffsetMs
         val session = GameSession(playable.notes, songPlayer, effects, timeSource, offset)

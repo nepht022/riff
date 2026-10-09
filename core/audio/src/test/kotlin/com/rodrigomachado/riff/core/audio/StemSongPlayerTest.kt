@@ -272,4 +272,17 @@ class StemSongPlayerTest {
         now += 2
         assertTrue(player.isCompleted)
     }
+
+    @Test
+    fun theAppVolumeLowersEveryTrack() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+
+        player.setVolume(0.5f)
+        player.renderOnce()
+
+        assertEquals(0.25f, sink.lastBlock[0], 1e-6f)
+    }
 }

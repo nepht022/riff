@@ -103,4 +103,15 @@ class StemMixerTest {
 
     @Test
     fun thirtyMillisecondsOfRampAtCdQuality() = assertEquals(1_323, StemMixer.rampFrames(44_100))
+
+    @Test
+    fun theAppVolumeScalesTheWholeMix() {
+        val mixer = StemMixer(trackCount = 2, rampFrames = 10)
+        val out = FloatArray(4)
+        mixer.masterGain = 0.5f
+
+        mixer.mix(arrayOf(constant(0.4f, 2), constant(0.4f, 2)), intArrayOf(1, 1), intArrayOf(2, 2), 2, out)
+
+        out.forEach { assertEquals(0.4f, it, 1e-6f) }
+    }
 }

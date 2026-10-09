@@ -9,6 +9,10 @@ class StemMixer(private val trackCount: Int, private val rampFrames: Int) {
     private val target = FloatArray(trackCount) { 1f }
     private val current = FloatArray(trackCount) { 1f }
 
+    /** Volume geral do app, aplicado à mistura inteira. */
+    @Volatile
+    var masterGain = 1f
+
     fun setTargetGain(track: Int, gain: Float) {
         target[track] = gain.coerceIn(0f, 1f)
     }
@@ -40,7 +44,8 @@ class StemMixer(private val trackCount: Int, private val rampFrames: Int) {
             }
             current[track] = gain
         }
-        for (i in 0 until frames * 2) out[i] = out[i].coerceIn(-1f, 1f)
+        val master = masterGain
+        for (i in 0 until frames * 2) out[i] = (out[i] * master).coerceIn(-1f, 1f)
     }
 
     private fun approach(value: Float, goal: Float, step: Float): Float = when {

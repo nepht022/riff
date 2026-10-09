@@ -12,6 +12,7 @@ class FakeTime(var now: Long = 0) : TimeSource {
 }
 
 class FakeSongPlayer : SongPlayer {
+    var appVolume = 1f
     var preparedUri: String? = null
     var prepareFailure: Exception? = null
     var released = false
@@ -41,6 +42,10 @@ class FakeSongPlayer : SongPlayer {
         isPlaying = false
     }
 
+    override fun setVolume(volume: Float) {
+        appVolume = volume
+    }
+
     override fun release() {
         released = true
     }
@@ -50,7 +55,8 @@ class FakeSfxPlayer : SfxPlayer {
     val hitLanes = mutableListOf<Int>()
     val hits: Int get() = hitLanes.size
     var misses = 0
-    var lastVolume = -1f
+    var hitVolume = -1f
+    var missVolume = -1f
     var released = false
 
     override fun hit(lane: Int) {
@@ -61,8 +67,9 @@ class FakeSfxPlayer : SfxPlayer {
         misses++
     }
 
-    override fun setVolume(volume: Float) {
-        lastVolume = volume
+    override fun setVolumes(hit: Float, miss: Float) {
+        hitVolume = hit
+        missVolume = miss
     }
 
     override fun release() {
@@ -86,6 +93,12 @@ class FakeChartTrackLoader : com.rodrigomachado.riff.core.data.game.ChartTrackLo
 class FakeSettingsRepository(settings: com.rodrigomachado.riff.core.model.Settings) :
     com.rodrigomachado.riff.core.data.SettingsRepository {
     override val settings = kotlinx.coroutines.flow.MutableStateFlow(settings)
+
+    override suspend fun update(
+        transform: (com.rodrigomachado.riff.core.model.Settings) -> com.rodrigomachado.riff.core.model.Settings,
+    ) {
+        settings.value = transform(settings.value)
+    }
 }
 
 class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {

@@ -31,4 +31,15 @@ class MediaSongPlayerTest {
         song.play()
         song.release()
     }
+
+    @Test
+    fun theAppVolumeGoesToThePlayer() {
+        val media = MediaPlayer()
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), media)
+
+        song.setVolume(0.4f)
+
+        assertEquals(0.4f, shadowOf(media).leftVolume, 1e-6f)
+        assertEquals(0.4f, shadowOf(media).rightVolume, 1e-6f)
+    }
 }

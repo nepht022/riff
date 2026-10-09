@@ -90,7 +90,7 @@ class GameplayViewModelTest {
         assertTrue(state is GameplayUiState.Ready)
         assertEquals("raiz/a/song.ogg", player.preparedUri)
         assertTrue(player.isPlaying)
-        assertEquals(0.3f, sfx.lastVolume)
+        assertEquals(0.3f, sfx.hitVolume)
     }
 
     @Test
@@ -279,5 +279,17 @@ class GameplayViewModelTest {
         assertEquals("raiz/a/song.ogg", player.preparedUri)
         assertTrue(player.isPlaying)
         assertTrue(state.withoutSeparateGuitar)
+    }
+
+    @Test
+    fun theSavedVolumesReachTheSongAndTheEffects() = runTest {
+        settings.settings.value = Settings.DEFAULT.copy(masterVolume = 0.5f, hitVolume = 0.6f, missVolume = 1f)
+        loader.result = { playable() }
+
+        viewModel()
+
+        assertEquals(0.5f, player.appVolume, 1e-6f)
+        assertEquals(0.3f, sfx.hitVolume, 1e-6f)
+        assertEquals(0.5f, sfx.missVolume, 1e-6f)
     }
 }

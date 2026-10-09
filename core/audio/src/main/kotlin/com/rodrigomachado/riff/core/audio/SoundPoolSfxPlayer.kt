@@ -22,21 +22,25 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
     private val misses = MissSoundPicker(missSounds.size)
     private val handler = Handler(Looper.getMainLooper())
     private var missStream = 0
-    private var volume = DEFAULT_VOLUME
+    private var missLevel = 0f
+    private var hitVolume = DEFAULT_VOLUME
+    private var missVolume = DEFAULT_VOLUME
 
     override fun hit(lane: Int) {
-        play(hitSounds[lane.coerceIn(hitSounds.indices)], volume)
+        play(hitSounds[lane.coerceIn(hitSounds.indices)], hitVolume)
     }
 
     /** Um som de erro por vez: o novo encerra o anterior com um fade curto (spec da guitarra separada). */
     override fun miss() {
         val choice = misses.pick(SystemClock.uptimeMillis()) ?: return
-        fadeOut(missStream)
-        missStream = play(missSounds[choice.index], volume * choice.gain)
+        fadeOut(missStream, missLevel)
+        missLevel = missVolume * choice.gain
+        missStream = play(missSounds[choice.index], missLevel)
     }
 
-    override fun setVolume(volume: Float) {
-        this.volume = volume.coerceIn(0f, 1f)
+    override fun setVolumes(hit: Float, miss: Float) {
+        hitVolume = hit.coerceIn(0f, 1f)
+        missVolume = miss.coerceIn(0f, 1f)
     }
 
     override fun release() {
@@ -46,9 +50,8 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
 
     private fun play(sound: Int, level: Float): Int = if (level > 0f) pool.play(sound, level, level, 1, 0, 1f) else 0
 
-    private fun fadeOut(stream: Int) {
+    private fun fadeOut(stream: Int, start: Float) {
         if (stream == 0) return
-        val start = volume
         for (step in 1..FADE_STEPS) {
             handler.postDelayed({
                 val level = start * (1f - step.toFloat() / FADE_STEPS)

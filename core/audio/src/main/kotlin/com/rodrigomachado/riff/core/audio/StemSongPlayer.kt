@@ -43,6 +43,7 @@ class StemSongPlayer(
     private var sampleRate = 0
     private var writtenFrames = 0L
     private var positionAtRelease = 0L
+    private var volume = 1f
 
     @Volatile private var playing = false
 
@@ -85,7 +86,7 @@ class StemSongPlayer(
         channels = IntArray(opened.size) { opened[it].channelCount }
         available = IntArray(opened.size)
         ended = BooleanArray(opened.size)
-        mixer = StemMixer(opened.size, StemMixer.rampFrames(rate))
+        mixer = StemMixer(opened.size, StemMixer.rampFrames(rate)).also { it.masterGain = volume }
         val output = sinks.create(rate)
         synchronized(lock) {
             if (released) {
@@ -177,6 +178,11 @@ class StemSongPlayer(
         if (released) return
         playing = false
         sink?.pause()
+    }
+
+    override fun setVolume(volume: Float) {
+        this.volume = volume.coerceIn(0f, 1f)
+        mixer?.masterGain = this.volume
     }
 
     override fun setGuitarAudible(audible: Boolean) {
