@@ -64,3 +64,10 @@ data class ScoreEntity(
     val miss: Int,
     val playedAtEpochMs: Long,
 )
+
+/** Ajuste fino de sincronia de um mapa da biblioteca (ms somados ao relógio). Sai junto com o mapa. */
+@Entity(
+    tableName = "chart_offsets",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+)
+data class ChartOffsetEntity(@PrimaryKey val chartId: String, val offsetMs: Int)

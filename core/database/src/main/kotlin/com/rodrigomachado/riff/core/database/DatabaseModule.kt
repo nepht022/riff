@@ -25,4 +25,7 @@ object DatabaseModule {
 
     @Provides
     fun scoreDao(database: RiffDatabase): ScoreDao = database.scoreDao()
+
+    @Provides
+    fun chartOffsetDao(database: RiffDatabase): ChartOffsetDao = database.chartOffsetDao()
 }
