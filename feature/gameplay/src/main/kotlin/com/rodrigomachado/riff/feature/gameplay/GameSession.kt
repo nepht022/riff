@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.Note
 import com.rodrigomachado.riff.core.ui.stage.FLAME_DURATION_MS
 import kotlin.math.max
+import kotlin.math.roundToLong
 
 /**
  * Uma partida: junta o motor, o relógio da música, o player e os sons.
@@ -39,6 +40,11 @@ class GameSession(
     private var pendingOffsetMs = 0L
     private var waitingForSound = false
 
+    /** A pista voltando como uma fita antes de a música continuar (modo biblioteca). */
+    private class Rewind(val fromMs: Long, val toMs: Long, val startedAtMs: Long)
+
+    private var rewind: Rewind? = null
+
     /** Quanto tempo atrás do relógio ainda desenhar (notas perdidas passando e rastros longos). */
     val lookBehindMs: Long = max(MISS_TAIL_MS, engine.notes.maxOfOrNull { it.sustainMs } ?: 0L)
 
@@ -48,7 +54,7 @@ class GameSession(
     var lastJudgment: Judgment? = null
         private set
 
-    val isPaused: Boolean get() = !player.isPlaying
+    val isPaused: Boolean get() = !player.isPlaying && rewind == null
 
     val isFinished: Boolean
         get() = player.isCompleted || (engine.isFinished && songTimeMs > lastNoteEndMs + END_GRACE_MS)
@@ -59,15 +65,23 @@ class GameSession(
     }
 
     fun pause() {
+        rewind = null
         player.pause()
         syncClock()
         for (lane in pressed.indices) release(lane)
     }
 
     fun resume() {
+        val shownMs = clock.positionMs()
         clock.offsetMs += pendingOffsetMs
         pendingOffsetMs = 0
-        if (rewindOnResumeMs > 0) player.seekTo((player.positionMs - rewindOnResumeMs).coerceAtLeast(0))
+        val position = player.positionMs
+        val target = (position - rewindOnResumeMs).coerceAtLeast(0)
+        if (target < position) {
+            player.seekTo(target)
+            rewind = Rewind(shownMs, target + clock.offsetMs, timeSource.nowMs())
+            return
+        }
         player.play()
         syncClock()
     }
@@ -84,6 +98,7 @@ class GameSession(
 
     /** Avança a partida até o instante atual. Chamado a cada frame. */
     fun tick(): Long {
+        rewind?.let { return rewindStep(it) }
         // Começando (o som ainda não saiu), sincroniza a cada quadro para a pista partir junto com a música.
         if (waitingForSound || player.isStarting || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
         songTimeMs = clock.positionMs()
@@ -96,8 +111,22 @@ class GameSession(
         return songTimeMs
     }
 
+    /** Um quadro da fita voltando; no fim, a música continua do ponto novo. */
+    private fun rewindStep(rewind: Rewind): Long {
+        val progress = ((timeSource.nowMs() - rewind.startedAtMs).toFloat() / REWIND_ANIMATION_MS).coerceIn(0f, 1f)
+        val eased = progress * progress * (3 - 2 * progress) // começa e termina devagar, como uma fita
+        songTimeMs = rewind.fromMs + ((rewind.toMs - rewind.fromMs) * eased).roundToLong()
+        if (progress >= 1f) {
+            this.rewind = null
+            player.play()
+            syncClock()
+            songTimeMs = clock.positionMs()
+        }
+        return songTimeMs
+    }
+
     fun press(lane: Int) {
-        if (isPaused) return
+        if (isPaused || rewind != null) return
         pressed[lane] = true
         val judgment = engine.onPress(lane, clock.positionMs())
         if (judgment == null) {
@@ -153,6 +182,7 @@ class GameSession(
 
     companion object {
         const val SYNC_INTERVAL_MS = 500L
+        const val REWIND_ANIMATION_MS = 600L
         const val END_GRACE_MS = 3_000L
         private const val MISS_TAIL_MS = 300L
         private const val NEVER = Long.MIN_VALUE

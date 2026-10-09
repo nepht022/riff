@@ -322,6 +322,7 @@ class GameplayViewModelTest {
         assertEquals(30, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
         assertEquals(980L, ready.session.tick()) // pausado: a pista não anda
         viewModel.resume()
+        time.now += GameSession.REWIND_ANIMATION_MS
         assertEquals(490L, ready.session.tick()) // a biblioteca volta 500 ms ao continuar; o ajuste já vale
     }
 

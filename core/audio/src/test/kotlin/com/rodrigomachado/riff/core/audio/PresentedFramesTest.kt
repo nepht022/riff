@@ -72,4 +72,17 @@ class PresentedFramesTest {
         val later = presented.update(head = 31_600, stampFrame = 31_080, stampNs = 40_500 * ms, nowNs = 40_500 * ms)
         assertEquals(31_080L, later)
     }
+
+    @Test
+    fun aTimestampThatHasNotPresentedAnyFrameYetMeansTheSoundIsNotOut() {
+        val presented = PresentedFrames(rate)
+        presented.started(nowNs = 0)
+
+        // saída nova: o timestamp já é "de agora", mas ainda no quadro 0 (o som não chegou no alto-falante)
+        assertEquals(0L, presented.update(head = 400, stampFrame = 0, stampNs = 20 * ms, nowNs = 200 * ms))
+        assertFalse(presented.isPresenting)
+
+        assertEquals(30L, presented.update(head = 400, stampFrame = 10, stampNs = 230 * ms, nowNs = 250 * ms))
+        assertTrue(presented.isPresenting)
+    }
 }

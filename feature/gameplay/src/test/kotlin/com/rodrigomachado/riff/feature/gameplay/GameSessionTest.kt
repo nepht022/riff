@@ -209,7 +209,7 @@ class GameSessionTest {
     }
 
     @Test
-    fun resumingRewindsWhenTheModeAsksForIt() {
+    fun resumingRewindsLikeATapeAndThenPlays() {
         player.positionMs = 30_000
         val session = GameSession(listOf(note(60_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
             .also { it.start() }
@@ -218,7 +218,31 @@ class GameSessionTest {
         session.resume()
 
         assertEquals(listOf(29_500L), player.seeks)
+        assertFalse(player.isPlaying) // a música espera a fita voltar
+        assertFalse(session.isPaused) // e não é uma pausa (sem menu)
+        assertEquals(30_000L, session.tick())
+        time.now += GameSession.REWIND_ANIMATION_MS / 2
+        val halfway = session.tick()
+        assertTrue(halfway in 29_501L..29_999L) // volta aos poucos, sem pular
+        time.now += GameSession.REWIND_ANIMATION_MS / 2
         assertEquals(29_500L, session.tick())
+        assertTrue(player.isPlaying)
+        time.now += 100
+        assertEquals(29_600L, session.tick())
+    }
+
+    @Test
+    fun tapsDuringTheRewindAreIgnored() {
+        player.positionMs = 30_000
+        val session = GameSession(listOf(note(29_600)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+        session.resume()
+
+        session.press(0)
+
+        assertEquals(0, sfx.misses)
+        assertEquals(null, session.lastJudgment)
     }
 
     @Test

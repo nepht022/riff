@@ -28,9 +28,11 @@ internal class PresentedFrames(private val sampleRate: Int) {
     }
 
     fun update(head: Long, stampFrame: Long?, stampNs: Long?, nowNs: Long): Long {
-        if (stampFrame != null && stampNs != null && stampNs >= startedAtNs) {
+        // Um timestamp novo que ainda não passou de onde começou quer dizer que o som não saiu ainda.
+        val fresh = stampNs != null && stampNs >= startedAtNs
+        if (fresh && stampFrame != null && stampFrame > framesAtStart) {
             val sinceStart = framesAtStart + (nowNs - startedAtNs) * sampleRate / NANOS_PER_SECOND
-            val extrapolated = stampFrame + (nowNs - stampNs) * sampleRate / NANOS_PER_SECOND
+            val extrapolated = stampFrame + (nowNs - checkNotNull(stampNs)) * sampleRate / NANOS_PER_SECOND
             frames = extrapolated.coerceIn(0, minOf(head, sinceStart))
             isPresenting = true
         } else if (nowNs - startedAtNs >= NO_TIMESTAMP_FALLBACK_NS) {
