@@ -53,4 +53,14 @@ class AndroidPlaybackInterruptionsTest {
 
         assertEquals(0, interruptions)
     }
+
+    @Test
+    fun aNotificationThatOnlyLowersTheVolumeDoesNotPause() {
+        subject.start { interruptions++ }
+
+        shadowOf(audio).lastAudioFocusRequest.listener
+            .onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)
+
+        assertEquals(0, interruptions)
+    }
 }

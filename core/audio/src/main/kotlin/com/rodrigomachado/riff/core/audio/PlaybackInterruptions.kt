@@ -46,8 +46,9 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
                     .build(),
             )
             .setOnAudioFocusChangeListener { change ->
-                // Qualquer perda pausa (inclusive "abaixar o volume"): uma partida não continua com som baixo.
-                if (change < 0) this.onInterrupted?.invoke()
+                // Ligação ou outro app tocando pausam; "abaixar o volume" por um instante (som de notificação) não.
+                val lost = change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                if (lost) this.onInterrupted?.invoke()
             }
             .build()
         focus?.let(audio::abandonAudioFocusRequest)
