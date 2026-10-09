@@ -30,4 +30,13 @@ class FlameTest {
             assertEquals(FlameFrame(alpha = 0f, scaleY = 0f), flameFrame(progress))
         }
     }
+
+    @Test
+    fun alphaAndHeightWithoutCreatingAFrameMatchTheKeyframes() {
+        for (progress in listOf(0f, 0.1f, 0.15f, 0.3f, 0.5f, 0.75f, 1f, 1.5f, Float.NaN)) {
+            val frame = flameFrame(progress)
+            assertEquals(frame.alpha, flameAlpha(progress), 1e-6f)
+            assertEquals(frame.scaleY, flameScaleY(progress), 1e-6f)
+        }
+    }
 }

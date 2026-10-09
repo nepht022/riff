@@ -97,4 +97,27 @@ class StageCache {
     internal fun gemCap(lane: Int, missed: Boolean): Brush = gemCaps[lane * 2 + if (missed) 1 else 0]
 
     internal fun fretInner(lane: Int, pressed: Boolean): Brush = if (pressed) fretLit[lane] else fretIdle
+
+    /** Uma forma por camada da chama, refeita no lugar (`rewind`) a cada desenho. */
+    internal val flamePaths = Array(FLAME_LAYERS) { Path() }
+
+    /** Degradês das camadas em altura 1: de y = −1 (ponta) a y = 0 (base). */
+    internal val flameBrushes = arrayOf(
+        Brush.verticalGradient(
+            0f to FlameRed.copy(alpha = 0f),
+            0.3f to FlameRed,
+            0.7f to FlameOrange,
+            1f to FlameYellow,
+            startY = -1f,
+            endY = 0f,
+        ),
+        Brush.verticalGradient(
+            0f to FlameYellow.copy(alpha = 0f),
+            0.4f to FlameYellow,
+            1f to FlameCore,
+            startY = -1f,
+            endY = 0f,
+        ),
+        Brush.verticalGradient(0f to FlameYellow.copy(alpha = 0f), 1f to FlameYellow, startY = -1f, endY = 0f),
+    )
 }

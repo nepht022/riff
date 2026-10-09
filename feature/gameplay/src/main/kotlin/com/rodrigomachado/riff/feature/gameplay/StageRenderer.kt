@@ -104,6 +104,7 @@ private fun DrawScope.drawTargetsAndFlames(
         val progress = session.flameProgress(lane)
         if (progress !in 0f..1f) continue
         drawFlame(
+            cache,
             geometry.laneCenter(screenLane(lane, leftHanded), 0f),
             geometry.laneWidthAtStrike * FLAME_WIDTH_FRACTION,
             geometry.laneWidthAtStrike * FLAME_HEIGHT_FRACTION,

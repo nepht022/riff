@@ -66,6 +66,7 @@ class StageScreenshotTest {
                         }
                         val hit = geometry.laneCenter(2, 0f)
                         drawFlame(
+                            cache,
                             hit,
                             geometry.laneWidthAtStrike * 0.62f,
                             geometry.laneWidthAtStrike * 1.7f,
@@ -112,10 +113,11 @@ class StageScreenshotTest {
                 StageBackground {
                     Column {
                         Canvas(Modifier.size(360.dp, 200.dp)) {
+                            val cache = StageCache()
                             val progresses = listOf(0.05f, 0.15f, 0.4f, 0.8f)
                             progresses.forEachIndexed { i, progress ->
                                 val base = Offset(size.width * (i + 0.5f) / progresses.size, size.height * 0.9f)
-                                drawFlame(base, 50.dp.toPx(), 140.dp.toPx(), progress)
+                                drawFlame(cache, base, 50.dp.toPx(), 140.dp.toPx(), progress)
                             }
                         }
                         Box(Modifier.padding(Spacing.md))

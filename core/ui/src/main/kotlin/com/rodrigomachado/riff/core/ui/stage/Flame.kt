@@ -18,11 +18,20 @@ private val KEYFRAMES = listOf(
 )
 
 /** Quadro da chama em [progress] (0 a 1 ao longo de [FLAME_DURATION_MS]). Fora disso, ou NaN, não desenha nada. */
-fun flameFrame(progress: Float): FlameFrame {
-    if (progress !in 0f..1f) return NOTHING
+fun flameFrame(progress: Float): FlameFrame =
+    if (progress !in 0f..1f) NOTHING else FlameFrame(flameAlpha(progress), flameScaleY(progress))
+
+/** Opacidade da chama em [progress], sem criar objeto (o desenho chama a cada quadro). */
+fun flameAlpha(progress: Float): Float = keyframe(progress, alpha = true)
+
+/** Altura relativa da chama em [progress], sem criar objeto. */
+fun flameScaleY(progress: Float): Float = keyframe(progress, alpha = false)
+
+private fun keyframe(progress: Float, alpha: Boolean): Float {
+    if (progress !in 0f..1f) return 0f
     val index = KEYFRAMES.indexOfLast { it.first <= progress }.coerceAtMost(KEYFRAMES.lastIndex - 1)
     val (start, from) = KEYFRAMES[index]
     val (end, to) = KEYFRAMES[index + 1]
     val t = (progress - start) / (end - start)
-    return FlameFrame(alpha = lerp(from.alpha, to.alpha, t), scaleY = lerp(from.scaleY, to.scaleY, t))
+    return if (alpha) lerp(from.alpha, to.alpha, t) else lerp(from.scaleY, to.scaleY, t)
 }

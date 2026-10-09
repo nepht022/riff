@@ -32,6 +32,7 @@ internal const val WEAVE_STEP = 0.12f
 const val MISSED_GEM_ALPHA = 0.4f
 internal const val GEM_SIDE = 0.32f
 internal const val FRET_INNER = 0.6f
+internal const val FLAME_LAYERS = 3
 
 private fun DrawScope.oval(color: Color, center: Offset, rx: Float, ry: Float) =
     drawOval(color, Offset(center.x - rx, center.y - ry), Size(rx * 2, ry * 2))
@@ -133,40 +134,50 @@ fun DrawScope.drawSustainTrail(start: Offset, end: Offset, width: Float, color: 
     drawLine(color.copy(alpha = if (active) 1f else 0.6f), start, end, width, StrokeCap.Round)
 }
 
+/** Largura, altura e deslocamento de cada camada da chama, em frações da largura e da altura. */
+private val FLAME_LAYER_SHAPE = floatArrayOf(1f, 1f, 0f, 0.55f, 0.7f, 0f, 0.3f, 0.4f, -0.15f)
+
+/** Faíscas: pares (deslocamento lateral, altura relativa de partida). */
+private val SPARKS = floatArrayOf(-0.45f, 0.75f, 0.1f, 0.95f, 0.4f, 0.62f)
+
 /** Chama do acerto saindo de [base] (centro do botão), no quadro dado por [progress] (0 a 1). */
-fun DrawScope.drawFlame(base: Offset, width: Float, height: Float, progress: Float) {
-    val frame = flameFrame(progress)
-    if (frame.alpha <= 0f) return
-    val h = height * frame.scaleY
-    fun layer(w: Float, layerHeight: Float, dx: Float, vararg stops: Pair<Float, Color>) {
-        drawPath(
-            path = flameTongue(base.x + dx, base.y, w, layerHeight),
-            brush = Brush.verticalGradient(*stops, startY = base.y - layerHeight, endY = base.y),
-            alpha = frame.alpha,
-        )
+fun DrawScope.drawFlame(cache: StageCache, base: Offset, width: Float, height: Float, progress: Float) {
+    val alpha = flameAlpha(progress)
+    if (alpha <= 0f) return
+    val h = height * flameScaleY(progress)
+    for (layer in 0 until FLAME_LAYERS) {
+        val layerWidth = width * FLAME_LAYER_SHAPE[layer * 3]
+        val layerHeight = h * FLAME_LAYER_SHAPE[layer * 3 + 1]
+        val path = cache.flamePaths[layer]
+        path.flameTongue(base.x + width * FLAME_LAYER_SHAPE[layer * 3 + 2], layerWidth, layerHeight)
+        withTransform({
+            translate(0f, base.y)
+            scale(1f, layerHeight, Offset.Zero)
+        }) {
+            drawPath(path, cache.flameBrushes[layer], alpha = alpha)
+        }
     }
-    layer(width, h, 0f, 0f to FlameRed.copy(alpha = 0f), 0.3f to FlameRed, 0.7f to FlameOrange, 1f to FlameYellow)
-    layer(width * 0.55f, h * 0.7f, 0f, 0f to FlameYellow.copy(alpha = 0f), 0.4f to FlameYellow, 1f to FlameCore)
-    layer(width * 0.3f, h * 0.4f, -width * 0.15f, 0f to FlameYellow.copy(alpha = 0f), 1f to FlameYellow)
-    SPARKS.forEach { (spread, rise) ->
-        val spark = Offset(base.x + spread * width * (0.5f + progress), base.y - h * (rise + 0.6f * progress))
-        drawCircle(FlameYellow, width * 0.05f, spark, alpha = frame.alpha)
+    for (i in SPARKS.indices step 2) {
+        val spark = Offset(
+            base.x + SPARKS[i] * width * (0.5f + progress),
+            base.y - h * (SPARKS[i + 1] + 0.6f * progress),
+        )
+        drawCircle(FlameYellow, width * 0.05f, spark, alpha = alpha)
     }
 }
 
-/** Faíscas: deslocamento lateral e altura relativa de partida. */
-private val SPARKS = listOf(-0.45f to 0.75f, 0.1f to 0.95f, 0.4f to 0.62f)
-
-/** Língua de fogo: base arredondada e ponta afinada para cima. */
-private fun flameTongue(centerX: Float, bottom: Float, width: Float, height: Float): Path {
-    val top = bottom - height
+/**
+ * Língua de fogo com a base em y = 0 e a ponta em y = −1 (altura 1; x em px), desenhada com escala vertical
+ * [height]: a mesma forma de antes, refeita no lugar (sem `Path` novo).
+ */
+private fun Path.flameTongue(centerX: Float, width: Float, height: Float) {
+    rewind()
     val r = width / 2
-    return Path().apply {
-        moveTo(centerX, top)
-        cubicTo(centerX + r * 0.2f, top + height * 0.35f, centerX + r, top + height * 0.5f, centerX + r, bottom - r)
-        cubicTo(centerX + r, bottom - r * 0.45f, centerX + r * 0.55f, bottom, centerX, bottom)
-        cubicTo(centerX - r * 0.55f, bottom, centerX - r, bottom - r * 0.45f, centerX - r, bottom - r)
-        cubicTo(centerX - r, top + height * 0.5f, centerX - r * 0.2f, top + height * 0.35f, centerX, top)
-        close()
-    }
+    val rUp = r / height // o raio da base, medido em alturas
+    moveTo(centerX, -1f)
+    cubicTo(centerX + r * 0.2f, -0.65f, centerX + r, -0.5f, centerX + r, -rUp)
+    cubicTo(centerX + r, -rUp * 0.45f, centerX + r * 0.55f, 0f, centerX, 0f)
+    cubicTo(centerX - r * 0.55f, 0f, centerX - r, -rUp * 0.45f, centerX - r, -rUp)
+    cubicTo(centerX - r, -0.5f, centerX - r * 0.2f, -0.65f, centerX, -1f)
+    close()
 }
