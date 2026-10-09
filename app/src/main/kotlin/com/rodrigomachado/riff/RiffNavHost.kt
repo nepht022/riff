@@ -16,6 +16,8 @@ import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.settings.SettingsRoute
+import com.rodrigomachado.riff.feature.settings.SettingsScreen
 
 /**
  * Tocando agora → Jogo → Resultado, e a biblioteca (jogar com o áudio da pasta ou escolher o mapa de
@@ -42,7 +44,11 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                     navController.navigate(LibraryRoute(matchTrackUri = trackUri, matchTrackTitle = title))
                 },
                 onOpenLibrary = dropUnlessResumed { navController.navigate(LibraryRoute()) },
+                onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             )
+        }
+        composable<SettingsRoute> {
+            SettingsScreen(onBack = dropUnlessResumed { navController.popBackStack() })
         }
         composable<LibraryRoute> { entry ->
             val route = entry.toRoute<LibraryRoute>()

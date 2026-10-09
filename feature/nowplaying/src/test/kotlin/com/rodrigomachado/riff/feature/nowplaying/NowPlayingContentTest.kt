@@ -30,6 +30,7 @@ class NowPlayingContentTest {
     private var chooseFor: Pair<String, String>? = null
     private var retries = 0
     private var libraryOpened = false
+    private var settingsOpened = false
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
         RiffTheme {
@@ -40,6 +41,7 @@ class NowPlayingContentTest {
                 onConfirm = { uri, id, confidence -> confirmed = Triple(uri, id, confidence) },
                 onChooseChart = { uri, title -> chooseFor = uri to title },
                 onOpenLibrary = { libraryOpened = true },
+                onOpenSettings = { settingsOpened = true },
             )
         }
     }
@@ -126,5 +128,14 @@ class NowPlayingContentTest {
 
         composeRule.onNodeWithText("Escolha a dificuldade").assertDoesNotExist()
         assertEquals(null, played)
+    }
+
+    @Test
+    fun settingsCanBeOpenedFromTheStartScreen() {
+        show(NowPlayingUiState.Connecting)
+
+        composeRule.onNodeWithText("Configurações").performClick()
+
+        assertTrue(settingsOpened)
     }
 }

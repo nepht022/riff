@@ -26,4 +26,5 @@
     <string name="nowplaying_badge_matched">Chart found</string>
     <string name="nowplaying_badge_suggested">Confirm chart</string>
     <string name="nowplaying_badge_none">No chart</string>
+    <string name="nowplaying_settings">Settings</string>
 </resources>

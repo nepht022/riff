@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +44,7 @@ fun NowPlayingScreen(
     onPlay: (PlayRequest) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
     onOpenLibrary: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
@@ -54,6 +56,7 @@ fun NowPlayingScreen(
         onConfirm = viewModel::confirmSuggestion,
         onChooseChart = onChooseChart,
         onOpenLibrary = onOpenLibrary,
+        onOpenSettings = onOpenSettings,
         modifier = modifier,
     )
 }
@@ -67,6 +70,7 @@ fun NowPlayingContent(
     onChooseChart: (trackUri: String, title: String) -> Unit,
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -74,8 +78,13 @@ fun NowPlayingContent(
             Modifier.padding(top = Spacing.md),
             style = MaterialTheme.typography.displaySmall,
         )
-        TextButton(onClick = onOpenLibrary) {
-            Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
+        Row {
+            TextButton(onClick = onOpenLibrary) {
+                Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
+            }
+            TextButton(onClick = onOpenSettings) {
+                Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
+            }
         }
         when (state) {
             NowPlayingUiState.Connecting -> LoadingState(message = stringResource(R.string.nowplaying_connecting))
