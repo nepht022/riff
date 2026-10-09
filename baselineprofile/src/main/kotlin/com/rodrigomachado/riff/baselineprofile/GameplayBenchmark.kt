@@ -3,7 +3,6 @@ package com.rodrigomachado.riff.baselineprofile
 import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
-import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -27,8 +26,11 @@ class GameplayBenchmark {
         metrics = listOf(FrameTimingMetric()),
         compilationMode = mode,
         iterations = 3,
-        startupMode = StartupMode.COLD,
+        // Sem modo de abertura: com COLD, o app é fechado entre a preparação e a medição, e a biblioteca some.
+        startupMode = null,
         setupBlock = {
+            // Fecha o app aqui (e não entre a preparação e a medição): cada repetição começa da tela inicial.
+            killProcess()
             pressHome()
             startActivityAndWait()
             waitForHome()

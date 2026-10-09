@@ -5,6 +5,7 @@ import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.Until
 
 const val PACKAGE = "com.rodrigomachado.riff"
@@ -38,12 +39,17 @@ fun MacrobenchmarkScope.waitForHome() {
 /** Biblioteca: abre e rola a lista até o fim e de volta. */
 fun MacrobenchmarkScope.browseLibrary() {
     device.findObject(By.res(OPEN_LIBRARY)).click()
-    val list = checkNotNull(
-        device.wait(Until.findObject(By.res(LIBRARY_LIST)), TIMEOUT_MS),
-    ) { "a biblioteca não abriu" }
-    list.setGestureMargin(device.displayWidth / 5)
-    list.fling(Direction.DOWN)
-    list.fling(Direction.UP)
+    checkNotNull(device.wait(Until.findObject(By.res(LIBRARY_LIST)), TIMEOUT_MS)) { "a biblioteca não abriu" }
+    for (direction in arrayOf(Direction.DOWN, Direction.UP)) {
+        // A lista é recomposta depois de cada rolagem: procura de novo em vez de guardar a referência.
+        val list = device.wait(Until.findObject(By.res(LIBRARY_LIST)), TIMEOUT_MS) ?: continue
+        try {
+            list.setGestureMargin(device.displayWidth / 5)
+            list.fling(direction)
+        } catch (_: StaleObjectException) {
+            // Recomposta no meio do gesto: a rolagem já aconteceu.
+        }
+    }
     device.waitForIdle()
 }
 

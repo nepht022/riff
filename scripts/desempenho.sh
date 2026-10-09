@@ -15,7 +15,14 @@ copia_de_seguranca() {
     mkdir -p "$COPIA"
     for arquivo in databases/riff.db databases/riff.db-wal databases/riff.db-shm \
         files/datastore/riff_settings.preferences_pb; do
-        "$ADB" -s "$SERIAL" exec-out run-as "$PACOTE" cat "$arquivo" > "$COPIA/$(basename "$arquivo")" 2>/dev/null || true
+        destino="$COPIA/$(basename "$arquivo")"
+        # Só o app de debug deixa ler os dados: com o de medição instalado, mantém a cópia anterior.
+        if "$ADB" -s "$SERIAL" exec-out run-as "$PACOTE" cat "$arquivo" > "$destino.novo" 2>/dev/null \
+            && [ -s "$destino.novo" ] && ! grep -q "run-as:" "$destino.novo"; then
+            mv "$destino.novo" "$destino"
+        else
+            rm -f "$destino.novo"
+        fi
     done
     echo "cópia dos dados em $COPIA"
 }
@@ -36,8 +43,14 @@ volta_debug() {
 }
 
 case "${1:-}" in
-    perfil) copia_de_seguranca; perfil; volta_debug ;;
-    medir) copia_de_seguranca; medir; volta_debug ;;
-    tudo) copia_de_seguranca; perfil; medir; volta_debug ;;
+    perfil | medir | tudo) ;;
     *) echo "uso: $0 perfil|medir|tudo"; exit 2 ;;
+esac
+copia_de_seguranca
+# O app de debug volta mesmo se a medição falhar no meio.
+trap volta_debug EXIT
+case "$1" in
+    perfil) perfil ;;
+    medir) medir ;;
+    tudo) perfil; medir ;;
 esac
