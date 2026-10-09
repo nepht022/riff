@@ -319,4 +319,21 @@ class GameSessionTest {
 
         assertEquals(Judgment.PERFECT, session.lastJudgment)
     }
+
+    @Test
+    fun pausingDuringTheRewindDoesNotGoBackAnotherHalfSecond() {
+        player.positionMs = 30_000
+        val session = GameSession(listOf(note(60_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+        session.resume() // começa a voltar para 29.500
+        time.now += GameSession.REWIND_ANIMATION_MS / 2
+
+        session.pause() // no meio da fita
+        session.resume()
+        time.now += GameSession.REWIND_ANIMATION_MS
+
+        assertEquals(listOf(29_500L), player.seeks) // não voltou mais 0,5 s
+        assertEquals(29_500L, session.tick())
+    }
 }

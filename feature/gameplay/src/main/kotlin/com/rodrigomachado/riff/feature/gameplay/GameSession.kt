@@ -47,6 +47,7 @@ class GameSession(
     private class Rewind(val fromMs: Long, val toMs: Long, val startedAtMs: Long)
 
     private var rewind: Rewind? = null
+    private var alreadyRewound = false
 
     /** Quanto tempo atrás do relógio ainda desenhar (notas perdidas passando e rastros longos). */
     val lookBehindMs: Long = max(MISS_TAIL_MS, engine.notes.maxOfOrNull { it.sustainMs } ?: 0L)
@@ -68,6 +69,8 @@ class GameSession(
     }
 
     fun pause() {
+        // Pausou no meio da fita: a música já está no ponto de retomada; continuar não volta mais 0,5 s.
+        alreadyRewound = rewind != null
         rewind = null
         player.pause()
         syncClock()
@@ -82,7 +85,8 @@ class GameSession(
         val shownMs = clock.positionMs()
         applyPendingOffset()
         val position = player.positionMs
-        val target = (position - rewindOnResumeMs).coerceAtLeast(0)
+        val target = if (alreadyRewound) position else (position - rewindOnResumeMs).coerceAtLeast(0)
+        alreadyRewound = false
         if (target < position) {
             player.seekTo(target)
             rewind = Rewind(shownMs, target + clock.offsetMs, timeSource.nowMs())
