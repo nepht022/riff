@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.audio.LocalSong
 import com.rodrigomachado.riff.core.audio.MusicStartFinder
+import com.rodrigomachado.riff.core.audio.PlaybackInterruptions
+import com.rodrigomachado.riff.core.audio.PlaybackInterruptionsFactory
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.audio.SongPlayer
@@ -69,6 +71,7 @@ class GameplayViewModel @Inject constructor(
     private val stemPlayers: StemSongPlayerFactory,
     private val sfxPlayers: SfxPlayerFactory,
     private val timeSource: TimeSource,
+    private val interruptionsFactory: PlaybackInterruptionsFactory,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
@@ -80,6 +83,9 @@ class GameplayViewModel @Inject constructor(
 
     private var player: SongPlayer? = null
     private var sfx: SfxPlayer? = null
+
+    // Biblioteca: ligação, outro app tocando ou fone desconectado pausam a partida (no Spotify, o Spotify cuida).
+    private var interruptions: PlaybackInterruptions? = null
     private var finishing = false
     private var songOffsetMs = 0
 
@@ -114,6 +120,9 @@ class GameplayViewModel @Inject constructor(
             rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )
         if (!pauseRequested) session.start()
+        if (spotifyTrackUri == null) {
+            interruptions = interruptionsFactory.create().also { if (!pauseRequested) it.start { pause() } }
+        }
         GameplayUiState.Ready(
             playable.chart.title,
             playable.chart.artist,
@@ -192,6 +201,7 @@ class GameplayViewModel @Inject constructor(
         if (player == null) return
         val ready = state.value as? GameplayUiState.Ready ?: return
         ready.session.resume()
+        interruptions?.start { pause() } // pede o foco de áudio de novo (uma ligação o tirou)
         state.update { ready.copy(isPaused = false) }
     }
 
@@ -242,6 +252,8 @@ class GameplayViewModel @Inject constructor(
 
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
+        interruptions?.stop()
+        interruptions = null
         player?.release()
         sfx?.release()
         player = null

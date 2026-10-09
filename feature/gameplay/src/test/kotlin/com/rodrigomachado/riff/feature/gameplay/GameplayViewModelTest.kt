@@ -52,6 +52,8 @@ class GameplayViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private val interruptions = FakePlaybackInterruptions()
+    private var interruptionsCreated = 0
     private var musicStartMs: Long? = null
     private val analyzed = mutableListOf<List<String>>()
 
@@ -87,6 +89,10 @@ class GameplayViewModelTest {
         },
         { sfx },
         time,
+        {
+            interruptionsCreated++
+            interruptions
+        },
     )
 
     private fun playable(audio: String? = "raiz/a/song.ogg") =
@@ -480,5 +486,30 @@ class GameplayViewModelTest {
         val record = scores.saved.single()
         assertEquals(1, record.perfect)
         assertEquals(1, record.miss)
+    }
+
+    @Test
+    fun aCallOrUnpluggedHeadphonesPauseTheLibraryGame() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+        assertEquals(1, interruptions.starts) // pediu o foco de áudio ao começar
+
+        interruptions.interrupt()
+
+        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).isPaused)
+        assertEquals(false, player.isPlaying)
+        viewModel.resume()
+        assertEquals(2, interruptions.starts) // pede o foco de novo ao continuar
+        viewModel.release()
+        assertTrue(interruptions.stopped)
+    }
+
+    @Test
+    fun spotifyHandlesItsOwnInterruptions() = runTest {
+        loader.result = { playable(audio = null) }
+
+        viewModel(spotifyTrackUri = "spotify:track:x")
+
+        assertEquals(0, interruptionsCreated)
     }
 }

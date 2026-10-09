@@ -41,5 +41,9 @@ object AudioModule {
         PcmMusicStartFinder { uri -> MediaCodecPcmSource.open(context, uri) }
 
     @Provides
+    fun playbackInterruptions(@ApplicationContext context: Context): PlaybackInterruptionsFactory =
+        PlaybackInterruptionsFactory { AndroidPlaybackInterruptions(context) }
+
+    @Provides
     fun audioSinks(): AudioSinkFactory = AudioSinkFactory(::AudioTrackSink)
 }

@@ -158,3 +158,22 @@ class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRep
         offsets[spotifyTrackUri to chartId] = offsetMs
     }
 }
+
+class FakePlaybackInterruptions : com.rodrigomachado.riff.core.audio.PlaybackInterruptions {
+    var starts = 0
+    var stopped = false
+    private var onInterrupted: (() -> Unit)? = null
+
+    override fun start(onInterrupted: () -> Unit) {
+        starts++
+        this.onInterrupted = onInterrupted
+    }
+
+    override fun stop() {
+        stopped = true
+        onInterrupted = null
+    }
+
+    /** Uma ligação, outro app tocando ou o fone desconectado. */
+    fun interrupt() = onInterrupted?.invoke()
+}
