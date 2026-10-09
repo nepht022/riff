@@ -90,7 +90,9 @@ class GameStageNoticeTest {
         composeRule.onNodeWithText("Sincronia desta música: +20 ms").assertExists()
         composeRule.onNodeWithText("−10 ms").performClick()
         composeRule.onNodeWithText("+10 ms").performClick()
+        composeRule.onNodeWithText("−1 s").performClick()
+        composeRule.onNodeWithText("+1 s").performClick()
 
-        assertEquals(listOf(-10, 10), adjustments)
+        assertEquals(listOf(-10, 10, -1_000, 1_000), adjustments)
     }
 }

@@ -40,7 +40,10 @@ class RoomChartOffsetRepositoryTest {
         offsets.save("a", 30)
         assertEquals(30, offsets.get("a"))
 
-        offsets.save("a", 900)
-        assertEquals(MAX_SYNC_OFFSET_MS, offsets.get("a"))
+        offsets.save("a", 3_900) // mapa com contagem de entrada: segundos, não ms
+        assertEquals(3_900, offsets.get("a"))
+
+        offsets.save("a", 12_000)
+        assertEquals(MAX_SONG_OFFSET_MS, offsets.get("a"))
     }
 }

@@ -37,5 +37,9 @@ object AudioModule {
         }
 
     @Provides
+    fun musicStarts(@ApplicationContext context: Context): MusicStartFinder =
+        PcmMusicStartFinder { uri -> MediaCodecPcmSource.open(context, uri) }
+
+    @Provides
     fun audioSinks(): AudioSinkFactory = AudioSinkFactory(::AudioTrackSink)
 }

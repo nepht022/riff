@@ -119,9 +119,12 @@ class RoomTrackMatchRepositoryTest {
         charts.saveScanned(chart("a", "Música", "Banda"), 1)
         matches.save("spotify:track:x", "a", confidence = 1f, isManual = true)
 
-        matches.saveOffset("spotify:track:x", "a", -800)
+        matches.saveOffset("spotify:track:x", "a", -3_900)
+        assertEquals(-3_900, matches.offsetFor("spotify:track:x", "a"))
 
-        assertEquals(-MAX_SYNC_OFFSET_MS, matches.offsetFor("spotify:track:x", "a"))
+        matches.saveOffset("spotify:track:x", "a", -12_000)
+
+        assertEquals(-MAX_SONG_OFFSET_MS, matches.offsetFor("spotify:track:x", "a"))
         assertEquals(true, db.trackMatchDao().get("spotify:track:x")?.isManual)
     }
 }

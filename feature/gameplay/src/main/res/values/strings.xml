@@ -15,6 +15,8 @@
     <string name="gameplay_unavailable_spotify">Não deu para tocar pelo Spotify. Confira se o app do Spotify está aberto e conectado.</string>
     <string name="gameplay_no_separate_guitar">Tocando sem a guitarra separada</string>
     <string name="gameplay_sync">Sincronia desta música: %1$s ms</string>
+    <string name="gameplay_sync_much_earlier">−1 s</string>
     <string name="gameplay_sync_earlier">−10 ms</string>
     <string name="gameplay_sync_later">+10 ms</string>
+    <string name="gameplay_sync_much_later">+1 s</string>
 </resources>

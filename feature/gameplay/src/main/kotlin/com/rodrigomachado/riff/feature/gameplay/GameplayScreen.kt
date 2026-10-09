@@ -63,6 +63,7 @@ private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
 private const val NOTICE_MS = 4_000L
 private const val SYNC_STEP_MS = 10
+private const val SYNC_BIG_STEP_MS = 1_000
 
 @Composable
 fun GameplayScreen(
@@ -270,7 +271,7 @@ private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onRes
     }
 }
 
-/** Ajuste fino de sincronia desta música, de 10 em 10 ms. */
+/** Ajuste de sincronia desta música: de 1 em 1 s (contagem de entrada) e de 10 em 10 ms (o fino). */
 @Composable
 private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -279,16 +280,22 @@ private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = RiffColors.Paper,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            TextButton(onClick = { onAdjustOffset(-SYNC_STEP_MS) }) {
-                Text(stringResource(R.string.gameplay_sync_earlier), color = RiffColors.Paper)
-            }
-            TextButton(onClick = { onAdjustOffset(SYNC_STEP_MS) }) {
-                Text(stringResource(R.string.gameplay_sync_later), color = RiffColors.Paper)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            for ((label, deltaMs) in SYNC_BUTTONS) {
+                TextButton(onClick = { onAdjustOffset(deltaMs) }) {
+                    Text(stringResource(label), color = RiffColors.Paper)
+                }
             }
         }
     }
 }
+
+private val SYNC_BUTTONS = listOf(
+    R.string.gameplay_sync_much_earlier to -SYNC_BIG_STEP_MS,
+    R.string.gameplay_sync_earlier to -SYNC_STEP_MS,
+    R.string.gameplay_sync_later to SYNC_STEP_MS,
+    R.string.gameplay_sync_much_later to SYNC_BIG_STEP_MS,
+)
 
 private fun signed(value: Int): String = if (value > 0) "+$value" else value.toString()
 

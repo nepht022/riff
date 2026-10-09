@@ -52,6 +52,9 @@ class GameplayViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private var musicStartMs: Long? = null
+    private val analyzed = mutableListOf<List<String>>()
+
     private fun viewModel(spotifyTrackUri: String? = null, trackOffsetMs: Int = 0) = GameplayViewModel(
         SavedStateHandle(
             buildMap {
@@ -66,6 +69,10 @@ class GameplayViewModelTest {
         scores,
         chartOffsets,
         trackMatches,
+        { uris ->
+            analyzed += uris
+            musicStartMs
+        },
         {
             playersCreated++
             player
@@ -332,7 +339,7 @@ class GameplayViewModelTest {
 
     @Test
     fun songOffsetStopsAtTheLimits() = runTest {
-        chartOffsets.offsets["a"] = 495
+        chartOffsets.offsets["a"] = 9_995
         loader.result = { playable() }
         val viewModel = viewModel()
         val ready = viewModel.uiState.value as GameplayUiState.Ready
@@ -343,7 +350,7 @@ class GameplayViewModelTest {
         viewModel.adjustSongOffset(+10)
         viewModel.adjustSongOffset(+10)
 
-        assertEquals(500, chartOffsets.offsets["a"])
+        assertEquals(10_000, chartOffsets.offsets["a"])
         assertEquals(before + 5, ready.session.tick())
     }
 
@@ -373,5 +380,40 @@ class GameplayViewModelTest {
 
         assertTrue(state.session.lastJudgment != null)
         assertEquals(1, sfx.hits)
+    }
+
+    @Test
+    fun spotifyWithoutAnAdjustmentStartsAlignedWithWhereTheChartMusicBegins() = runTest {
+        musicStartMs = 3_900 // o áudio do mapa tem uma contagem de entrada antes da banda
+        loader.result = { playable() }
+
+        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
+
+        assertEquals(listOf(listOf("raiz/a/song.ogg")), analyzed)
+        assertEquals(3_900, state.songOffsetMs)
+        assertEquals(3_900, trackMatches.offsets["spotify:track:x" to "a"])
+    }
+
+    @Test
+    fun aSavedSpotifyAdjustmentIsKeptWithoutAnalyzing() = runTest {
+        musicStartMs = 3_900
+        trackMatches.offsets["spotify:track:x" to "a"] = 3_870
+        loader.result = { playable() }
+
+        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
+
+        assertEquals(emptyList<List<String>>(), analyzed)
+        assertEquals(3_870, state.songOffsetMs)
+    }
+
+    @Test
+    fun theLibraryPlaysItsOwnAudioAndNeedsNoAnalysis() = runTest {
+        musicStartMs = 3_900
+        loader.result = { playable() }
+
+        val state = viewModel().uiState.value as GameplayUiState.Ready
+
+        assertEquals(emptyList<List<String>>(), analyzed)
+        assertEquals(0, state.songOffsetMs)
     }
 }

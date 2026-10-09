@@ -1,0 +1,28 @@
+package com.rodrigomachado.riff.feature.gameplay
+
+import com.rodrigomachado.riff.core.audio.MusicStartFinder
+import com.rodrigomachado.riff.core.data.MAX_SONG_OFFSET_MS
+import com.rodrigomachado.riff.core.data.TrackMatchRepository
+import com.rodrigomachado.riff.core.data.game.ChartAudio
+
+/**
+ * Ajuste de sincronia de uma faixa do Spotify. Sem ajuste salvo, alinha pelo começo da música no áudio do mapa:
+ * a versão do Spotify não tem a contagem de entrada nem o silêncio que o áudio do mapa pode ter. O valor fica
+ * salvo para o jogador refinar na pausa.
+ */
+internal class SpotifySongOffset(
+    private val trackMatches: TrackMatchRepository,
+    private val musicStarts: MusicStartFinder,
+) {
+    suspend fun forTrack(uri: String, chartId: String, fromRouteMs: Int, audio: ChartAudio?): Int {
+        val saved = trackMatches.offsetFor(uri, chartId) ?: fromRouteMs
+        if (saved != 0 || audio == null) return saved
+        val uris = when (audio) {
+            is ChartAudio.Single -> listOf(audio.uri)
+            is ChartAudio.Stems -> listOf(audio.guitarUri) + audio.backingUris
+        }
+        val start = musicStarts.musicStartMs(uris)?.toInt()?.coerceAtMost(MAX_SONG_OFFSET_MS) ?: return 0
+        if (start > 0) trackMatches.saveOffset(uri, chartId, start)
+        return start
+    }
+}

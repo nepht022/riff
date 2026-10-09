@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.audio.LocalSong
+import com.rodrigomachado.riff.core.audio.MusicStartFinder
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.audio.SongPlayer
@@ -11,7 +12,7 @@ import com.rodrigomachado.riff.core.audio.SongPlayerFactory
 import com.rodrigomachado.riff.core.audio.SpotifySong
 import com.rodrigomachado.riff.core.audio.StemSongPlayerFactory
 import com.rodrigomachado.riff.core.data.ChartOffsetRepository
-import com.rodrigomachado.riff.core.data.MAX_SYNC_OFFSET_MS
+import com.rodrigomachado.riff.core.data.MAX_SONG_OFFSET_MS
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
@@ -62,6 +63,7 @@ class GameplayViewModel @Inject constructor(
     private val scores: ScoreRepository,
     private val chartOffsets: ChartOffsetRepository,
     private val trackMatches: TrackMatchRepository,
+    musicStarts: MusicStartFinder,
     @LocalSong private val songPlayers: SongPlayerFactory,
     @SpotifySong private val spotifyPlayers: SongPlayerFactory,
     private val stemPlayers: StemSongPlayerFactory,
@@ -72,6 +74,7 @@ class GameplayViewModel @Inject constructor(
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
     private val spotifyTrackUri: String? = savedStateHandle["spotifyTrackUri"]
     private val trackOffsetMs: Int = savedStateHandle["trackOffsetMs"] ?: 0
+    private val spotifyOffsets = SpotifySongOffset(trackMatches, musicStarts)
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
 
@@ -97,7 +100,7 @@ class GameplayViewModel @Inject constructor(
             sfx = it
             it.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         }
-        songOffsetMs = spotifyTrackUri?.let { trackMatches.offsetFor(it, chartId) ?: trackOffsetMs }
+        songOffsetMs = spotifyTrackUri?.let { spotifyOffsets.forTrack(it, chartId, trackOffsetMs, playable.audio) }
             ?: chartOffsets.get(chartId)
         val offset = settings.audioOffsetMs.toLong() + songOffsetMs
         val session = GameSession(
@@ -203,7 +206,7 @@ class GameplayViewModel @Inject constructor(
     /** Ajuste fino na pausa: vale ao continuar e fica salvo para esta música (Spotify) ou este mapa. */
     fun adjustSongOffset(deltaMs: Int) {
         val ready = state.value as? GameplayUiState.Ready ?: return
-        val updated = (songOffsetMs + deltaMs).coerceIn(-MAX_SYNC_OFFSET_MS, MAX_SYNC_OFFSET_MS)
+        val updated = (songOffsetMs + deltaMs).coerceIn(-MAX_SONG_OFFSET_MS, MAX_SONG_OFFSET_MS)
         if (updated == songOffsetMs) return
         ready.session.adjustOffset((updated - songOffsetMs).toLong())
         songOffsetMs = updated
