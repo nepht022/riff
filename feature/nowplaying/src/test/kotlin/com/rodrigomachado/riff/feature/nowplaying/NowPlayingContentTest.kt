@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.nowplaying
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -147,5 +148,29 @@ class NowPlayingContentTest {
         composeRule.onNodeWithTag(NowPlayingTestTags.OPEN_LIBRARY).performClick()
 
         assertTrue(libraryOpened)
+    }
+
+    @Test
+    fun theDifficultyDialogSurvivesRotatingTheScreen() {
+        val restoration = StateRestorationTester(composeRule)
+        restoration.setContent {
+            RiffTheme {
+                NowPlayingContent(
+                    state = NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), trackOffsetMs = 25))),
+                    onRetry = {},
+                    onPlay = { played = it },
+                    onConfirm = { _, _, _ -> },
+                    onChooseChart = { _, _ -> },
+                    onOpenLibrary = {},
+                    onOpenSettings = {},
+                )
+            }
+        }
+        composeRule.onNodeWithText("Jogar").performClick()
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithText("Expert").performClick()
+        assertEquals(PlayRequest("a", Difficulty.EXPERT, "spotify:track:x", 25), played)
     }
 }

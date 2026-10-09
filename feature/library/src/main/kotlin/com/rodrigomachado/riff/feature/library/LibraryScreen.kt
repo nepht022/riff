@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,7 +88,9 @@ fun LibraryContent(
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
 ) {
-    var choosing by remember { mutableStateOf<Chart?>(null) }
+    // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
+    var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
+    val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
         PosterTitle(
@@ -129,7 +131,7 @@ fun LibraryContent(
             )
 
             else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { chart ->
-                if (matchingTitle != null) onChartMatched(chart.id) else choosing = chart
+                if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
             }
         }
     }
@@ -139,10 +141,10 @@ fun LibraryContent(
             options = chart.difficulties.sorted(),
             label = { stringResource(difficultyLabel(it.ordinal)) },
             onChoose = { difficulty ->
-                choosing = null
+                choosingId = null
                 onPlay(chart.id, difficulty)
             },
-            onDismiss = { choosing = null },
+            onDismiss = { choosingId = null },
         )
     }
 }

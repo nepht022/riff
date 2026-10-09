@@ -13,7 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -145,7 +145,9 @@ private fun Playing(
 ) {
     val track = nowPlaying.playback
     // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
-    var choosing by remember(track.trackUri) { mutableStateOf<MatchStatus.Matched?>(null) }
+    // Sobrevive à rotação da tela; o mapa vem do casamento atual da faixa.
+    var choosingFor by rememberSaveable(track.trackUri) { mutableStateOf(false) }
+    val choosing = (nowPlaying.match as? MatchStatus.Matched)?.takeIf { choosingFor }
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -160,7 +162,7 @@ private fun Playing(
                     stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist),
                     color = RiffColors.Paper,
                 )
-                PosterButton(stringResource(R.string.nowplaying_play), onClick = { choosing = match })
+                PosterButton(stringResource(R.string.nowplaying_play), onClick = { choosingFor = true })
                 TextButton(onClick = { onChooseChart(track.trackUri, track.title) }) {
                     Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
                 }
@@ -195,10 +197,10 @@ private fun Playing(
             options = match.chart.difficulties.sorted(),
             label = { stringResource(difficultyLabel(it.ordinal)) },
             onChoose = { difficulty ->
-                choosing = null
+                choosingFor = false
                 onPlay(PlayRequest(match.chart.id, difficulty, track.trackUri, match.trackOffsetMs))
             },
-            onDismiss = { choosing = null },
+            onDismiss = { choosingFor = false },
         )
     }
 }

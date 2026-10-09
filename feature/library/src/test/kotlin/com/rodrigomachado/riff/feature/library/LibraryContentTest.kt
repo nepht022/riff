@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.library
 
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -193,5 +194,34 @@ class LibraryContentTest {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))))
 
         composeRule.onNodeWithTag(LibraryTestTags.LIST).assertExists()
+    }
+
+    @Test
+    fun theDifficultyDialogSurvivesRotatingTheScreen() {
+        val restoration = StateRestorationTester(composeRule)
+        val state = LibraryUiState(
+            isLoading = false,
+            hasFolder = true,
+            charts = listOf(chart("a", title = "Música", difficulties = setOf(Difficulty.EXPERT))),
+        )
+        restoration.setContent {
+            RiffTheme {
+                LibraryContent(
+                    state = state,
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { id, difficulty -> played = id to difficulty },
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.onNodeWithText("Música").performClick()
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+        composeRule.onNodeWithText("Expert").performClick()
+        assertEquals("a" to Difficulty.EXPERT, played)
     }
 }
