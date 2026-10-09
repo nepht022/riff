@@ -151,7 +151,7 @@ class GameSessionTest {
     }
 
     @Test
-    fun adjustingTheOffsetShiftsTheSongTimeImmediately() {
+    fun adjustingTheOffsetWhilePausedKeepsTheHighwayStillAndAppliesOnResume() {
         player.positionMs = 1_000
         val session = session(note(10_000))
         session.pause()
@@ -159,7 +159,19 @@ class GameSessionTest {
         session.adjustOffset(-10)
         session.adjustOffset(-10)
 
+        assertEquals(1_000L, session.tick()) // pausado: a pista não anda
+        session.resume()
         assertEquals(980L, session.tick())
+    }
+
+    @Test
+    fun adjustingTheOffsetWhilePlayingShiftsTheSongTimeImmediately() {
+        player.positionMs = 1_000
+        val session = session(note(10_000))
+
+        session.adjustOffset(-10)
+
+        assertEquals(990L, session.tick())
     }
 
     @Test

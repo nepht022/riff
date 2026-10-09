@@ -313,6 +313,8 @@ class GameplayViewModelTest {
 
         assertEquals(30, chartOffsets.offsets["a"])
         assertEquals(30, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
+        assertEquals(980L, ready.session.tick()) // pausado: a pista não anda
+        viewModel.resume()
         assertEquals(990L, ready.session.tick())
     }
 

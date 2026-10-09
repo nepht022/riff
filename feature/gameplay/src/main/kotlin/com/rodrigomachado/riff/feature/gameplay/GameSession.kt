@@ -34,6 +34,7 @@ class GameSession(
     private var lastSyncAt = NEVER
     private var missesHeard = 0
     private var lastJudgmentAt = NEVER
+    private var pendingOffsetMs = 0L
 
     /** Quanto tempo atrás do relógio ainda desenhar (notas perdidas passando e rastros longos). */
     val lookBehindMs: Long = max(MISS_TAIL_MS, engine.notes.maxOfOrNull { it.sustainMs } ?: 0L)
@@ -61,12 +62,18 @@ class GameSession(
     }
 
     fun resume() {
+        clock.offsetMs += pendingOffsetMs
+        pendingOffsetMs = 0
         player.play()
         syncClock()
     }
 
-    /** Ajuste fino de sincronia desta música, aplicado na hora. */
+    /** Ajuste fino de sincronia desta música. Pausado, a pista fica parada e o ajuste vale ao continuar. */
     fun adjustOffset(deltaMs: Long) {
+        if (isPaused) {
+            pendingOffsetMs += deltaMs
+            return
+        }
         clock.offsetMs += deltaMs
         songTimeMs = clock.positionMs()
     }
