@@ -53,7 +53,7 @@ class SpotifySongPlayerTest {
         player.pause()
         player.play()
 
-        assertEquals(listOf("play:$ours", "pause", "resume"), remote.commands)
+        assertEquals(listOf("play:$ours", "pause", "seek:0", "resume"), remote.commands)
     }
 
     @Test
@@ -113,6 +113,21 @@ class SpotifySongPlayerTest {
         emit(state(position = 30_510))
         now += 100
         assertEquals(30_610L, player.positionMs)
+    }
+
+    @Test
+    fun resumingSeeksBackEvenIfSpotifyNeverReportedThePause() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 30_000))
+        now += 500
+        player.pause()
+        remote.commands.clear()
+
+        now += 1_000
+        player.play()
+
+        assertEquals(listOf("seek:30500", "resume"), remote.commands)
     }
 
     @Test

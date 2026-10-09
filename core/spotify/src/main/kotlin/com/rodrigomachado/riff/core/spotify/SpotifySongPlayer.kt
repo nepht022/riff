@@ -33,9 +33,6 @@ class SpotifySongPlayer(
     private var startedAtMs = 0L
     private var starting = false
 
-    /** Onde o Spotify disse que parou (pode ser um pouco depois de onde o jogo parou). */
-    private var spotifyPausedAtMs: Long? = null
-
     // Conexão caiu: a posição fica congelada e o que o Spotify mostrar na volta só vale no próximo play.
     private var disconnected = false
     private var afterReconnect: PlaybackState? = null
@@ -83,10 +80,8 @@ class SpotifySongPlayer(
         val wasNearTheEnd = sawOurTrack && isPlaying && positionMs >= state.durationMs - NEAR_END_MS
         sawOurTrack = true
         val pausedByTheGame = last?.isPaused == true
-        if (state.isPaused && pausedByTheGame) {
-            // Pausado pelo jogo (ou esperando o Spotify voltar): a pista fica onde parou.
-            spotifyPausedAtMs = state.positionMs
-        } else {
+        // Pausado pelo jogo (ou esperando o Spotify voltar), a pista fica onde parou: o Spotify obedece depois.
+        if (!state.isPaused || !pausedByTheGame) {
             starting = false
             last = state
         }
@@ -140,12 +135,10 @@ class SpotifySongPlayer(
         }
     }
 
+    /** O Spotify para um pouco depois do jogo: volta para onde a pista parou antes de continuar. */
     private fun resumeWhereTheGameStopped() {
-        val position = positionMs
-        val spotifyAt = spotifyPausedAtMs
-        if (spotifyAt != null && abs(spotifyAt - position) > SEEK_TOLERANCE_MS) remote.seekTo(position)
+        remote.seekTo(positionMs)
         remote.resume()
-        spotifyPausedAtMs = null
         starting = true
     }
 
@@ -168,7 +161,6 @@ class SpotifySongPlayer(
         if (!started) return
         val position = positionMs
         starting = false
-        spotifyPausedAtMs = null
         lastCommandAtMs = nowMs()
         remote.pause()
         last = last?.frozenAt(position)
@@ -201,7 +193,6 @@ class SpotifySongPlayer(
         const val END_TOLERANCE_MS = 1_500L
         const val START_TIMEOUT_MS = 5_000L
         const val RESUME_TOLERANCE_MS = 1_000L
-        const val SEEK_TOLERANCE_MS = 50L
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }

@@ -14,8 +14,8 @@ class PresentedFramesTest {
         val presented = PresentedFrames(rate)
         presented.started(nowNs = 0)
 
-        assertEquals(500L, presented.update(head = 900, stampFrame = 400, stampNs = 100 * ms, nowNs = 200 * ms))
-        assertEquals(900L, presented.update(head = 900, stampFrame = 400, stampNs = 100 * ms, nowNs = 2_000 * ms))
+        assertEquals(190L, presented.update(head = 900, stampFrame = 90, stampNs = 100 * ms, nowNs = 200 * ms))
+        assertEquals(900L, presented.update(head = 900, stampFrame = 90, stampNs = 100 * ms, nowNs = 2_000 * ms))
         assertTrue(presented.isPresenting)
     }
 
@@ -40,7 +40,7 @@ class PresentedFramesTest {
     fun whilePausedThePositionHolds() {
         val presented = PresentedFrames(rate)
         presented.started(nowNs = 0)
-        presented.update(head = 700, stampFrame = 500, stampNs = 0, nowNs = 100 * ms)
+        presented.update(head = 700, stampFrame = 500, stampNs = 500 * ms, nowNs = 600 * ms)
         presented.paused()
 
         assertEquals(600L, presented.frames)
@@ -55,5 +55,21 @@ class PresentedFramesTest {
         assertEquals(0L, presented.update(head = 300, stampFrame = null, stampNs = null, nowNs = 100 * ms))
         assertEquals(900L, presented.update(head = 900, stampFrame = null, stampNs = null, nowNs = 1_100 * ms))
         assertTrue(presented.isPresenting)
+    }
+
+    @Test
+    fun rightAfterResumingAnEarlyTimestampCannotRunAheadOfTheTimeSinceResuming() {
+        val presented = PresentedFrames(rate)
+        presented.started(nowNs = 0)
+        presented.update(head = 30_800, stampFrame = 30_580, stampNs = 30_580 * ms, nowNs = 30_580 * ms)
+        presented.paused()
+
+        presented.started(nowNs = 40_000 * ms)
+        // a primeira leitura depois de continuar diz 345 ms à frente, só 30 ms depois: impossível
+        val early = presented.update(head = 31_200, stampFrame = 30_925, stampNs = 40_030 * ms, nowNs = 40_030 * ms)
+
+        assertEquals(30_610L, early)
+        val later = presented.update(head = 31_600, stampFrame = 31_080, stampNs = 40_500 * ms, nowNs = 40_500 * ms)
+        assertEquals(31_080L, later)
     }
 }
