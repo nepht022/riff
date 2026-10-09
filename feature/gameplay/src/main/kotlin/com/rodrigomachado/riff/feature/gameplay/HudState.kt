@@ -41,7 +41,6 @@ internal class HudState {
     }
 }
 
-
 /** Salto do julgamento logo depois do toque (1 = tamanho normal). */
 internal fun judgmentBounce(ageMs: Long, reducedMotion: Boolean): Float =
     if (reducedMotion) 1f else 1f + JUDGMENT_BOUNCE_SCALE * (1f - (ageMs / JUDGMENT_BOUNCE_MS).coerceAtMost(1f))
