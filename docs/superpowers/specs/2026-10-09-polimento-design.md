@@ -1,6 +1,6 @@
 # Riff: polimento (desempenho, Baseline Profile e README)
 
-Data: 2026-10-09 · Status: aprovado em conversa, aguardando revisão do documento
+Data: 2026-10-09 · Status: implementado em 2026-10-09 (ver §9)
 Complementa: `2026-10-05-riff-design.md` (§ Desempenho: "60 fps no gameplay em um aparelho intermediário, sem alocar memória no loop de frame. Baseline Profile entra na fase final."; §11 passo 8: "Polimento: Baseline Profile e README final.") e `2026-10-07-identidade-visual-design.md` (chama "sem alocação por frame")
 
 ## 1. Objetivo
@@ -83,3 +83,10 @@ Atualização: cada plano futuro que mudar o uso do app atualiza a seção corre
 - **Aparência:** screenshots existentes passam (`verifyRoborazziDebug`).
 - **Placar:** teste de composição conferindo que o placar não recompõe quando nada mudou (contador de recomposições) e recompõe quando a pontuação muda.
 - **No aparelho:** gerador e medições rodam no S25; os números entram no README.
+
+## 9. Resultado (2026-10-09)
+
+Medido no Galaxy S25 (Android 16, 120 Hz), depois das correções da §3: abertura 185 ms sem perfil e 148 ms com perfil; a partida roda a 120 fps, com 1 a 3 quadros com atraso do app em cerca de 2.480 (thread principal ~2,4 ms por quadro).
+
+A meta da §4 em `frameDurationCpuMs` (p90 < 8,3 ms) não se cumpriu (11,2 ms), mas a métrica soma a espera na fila da tela ("Buffer Stuffing": o app adiantado, ~5 ms por quadro no `queueBuffer`). Decisão do usuário: aceitar e trocar o critério por fps e quadros com atraso do app, lidos dos traces do Perfetto por `scripts/quadros_travados.py`.
+

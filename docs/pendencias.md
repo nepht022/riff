@@ -19,3 +19,19 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **O que é:** o YARG aceita `delay_seconds` no `song.ini` como alternativa ao `delay` (em ms). Aqui só o `delay` é lido.
 - **Efeito:** é raro na prática. Nesses casos, vale o `Offset` do `.chart`.
 - **Quando retomar:** se aparecer um mapa real que use esse campo.
+
+## Spotify no build release
+
+- **O que é:** no build release (o medido pelo `:baselineprofile`), o "Tocando agora" diz "Spotify não instalado". O debug, que é o usado no dia a dia, funciona.
+- **Provável causa:** o R8 tira algo que o SDK do App Remote usa por reflexão, além dos tipos do protocolo já mantidos em `app/proguard-rules.pro`.
+- **Quando retomar:** se o release passar a ser instalado para jogar, ou se o Spotify entrar nas medições de desempenho.
+
+## Pontos menores da revisão da calibração (2026-10-09)
+
+- Pausar durante a animação de retrocesso e continuar volta mais 0,5 s a cada vez.
+- Se criar a saída de áudio nova ao voltar 0,5 s falhar, a saída antiga fica liberada e o próximo `play` quebra (raro).
+- Salvar um ajuste de sincronia de um mapa removido no meio da partida pode lançar `SQLiteConstraintException`.
+- Pausar antes de o Spotify começar a primeira música e voltar mais de 5 s depois força uma pausa extra.
+- Retomar depois de reconectar o Spotify não espera a confirmação nem volta ao ponto da pista.
+- A detecção do começo da música supõe que a versão do Spotify começa direto na música e não é cancelável; uma introdução baixa pode exagerar o valor (o jogador refina na pausa).
+- Na calibração, duas corrotinas leem a posição da saída ao mesmo tempo (efeito desprezível).

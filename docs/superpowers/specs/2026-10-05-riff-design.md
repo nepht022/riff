@@ -171,6 +171,6 @@ GitHub Actions a cada PR: ktlint, Detekt, Lint, testes unitários, Kover e `asse
 5. `:feature:gameplay` + `:feature:results`, jogáveis com um relógio local (sem Spotify), para validar a sensação do jogo. Implementado com o áudio da pasta do mapa (`song.*` ou `guitar.*`); a partida termina no fim do áudio ou 3 s depois da última nota julgada.
 6. `:core:spotify` + `:feature:nowplaying`: sincronização real. Implementado. A conexão é do App Remote SDK 0.8.0 (AAR em `third_party/maven`); "Tocando agora" é a tela inicial. Decisão de 2026-10-08: o modo com o áudio da pasta continua na biblioteca. Validado num Galaxy S25 (Android 16, Spotify 9.1): o pedido de autorização do próprio SDK é bloqueado pelo Android atual, então a autorização usa a biblioteca oficial de login (`com.spotify.android:auth` 5.0.0, escopo `app-remote-control`), aberta a partir da tela do Riff; a conexão parte da Activity em primeiro plano. O app no Developer Dashboard precisa da plataforma Android com o package e o SHA-1 da chave.
 7. `:feature:calibration` + `:feature:settings`. Calibração e Configurações implementadas em 2026-10-09 (Configurações abertas por "Tocando agora"; Calibração pelas Configurações).
-8. Polimento: Baseline Profile e README final.
+8. Polimento: Baseline Profile e README final (concluído em 2026-10-09; ver `2026-10-09-polimento-design.md`).
 
 Os passos 5 e 6 ficam separados para validar o gameplay antes de depender do Spotify. Assim dá para testar com o áudio de qualquer mapa (o `song.ogg` da pasta) tocando localmente, só em modo de depuração.
