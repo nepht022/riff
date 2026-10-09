@@ -70,7 +70,8 @@ class GameSession(
 
     fun pause() {
         // Pausou no meio da fita: a música já está no ponto de retomada; continuar não volta mais 0,5 s.
-        alreadyRewound = rewind != null
+        // Só liga, nunca desliga aqui: uma segunda pausa seguida (ligação e depois segundo plano) não pode apagar.
+        if (rewind != null) alreadyRewound = true
         rewind = null
         player.pause()
         syncClock()

@@ -350,4 +350,21 @@ class GameSessionTest {
 
         assertEquals(30_100L, session.tick())
     }
+
+    @Test
+    fun aSecondPauseDuringTheRewindStillDoesNotGoBackAgain() {
+        player.positionMs = 30_000
+        val session = GameSession(listOf(note(60_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+        session.resume()
+        time.now += GameSession.REWIND_ANIMATION_MS / 2
+
+        session.pause() // uma ligação: perda do foco de áudio...
+        session.pause() // ...e logo depois o app vai para segundo plano
+        session.resume()
+        time.now += GameSession.REWIND_ANIMATION_MS
+
+        assertEquals(listOf(29_500L), player.seeks)
+    }
 }

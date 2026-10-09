@@ -20,12 +20,16 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **Efeito:** é raro na prática. Nesses casos, vale o `Offset` do `.chart`.
 - **Quando retomar:** se aparecer um mapa real que use esse campo.
 
-## Pontos menores da revisão da calibração (2026-10-09)
+## Pontos menores em aberto (revisões de 2026-10-09)
 
-- Pausar durante a animação de retrocesso e continuar volta mais 0,5 s a cada vez.
+Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada depois de reconectar, pausa antes do primeiro início).
+
 - Se criar a saída de áudio nova ao voltar 0,5 s falhar, a saída antiga fica liberada e o próximo `play` quebra (raro).
 - Salvar um ajuste de sincronia de um mapa removido no meio da partida pode lançar `SQLiteConstraintException`.
-- Pausar antes de o Spotify começar a primeira música e voltar mais de 5 s depois força uma pausa extra.
-- Retomar depois de reconectar o Spotify não espera a confirmação nem volta ao ponto da pista.
 - A detecção do começo da música supõe que a versão do Spotify começa direto na música e não é cancelável; uma introdução baixa pode exagerar o valor (o jogador refina na pausa).
 - Na calibração, duas corrotinas leem a posição da saída ao mesmo tempo (efeito desprezível).
+- Spotify: reconectar antes de ele ter começado a nossa faixa e continuar força uma pausa (o prazo de 5 s ainda conta do primeiro play).
+- Dedo que ficou na tela durante a pausa ou o retrocesso: ao sair, pode soltar a nota longa de outro dedo na mesma trilha (caso estreito do contador de dedos).
+- Toque nos últimos ~16–30 ms da janela de acerto, processado depois do quadro que marcou o erro, continua erro (falta uma pequena folga na marcação de erros).
+- Se o Android negar o foco de áudio ao continuar (por exemplo, no meio de uma ligação), a música toca assim mesmo.
+- O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.
