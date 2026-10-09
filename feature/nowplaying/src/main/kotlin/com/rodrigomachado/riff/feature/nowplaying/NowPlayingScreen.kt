@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +36,11 @@ import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+
+/** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
+object NowPlayingTestTags {
+    const val OPEN_LIBRARY = "nowplaying_open_library"
+}
 
 /** O que "Jogar" leva para a partida. */
 data class PlayRequest(val chartId: String, val difficulty: Difficulty, val trackUri: String, val trackOffsetMs: Int)
@@ -79,7 +85,7 @@ fun NowPlayingContent(
             style = MaterialTheme.typography.displaySmall,
         )
         Row {
-            TextButton(onClick = onOpenLibrary) {
+            TextButton(onClick = onOpenLibrary, modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY)) {
                 Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
             }
             TextButton(onClick = onOpenSettings) {

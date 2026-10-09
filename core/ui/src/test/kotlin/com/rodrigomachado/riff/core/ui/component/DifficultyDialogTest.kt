@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff.core.ui.component
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -51,5 +53,16 @@ class DifficultyDialogTest {
         composeRule.onNodeWithText("Cancelar").performClick()
 
         assertTrue(dismissed)
+    }
+
+    @Test
+    fun everyOptionHasTheSameTagAndTheFirstIsTheEasiest() {
+        show()
+
+        val options = composeRule.onAllNodesWithTag(DifficultyDialogTestTags.OPTION)
+        options.assertCountEquals(2)
+        options[0].performClick()
+
+        assertEquals(0, chosen)
     }
 }

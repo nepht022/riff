@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -25,7 +27,8 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             RiffTheme {
-                StageBackground(Modifier.fillMaxSize()) {
+                // Etiquetas viram resource-id: os percursos de desempenho (UiAutomator) acham os elementos.
+                StageBackground(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
                     RiffNavHost(Modifier.safeDrawingPadding())
                 }
             }

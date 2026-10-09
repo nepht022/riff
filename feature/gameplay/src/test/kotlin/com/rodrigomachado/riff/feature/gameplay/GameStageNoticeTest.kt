@@ -1,12 +1,17 @@
 package com.rodrigomachado.riff.feature.gameplay
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,5 +99,42 @@ class GameStageNoticeTest {
         composeRule.onNodeWithText("+1 s").performClick()
 
         assertEquals(listOf(-10, 10, -1_000, 1_000), adjustments)
+    }
+
+    @Test
+    fun pauseAndExitHaveTagsForTheAutomatedJourneys() {
+        var paused = false
+        var exited = false
+        val session = GameSession(listOf(note(60_000)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), audioOffsetMs = 0)
+        var isPaused by mutableStateOf(false)
+        composeRule.setContent {
+            RiffTheme {
+                GameStage(
+                    GameplayUiState.Ready(
+                        "Música",
+                        "Banda",
+                        Difficulty.EXPERT,
+                        session,
+                        Settings.DEFAULT,
+                        isPaused = isPaused,
+                    ),
+                    reducedMotion = true,
+                    onPause = {
+                        paused = true
+                        isPaused = true
+                    },
+                    onResume = {},
+                    onExit = { exited = true },
+                    onSessionFinished = {},
+                    animate = false,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(GameplayTestTags.PAUSE).performClick()
+        composeRule.onNodeWithTag(GameplayTestTags.EXIT).performClick()
+
+        assertTrue(paused)
+        assertTrue(exited)
     }
 }

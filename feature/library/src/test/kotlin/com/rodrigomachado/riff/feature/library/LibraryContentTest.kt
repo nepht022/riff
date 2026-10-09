@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
@@ -185,5 +186,12 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Voltar").performClick()
 
         assertEquals(true, back)
+    }
+
+    @Test
+    fun theChartListHasATagForTheAutomatedJourneys() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))))
+
+        composeRule.onNodeWithTag(LibraryTestTags.LIST).assertExists()
     }
 }

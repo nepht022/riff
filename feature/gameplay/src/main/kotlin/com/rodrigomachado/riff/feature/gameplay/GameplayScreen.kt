@@ -54,6 +54,8 @@ import kotlinx.coroutines.isActive
 
 object GameplayTestTags {
     const val STAGE = "gameplay_stage"
+    const val PAUSE = "gameplay_pause"
+    const val EXIT = "gameplay_exit"
 }
 
 private const val JUDGMENT_VISIBLE_MS = 500L
@@ -199,7 +201,9 @@ private fun Hud(
             verticalAlignment = Alignment.Top,
         ) {
             ScoreText(engine.score)
-            TextButton(onClick = onPause) { Text(stringResource(R.string.gameplay_pause), color = RiffColors.Paper) }
+            TextButton(onClick = onPause, modifier = Modifier.testTag(GameplayTestTags.PAUSE)) {
+                Text(stringResource(R.string.gameplay_pause), color = RiffColors.Paper)
+            }
             MultiplierStamp(engine.multiplier)
         }
         val combo = engine.state.combo
@@ -267,7 +271,9 @@ private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onRes
         PosterTitle(stringResource(R.string.gameplay_paused))
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume)
         SyncAdjuster(songOffsetMs, onAdjustOffset)
-        TextButton(onClick = onExit) { Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper) }
+        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
+            Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper)
+        }
     }
 }
 

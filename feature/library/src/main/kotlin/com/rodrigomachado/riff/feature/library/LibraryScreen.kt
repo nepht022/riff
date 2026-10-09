@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -42,6 +43,11 @@ import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+
+/** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
+object LibraryTestTags {
+    const val LIST = "library_list"
+}
 
 @Composable
 fun LibraryScreen(
@@ -151,6 +157,7 @@ private fun ChartList(
     onChartClick: (Chart) -> Unit,
 ) {
     LazyColumn(
+        modifier = Modifier.testTag(LibraryTestTags.LIST),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
         contentPadding = PaddingValues(vertical = Spacing.md),
     ) {
