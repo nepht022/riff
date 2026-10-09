@@ -54,4 +54,40 @@ class GameplayScreenshotTest {
             }
         }
     }
+
+    @Test
+    fun stageMidSongLeftHandedWithAMissedNote() {
+        val time = FakeTime()
+        val player = FakeSongPlayer().apply { positionMs = 3_650 }
+        val notes = listOf(
+            Note(3_500, 1, 0, false), // passa sem ser tocada: fica esmaecida
+            Note(4_000, 2, 0, false),
+            Note(4_450, 0, 0, false),
+            Note(4_900, 1, 0, true),
+            Note(5_350, 3, 900, false),
+            Note(5_800, 4, 0, false),
+        )
+        val session = GameSession(notes, player, FakeSfxPlayer(), time, audioOffsetMs = 0).also {
+            it.start()
+            it.tick()
+        }
+        // Em 0,5× a pista mostra até ~200 ms abaixo da linha: a nota perdida (julgada aos 100 ms) aparece.
+        val settings = Settings.DEFAULT.copy(leftHanded = true, noteSpeed = 0.5f)
+        val state = GameplayUiState.Ready("Música", "Banda", Difficulty.EXPERT, session, settings)
+        captureRoboImage("src/test/screenshots/Gameplay_stage_lefthanded.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    GameStage(
+                        state,
+                        reducedMotion = false,
+                        onPause = {},
+                        onResume = {},
+                        onExit = {},
+                        onSessionFinished = {},
+                        animate = false,
+                    )
+                }
+            }
+        }
+    }
 }
