@@ -30,7 +30,8 @@ internal class PresentedFrames(private val sampleRate: Int) {
     fun update(head: Long, stampFrame: Long?, stampNs: Long?, nowNs: Long): Long {
         if (stampFrame != null && stampNs != null && stampNs >= startedAtNs) {
             val sinceStart = framesAtStart + (nowNs - startedAtNs) * sampleRate / NANOS_PER_SECOND
-            frames = (stampFrame + (nowNs - stampNs) * sampleRate / NANOS_PER_SECOND).coerceIn(0, minOf(head, sinceStart))
+            val extrapolated = stampFrame + (nowNs - stampNs) * sampleRate / NANOS_PER_SECOND
+            frames = extrapolated.coerceIn(0, minOf(head, sinceStart))
             isPresenting = true
         } else if (nowNs - startedAtNs >= NO_TIMESTAMP_FALLBACK_NS) {
             // Saída que nunca dá timestamp: a cabeça de leitura é o melhor que há.
