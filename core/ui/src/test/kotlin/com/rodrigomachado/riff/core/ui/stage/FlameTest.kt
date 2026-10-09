@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.ui.stage
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FlameTest {
@@ -38,5 +39,17 @@ class FlameTest {
             assertEquals(frame.alpha, flameAlpha(progress), 1e-6f)
             assertEquals(frame.scaleY, flameScaleY(progress), 1e-6f)
         }
+    }
+
+    @Test
+    fun readingTheFlameFrameAllocatesNothing() {
+        val threads = java.lang.management.ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
+        val thread = Thread.currentThread().id
+        var sink = 0f
+        val before = threads.getThreadAllocatedBytes(thread)
+        for (i in 0 until 1_000) sink += flameAlpha(i / 1_000f) + flameScaleY(i / 1_000f)
+        val allocated = threads.getThreadAllocatedBytes(thread) - before
+
+        assertTrue("alocou $allocated bytes em 1.000 quadros (soma $sink)", allocated < 1_024)
     }
 }

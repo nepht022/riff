@@ -29,7 +29,9 @@ fun flameScaleY(progress: Float): Float = keyframe(progress, alpha = false)
 
 private fun keyframe(progress: Float, alpha: Boolean): Float {
     if (progress !in 0f..1f) return 0f
-    val index = KEYFRAMES.indexOfLast { it.first <= progress }.coerceAtMost(KEYFRAMES.lastIndex - 1)
+    // Laço por índice: o indexOfLast de uma List cria um iterador a cada chamada (e isto roda a cada quadro).
+    var index = 0
+    for (i in 0 until KEYFRAMES.size - 1) if (KEYFRAMES[i].first <= progress) index = i
     val (start, from) = KEYFRAMES[index]
     val (end, to) = KEYFRAMES[index + 1]
     val t = (progress - start) / (end - start)

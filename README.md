@@ -85,15 +85,17 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 ### Screenshots
 
 ```bash
-./scripts/gw :core:ui:recordRoborazziDebug   # regrava as referências depois de uma mudança visual intencional
-./scripts/gw :core:ui:verifyRoborazziDebug   # compara com as referências
+./scripts/gw recordRoborazziDebug   # regrava as referências (todos os módulos) depois de uma mudança visual intencional
+./scripts/gw verifyRoborazziDebug   # compara com as referências
 ```
 
 A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de commitar mudanças de UI. O CI não compara as imagens, porque o Robolectric desenha as fontes de forma diferente no Linux e no Windows (veja `docs/pendencias.md`).
 
 ### Desempenho
 
-O **Baseline Profile** diz ao Android quais partes do app compilar antes da primeira execução: a abertura e a partida já começam rápidas. Ele é gerado no celular por percursos automáticos (abrir o app, rolar a biblioteca, jogar 20 s de uma música e sair).
+O **Baseline Profile** diz ao Android quais partes do app compilar antes da primeira execução, para a abertura e a partida já começarem rápidas. Ele é gerado no celular por percursos automáticos (abrir o app, rolar a biblioteca, jogar 20 s de uma música e sair).
+
+**Vale só para o build release.** O Android ignora o perfil em apps de debug, que é o build usado no dia a dia (o release ainda não conecta ao Spotify; veja `docs/pendencias.md`). Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois.
 
 ```bash
 scripts/desempenho.sh perfil    # gera o perfil de novo
@@ -103,8 +105,9 @@ uv run --with perfetto python3 scripts/quadros_travados.py   # fps e quadros com
 ```
 
 - Celular conectado, desbloqueado, com a tela ligada (tempo de tela longo) e sem economia de bateria; não mexa nele durante a execução (10 a 15 minutos).
-- A música do percurso precisa estar na biblioteca: por padrão "Smells Like Teen Spirit"; outra com `-Pandroid.testInstrumentationRunnerArguments.riff.song="<nome>"`.
-- O app medido substitui o de debug no celular sem apagar os dados (mesma chave); o script copia os dados antes (`build/copia-dados-riff/`) e reinstala o debug no fim, mesmo se algo falhar.
+- A música do percurso precisa estar na biblioteca e aparecer sem rolar a lista: por padrão "Smells Like Teen Spirit"; outra com `scripts/desempenho.sh tudo "-Pandroid.testInstrumentationRunnerArguments.riff.song=<nome>"`.
+- O app medido substitui o de debug no celular sem apagar os dados (mesma chave). Antes, o script para o app e copia os dados para uma pasta nova em `.copias-dados/<data>/` (fora do git); no fim, reinstala o debug, mesmo se algo falhar.
+- **Restaurar uma cópia** (só se os dados sumirem), com o app de debug instalado e parado (`adb shell am force-stop com.rodrigomachado.riff`): para cada arquivo da pasta, `adb push <arquivo> /data/local/tmp/` e `adb shell "run-as com.rodrigomachado.riff sh -c 'cat /data/local/tmp/<arquivo> > databases/<arquivo>'"` (o `riff_settings.preferences_pb` vai para `files/datastore/`). Apague do aparelho o `riff.db-wal`/`-shm` que não estiver na cópia.
 - **Quando regerar o perfil:** depois de mudanças grandes em telas ou no gameplay. Um perfil desatualizado não quebra nada: só deixa de acelerar o que mudou.
 - O `frameDurationCpuMs` do Macrobenchmark inclui a espera na fila da tela ("Buffer Stuffing", o app adiantado). Para saber se a partida trava, use o `quadros_travados.py`.
 
