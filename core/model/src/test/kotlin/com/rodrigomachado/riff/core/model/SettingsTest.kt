@@ -7,20 +7,35 @@ import org.junit.jupiter.api.assertThrows
 
 class SettingsTest {
     @Test
-    fun defaultSfxVolumeIsSixtyPercent() {
-        assertEquals(0.6f, Settings.DEFAULT.sfxVolume)
+    fun defaultsAreFullAppVolumeAndSixtyPercentEffects() {
+        assertEquals(1f, Settings.DEFAULT.masterVolume)
+        assertEquals(0.6f, Settings.DEFAULT.hitVolume)
+        assertEquals(0.6f, Settings.DEFAULT.missVolume)
+        assertEquals(1f, Settings.DEFAULT.noteSpeed)
     }
 
     @Test
-    fun acceptsSfxVolumeFromZeroToOne() {
-        assertDoesNotThrow { Settings.DEFAULT.copy(sfxVolume = 0f) }
-        assertDoesNotThrow { Settings.DEFAULT.copy(sfxVolume = 1f) }
+    fun volumesGoFromSilentToFull() {
+        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 0f, hitVolume = 0f, missVolume = 0f) }
+        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 1f, hitVolume = 1f, missVolume = 1f) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(masterVolume = 1.1f) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(hitVolume = -0.1f) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(missVolume = Float.NaN) }
     }
 
     @Test
-    fun rejectsSfxVolumeOutsideZeroToOne() {
-        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(sfxVolume = -0.1f) }
-        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(sfxVolume = 1.1f) }
-        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(sfxVolume = Float.NaN) }
+    fun noteSpeedStaysBetweenHalfAndDouble() {
+        assertDoesNotThrow { Settings.DEFAULT.copy(noteSpeed = Settings.MIN_NOTE_SPEED) }
+        assertDoesNotThrow { Settings.DEFAULT.copy(noteSpeed = Settings.MAX_NOTE_SPEED) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(noteSpeed = 0.25f) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(noteSpeed = 2.5f) }
+    }
+
+    @Test
+    fun effectsAreScaledByTheAppVolume() {
+        val settings = Settings.DEFAULT.copy(masterVolume = 0.5f, hitVolume = 0.6f, missVolume = 1f)
+
+        assertEquals(0.3f, settings.effectiveHitVolume, 1e-6f)
+        assertEquals(0.5f, settings.effectiveMissVolume, 1e-6f)
     }
 }

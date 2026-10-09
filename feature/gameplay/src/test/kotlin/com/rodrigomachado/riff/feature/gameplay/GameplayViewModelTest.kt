@@ -26,7 +26,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameplayViewModelTest {
     private val loader = FakeChartTrackLoader()
-    private val settings = FakeSettingsRepository(Settings.DEFAULT.copy(sfxVolume = 0.3f, audioOffsetMs = -40))
+    private val settings = FakeSettingsRepository(Settings.DEFAULT.copy(hitVolume = 0.3f, audioOffsetMs = -40))
     private val scores = FakeScoreRepository()
     private val player = FakeSongPlayer()
     private val sfx = FakeSfxPlayer()

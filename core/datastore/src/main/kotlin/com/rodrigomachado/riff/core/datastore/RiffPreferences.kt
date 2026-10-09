@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -32,8 +31,11 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[AUDIO_OFFSET_MS] = updated.audioOffsetMs
             prefs[NOTE_SPEED] = updated.noteSpeed
             prefs[LEFT_HANDED] = updated.leftHanded
-            prefs[DEFAULT_DIFFICULTY] = updated.defaultDifficulty.name
-            prefs[SFX_VOLUME] = updated.sfxVolume
+            prefs[MASTER_VOLUME] = updated.masterVolume
+            prefs[HIT_VOLUME] = updated.hitVolume
+            prefs[MISS_VOLUME] = updated.missVolume
+            prefs.remove(LEGACY_SFX_VOLUME)
+            prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
         }
     }
 
@@ -43,23 +45,32 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
 
     private fun Preferences.toSettings(): Settings {
         val default = Settings.DEFAULT
+        // O volume único de antes (sfx_volume) vale para acerto e erro até o jogador mexer neles.
+        val legacyEffects = volume(LEGACY_SFX_VOLUME)
         return Settings(
             audioOffsetMs = this[AUDIO_OFFSET_MS] ?: default.audioOffsetMs,
-            noteSpeed = this[NOTE_SPEED]?.takeIf { it.isFinite() && it > 0f } ?: default.noteSpeed,
+            noteSpeed = this[NOTE_SPEED]?.takeIf { it.isFinite() && it > 0f }
+                ?.coerceIn(Settings.MIN_NOTE_SPEED, Settings.MAX_NOTE_SPEED)
+                ?: default.noteSpeed,
             leftHanded = this[LEFT_HANDED] ?: default.leftHanded,
-            defaultDifficulty = this[DEFAULT_DIFFICULTY]
-                ?.let { name -> Difficulty.entries.firstOrNull { it.name == name } }
-                ?: default.defaultDifficulty,
-            sfxVolume = this[SFX_VOLUME]?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f) ?: default.sfxVolume,
+            masterVolume = volume(MASTER_VOLUME) ?: default.masterVolume,
+            hitVolume = volume(HIT_VOLUME) ?: legacyEffects ?: default.hitVolume,
+            missVolume = volume(MISS_VOLUME) ?: legacyEffects ?: default.missVolume,
         )
     }
+
+    private fun Preferences.volume(key: Preferences.Key<Float>): Float? =
+        this[key]?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f)
 
     private companion object {
         val AUDIO_OFFSET_MS = intPreferencesKey("audio_offset_ms")
         val NOTE_SPEED = floatPreferencesKey("note_speed")
         val LEFT_HANDED = booleanPreferencesKey("left_handed")
-        val DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
-        val SFX_VOLUME = floatPreferencesKey("sfx_volume")
+        val MASTER_VOLUME = floatPreferencesKey("master_volume")
+        val HIT_VOLUME = floatPreferencesKey("hit_volume")
+        val MISS_VOLUME = floatPreferencesKey("miss_volume")
+        val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
+        val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")
     }
 }

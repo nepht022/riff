@@ -5,8 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,32 +37,54 @@ class RiffPreferencesTest {
     @Test
     fun updatesArePersisted() = runTest {
         val preferences = RiffPreferences(InMemoryPreferencesStore())
+
         preferences.updateSettings {
-            it.copy(audioOffsetMs = -180, leftHanded = true, defaultDifficulty = Difficulty.EXPERT, sfxVolume = 0.25f)
+            it.copy(
+                audioOffsetMs = -180,
+                leftHanded = true,
+                noteSpeed = 1.5f,
+                masterVolume = 0.8f,
+                hitVolume = 0.2f,
+                missVolume = 0.9f,
+            )
         }
-        preferences.setLibraryRootUri("content://pasta")
 
         val settings = preferences.settings.first()
         assertEquals(-180, settings.audioOffsetMs)
         assertEquals(true, settings.leftHanded)
-        assertEquals(Difficulty.EXPERT, settings.defaultDifficulty)
-        assertEquals(0.25f, settings.sfxVolume)
-        assertEquals("content://pasta", preferences.libraryRootUri.first())
+        assertEquals(1.5f, settings.noteSpeed)
+        assertEquals(0.8f, settings.masterVolume)
+        assertEquals(0.2f, settings.hitVolume)
+        assertEquals(0.9f, settings.missVolume)
+    }
+
+    @Test
+    fun theOldSingleEffectsVolumeCarriesOverToHitAndMiss() = runTest {
+        val store = InMemoryPreferencesStore()
+        store.edit { it[floatPreferencesKey("sfx_volume")] = 0.25f }
+
+        val settings = RiffPreferences(store).settings.first()
+
+        assertEquals(0.25f, settings.hitVolume)
+        assertEquals(0.25f, settings.missVolume)
+        assertEquals(1f, settings.masterVolume)
     }
 
     @Test
     fun corruptedValuesFallBackToDefaultsInsteadOfCrashing() = runTest {
         val store = InMemoryPreferencesStore()
         store.edit {
-            it[floatPreferencesKey("sfx_volume")] = 5f
-            it[floatPreferencesKey("note_speed")] = -1f
-            it[stringPreferencesKey("default_difficulty")] = "IMPOSSIVEL"
+            it[floatPreferencesKey("hit_volume")] = 5f
+            it[floatPreferencesKey("miss_volume")] = Float.NaN
+            it[floatPreferencesKey("master_volume")] = -2f
+            it[floatPreferencesKey("note_speed")] = 9f
         }
 
         val settings = RiffPreferences(store).settings.first()
-        assertEquals(1f, settings.sfxVolume)
-        assertEquals(Settings.DEFAULT.noteSpeed, settings.noteSpeed)
-        assertEquals(Settings.DEFAULT.defaultDifficulty, settings.defaultDifficulty)
+        assertEquals(1f, settings.hitVolume)
+        assertEquals(Settings.DEFAULT.missVolume, settings.missVolume)
+        assertEquals(0f, settings.masterVolume)
+        assertEquals(Settings.MAX_NOTE_SPEED, settings.noteSpeed)
     }
 
     @Test
