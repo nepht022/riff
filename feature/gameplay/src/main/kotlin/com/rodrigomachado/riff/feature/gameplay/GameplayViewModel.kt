@@ -10,8 +10,11 @@ import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayerFactory
 import com.rodrigomachado.riff.core.audio.SpotifySong
 import com.rodrigomachado.riff.core.audio.StemSongPlayerFactory
+import com.rodrigomachado.riff.core.data.ChartOffsetRepository
+import com.rodrigomachado.riff.core.data.MAX_SYNC_OFFSET_MS
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
@@ -43,6 +46,7 @@ sealed interface GameplayUiState {
         val settings: Settings,
         val isPaused: Boolean = false,
         val withoutSeparateGuitar: Boolean = false,
+        val songOffsetMs: Int = 0,
     ) : GameplayUiState
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
@@ -56,6 +60,8 @@ class GameplayViewModel @Inject constructor(
     private val loader: ChartTrackLoader,
     private val settingsRepository: SettingsRepository,
     private val scores: ScoreRepository,
+    private val chartOffsets: ChartOffsetRepository,
+    private val trackMatches: TrackMatchRepository,
     @LocalSong private val songPlayers: SongPlayerFactory,
     @SpotifySong private val spotifyPlayers: SongPlayerFactory,
     private val stemPlayers: StemSongPlayerFactory,
@@ -72,6 +78,7 @@ class GameplayViewModel @Inject constructor(
     private var player: SongPlayer? = null
     private var sfx: SfxPlayer? = null
     private var finishing = false
+    private var songOffsetMs = 0
 
     // O app pode ir para segundo plano enquanto a música carrega: a partida começa pausada.
     private var pauseRequested = false
@@ -90,7 +97,9 @@ class GameplayViewModel @Inject constructor(
             sfx = it
             it.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         }
-        val offset = settings.audioOffsetMs.toLong() + trackOffsetMs
+        songOffsetMs = spotifyTrackUri?.let { trackMatches.offsetFor(it, chartId) ?: trackOffsetMs }
+            ?: chartOffsets.get(chartId)
+        val offset = settings.audioOffsetMs.toLong() + songOffsetMs
         val session = GameSession(playable.notes, songPlayer, effects, timeSource, offset)
         if (!pauseRequested) session.start()
         GameplayUiState.Ready(
@@ -101,6 +110,7 @@ class GameplayViewModel @Inject constructor(
             settings,
             pauseRequested,
             withoutSeparateGuitar,
+            songOffsetMs = songOffsetMs,
         )
     } catch (e: CancellationException) {
         throw e
@@ -180,6 +190,20 @@ class GameplayViewModel @Inject constructor(
         if (ready.isPaused == paused) return
         if (paused) ready.session.pause()
         state.update { ready.copy(isPaused = paused) }
+    }
+
+    /** Ajuste fino na pausa: vale ao continuar e fica salvo para esta música (Spotify) ou este mapa. */
+    fun adjustSongOffset(deltaMs: Int) {
+        val ready = state.value as? GameplayUiState.Ready ?: return
+        val updated = (songOffsetMs + deltaMs).coerceIn(-MAX_SYNC_OFFSET_MS, MAX_SYNC_OFFSET_MS)
+        if (updated == songOffsetMs) return
+        ready.session.adjustOffset((updated - songOffsetMs).toLong())
+        songOffsetMs = updated
+        state.update { ready.copy(songOffsetMs = updated) }
+        viewModelScope.launch {
+            val uri = spotifyTrackUri
+            if (uri != null) trackMatches.saveOffset(uri, chartId, updated) else chartOffsets.save(chartId, updated)
+        }
     }
 
     fun onSessionFinished() {

@@ -36,6 +36,8 @@ class GameplayViewModelTest {
     private val stemPlayer = FakeStemPlayer()
     private var stemsCreated: Pair<String, List<String>>? = null
     private val time = FakeTime()
+    private val chartOffsets = FakeChartOffsetRepository()
+    private val trackMatches = FakeTrackMatchRepository()
 
     private val chart = Chart(
         "a", "Música", "Banda", null, null, null, "raiz/a", ChartFormat.CHART,
@@ -62,6 +64,8 @@ class GameplayViewModelTest {
         loader,
         settings,
         scores,
+        chartOffsets,
+        trackMatches,
         {
             playersCreated++
             player
@@ -291,5 +295,53 @@ class GameplayViewModelTest {
         assertEquals(0.5f, player.appVolume, 1e-6f)
         assertEquals(0.3f, sfx.hitVolume, 1e-6f)
         assertEquals(0.5f, sfx.missVolume, 1e-6f)
+    }
+
+    @Test
+    fun theLibraryChartAdjustmentIsUsedAndSaved() = runTest {
+        chartOffsets.offsets["a"] = 20
+        loader.result = { playable() }
+        val viewModel = viewModel()
+        val ready = viewModel.uiState.value as GameplayUiState.Ready
+        assertEquals(20, ready.songOffsetMs)
+        player.positionMs = 1_000
+        time.now = GameSession.SYNC_INTERVAL_MS
+        assertEquals(980L, ready.session.tick()) // 1000 − 40 (geral) + 20 (mapa)
+
+        viewModel.pause()
+        viewModel.adjustSongOffset(+10)
+
+        assertEquals(30, chartOffsets.offsets["a"])
+        assertEquals(30, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
+        assertEquals(990L, ready.session.tick())
+    }
+
+    @Test
+    fun spotifyOffsetIsReadFromTheSavedMatchNotFromTheRoute() = runTest {
+        trackMatches.offsets["spotify:track:x" to "a"] = -30
+        loader.result = { playable() }
+
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", trackOffsetMs = 25)
+        viewModel.adjustSongOffset(-10)
+
+        assertEquals(-40, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
+        assertEquals(-40, trackMatches.offsets["spotify:track:x" to "a"])
+    }
+
+    @Test
+    fun songOffsetStopsAtTheLimits() = runTest {
+        chartOffsets.offsets["a"] = 495
+        loader.result = { playable() }
+        val viewModel = viewModel()
+        val ready = viewModel.uiState.value as GameplayUiState.Ready
+        player.positionMs = 1_000
+        time.now = GameSession.SYNC_INTERVAL_MS
+        val before = ready.session.tick()
+
+        viewModel.adjustSongOffset(+10)
+        viewModel.adjustSongOffset(+10)
+
+        assertEquals(500, chartOffsets.offsets["a"])
+        assertEquals(before + 5, ready.session.tick())
     }
 }

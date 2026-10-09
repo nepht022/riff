@@ -14,4 +14,7 @@
     <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
     <string name="gameplay_unavailable_spotify">Couldn\'t play through Spotify. Check that the Spotify app is open and connected.</string>
     <string name="gameplay_no_separate_guitar">Playing without the separate guitar</string>
+    <string name="gameplay_sync">Sync for this song: %1$s ms</string>
+    <string name="gameplay_sync_earlier">−10 ms</string>
+    <string name="gameplay_sync_later">+10 ms</string>
 </resources>

@@ -125,3 +125,29 @@ class FakeStemPlayer(val song: FakeSongPlayer = FakeSongPlayer()) :
         this.audible += audible
     }
 }
+
+class FakeChartOffsetRepository : com.rodrigomachado.riff.core.data.ChartOffsetRepository {
+    val offsets = mutableMapOf<String, Int>()
+
+    override suspend fun get(chartId: String): Int = offsets[chartId] ?: 0
+
+    override suspend fun save(chartId: String, offsetMs: Int) {
+        offsets[chartId] = offsetMs
+    }
+}
+
+class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
+    val offsets = mutableMapOf<Pair<String, String>, Int>()
+    override val changes = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
+        com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
+
+    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
+
+    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = offsets[spotifyTrackUri to chartId]
+
+    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) {
+        offsets[spotifyTrackUri to chartId] = offsetMs
+    }
+}

@@ -62,6 +62,7 @@ private const val JUDGMENT_BOUNCE_SCALE = 0.25f
 private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
 private const val NOTICE_MS = 4_000L
+private const val SYNC_STEP_MS = 10
 
 @Composable
 fun GameplayScreen(
@@ -92,6 +93,7 @@ fun GameplayScreen(
             onExit = onExit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
             onPlaybackChanged = viewModel::onPlaybackChanged,
+            onAdjustOffset = viewModel::adjustSongOffset,
             modifier = modifier,
         )
 
@@ -112,6 +114,7 @@ internal fun GameStage(
     onSessionFinished: () -> Unit,
     modifier: Modifier = Modifier,
     onPlaybackChanged: (Boolean) -> Unit = {},
+    onAdjustOffset: (Int) -> Unit = {},
     animate: Boolean = true,
 ) {
     val session = state.session
@@ -149,7 +152,7 @@ internal fun GameStage(
             drawStage(session, msPerUnit, leftHanded, reducedMotion)
         }
         Hud(session, frame, reducedMotion, state.withoutSeparateGuitar, onPause, Modifier.fillMaxSize())
-        if (state.isPaused) PauseOverlay(onResume, onExit)
+        if (state.isPaused) PauseOverlay(state.songOffsetMs, onAdjustOffset, onResume, onExit)
     }
 }
 
@@ -254,7 +257,7 @@ private fun NoSeparateGuitarNotice(modifier: Modifier) {
 }
 
 @Composable
-private fun PauseOverlay(onResume: () -> Unit, onExit: () -> Unit) {
+private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onResume: () -> Unit, onExit: () -> Unit) {
     Column(
         Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA)),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
@@ -262,9 +265,32 @@ private fun PauseOverlay(onResume: () -> Unit, onExit: () -> Unit) {
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume)
+        SyncAdjuster(songOffsetMs, onAdjustOffset)
         TextButton(onClick = onExit) { Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper) }
     }
 }
+
+/** Ajuste fino de sincronia desta música, de 10 em 10 ms. */
+@Composable
+private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            stringResource(R.string.gameplay_sync, signed(songOffsetMs)),
+            style = MaterialTheme.typography.bodyLarge,
+            color = RiffColors.Paper,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            TextButton(onClick = { onAdjustOffset(-SYNC_STEP_MS) }) {
+                Text(stringResource(R.string.gameplay_sync_earlier), color = RiffColors.Paper)
+            }
+            TextButton(onClick = { onAdjustOffset(SYNC_STEP_MS) }) {
+                Text(stringResource(R.string.gameplay_sync_later), color = RiffColors.Paper)
+            }
+        }
+    }
+}
+
+private fun signed(value: Int): String = if (value > 0) "+$value" else value.toString()
 
 /** "Remover animações" do Android: escala de animação zerada. */
 @Composable
