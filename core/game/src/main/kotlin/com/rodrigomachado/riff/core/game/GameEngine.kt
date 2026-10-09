@@ -91,6 +91,19 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         sustains.remove(lane)
     }
 
+    /**
+     * Há uma nota que já passou do acerto perfeito e ainda não foi tocada (mas ainda pode ser, atrasada).
+     * Com a guitarra separada, ela silencia aqui em vez de esperar o fim da janela.
+     */
+    fun hasOverdueNote(timeMs: Long): Boolean {
+        var i = firstPending
+        while (i < notes.size && notes[i].timeMs < timeMs - windows.perfectMs) {
+            if (judgments[i] == null) return true
+            i++
+        }
+        return false
+    }
+
     private fun findHittable(lane: Int, timeMs: Long): Int? {
         var i = firstPending
         while (i < notes.size && notes[i].timeMs <= timeMs + windows.goodMs) {

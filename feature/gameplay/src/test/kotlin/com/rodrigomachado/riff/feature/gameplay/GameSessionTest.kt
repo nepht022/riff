@@ -267,4 +267,19 @@ class GameSessionTest {
 
         assertEquals(emptyList<Long>(), player.seeks)
     }
+
+    @Test
+    fun withTheSeparateGuitarANoteNotYetHitSilencesItRightAfterItsTime() {
+        val session = stemSession(note(1_000))
+        stems.song.positionMs = 1_060
+        time.now = SYNC
+
+        session.tick()
+        session.tick()
+
+        assertEquals(listOf(false), stems.audible) // uma vez só, sem esperar o fim da janela
+        assertEquals(0, sfx.misses) // ainda não é erro: dá para acertar atrasado
+        session.press(0)
+        assertEquals(listOf(false, true), stems.audible)
+    }
 }

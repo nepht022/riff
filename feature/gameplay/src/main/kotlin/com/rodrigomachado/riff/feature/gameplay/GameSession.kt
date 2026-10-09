@@ -39,6 +39,7 @@ class GameSession(
     private var lastJudgmentAt = NEVER
     private var pendingOffsetMs = 0L
     private var waitingForSound = false
+    private var silencedForOverdueNote = false
 
     /** A pista voltando como uma fita antes de a música continuar (modo biblioteca). */
     private class Rewind(val fromMs: Long, val toMs: Long, val startedAtMs: Long)
@@ -108,6 +109,7 @@ class GameSession(
             missesHeard = misses
             onMiss()
         }
+        silenceGuitarForOverdueNote()
         return songTimeMs
     }
 
@@ -142,6 +144,13 @@ class GameSession(
         flameStartedAt[lane] = now
         lastJudgment = judgment
         lastJudgmentAt = now
+    }
+
+    /** A nota passou da hora sem ser tocada: a guitarra cala já (o erro em si só vem no fim da janela). */
+    private fun silenceGuitarForOverdueNote() {
+        val overdue = guitar != null && engine.hasOverdueNote(songTimeMs)
+        if (overdue && !silencedForOverdueNote) guitar?.setGuitarAudible(false)
+        silencedForOverdueNote = overdue
     }
 
     private fun onMiss() {

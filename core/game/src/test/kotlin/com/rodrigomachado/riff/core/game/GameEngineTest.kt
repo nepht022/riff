@@ -152,4 +152,23 @@ class GameEngineTest {
         assertEquals(1, engine.count(Judgment.MISS))
         assertEquals(0, engine.count(Judgment.GOOD))
     }
+
+    @Test
+    fun aNoteIsOverdueOncePastThePerfectWindowUntilItIsHit() {
+        val engine = GameEngine(listOf(note(1_000)))
+
+        assertFalse(engine.hasOverdueNote(1_050))
+        assertTrue(engine.hasOverdueNote(1_051))
+        engine.onPress(0, 1_060)
+        assertFalse(engine.hasOverdueNote(1_070))
+    }
+
+    @Test
+    fun aMissedNoteIsNoLongerOverdue() {
+        val engine = GameEngine(listOf(note(1_000)))
+
+        engine.update(1_200)
+
+        assertFalse(engine.hasOverdueNote(1_200))
+    }
 }
