@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-/** Toca o metrônomo e devolve o instante (relógio `uptimeMillis`) em que cada clique saiu no alto-falante. */
+/** Toca o metrônomo e devolve o instante (relógio `uptimeMillis`) em que cada batida saiu no alto-falante. */
 fun interface ClickTrackPlayer {
     suspend fun play(): List<Long>
 }
@@ -25,7 +25,10 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
             coroutineScope {
                 val watcher = launch {
                     while (isActive) {
-                        timeline.observe(SystemClock.uptimeMillis(), sink.playedFrames)
+                        val now = SystemClock.uptimeMillis()
+                        val played = sink.playedFrames
+                        android.util.Log.d("RiffCalib", "obs now=$now played=$played") // DIAGNÓSTICO TEMPORÁRIO
+                        timeline.observe(now, played)
                         delay(OBSERVE_EVERY_MS)
                     }
                 }

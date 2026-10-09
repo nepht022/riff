@@ -45,6 +45,7 @@ fun CalibrationScreen(
         onNudge = viewModel::nudge,
         onSave = { viewModel.save(onDone) },
         onDone = onDone,
+        onReset = { viewModel.reset(onDone) },
         modifier = modifier,
     )
 }
@@ -57,6 +58,7 @@ fun CalibrationContent(
     onNudge: (Int) -> Unit,
     onSave: () -> Unit,
     onDone: () -> Unit,
+    onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
@@ -68,7 +70,11 @@ fun CalibrationContent(
                     stringResource(R.string.calibration_instructions),
                     stringResource(R.string.calibration_start),
                     onStart,
-                )
+                ) {
+                    TextButton(onClick = onReset) {
+                        Text(stringResource(R.string.calibration_reset), color = RiffColors.Paper)
+                    }
+                }
 
                 is CalibrationUiState.Measuring -> TapArea(state.taps, onTap)
 
@@ -91,10 +97,13 @@ fun CalibrationContent(
 }
 
 @Composable
-private fun Message(text: String, action: String, onAction: () -> Unit) {
+private fun Message(text: String, action: String, onAction: () -> Unit, secondary: @Composable () -> Unit = {}) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
         Text(text, style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
-        PosterButton(action, onClick = onAction)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            PosterButton(action, onClick = onAction)
+            secondary()
+        }
     }
 }
 

@@ -114,4 +114,16 @@ class CalibrationViewModelTest {
 
         assertEquals(CalibrationUiState.AudioFailed, viewModel.uiState.value)
     }
+
+    @Test
+    fun resettingClearsTheSavedCalibration() = runTest {
+        settings.settings.value = Settings.DEFAULT.copy(audioOffsetMs = 99)
+        val viewModel = CalibrationViewModel(settings, player)
+        var done = false
+
+        viewModel.reset { done = true }
+
+        assertEquals(0, settings.settings.value.audioOffsetMs)
+        assertTrue(done)
+    }
 }

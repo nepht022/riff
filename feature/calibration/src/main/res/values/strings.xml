@@ -2,9 +2,10 @@
 <resources>
     <string name="calibration_title">Calibração</string>
     <string name="calibration_back">Voltar</string>
-    <string name="calibration_instructions">Toque na tela junto com cada clique.</string>
+    <string name="calibration_instructions">Toque na tela junto com cada batida.</string>
+    <string name="calibration_reset">Zerar</string>
     <string name="calibration_start">Começar</string>
-    <string name="calibration_measuring">Toque junto com cada clique</string>
+    <string name="calibration_measuring">Toque junto com cada batida</string>
     <plurals name="calibration_taps">
         <item quantity="one">%1$d toque</item>
         <item quantity="other">%1$d toques</item>
@@ -14,7 +15,7 @@
     <string name="calibration_more">+5 ms</string>
     <string name="calibration_save">Salvar</string>
     <string name="calibration_repeat">Repetir</string>
-    <string name="calibration_unstable">Medição instável. Tente de novo, tocando junto com o clique.</string>
+    <string name="calibration_unstable">Medição instável. Tente de novo, tocando junto com a batida.</string>
     <string name="calibration_audio_failed">Não deu para tocar o metrônomo.</string>
     <string name="calibration_retry">Tentar de novo</string>
 </resources>

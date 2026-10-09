@@ -43,7 +43,9 @@ class CalibrationViewModel @Inject constructor(
         state.value = CalibrationUiState.Measuring(taps = 0)
         measuring = viewModelScope.launch {
             state.value = try {
-                when (val result = CalibrationSession.result(player.play(), taps.toList())) {
+                val clicks = player.play()
+                runCatching { android.util.Log.d("RiffCalib", "clicks=$clicks taps=$taps") } // DIAGNÓSTICO TEMPORÁRIO
+                when (val result = CalibrationSession.result(clicks, taps.toList())) {
                     is CalibrationResult.Measured -> CalibrationUiState.Result(result.latencyMs.limited())
                     CalibrationResult.Unstable -> CalibrationUiState.Unstable
                 }
@@ -73,6 +75,14 @@ class CalibrationViewModel @Inject constructor(
         viewModelScope.launch {
             settings.update { it.copy(audioOffsetMs = -current.latencyMs) }
             onSaved()
+        }
+    }
+
+    /** Volta ao "não calibrado" (atraso 0). */
+    fun reset(onDone: () -> Unit) {
+        viewModelScope.launch {
+            settings.update { it.copy(audioOffsetMs = 0) }
+            onDone()
         }
     }
 

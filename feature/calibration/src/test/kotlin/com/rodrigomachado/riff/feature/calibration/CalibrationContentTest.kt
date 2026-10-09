@@ -30,6 +30,7 @@ class CalibrationContentTest {
                 onNudge = { events += "nudge:$it" },
                 onSave = { events += "save" },
                 onDone = { events += "done" },
+                onReset = { events += "reset" },
             )
         }
     }
@@ -38,7 +39,7 @@ class CalibrationContentTest {
     fun theInstructionsExplainWhatToDo() {
         show(CalibrationUiState.Instructions)
 
-        composeRule.onNodeWithText("Toque na tela junto com cada clique.").assertExists()
+        composeRule.onNodeWithText("Toque na tela junto com cada batida.").assertExists()
         composeRule.onNodeWithText("Começar").performClick()
 
         assertEquals(listOf("start"), events)
@@ -71,7 +72,7 @@ class CalibrationContentTest {
     fun anUnsteadyMeasurementAsksToTryAgain() {
         show(CalibrationUiState.Unstable)
 
-        composeRule.onNodeWithText("Medição instável. Tente de novo, tocando junto com o clique.").assertExists()
+        composeRule.onNodeWithText("Medição instável. Tente de novo, tocando junto com a batida.").assertExists()
         composeRule.onNodeWithText("Repetir").performClick()
 
         assertEquals(listOf("start"), events)
@@ -82,5 +83,14 @@ class CalibrationContentTest {
         show(CalibrationUiState.AudioFailed)
 
         composeRule.onNodeWithText("Não deu para tocar o metrônomo.").assertExists()
+    }
+
+    @Test
+    fun theCalibrationCanBeResetFromTheStart() {
+        show(CalibrationUiState.Instructions)
+
+        composeRule.onNodeWithText("Zerar").performClick()
+
+        assertEquals(listOf("reset"), events)
     }
 }

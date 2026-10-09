@@ -25,7 +25,15 @@ class CalibrationScreenshotTest {
         captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
-                    CalibrationContent(state, onStart = {}, onTap = {}, onNudge = {}, onSave = {}, onDone = {})
+                    CalibrationContent(
+                        state,
+                        onStart = {},
+                        onTap = {},
+                        onNudge = {},
+                        onSave = {},
+                        onDone = {},
+                        onReset = {},
+                    )
                 }
             }
         }
