@@ -10,6 +10,10 @@ interface PcmSource : Closeable {
 
     /** Preenche até [maxFrames] quadros intercalados; devolve menos só no fim da faixa (0 = acabou). */
     fun read(buffer: FloatArray, maxFrames: Int): Int
+
+    /** A próxima leitura começa no quadro [frame]. */
+    @Throws(IOException::class)
+    fun seekTo(frame: Long): Unit = throw IOException("esta faixa não sabe reposicionar")
 }
 
 fun interface PcmSourceOpener {

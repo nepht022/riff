@@ -38,6 +38,10 @@ class MediaSongPlayer(private val context: Context, private val player: MediaPla
         if (isPlaying) player.pause()
     }
 
+    override fun seekTo(positionMs: Long) {
+        if (!released) player.seekTo(positionMs, MediaPlayer.SEEK_CLOSEST)
+    }
+
     override fun setVolume(volume: Float) {
         if (!released) volume.coerceIn(0f, 1f).let { player.setVolume(it, it) }
     }

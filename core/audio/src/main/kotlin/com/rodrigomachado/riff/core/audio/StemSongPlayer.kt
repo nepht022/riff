@@ -23,6 +23,12 @@ class StemSongPlayer(
     private val nowMs: () -> Long = { SystemClock.uptimeMillis() },
 ) : StemPlayer {
     private val lock = Object()
+
+    // A thread de áudio escreve com isto travado; reposicionar troca faixas e saída sem ela no meio.
+    private val renderLock = Object()
+
+    // Quadro da música em que a saída atual começou (muda ao reposicionar: a saída nova conta do zero).
+    private var baseFrames = 0L
     private var sources: List<PcmSource> = emptyList()
     private var sink: AudioSink? = null
     private var mixer: StemMixer? = null
@@ -105,7 +111,7 @@ class StemSongPlayer(
             synchronized(lock) {
                 while (!released && !hasWork()) lock.wait()
             }
-            if (!released) renderOnce()
+            if (!released) synchronized(renderLock) { renderOnce() }
         }
     }
 
@@ -180,6 +186,29 @@ class StemSongPlayer(
         sink?.pause()
     }
 
+    /** Só com a música pausada: cada faixa volta ao ponto e uma saída nova começa dali (a antiga tinha o futuro). */
+    override fun seekTo(positionMs: Long) {
+        if (released || playing) return
+        synchronized(renderLock) {
+            val old = sink ?: return
+            val frame = positionMs * sampleRate / 1_000
+            for (track in sources.indices) {
+                ended[track] = runCatching { sources[track].seekTo(frame) }
+                    .onFailure { log("Faixa $track não pôde voltar", it) }
+                    .isFailure
+            }
+            old.stop()
+            old.release()
+            sink = sinks.create(sampleRate)
+            baseFrames = frame
+            writtenFrames = 0
+            pendingFrames = 0
+            pendingOffset = 0
+            allEnded = false
+            stalledHead = -1
+        }
+    }
+
     override fun setVolume(volume: Float) {
         this.volume = volume.coerceIn(0f, 1f)
         mixer?.masterGain = this.volume
@@ -207,7 +236,7 @@ class StemSongPlayer(
         get() {
             if (released) return positionAtRelease
             val output = sink ?: return 0
-            return output.playedFrames * 1_000 / sampleRate
+            return (baseFrames + output.playedFrames) * 1_000 / sampleRate
         }
 
     override val isPlaying: Boolean get() = playing && !released && !isCompleted

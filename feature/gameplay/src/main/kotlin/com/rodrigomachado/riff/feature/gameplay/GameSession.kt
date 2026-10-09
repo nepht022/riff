@@ -24,6 +24,8 @@ class GameSession(
     audioOffsetMs: Long,
     /** Falso no modo Spotify: a música inteira já está tocando, então o acerto fica em silêncio. */
     private val hitSounds: Boolean = true,
+    /** Quanto voltar ao continuar depois de uma pausa (modo biblioteca: dá tempo de se preparar). */
+    private val rewindOnResumeMs: Long = 0,
 ) {
     val engine = GameEngine(notes)
     private val clock = SongClock(timeSource, audioOffsetMs)
@@ -65,6 +67,7 @@ class GameSession(
     fun resume() {
         clock.offsetMs += pendingOffsetMs
         pendingOffsetMs = 0
+        if (rewindOnResumeMs > 0) player.seekTo((player.positionMs - rewindOnResumeMs).coerceAtLeast(0))
         player.play()
         syncClock()
     }

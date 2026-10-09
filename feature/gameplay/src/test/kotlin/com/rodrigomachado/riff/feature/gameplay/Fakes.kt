@@ -18,6 +18,7 @@ class FakeSongPlayer : SongPlayer {
     var released = false
     override var isCompleted: Boolean = false
     override var isStarting: Boolean = false
+    val seeks = mutableListOf<Long>()
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
     override var positionMs: Long = 0
@@ -45,6 +46,11 @@ class FakeSongPlayer : SongPlayer {
 
     override fun setVolume(volume: Float) {
         appVolume = volume
+    }
+
+    override fun seekTo(positionMs: Long) {
+        seeks += positionMs
+        this.positionMs = positionMs
     }
 
     override fun release() {

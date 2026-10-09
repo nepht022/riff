@@ -110,6 +110,8 @@ class GameplayViewModel @Inject constructor(
             timeSource,
             offset,
             hitSounds = spotifyTrackUri == null,
+            // Na biblioteca o jogador veio jogar: volta um pouco para retomar. No Spotify veio ouvir: segue.
+            rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )
         session.syncLog = { runCatching { android.util.Log.d("RiffSync", it) } } // DIAGNÓSTICO TEMPORÁRIO
         if (!pauseRequested) session.start()
@@ -248,3 +250,6 @@ class GameplayViewModel @Inject constructor(
 
     override fun onCleared() = release()
 }
+
+/** Quanto a biblioteca volta ao continuar depois de uma pausa. */
+private const val LIBRARY_REWIND_MS = 500L

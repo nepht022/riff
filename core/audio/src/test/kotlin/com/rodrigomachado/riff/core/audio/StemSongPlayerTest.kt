@@ -27,6 +27,10 @@ class StemSongPlayerTest {
             return count
         }
 
+        override fun seekTo(frame: Long) {
+            position = frame.toInt()
+        }
+
         override fun close() {
             closed = true
         }
@@ -302,5 +306,34 @@ class StemSongPlayerTest {
         assertFalse(player.isStarting)
         player.pause()
         assertFalse(player.isStarting)
+    }
+
+    @Test
+    fun seekingWhilePausedRestartsEveryTrackAndTheOutputThere() {
+        val guitar = FakeSource(frames = 200_000)
+        val song = FakeSource(frames = 200_000)
+        sources["guitar.ogg"] = guitar
+        sources["song.ogg"] = song
+        val outputs = mutableListOf<FakeSink>()
+        val player = StemSongPlayer(
+            guitarUri = "guitar.ogg",
+            backingUris = listOf("song.ogg"),
+            opener = { uri -> sources.getValue(uri) },
+            sinks = { FakeSink().also { outputs += it } },
+            startThread = false,
+            nowMs = { now },
+        ).also { runBlocking { it.prepare("guitar.ogg") } }
+        player.play()
+        player.renderOnce()
+        player.pause()
+
+        player.seekTo(1_000)
+
+        assertEquals(44_100, guitar.position)
+        assertEquals(44_100, song.position)
+        assertEquals(2, outputs.size)
+        assertTrue(outputs[0].released) // a saída antiga tinha áudio de depois do ponto novo
+        outputs[1].playedFrames = 4_410
+        assertEquals(1_100L, player.positionMs)
     }
 }

@@ -20,6 +20,9 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
     private var inputDone = false
     private var outputDone = false
 
+    // Depois de reposicionar: descarta o que o decodificador entregar antes deste quadro.
+    private var skipUntilFrame = 0L
+
     override var sampleRate = 0
         private set
 
@@ -75,9 +78,30 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
         buffer.position(info.offset)
         buffer.limit(info.offset + info.size)
         buffer.order(ByteOrder.nativeOrder())
+        skipBeforeTarget(buffer)
         output = buffer
         outputIndex = index
         return buffer
+    }
+
+    override fun seekTo(frame: Long) {
+        extractor.seekTo(frame * MICROS_PER_SECOND / sampleRate, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+        codec.flush()
+        output = null
+        outputIndex = -1
+        inputDone = false
+        outputDone = false
+        skipUntilFrame = frame
+    }
+
+    /** O extrator volta até o quadro-chave anterior: pula as amostras de antes do ponto pedido. */
+    private fun skipBeforeTarget(buffer: ByteBuffer) {
+        if (skipUntilFrame <= 0) return
+        val bytesPerFrame = channelCount * if (floatOutput) Float.SIZE_BYTES else Short.SIZE_BYTES
+        val firstFrame = info.presentationTimeUs * sampleRate / MICROS_PER_SECOND
+        val skip = ((skipUntilFrame - firstFrame) * bytesPerFrame).coerceIn(0, buffer.remaining().toLong())
+        buffer.position(buffer.position() + skip.toInt())
+        if (buffer.hasRemaining()) skipUntilFrame = 0
     }
 
     private fun readFormat(format: MediaFormat) {
@@ -112,6 +136,7 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
         private const val TIMEOUT_US = 10_000L
         private const val PRIME_ATTEMPTS = 200
         private const val SHORT_SCALE = 32_768f
+        private const val MICROS_PER_SECOND = 1_000_000L
 
         @Throws(IOException::class)
         @Suppress("TooGenericExceptionCaught") // erros do MediaCodec chegam como RuntimeException

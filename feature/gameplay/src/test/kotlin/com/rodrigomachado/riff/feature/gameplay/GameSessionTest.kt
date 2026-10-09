@@ -207,4 +207,40 @@ class GameSessionTest {
         time.now = 310
         assertEquals(30_110L, session.tick())
     }
+
+    @Test
+    fun resumingRewindsWhenTheModeAsksForIt() {
+        player.positionMs = 30_000
+        val session = GameSession(listOf(note(60_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+
+        session.resume()
+
+        assertEquals(listOf(29_500L), player.seeks)
+        assertEquals(29_500L, session.tick())
+    }
+
+    @Test
+    fun theRewindStopsAtTheStartOfTheSong() {
+        player.positionMs = 200
+        val session = GameSession(listOf(note(60_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+
+        session.resume()
+
+        assertEquals(listOf(0L), player.seeks)
+    }
+
+    @Test
+    fun withoutRewindResumingKeepsThePosition() {
+        player.positionMs = 30_000
+        val session = session(note(60_000))
+        session.pause()
+
+        session.resume()
+
+        assertEquals(emptyList<Long>(), player.seeks)
+    }
 }

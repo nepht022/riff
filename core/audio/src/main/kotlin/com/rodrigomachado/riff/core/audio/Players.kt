@@ -9,6 +9,9 @@ interface SongPlayer {
 
     fun pause()
 
+    /** Leva a música para [positionMs]; usado com a música pausada. Quem não sabe reposicionar ignora. */
+    fun seekTo(positionMs: Long) = Unit
+
     /** Volume geral do app, de 0 a 1. Quem não controla o volume (o Spotify, pelo SDK) ignora. */
     fun setVolume(volume: Float) = Unit
 

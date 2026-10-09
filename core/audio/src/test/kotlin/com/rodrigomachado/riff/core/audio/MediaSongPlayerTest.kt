@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.audio
 
 import android.media.MediaPlayer
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,7 +9,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowMediaPlayer
 import org.robolectric.shadows.ShadowMediaPlayer.InvalidStateBehavior
+import org.robolectric.shadows.util.DataSource
 
 @RunWith(RobolectricTestRunner::class)
 class MediaSongPlayerTest {
@@ -41,5 +44,19 @@ class MediaSongPlayerTest {
 
         assertEquals(0.4f, shadowOf(media).leftVolume, 1e-6f)
         assertEquals(0.4f, shadowOf(media).rightVolume, 1e-6f)
+    }
+
+    @Test
+    fun seekingMovesTheSong() {
+        ShadowMediaPlayer.addMediaInfo(DataSource.toDataSource("musica.ogg"), ShadowMediaPlayer.MediaInfo(60_000, 0))
+        val media = MediaPlayer()
+        media.setDataSource("musica.ogg")
+        media.prepare()
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), media)
+
+        song.seekTo(29_500)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(29_500L, song.positionMs)
     }
 }

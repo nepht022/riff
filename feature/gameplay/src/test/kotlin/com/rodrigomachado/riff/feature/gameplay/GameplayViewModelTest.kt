@@ -322,7 +322,7 @@ class GameplayViewModelTest {
         assertEquals(30, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
         assertEquals(980L, ready.session.tick()) // pausado: a pista não anda
         viewModel.resume()
-        assertEquals(990L, ready.session.tick())
+        assertEquals(490L, ready.session.tick()) // a biblioteca volta 500 ms ao continuar; o ajuste já vale
     }
 
     @Test
@@ -415,5 +415,29 @@ class GameplayViewModelTest {
 
         assertEquals(emptyList<List<String>>(), analyzed)
         assertEquals(0, state.songOffsetMs)
+    }
+
+    @Test
+    fun theLibraryGoesBackHalfASecondWhenResuming() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+        player.positionMs = 30_000
+        viewModel.pause()
+
+        viewModel.resume()
+
+        assertEquals(listOf(29_500L), player.seeks)
+    }
+
+    @Test
+    fun spotifyResumesExactlyWhereItStopped() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        spotifyPlayer.positionMs = 30_000
+        viewModel.pause()
+
+        viewModel.resume()
+
+        assertEquals(emptyList<Long>(), spotifyPlayer.seeks)
     }
 }
