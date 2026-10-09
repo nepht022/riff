@@ -104,6 +104,15 @@ class DaoTest {
         assertEquals(900L, db.scoreDao().best("a", "EXPERT")?.score)
     }
 
+    @Test
+    fun aTieKeepsTheOlderRecordSoMatchingItIsNotANewBest() = runTest {
+        db.chartDao().replace(chart("a"), emptyList())
+        val first = db.scoreDao().insert(score("a", "EXPERT", 900))
+        repeat(5) { db.scoreDao().insert(score("a", "EXPERT", 900)) }
+
+        assertEquals(first, db.scoreDao().best("a", "EXPERT")?.id)
+    }
+
     private fun score(chartId: String, difficulty: String, value: Long) = ScoreEntity(
         chartId = chartId,
         difficulty = difficulty,
