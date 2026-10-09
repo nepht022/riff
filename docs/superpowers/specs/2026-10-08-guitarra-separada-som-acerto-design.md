@@ -20,8 +20,15 @@ O Spotify não expõe o áudio nem faixas separadas (spec principal §3), então
 - Uma nota por trilha, pentatônica de Mi menor: verde Mi3 (164,81 Hz), vermelha Sol3 (196,00 Hz), amarela Lá3 (220,00 Hz), azul Si3 (246,94 Hz), laranja Ré4 (293,66 Hz).
 - Duração 0,25 s, com fade-out de 60 ms.
 - Pico do arquivo em −12 dBFS (o estalo atual tem pico de ~−0,8 dBFS), para ficar atrás da música no volume padrão `sfxVolume = 0,6`. O ajuste fica na tela de Configurações (plano seguinte); 0 desliga.
-- O som de erro (corda abafada) não muda.
 - Gerados por `scripts/gerar_sfx.py` (síntese nossa, sem amostras de terceiros): `sfx_hit_1.wav` a `sfx_hit_5.wav`. O `sfx_hit.wav` atual é removido.
+
+### Som de erro (todos os modos)
+
+Decidido com o usuário em 2026-10-08, depois de ouvir candidatos sintetizados (não soavam naturais) e gravações reais.
+
+- **Material:** gravações reais de guitarra, licença CC0, do Freesound, guardadas em `third_party/sons/` com origem e licença: 353605 "Muted Guitar Strum" (chiller345), 12006 "Dist_Chr_Gmin_pm" e 12042 "Dist_sng_G_3rd_str_pm" (SpeedY), 576575 "guit scratch" (gazbooth), 483882 "Electric Guitar String Pluck Noise 1_11" (Joao_Janz). Nada do Guitar Hero: o som original do jogo foi descartado pela regra do projeto e por direito autoral.
+- **Seis variações curtas** (0,3 a 0,4 s) montadas com trechos dessas gravações (batida abafada, acorde distorcido abafado, nota fora do tom, raspada, ruído de corda), por `scripts/montar_sfx_erro.py`: `sfx_miss_1.wav` a `sfx_miss_6.wav`, pico em −9 dBFS (um pouco acima do acerto, para o erro ser percebido). O `sfx_miss.wav` sintetizado é removido.
+- **Um som por vez (simulação S3 escolhida pelo usuário):** cada erro sorteia uma variação diferente da anterior, com força entre 75% e 100%; um erro novo encerra o som anterior num fade de 25 ms; erros a menos de 250 ms do último som não disparam outro (no máximo 4 por segundo). A guitarra separada continua sendo cortada em todos os erros.
 
 ### Guitarra separada (modo biblioteca)
 
@@ -59,7 +66,7 @@ A escolha segue a seção 2. O gameplay usa `Single` como hoje e `Stems` com o p
   - `pause` pausa o `AudioTrack` e a thread; `release` para a thread, espera o término e libera codecs e `AudioTrack`, de forma idempotente, com as mesmas garantias do `MediaSongPlayer` (usar depois de liberado é inofensivo).
   - Sem alocação por bloco de áudio: buffers de decodificação e de mistura reaproveitados.
 - **`GuitarTrackControl`**: `fun setGuitarAudible(audible: Boolean)`.
-- **`SfxPlayer.hit()` vira `hit(lane: Int)`**: o `SoundPoolSfxPlayer` carrega os cinco sons e toca o da trilha.
+- **`SfxPlayer.hit()` vira `hit(lane: Int)`**: o `SoundPoolSfxPlayer` carrega os cinco sons e toca o da trilha. Para o erro, carrega as seis variações e usa o `MissSoundPicker`; o corte do som anterior é feito baixando o volume do stream em passos ao longo de 25 ms e parando-o.
 - **Fábrica:** `SongPlayerFactory` ganha a criação do player de faixas (por exemplo, um `StemSongPlayerFactory` com `@LocalSong`), escolhida pelo `GameplayViewModel` conforme o `ChartAudio`.
 
 ### `:feature:gameplay`: `GameSession`
@@ -82,4 +89,5 @@ A escolha segue a seção 2. O gameplay usa `Single` como hoje e `Stems` com o p
 - **`GameplayViewModel`**: escolhe o player de faixas para `Stems`; falha no preparo das faixas cai em `Single` com o aviso.
 - **`StemSongPlayer`** (Robolectric): ciclo preparar, tocar, pausar, liberar; liberar duas vezes; nenhuma thread viva depois de liberar.
 - **`gerar_sfx.py`**: o `SfxAssetsTest` existente passa a conferir `sfx_hit_1..5` (presentes, duração ≤ 0,3 s, pico ≤ −12 dBFS).
+- **Som de erro:** `MissSoundPicker` (unitário): nunca repete a variação anterior, passa por todas, ignora erros a menos de 250 ms e a força fica entre 0,75 e 1; `SfxAssetsTest` confere `sfx_miss_1..6` (presentes, duração ≤ 0,4 s, pico ≤ −9 dBFS) e que o `sfx_miss.wav` antigo saiu.
 - **No aparelho do usuário:** um mapa com a guitarra separada (do Encore, de charter da comunidade, nunca Harmonix/Neversoft; se não houver, o mapa do Nirvana separado pelo Demucs). O usuário confere de ouvido o corte no erro, a volta no acerto e o volume do som novo.

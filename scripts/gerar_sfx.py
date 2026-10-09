@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Gera os efeitos sonoros do Riff. Tudo sintetizado aqui, sem samples de terceiros.
+"""Gera os sons de acerto do Riff. Tudo sintetizado aqui, sem samples de terceiros.
+O som de erro vem de gravações CC0: scripts/montar_sfx_erro.py.
 
 Uso: python3 scripts/gerar_sfx.py core/audio/src/main/res/raw
 """
@@ -68,22 +69,7 @@ def hit(lane):
     return [x / peak * HIT_PEAK for x in shaped]
 
 
-def miss():
-    """Corda abafada: onda quadrada grave misturada a ruído filtrado, decaindo."""
-    rng = random.Random(2)
-    count = int(RATE * 0.18)
-    filtered = 0.0
-    samples = []
-    for i in range(count):
-        t = i / RATE
-        square = 1.0 if math.sin(2 * math.pi * 98 * t) >= 0 else -1.0
-        filtered = 0.85 * filtered + 0.15 * (rng.random() * 2 - 1)
-        samples.append((0.5 * square + 0.8 * filtered) * math.exp(-t / 0.06) * 0.8)
-    return samples
-
-
 if __name__ == "__main__":
     target = sys.argv[1]
     for lane in range(len(LANE_NOTES_HZ)):
         write(f"{target}/sfx_hit_{lane + 1}.wav", hit(lane))
-    write(f"{target}/sfx_miss.wav", miss())

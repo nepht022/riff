@@ -54,5 +54,14 @@ class SfxAssetsTest {
     fun theOldClickIsGone() = assertFalse(file("sfx_hit.wav").exists())
 
     @Test
-    fun missIsAShortMutedString() = check("sfx_miss.wav", maxSeconds = 0.25)
+    fun eachMissVariationIsShortAndAboveTheHitSound() {
+        val limit = (Short.MAX_VALUE * 10.0.pow(-9.0 / 20)).toInt() + 1 // −9 dBFS
+        for (variation in 1..6) {
+            check("sfx_miss_$variation.wav", maxSeconds = 0.4)
+            assertTrue("sfx_miss_$variation.wav alto demais", peak("sfx_miss_$variation.wav") <= limit)
+        }
+    }
+
+    @Test
+    fun theSynthesizedMissIsGone() = assertFalse(file("sfx_miss.wav").exists())
 }

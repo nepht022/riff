@@ -1822,3 +1822,9 @@ Expected: `BUILD SUCCESSFUL`.
 git add -A
 git commit -m "docs: guitarra separada e som de acerto na especificação e no README" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
+
+---
+
+### Task 7 (acrescentada durante a execução): som de erro com gravações CC0
+
+Pedido do usuário depois do teste no aparelho: o som de erro sintetizado não soava natural. Decisão registrada na spec (§2 "Som de erro"): seis variações montadas por `scripts/montar_sfx_erro.py` com gravações CC0 de `third_party/sons` (origem em `third_party/README.md`), `MissSoundPicker` (sorteio sem repetir, força 0,75 a 1, nada a menos de 250 ms) e `SoundPoolSfxPlayer.miss()` encerrando o som anterior num fade de 25 ms. Testes: `MissSoundPickerTest` (5) e `SfxAssetsTest` (`sfx_miss_1..6` ≤ 0,4 s e ≤ −9 dBFS; `sfx_miss.wav` removido).
