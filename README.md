@@ -41,6 +41,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa e fim |
 | `:feature:results` | Resultado da partida e recorde |
+| `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques e resultado |
 | `:feature:settings` | Configurações: volume geral, de acerto e de erro, velocidade das notas e modo canhoto |
 | `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
 
@@ -67,6 +68,6 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 ## Status
 
-Fundação, identidade visual, biblioteca, gameplay, integração com o Spotify e configurações prontos. Próximo plano: calibração.
+Fundação, identidade visual, biblioteca, gameplay, integração com o Spotify, configurações e calibração prontos. Próximo plano: polimento (Baseline Profile e README final).
 
 Identidade visual "Pôster de turnê" aplicada ao design system (`docs/superpowers/specs/2026-10-07-identidade-visual-design.md`).
