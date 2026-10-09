@@ -50,6 +50,9 @@ abstract class DataBindsModule {
 
     @Binds
     abstract fun nowPlayingRepository(impl: SpotifyNowPlayingRepository): NowPlayingRepository
+
+    @Binds
+    abstract fun chartOffsetRepository(impl: RoomChartOffsetRepository): ChartOffsetRepository
 }
 
 @Module

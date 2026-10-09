@@ -76,6 +76,10 @@ class SpotifyNowPlayingRepositoryTest {
         override suspend fun matchFor(track: PlaybackState) = result
 
         override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
+
+        override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null
+
+        override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) = Unit
     }
 
     private class FakeCharts : ChartRepository {

@@ -24,6 +24,12 @@ interface TrackMatchRepository {
 
     /** Grava a confirmação ou a escolha manual; mantém o ajuste fino se o mapa for o mesmo. */
     suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean)
+
+    /** Ajuste salvo desta faixa com este mapa; `null` se não houver casamento salvo com ele. */
+    suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int?
+
+    /** Grava o ajuste fino; um casamento automático passa a ficar salvo (com o mesmo mapa). */
+    suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int)
 }
 
 @Singleton
@@ -49,6 +55,23 @@ class RoomTrackMatchRepository @Inject constructor(
     override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
         val offset = dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }?.trackOffsetMs ?: 0
         dao.upsert(TrackMatchEntity(spotifyTrackUri, chartId, confidence, isManual, offset))
+        version.update { it + 1 }
+    }
+
+    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? =
+        dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }?.trackOffsetMs?.limited()
+
+    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) {
+        val saved = dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }
+        val updated = saved?.copy(trackOffsetMs = offsetMs.limited())
+            ?: TrackMatchEntity(
+                spotifyTrackUri,
+                chartId,
+                confidence = 1f,
+                isManual = false,
+                trackOffsetMs = offsetMs.limited(),
+            )
+        dao.upsert(updated)
         version.update { it + 1 }
     }
 }

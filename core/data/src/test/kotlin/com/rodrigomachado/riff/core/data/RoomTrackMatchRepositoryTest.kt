@@ -101,4 +101,27 @@ class RoomTrackMatchRepositoryTest {
 
         assertEquals(MatchStatus.NoMatch, matches.matchFor(track("Bohemian Rhapsody", "Queen")))
     }
+
+    @Test
+    fun adjustingAnAutomaticMatchSavesItWithTheOffset() = runTest {
+        val queen = chart("a", "Bohemian Rhapsody", "Queen")
+        charts.saveScanned(queen, 1)
+        assertEquals(null, matches.offsetFor("spotify:track:x", "a"))
+
+        matches.saveOffset("spotify:track:x", "a", -20)
+
+        assertEquals(-20, matches.offsetFor("spotify:track:x", "a"))
+        assertEquals(MatchStatus.Matched(queen, -20), matches.matchFor(track("Bohemian Rhapsody", "Queen")))
+    }
+
+    @Test
+    fun theOffsetOfASavedMatchIsUpdatedAndLimited() = runTest {
+        charts.saveScanned(chart("a", "Música", "Banda"), 1)
+        matches.save("spotify:track:x", "a", confidence = 1f, isManual = true)
+
+        matches.saveOffset("spotify:track:x", "a", -800)
+
+        assertEquals(-MAX_SYNC_OFFSET_MS, matches.offsetFor("spotify:track:x", "a"))
+        assertEquals(true, db.trackMatchDao().get("spotify:track:x")?.isManual)
+    }
 }
