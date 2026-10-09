@@ -33,6 +33,7 @@ class LibraryContentTest {
                 onRescan = { rescans++ },
                 onReportDismissed = { dismissals++ },
                 onPlay = { id, difficulty -> played = id to difficulty },
+                onBack = {},
             )
         }
     }
@@ -150,6 +151,7 @@ class LibraryContentTest {
                     onRescan = {},
                     onReportDismissed = {},
                     onPlay = { _, _ -> error("não deveria jogar") },
+                    onBack = {},
                     matchingTitle = "Bohemian Rhapsody",
                     onChartMatched = { picked = it },
                 )
@@ -162,5 +164,26 @@ class LibraryContentTest {
 
         composeRule.onNodeWithText("Escolha a dificuldade").assertDoesNotExist()
         assertEquals("a", picked)
+    }
+
+    @Test
+    fun backLeavesTheLibrary() {
+        var back = false
+        composeRule.setContent {
+            RiffTheme {
+                LibraryContent(
+                    state = LibraryUiState(isLoading = false, hasFolder = true),
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> },
+                    onBack = { back = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Voltar").performClick()
+
+        assertEquals(true, back)
     }
 }

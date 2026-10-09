@@ -46,6 +46,7 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 @Composable
 fun LibraryScreen(
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     match: TrackToMatch? = null,
     onMatched: () -> Unit = {},
@@ -62,6 +63,7 @@ fun LibraryScreen(
         onRescan = viewModel::onRescan,
         onReportDismissed = viewModel::onReportDismissed,
         onPlay = onPlay,
+        onBack = onBack,
         modifier = modifier,
         matchingTitle = match?.title,
         onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
@@ -75,15 +77,16 @@ fun LibraryContent(
     onRescan: () -> Unit,
     onReportDismissed: () -> Unit,
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
 ) {
     var choosing by remember { mutableStateOf<Chart?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
+        TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
         PosterTitle(
             stringResource(R.string.library_title),
-            Modifier.padding(top = Spacing.md),
             style = MaterialTheme.typography.displaySmall,
         )
         matchingTitle?.let { title ->

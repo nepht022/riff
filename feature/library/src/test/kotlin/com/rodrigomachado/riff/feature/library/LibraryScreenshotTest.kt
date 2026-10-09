@@ -36,6 +36,7 @@ class LibraryScreenshotTest {
             onRescan = {},
             onReportDismissed = {},
             onPlay = { _, _ -> },
+            onBack = {},
         )
     }
 
@@ -47,6 +48,7 @@ class LibraryScreenshotTest {
             onRescan = {},
             onReportDismissed = {},
             onPlay = { _, _ -> },
+            onBack = {},
         )
     }
 

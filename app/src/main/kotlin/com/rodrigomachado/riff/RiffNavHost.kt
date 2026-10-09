@@ -56,6 +56,7 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 onPlay = dropUnlessResumed { chartId, difficulty ->
                     navController.navigate(GameplayRoute(chartId, difficulty.name))
                 },
+                onBack = dropUnlessResumed { navController.popBackStack() },
                 match = route.matchTrackUri?.let { TrackToMatch(it, route.matchTrackTitle.orEmpty()) },
                 onMatched = dropUnlessResumed { navController.popBackStack() },
             )
