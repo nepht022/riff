@@ -90,4 +90,14 @@ class SongClockTest {
         time.now = 2_000
         assertEquals(1_040L, clock.positionMs())
     }
+
+    @Test
+    fun changingTheOffsetMovesThePositionAtOnce() {
+        time.now = 5_000
+        clock.sync(positionMs = 1_000, isPaused = true, capturedAtMs = 5_000)
+
+        clock.offsetMs = -40
+
+        assertEquals(960L, clock.positionMs())
+    }
 }

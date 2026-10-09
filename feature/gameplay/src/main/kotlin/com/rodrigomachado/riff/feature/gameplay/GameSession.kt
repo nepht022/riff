@@ -15,6 +15,7 @@ import kotlin.math.max
  * Uma partida: junta o motor, o relógio da música, o player e os sons.
  * Não conhece a tela; a tela chama [tick] a cada frame e repassa os toques.
  */
+@Suppress("TooManyFunctions") // a partida: relógio, toques, chamas e sons; dividir espalharia o estado
 class GameSession(
     notes: List<Note>,
     private val player: SongPlayer,
@@ -60,6 +61,12 @@ class GameSession(
     fun resume() {
         player.play()
         syncClock()
+    }
+
+    /** Ajuste fino de sincronia desta música, aplicado na hora. */
+    fun adjustOffset(deltaMs: Long) {
+        clock.offsetMs += deltaMs
+        songTimeMs = clock.positionMs()
     }
 
     /** Avança a partida até o instante atual. Chamado a cada frame. */

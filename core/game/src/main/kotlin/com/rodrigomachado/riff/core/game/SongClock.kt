@@ -17,7 +17,10 @@ fun interface TimeSource {
  *
  * [offsetMs] é somado à posição. Valores negativos compensam atraso de áudio (fone Bluetooth).
  */
-class SongClock(private val timeSource: TimeSource, private val offsetMs: Long = 0) {
+class SongClock(private val timeSource: TimeSource, offsetMs: Long = 0) {
+    /** Ajuste somado à posição; pode mudar no meio da partida (ajuste fino na pausa). */
+    var offsetMs: Long = offsetMs
+
     private var anchorPositionMs = 0L
     private var anchorAtMs = 0L
     private var paused = true

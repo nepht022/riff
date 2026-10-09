@@ -149,4 +149,16 @@ class GameSessionTest {
         assertEquals(listOf(false), stems.audible)
         assertEquals(1, sfx.misses)
     }
+
+    @Test
+    fun adjustingTheOffsetShiftsTheSongTimeImmediately() {
+        player.positionMs = 1_000
+        val session = session(note(10_000))
+        session.pause()
+
+        session.adjustOffset(-10)
+        session.adjustOffset(-10)
+
+        assertEquals(980L, session.tick())
+    }
 }
