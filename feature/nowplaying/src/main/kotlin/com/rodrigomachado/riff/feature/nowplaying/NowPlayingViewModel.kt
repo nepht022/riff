@@ -48,6 +48,15 @@ class NowPlayingViewModel @Inject constructor(
 
     fun retry() = repository.connect()
 
+    /**
+     * O jogador voltou ao Riff: se o Spotify faltava ou estava deslogado, ele pode ter resolvido lá fora; tenta de novo
+     * sem pedir o toque em "Tentar de novo". O que não muda com o app aberto (Client ID ausente) fica como está.
+     */
+    fun onReturn() {
+        val error = (uiState.value as? NowPlayingUiState.Unavailable)?.error ?: return
+        if (error == SpotifyError.NOT_INSTALLED || error == SpotifyError.NOT_LOGGED_IN) repository.connect()
+    }
+
     /** O jogador confirmou o mapa sugerido (confiança média, spec §5). */
     fun confirmSuggestion(trackUri: String, chartId: String, confidence: Float) {
         viewModelScope.launch { matches.save(trackUri, chartId, confidence, isManual = false) }

@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -55,6 +57,8 @@ fun NowPlayingScreen(
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Voltou ao Riff (por exemplo, depois de instalar ou entrar no Spotify): tenta de novo sozinho.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
     NowPlayingContent(
         state = state,
         onRetry = viewModel::retry,

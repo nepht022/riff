@@ -70,4 +70,29 @@ class NowPlayingViewModelTest {
 
         assertEquals(listOf(Triple("spotify:track:x", "a", false)), matches.saved)
     }
+
+    @Test
+    fun comingBackToTheAppTriesAgainIfSpotifyWasMissingOrLoggedOut() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_INSTALLED)
+
+        viewModel.onReturn() // o jogador instalou o Spotify e voltou ao Riff
+        assertEquals(2, repository.connects)
+
+        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_LOGGED_IN)
+        viewModel.onReturn()
+        assertEquals(3, repository.connects)
+    }
+
+    @Test
+    fun comingBackDoesNotRetryWhatCannotChangeWithTheAppOpen() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_CONFIGURED)
+
+        viewModel.onReturn()
+        repository.connection.value = SpotifyConnection.Connected
+        viewModel.onReturn()
+
+        assertEquals(1, repository.connects)
+    }
 }
