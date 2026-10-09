@@ -282,4 +282,17 @@ class GameSessionTest {
         session.press(0)
         assertEquals(listOf(false, true), stems.audible)
     }
+
+    @Test
+    fun anAdjustmentMadeWhilePausedAppliesWhenTheMusicResumesFromOutsideTheGame() {
+        player.positionMs = 30_000
+        val session = session(note(60_000))
+        session.pause()
+        session.adjustOffset(1_000)
+
+        player.isPlaying = true // o Spotify voltou pela notificação ou pelo fone, sem passar por resume()
+        time.now = SYNC
+
+        assertEquals(31_000L, session.tick())
+    }
 }

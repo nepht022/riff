@@ -127,4 +127,17 @@ class RoomTrackMatchRepositoryTest {
         assertEquals(-MAX_SONG_OFFSET_MS, matches.offsetFor("spotify:track:x", "a"))
         assertEquals(true, db.trackMatchDao().get("spotify:track:x")?.isManual)
     }
+
+    @Test
+    fun aConfirmedMatchHasNoChosenOffsetUntilOneIsSavedEvenZero() = runTest {
+        charts.saveScanned(chart("a", "Música", "Banda"), 1)
+        matches.save("spotify:track:x", "a", confidence = 1f, isManual = true)
+        assertEquals(null, matches.offsetFor("spotify:track:x", "a"))
+
+        matches.saveOffset("spotify:track:x", "a", 0)
+
+        assertEquals(0, matches.offsetFor("spotify:track:x", "a"))
+        matches.save("spotify:track:x", "a", confidence = 1f, isManual = true) // confirmar de novo não apaga
+        assertEquals(0, matches.offsetFor("spotify:track:x", "a"))
+    }
 }

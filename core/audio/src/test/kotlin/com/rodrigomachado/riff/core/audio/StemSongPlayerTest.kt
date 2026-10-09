@@ -47,7 +47,9 @@ class StemSongPlayerTest {
 
         /** Quantos quadros a próxima escrita aceita (o AudioTrack pausado no meio devolve menos). */
         var acceptNext: Int? = null
+        val calls = mutableListOf<String>()
         override var playedFrames = 0L
+            get() = field.also { calls += "posição" }
         override var isPresenting = true
 
         override fun start() {
@@ -56,6 +58,7 @@ class StemSongPlayerTest {
         }
 
         override fun pause() {
+            calls += "pausa"
             paused = true
         }
 
@@ -335,5 +338,19 @@ class StemSongPlayerTest {
         assertTrue(outputs[0].released) // a saída antiga tinha áudio de depois do ponto novo
         outputs[1].playedFrames = 4_410
         assertEquals(1_100L, player.positionMs)
+    }
+
+    @Test
+    fun pausingReadsWhereTheSoundIsBeforeStoppingTheOutput() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+        sink.calls.clear()
+
+        player.pause()
+
+        // A posição apresentada só se atualiza quando lida: lida antes da pausa, ela não fica até 500 ms para trás.
+        assertEquals(listOf("posição", "pausa"), sink.calls)
     }
 }

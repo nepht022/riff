@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -45,6 +46,8 @@ data class TrackMatchEntity(
     val confidence: Float,
     val isManual: Boolean,
     val trackOffsetMs: Int,
+    /** O jogador (ou a detecção automática) já escolheu o ajuste; 0 escolhido vale, 0 não escolhido não. */
+    @ColumnInfo(defaultValue = "0") val offsetChosen: Boolean = false,
 )
 
 @Entity(

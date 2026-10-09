@@ -183,7 +183,11 @@ class StemSongPlayer(
     override fun pause() {
         if (released) return
         playing = false
-        sink?.pause()
+        val output = sink ?: return
+        // A posição apresentada só se atualiza quando lida (a partida lê a cada 500 ms): lê agora, antes de
+        // congelar, para a pista e o ponto de retomada não ficarem para trás.
+        output.playedFrames
+        output.pause()
     }
 
     /** Só com a música pausada: cada faixa volta ao ponto e uma saída nova começa dali (a antiga tinha o futuro). */

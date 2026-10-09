@@ -74,8 +74,7 @@ class GameSession(
 
     fun resume() {
         val shownMs = clock.positionMs()
-        clock.offsetMs += pendingOffsetMs
-        pendingOffsetMs = 0
+        applyPendingOffset()
         val position = player.positionMs
         val target = (position - rewindOnResumeMs).coerceAtLeast(0)
         if (target < position) {
@@ -100,6 +99,8 @@ class GameSession(
     /** Avança a partida até o instante atual. Chamado a cada frame. */
     fun tick(): Long {
         rewind?.let { return rewindStep(it) }
+        // A música voltou por fora do jogo (notificação do Spotify, fone): o ajuste feito na pausa vale agora.
+        if (pendingOffsetMs != 0L && !isPaused) applyPendingOffset()
         // Começando (o som ainda não saiu), sincroniza a cada quadro para a pista partir junto com a música.
         if (waitingForSound || player.isStarting || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
         songTimeMs = clock.positionMs()
@@ -111,6 +112,11 @@ class GameSession(
         }
         silenceGuitarForOverdueNote()
         return songTimeMs
+    }
+
+    private fun applyPendingOffset() {
+        clock.offsetMs += pendingOffsetMs
+        pendingOffsetMs = 0
     }
 
     /** Um quadro da fita voltando; no fim, a música continua do ponto novo. */

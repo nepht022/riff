@@ -53,23 +53,33 @@ class RoomTrackMatchRepository @Inject constructor(
     }
 
     override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
-        val offset = dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }?.trackOffsetMs ?: 0
-        dao.upsert(TrackMatchEntity(spotifyTrackUri, chartId, confidence, isManual, offset))
+        val same = dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }
+        dao.upsert(
+            TrackMatchEntity(
+                spotifyTrackUri,
+                chartId,
+                confidence,
+                isManual,
+                trackOffsetMs = same?.trackOffsetMs ?: 0,
+                offsetChosen = same?.offsetChosen ?: false,
+            ),
+        )
         version.update { it + 1 }
     }
 
     override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? =
-        dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }?.trackOffsetMs?.limited()
+        dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId && it.offsetChosen }?.trackOffsetMs?.limited()
 
     override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) {
         val saved = dao.get(spotifyTrackUri)?.takeIf { it.chartId == chartId }
-        val updated = saved?.copy(trackOffsetMs = offsetMs.limited())
+        val updated = saved?.copy(trackOffsetMs = offsetMs.limited(), offsetChosen = true)
             ?: TrackMatchEntity(
                 spotifyTrackUri,
                 chartId,
                 confidence = 1f,
                 isManual = false,
                 trackOffsetMs = offsetMs.limited(),
+                offsetChosen = true,
             )
         dao.upsert(updated)
         version.update { it + 1 }

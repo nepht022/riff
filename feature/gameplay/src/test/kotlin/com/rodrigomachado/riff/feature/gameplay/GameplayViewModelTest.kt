@@ -441,4 +441,26 @@ class GameplayViewModelTest {
 
         assertEquals(emptyList<Long>(), spotifyPlayer.seeks)
     }
+
+    @Test
+    fun aSavedSpotifyAdjustmentOfZeroIsKeptWithoutAnalyzing() = runTest {
+        musicStartMs = 3_900
+        trackMatches.offsets["spotify:track:x" to "a"] = 0 // o jogador corrigiu a detecção para 0
+        loader.result = { playable() }
+
+        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
+
+        assertEquals(emptyList<List<String>>(), analyzed)
+        assertEquals(0, state.songOffsetMs)
+    }
+
+    @Test
+    fun anAnalysisThatFindsNoStartIsSavedSoItRunsOnlyOnce() = runTest {
+        musicStartMs = null
+        loader.result = { playable() }
+
+        viewModel(spotifyTrackUri = "spotify:track:x")
+
+        assertEquals(0, trackMatches.offsets["spotify:track:x" to "a"])
+    }
 }

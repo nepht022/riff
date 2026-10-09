@@ -42,6 +42,30 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun version2BecomesVersion3MarkingTheOffsetsAlreadyChosen() {
+        helper.createDatabase(2).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId) VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1)",
+            )
+            execSQL("INSERT INTO track_matches VALUES ('spotify:track:ajustada', 'a', 1.0, 0, 3000)")
+            execSQL("INSERT INTO track_matches VALUES ('spotify:track:nova', 'a', 1.0, 1, 0)")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(3).apply {
+            prepare("SELECT spotifyTrackUri, offsetChosen FROM track_matches ORDER BY spotifyTrackUri").use {
+                it.step()
+                assertEquals("spotify:track:ajustada", it.getText(0))
+                assertEquals(1L, it.getLong(1)) // os +3000 ms do jogador continuam valendo
+                it.step()
+                assertEquals(0L, it.getLong(1)) // sem ajuste: o Spotify ainda vai alinhar pelo mapa
+            }
+            close()
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }
