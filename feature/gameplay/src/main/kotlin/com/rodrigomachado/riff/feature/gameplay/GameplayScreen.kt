@@ -59,12 +59,8 @@ object GameplayTestTags {
     const val EXIT = "gameplay_exit"
 }
 
-private const val JUDGMENT_VISIBLE_MS = 500L
-private const val JUDGMENT_BOUNCE_MS = 120f
-private const val JUDGMENT_BOUNCE_SCALE = 0.25f
 private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
-private const val NOTICE_MS = 4_000L
 private const val SYNC_STEP_MS = 10
 private const val SYNC_BIG_STEP_MS = 1_000
 
@@ -126,6 +122,9 @@ internal fun GameStage(
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
     val stageCache = remember { StageCache() }
+    // Primeiro quadro (e screenshots, com animate = false); depois o loop atualiza a cada quadro.
+    val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
+    val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
     BackHandler(enabled = !state.isPaused, onBack = onPause)
     val currentPaused by rememberUpdatedState(state.isPaused)
@@ -135,6 +134,7 @@ internal fun GameStage(
             while (isActive) {
                 withFrameMillis {
                     session.tick()
+                    hud.update(session, withoutSeparateGuitar)
                     frame++
                 }
                 if (session.isFinished) {
@@ -156,7 +156,7 @@ internal fun GameStage(
             frame // lê o contador para redesenhar a cada frame
             drawStage(stageCache, session, msPerUnit, leftHanded, reducedMotion)
         }
-        Hud(session, frame, reducedMotion, state.withoutSeparateGuitar, onPause, Modifier.fillMaxSize())
+        Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
         if (state.isPaused) PauseOverlay(state.songOffsetMs, onAdjustOffset, onResume, onExit)
     }
 }
@@ -188,65 +188,50 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
 @Composable
 private fun Hud(
     session: GameSession,
-    frame: Long,
+    hud: HudState,
+    frame: () -> Long,
     reducedMotion: Boolean,
-    withoutSeparateGuitar: Boolean,
     onPause: () -> Unit,
     modifier: Modifier,
 ) {
-    frame // recompõe o placar a cada frame
-    val engine = session.engine
     Box(modifier.padding(Spacing.md)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
-            ScoreText(engine.score)
+            ScoreText(hud.score)
             TextButton(onClick = onPause, modifier = Modifier.testTag(GameplayTestTags.PAUSE)) {
                 Text(stringResource(R.string.gameplay_pause), color = RiffColors.Paper)
             }
-            MultiplierStamp(engine.multiplier)
+            MultiplierStamp(hud.multiplier)
         }
-        val combo = engine.state.combo
-        if (combo >= COMBO_MIN_TO_SHOW) {
+        if (hud.combo >= COMBO_MIN_TO_SHOW) {
             Text(
-                stringResource(R.string.gameplay_combo, combo),
+                stringResource(R.string.gameplay_combo, hud.combo),
                 style = MaterialTheme.typography.labelLarge,
                 color = RiffColors.Paper,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = Spacing.xl * 2),
             )
         }
-        val age = session.judgmentAgeMs()
-        val judgment = session.lastJudgment
-        if (judgment != null && age < JUDGMENT_VISIBLE_MS) {
-            val bounce = if (reducedMotion) {
-                1f
+        val judgment = hud.judgment
+        if (judgment != null && hud.showingJudgment) {
+            val label = if (judgment == Judgment.PERFECT) {
+                R.string.gameplay_judgment_perfect
             } else {
-                1f +
-                    JUDGMENT_BOUNCE_SCALE * (
-                        1f - (age / JUDGMENT_BOUNCE_MS).coerceAtMost(
-                            1f,
-                        )
-                        )
+                R.string.gameplay_judgment_good
             }
             JudgmentText(
-                stringResource(
-                    if (judgment ==
-                        Judgment.PERFECT
-                    ) {
-                        R.string.gameplay_judgment_perfect
-                    } else {
-                        R.string.gameplay_judgment_good
-                    },
-                ),
+                stringResource(label),
                 Modifier.align(Alignment.Center).graphicsLayer {
+                    frame() // relê a cada quadro só esta camada, sem recompor o placar
+                    val bounce = judgmentBounce(session.judgmentAgeMs(), reducedMotion)
                     scaleX = bounce
                     scaleY = bounce
                 },
             )
         }
-        if (withoutSeparateGuitar && session.songTimeMs < NOTICE_MS) {
+        if (hud.showingNotice) {
             NoSeparateGuitarNotice(Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.xl * 3))
         }
     }

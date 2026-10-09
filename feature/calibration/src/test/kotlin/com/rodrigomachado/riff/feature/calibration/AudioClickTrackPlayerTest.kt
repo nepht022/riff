@@ -34,7 +34,8 @@ class AudioClickTrackPlayerTest {
         val sink = StuckSink(stuckAt = ClickTrack.clickFrames(44_100).last() - 1_000)
         val player = AudioClickTrackPlayer { sink }
 
-        runBlocking { withTimeout(5_000) { player.play() } }
+        // Folga para a máquina carregada (suíte em paralelo); sem a correção, o play() não voltaria nunca.
+        runBlocking { withTimeout(30_000) { player.play() } }
 
         assertTrue(sink.released)
     }

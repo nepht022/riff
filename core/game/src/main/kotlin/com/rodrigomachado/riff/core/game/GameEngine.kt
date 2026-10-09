@@ -26,7 +26,10 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
     private var firstPending = 0
     private var hitScore = 0L
     private var sustainScore = 0.0
-    private var combo = 0
+
+    /** Acertos seguidos; leitura sem montar o [state] (o placar lê a cada quadro). */
+    var combo = 0
+        private set
     private var maxCombo = 0
     private var songTimeMs = 0L
 

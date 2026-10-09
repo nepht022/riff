@@ -171,4 +171,14 @@ class GameEngineTest {
 
         assertFalse(engine.hasOverdueNote(1_200))
     }
+
+    @Test
+    fun theComboCanBeReadWithoutBuildingTheWholeState() {
+        val engine = GameEngine(listOf(note(1_000), note(2_000)))
+        engine.onPress(0, 1_000)
+        engine.onPress(0, 2_000)
+
+        assertEquals(2, engine.combo)
+        assertEquals(engine.state.combo, engine.combo)
+    }
 }

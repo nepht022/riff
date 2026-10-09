@@ -39,9 +39,10 @@ internal fun DrawScope.drawStage(
     drawHighway(cache)
     val radius = geometry.laneWidthAtStrike * GEM_RADIUS_FRACTION
     val notes = session.engine.notes
-    val range = NoteTimeline.visibleRange(notes, t - session.lookBehindMs, t + visibleMs)
+    val first = NoteTimeline.firstAtOrAfter(notes, t - session.lookBehindMs)
+    val end = NoteTimeline.firstAtOrAfter(notes, t + visibleMs + 1)
     // Do fundo para a frente, para as notas mais próximas ficarem por cima.
-    for (i in range.last downTo range.first) {
+    for (i in end - 1 downTo first) {
         drawNote(cache, geometry, session, i, (notes[i].timeMs - t) / msPerUnit, msPerUnit, radius, leftHanded)
     }
     drawTargetsAndFlames(cache, geometry, session, radius, leftHanded, reducedMotion)
