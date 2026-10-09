@@ -11,4 +11,6 @@
     <string name="settings_note_speed">Velocidade das notas</string>
     <string name="settings_left_handed">Modo canhoto</string>
     <string name="settings_left_handed_hint">Espelha as trilhas: a verde fica à direita.</string>
+    <string name="settings_calibrate">Calibrar atraso do áudio</string>
+    <string name="settings_not_calibrated">Não calibrado</string>
 </resources>

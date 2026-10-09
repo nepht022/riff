@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,7 +41,12 @@ object SettingsTestTags {
 }
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onCalibrate: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val current = settings
     if (current == null) {
@@ -56,6 +62,7 @@ fun SettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel:
         onLeftHanded = viewModel::setLeftHanded,
         onPreviewHit = viewModel::previewHit,
         onPreviewMiss = viewModel::previewMiss,
+        onCalibrate = onCalibrate,
         onBack = onBack,
         modifier = modifier,
     )
@@ -71,6 +78,7 @@ fun SettingsContent(
     onLeftHanded: (Boolean) -> Unit,
     onPreviewHit: () -> Unit,
     onPreviewMiss: () -> Unit,
+    onCalibrate: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -117,6 +125,7 @@ fun SettingsContent(
             steps = SPEED_STEPS,
         )
         LeftHandedRow(settings.leftHanded, onLeftHanded)
+        CalibrationRow(settings.audioOffsetMs, onCalibrate)
     }
 }
 
@@ -167,6 +176,26 @@ private fun SettingSlider(
                 inactiveTickColor = RiffColors.PaperDim,
             ),
             modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onCalibrate).padding(vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.settings_calibrate),
+            style = MaterialTheme.typography.titleMedium,
+            color = RiffColors.Paper,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            if (audioOffsetMs == 0) stringResource(R.string.settings_not_calibrated) else "${-audioOffsetMs} ms",
+            style = MaterialTheme.typography.titleMedium,
+            color = RiffColors.PaperDim,
         )
     }
 }

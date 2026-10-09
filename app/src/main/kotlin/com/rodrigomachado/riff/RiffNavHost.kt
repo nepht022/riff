@@ -2,11 +2,15 @@ package com.rodrigomachado.riff
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
+import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
+import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
@@ -47,9 +51,7 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             )
         }
-        composable<SettingsRoute> {
-            SettingsScreen(onBack = dropUnlessResumed { navController.popBackStack() })
-        }
+        settingsDestinations(navController)
         composable<LibraryRoute> { entry ->
             val route = entry.toRoute<LibraryRoute>()
             LibraryScreen(
@@ -83,5 +85,18 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 onDone = dropUnlessResumed { navController.popBackStack() },
             )
         }
+    }
+}
+
+/** Configurações e calibração, abertas a partir de "Tocando agora". */
+private fun NavGraphBuilder.settingsDestinations(navController: NavHostController) {
+    composable<SettingsRoute> {
+        SettingsScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
+        )
+    }
+    composable<CalibrationRoute> {
+        CalibrationScreen(onDone = dropUnlessResumed { navController.popBackStack() })
     }
 }

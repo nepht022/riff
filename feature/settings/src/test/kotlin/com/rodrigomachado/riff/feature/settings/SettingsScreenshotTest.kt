@@ -30,6 +30,7 @@ class SettingsScreenshotTest {
                         onLeftHanded = {},
                         onPreviewHit = {},
                         onPreviewMiss = {},
+                        onCalibrate = {},
                         onBack = {},
                     )
                 }

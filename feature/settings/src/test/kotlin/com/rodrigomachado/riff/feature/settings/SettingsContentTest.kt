@@ -37,6 +37,7 @@ class SettingsContentTest {
                 onLeftHanded = { leftHanded = it },
                 onPreviewHit = {},
                 onPreviewMiss = {},
+                onCalibrate = {},
                 onBack = { back = true },
             )
         }
@@ -80,5 +81,38 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Voltar").performClick()
 
         assertEquals(true, back)
+    }
+
+    @Test
+    fun calibrationShowsTheCurrentDelayAndOpens() {
+        var opened = false
+        composeRule.setContent {
+            RiffTheme {
+                SettingsContent(
+                    settings = Settings.DEFAULT.copy(audioOffsetMs = -42),
+                    onMasterVolume = {},
+                    onHitVolume = {},
+                    onMissVolume = {},
+                    onNoteSpeed = {},
+                    onLeftHanded = {},
+                    onPreviewHit = {},
+                    onPreviewMiss = {},
+                    onCalibrate = { opened = true },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Calibrar atraso do áudio").performScrollTo().performClick()
+
+        composeRule.onNodeWithText("42 ms").assertExists()
+        assertEquals(true, opened)
+    }
+
+    @Test
+    fun withoutCalibrationItSaysSo() {
+        show()
+
+        composeRule.onNodeWithText("Não calibrado").performScrollTo().assertExists()
     }
 }

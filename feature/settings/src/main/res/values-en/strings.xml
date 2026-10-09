@@ -11,4 +11,6 @@
     <string name="settings_note_speed">Note speed</string>
     <string name="settings_left_handed">Left-handed mode</string>
     <string name="settings_left_handed_hint">Mirrors the lanes: green goes to the right.</string>
+    <string name="settings_calibrate">Calibrate audio delay</string>
+    <string name="settings_not_calibrated">Not calibrated</string>
 </resources>
