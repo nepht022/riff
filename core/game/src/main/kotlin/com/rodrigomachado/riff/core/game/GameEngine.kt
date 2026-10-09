@@ -17,6 +17,7 @@ data class JudgmentWindows(val perfectMs: Long = 50, val goodMs: Long = 100) {
  * Regras da partida: julga toques, conta combo e multiplicador, pontua notas longas.
  * Não conhece relógio nem UI: recebe sempre o tempo da música em ms.
  */
+@Suppress("TooManyFunctions") // julgamento, contagem e notas longas dividem o mesmo estado da partida
 class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = JudgmentWindows()) {
     val notes: List<Note> = notes.sortedWith(compareBy<Note> { it.timeMs }.thenBy { it.lane })
 
@@ -92,6 +93,12 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
     fun onRelease(lane: Int, timeMs: Long) {
         update(timeMs)
         sustains.remove(lane)
+    }
+
+    /** Fim da partida antes do mapa (o áudio acabou): as notas que nunca chegaram contam como erro. */
+    fun finish() {
+        markMisses(Long.MAX_VALUE)
+        sustains.clear()
     }
 
     /**

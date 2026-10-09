@@ -181,4 +181,16 @@ class GameEngineTest {
         assertEquals(2, engine.combo)
         assertEquals(engine.state.combo, engine.combo)
     }
+
+    @Test
+    fun finishingEarlyCountsTheNotesThatNeverArrivedAsMisses() {
+        val engine = GameEngine(listOf(note(1_000), note(5_000), note(9_000)))
+        engine.onPress(0, 1_000)
+
+        engine.finish() // o áudio acabou antes do mapa
+
+        assertEquals(1, engine.count(Judgment.PERFECT))
+        assertEquals(2, engine.count(Judgment.MISS))
+        assertTrue(engine.isFinished)
+    }
 }

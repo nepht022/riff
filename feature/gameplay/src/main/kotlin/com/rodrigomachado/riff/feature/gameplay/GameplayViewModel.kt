@@ -224,6 +224,7 @@ class GameplayViewModel @Inject constructor(
         finishing = true
         release()
         val engine = ready.session.engine
+        engine.finish()
         val record = ScoreRecord(
             id = 0,
             chartId = chartId,

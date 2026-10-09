@@ -463,4 +463,22 @@ class GameplayViewModelTest {
 
         assertEquals(0, trackMatches.offsets["spotify:track:x" to "a"])
     }
+
+    @Test
+    fun aSongThatEndsBeforeTheChartCountsTheRestAsMisses() = runTest {
+        loader.result = { playable() } // notas em 1.000 e 2.000
+        val viewModel = viewModel()
+        val session = (viewModel.uiState.value as GameplayUiState.Ready).session
+        player.positionMs = 1_000
+        time.now = GameSession.SYNC_INTERVAL_MS
+        session.tick()
+        session.press(0)
+        player.isCompleted = true // o áudio acabou antes da segunda nota
+
+        viewModel.onSessionFinished()
+
+        val record = scores.saved.single()
+        assertEquals(1, record.perfect)
+        assertEquals(1, record.miss)
+    }
 }
