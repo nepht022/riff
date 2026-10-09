@@ -42,4 +42,17 @@ class ClickTrackTest {
     fun withoutObservationsThereAreNoInstants() {
         assertEquals(emptyList<Long>(), ClickTimeline(1_000, longArrayOf(500)).clickTimesMs())
     }
+
+    @Test
+    fun eachClickIsAGuitarNoteThatRingsAndEndsBeforeTheNext() {
+        val rate = 44_100
+        val pcm = ClickTrack.render(rate)
+        val first = ClickTrack.clickFrames(rate)[0].toInt()
+        fun peakBetween(fromMs: Int, toMs: Int) =
+            (first + fromMs * rate / 1_000 until first + toMs * rate / 1_000).maxOf { kotlin.math.abs(pcm[it * 2]) }
+
+        assertTrue("o ataque precisa ser imediato", peakBetween(0, 5) > 0.3f)
+        assertTrue("a nota precisa soar, não estalar", peakBetween(100, 200) > 0.05f)
+        assertEquals(0f, peakBetween(300, 590), 0f)
+    }
 }

@@ -37,7 +37,7 @@ Decisões do usuário (2026-10-09): **um atraso só** (sem perfil por saída de 
 ## 3. Medição
 
 - **Sinal:** o relógio do jogo soma o ajuste à posição da música (`SongClock`: posição + `offsetMs`). Se o jogador toca, em média, `L` ms depois do clique que ouve, o atraso geral salvo é `audioOffsetMs = −L`. Na partida vale `audioOffsetMs + ajuste da música`.
-- **Cliques:** gerados por nós numa saída de áudio própria, a mesma `AudioTrackSink` das faixas separadas (PCM float, `USAGE_GAME`), que informa quando cada quadro sai no alto-falante. Clique: 20 ms de uma senoide de 1,5 kHz com decaimento rápido, sintetizado em código.
+- **Cliques:** gerados por nós numa saída de áudio própria, a mesma `AudioTrackSink` das faixas separadas (PCM float, `USAGE_GAME`), que informa quando cada quadro sai no alto-falante. Batida: uma nota de guitarra (Mi3, 0,25 s) no mesmo timbre "crunch" do som de acerto, sintetizada em código, com ataque imediato (pedido do usuário em 2026-10-09: o clique de senoide não agradou).
 - **Instante de cada clique:** o quadro em que ele começa, convertido para o relógio do sistema (`SystemClock.uptimeMillis`) pela posição apresentada da saída.
 - **Instante de cada toque:** `MotionEvent.eventTime` (mesmo relógio), no momento em que o dedo encosta.
 - **`CalibrationSession` (Kotlin puro):** recebe os instantes dos cliques e dos toques; associa cada toque ao clique mais próximo (cada clique aceita no máximo um toque, o mais próximo); calcula a diferença de cada par; descarta as diferenças a mais de 250 ms da mediana; com 12 ou mais restantes, o atraso é a mediana delas, arredondada para ms; com menos, "instável". Toques nos cliques de entrada não contam.
