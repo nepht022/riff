@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.riff.android.application.compose)
     alias(libs.plugins.riff.android.hilt)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -14,6 +15,8 @@ android {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Uso pessoal: a mesma chave do debug deixa o app medido substituir o de debug sem apagar os dados.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
@@ -31,4 +34,6 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:calibration"))
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 }
