@@ -43,9 +43,7 @@ class CalibrationViewModel @Inject constructor(
         state.value = CalibrationUiState.Measuring(taps = 0)
         measuring = viewModelScope.launch {
             state.value = try {
-                val clicks = player.play()
-                runCatching { android.util.Log.d("RiffCalib", "clicks=$clicks taps=$taps") } // DIAGNÓSTICO TEMPORÁRIO
-                when (val result = CalibrationSession.result(clicks, taps.toList())) {
+                when (val result = CalibrationSession.result(player.play(), taps.toList())) {
                     is CalibrationResult.Measured -> CalibrationUiState.Result(result.latencyMs.limited())
                     CalibrationResult.Unstable -> CalibrationUiState.Unstable
                 }

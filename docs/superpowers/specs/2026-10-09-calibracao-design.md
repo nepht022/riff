@@ -1,6 +1,6 @@
 # Riff: calibração do atraso de áudio e ajuste fino por música
 
-Data: 2026-10-09 · Status: aprovado em conversa, aguardando revisão do documento
+Data: 2026-10-09 · Status: implementado; revisto depois do teste no aparelho (§8)
 Complementa: `2026-10-05-riff-design.md` (§2 item 4 Calibração, §4 Sincronização, §11 passo 7)
 
 ## 1. Objetivo
@@ -28,7 +28,7 @@ Decisões do usuário (2026-10-09): **um atraso só** (sem perfil por saída de 
 
 - No menu de pausa da partida: "Sincronia desta música: +20 ms" com botões "−10 ms" e "+10 ms".
 - Cada toque muda o ajuste na hora (vale ao continuar) e grava.
-- Limites: −500 ms a +500 ms.
+- Limites: −10 s a +10 s (era ±500 ms; ver §8).
 - Onde fica salvo:
   - modo Spotify: no casamento faixa ↔ mapa (`track_matches.trackOffsetMs`); se o casamento era automático e ainda não estava salvo, ajustar o salva (com o mesmo mapa);
   - modo biblioteca: por mapa, numa tabela nova.
@@ -69,3 +69,15 @@ Decisões do usuário (2026-10-09): **um atraso só** (sem perfil por saída de 
 - `GameplayViewModel`: lê o ajuste do mapa na biblioteca; −10/+10 muda a sessão, respeita os limites e grava no lugar certo (Spotify ou biblioteca).
 - Telas: estados da calibração (instrução, medindo, resultado, instável) com screenshot; linha nas Configurações; linha de sincronia no menu de pausa.
 - No aparelho: o usuário calibra e confere de ouvido se as notas ficaram mais certas.
+
+## 8. Depois do teste no aparelho (2026-10-09)
+
+O teste no Galaxy do usuário mudou várias coisas. Decisões do usuário em conversa:
+
+- **Calibração por toque pouco confiável:** a saída de áudio da medição foi estável (o instante estimado das batidas variou menos de 2 ms), mas os toques foram adiantando ao longo da medição (de +60 a −160 ms), e a mediana ficou longe do certo. Com a calibração em 0, a biblioteca ficou perfeitamente sincronizada. A calibração fica (útil com fone Bluetooth), com um botão **Zerar** ao lado de **Começar**; o metrônomo toca uma nota de guitarra no timbre do som de acerto em vez do clique de senoide.
+- **Spotify fora de sincronia por segundos, não ms:** o áudio do mapa pode ter uma contagem de entrada ou silêncio antes da música, que a versão do Spotify não tem (Smells Like Teen Spirit: guitarra aos 4,0 s no mapa). Sem ajuste salvo, o modo Spotify mede onde a música começa no áudio do mapa (`MusicStart`: primeiro trecho de 50 ms em que 80% do segundo seguinte fica a menos de 30 dB da parte mais alta; contagem de baqueta não sustenta) e usa isso como ajuste da faixa, salvo para refinar. O ajuste por música vai até ±10 s, e a pausa ganha −1 s e +1 s além de −10 ms e +10 ms. O usuário refinou Teen Spirit para +3000 ms (detectado: +4000).
+- **Acerto em silêncio no Spotify:** a música inteira já está tocando; o som de acerto ficou só para a biblioteca sem guitarra separada.
+- **Ajuste na pausa não move a pista:** pausado, o valor muda e é salvo, mas só vale ao continuar.
+- **Pista espera o som:** depois de começar ou continuar, a posição fica parada até o som sair de verdade (`SongPlayer.isStarting`). Na saída própria, só vale um timestamp tirado depois de começar, que já tenha apresentado algum quadro e que não ande mais que o tempo desde a retomada (`PresentedFrames`); no Spotify, até ele confirmar que voltou, e ao continuar ele volta para onde a pista parou (o Spotify para uns 170 ms depois do jogo). Enquanto pausado, a posição que o Spotify informa não mexe na pista; se ele não voltar em 5 s, o jogo pausa.
+- **Biblioteca volta 0,5 s ao continuar,** como uma fita (animação de 600 ms, devagar no começo e no fim), e só então a música segue; os toques são ignorados no retrocesso. No Spotify a música segue de onde parou: ali o jogador veio ouvir música. Os players da biblioteca ganharam `seekTo` (o de faixas separadas recria a saída a partir do ponto novo).
+

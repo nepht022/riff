@@ -176,14 +176,8 @@ class GameSession(
     /** Há quanto tempo apareceu o último julgamento. */
     fun judgmentAgeMs(): Long = if (lastJudgmentAt == NEVER) Long.MAX_VALUE else timeSource.nowMs() - lastJudgmentAt
 
-    /** DIAGNÓSTICO TEMPORÁRIO: posição do player e do relógio a cada sincronização. */
-    var syncLog: ((String) -> Unit)? = null
-
     private fun syncClock() {
         val now = timeSource.nowMs()
-        val line = "sync now=$now player=${player.positionMs} clock=${clock.positionMs()} " +
-            "playing=${player.isPlaying} starting=${player.isStarting}"
-        syncLog?.invoke(line)
         waitingForSound = player.isStarting
         clock.sync(player.positionMs, !player.isPlaying || waitingForSound, now)
         lastSyncAt = now

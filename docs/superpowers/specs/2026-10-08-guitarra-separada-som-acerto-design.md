@@ -37,6 +37,7 @@ Decidido com o usuário em 2026-10-08, depois de ouvir candidatos sintetizados (
   - acompanhamento: `song`, `rhythm`, `bass`, `drums`, `drums_1` a `drums_4`, `vocals`, `vocals_1`, `vocals_2`, `keys`, `crowd`.
 - **Quando vale o modo de faixas:** existe `guitar.*` e pelo menos uma faixa de acompanhamento. Sem `guitar.*`, ou com `guitar.*` sozinha, fica o modo de um arquivo de hoje (`song.*` primeiro; `guitar.*` se for a única).
 - **Erro** (nota que passou sem ser tocada, ou toque sem nota): a guitarra cai a zero numa rampa de 30 ms e toca o som de erro.
+- **Nota atrasada** (2026-10-09, depois do teste no aparelho): 50 ms depois do tempo de uma nota ainda não tocada, a guitarra já cala, sem som de erro; o erro em si continua no fim da janela (100 ms), e um acerto atrasado a traz de volta. Antes, o começo da nota perdida chegava a tocar.
 - **Acerto:** a guitarra volta a 100% numa rampa de 30 ms. Nesse modo não há som de acerto.
 - **Começo da partida:** a guitarra começa audível.
 - **Fim:** a partida acaba quando a faixa mais longa termina (ou pela regra de hoje: 3 s depois da última nota julgada). Uma faixa mais curta que as outras termina em silêncio.

@@ -113,7 +113,6 @@ class GameplayViewModel @Inject constructor(
             // Na biblioteca o jogador veio jogar: volta um pouco para retomar. No Spotify veio ouvir: segue.
             rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )
-        session.syncLog = { runCatching { android.util.Log.d("RiffSync", it) } } // DIAGNÓSTICO TEMPORÁRIO
         if (!pauseRequested) session.start()
         GameplayUiState.Ready(
             playable.chart.title,

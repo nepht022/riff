@@ -41,7 +41,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa e fim |
 | `:feature:results` | Resultado da partida e recorde |
-| `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques e resultado |
+| `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
 | `:feature:settings` | Configurações: volume geral, de acerto e de erro, velocidade das notas e modo canhoto |
 | `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
 

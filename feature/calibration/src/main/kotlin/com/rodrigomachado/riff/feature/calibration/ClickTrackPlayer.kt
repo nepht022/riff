@@ -25,10 +25,7 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
             coroutineScope {
                 val watcher = launch {
                     while (isActive) {
-                        val now = SystemClock.uptimeMillis()
-                        val played = sink.playedFrames
-                        android.util.Log.d("RiffCalib", "obs now=$now played=$played") // DIAGNÓSTICO TEMPORÁRIO
-                        timeline.observe(now, played)
+                        timeline.observe(SystemClock.uptimeMillis(), sink.playedFrames)
                         delay(OBSERVE_EVERY_MS)
                     }
                 }
