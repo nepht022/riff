@@ -7,12 +7,12 @@ import android.media.AudioTrack
 
 /**
  * Saída estéreo em PCM float. O relógio da música são os quadros que já saíram no alto-falante
- * (`getTimestamp`, que desconta a latência de saída, como o MediaPlayer faz); sem timestamp, a cabeça de leitura.
+ * (`getTimestamp`, que desconta a latência de saída, como o MediaPlayer faz). Ver [PresentedFrames].
  */
 class AudioTrackSink(private val sampleRate: Int) : AudioSink {
     private val track: AudioTrack
     private val timestamp = AudioTimestamp()
-    private var presented = 0L
+    private val presented = PresentedFrames(sampleRate)
 
     init {
         val format = AudioFormat.Builder()
@@ -38,9 +38,15 @@ class AudioTrackSink(private val sampleRate: Int) : AudioSink {
             .build()
     }
 
-    override fun start() = track.play()
+    override fun start() {
+        presented.started(System.nanoTime())
+        track.play()
+    }
 
-    override fun pause() = track.pause()
+    override fun pause() {
+        track.pause()
+        presented.paused()
+    }
 
     override fun stop() {
         runCatching { track.stop() }
@@ -51,21 +57,23 @@ class AudioTrackSink(private val sampleRate: Int) : AudioSink {
 
     override val playedFrames: Long
         get() {
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) return presented.frames
             val head = track.playbackHeadPosition.toLong() and UINT_MASK
-            if (track.playState == AudioTrack.PLAYSTATE_PLAYING && track.getTimestamp(timestamp)) {
-                val sinceNs = System.nanoTime() - timestamp.nanoTime
-                presented = (timestamp.framePosition + sinceNs * sampleRate / NANOS_PER_SECOND).coerceIn(0, head)
-            } else if (track.playState != AudioTrack.PLAYSTATE_PAUSED) {
-                presented = head
-            }
-            return presented
+            val stamped = track.getTimestamp(timestamp)
+            return presented.update(
+                head = head,
+                stampFrame = if (stamped) timestamp.framePosition else null,
+                stampNs = if (stamped) timestamp.nanoTime else null,
+                nowNs = System.nanoTime(),
+            )
         }
+
+    override val isPresenting: Boolean get() = presented.isPresenting
 
     override fun release() = track.release()
 
     private companion object {
         const val BUFFER_MULTIPLIER = 2
         const val UINT_MASK = 0xFFFF_FFFFL
-        const val NANOS_PER_SECOND = 1_000_000_000L
     }
 }

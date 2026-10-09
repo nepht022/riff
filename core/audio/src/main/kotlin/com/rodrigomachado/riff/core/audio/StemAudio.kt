@@ -34,6 +34,9 @@ interface AudioSink {
 
     val playedFrames: Long
 
+    /** O som já está saindo (falso logo depois de [start], até a saída confirmar). */
+    val isPresenting: Boolean get() = true
+
     fun release()
 }
 

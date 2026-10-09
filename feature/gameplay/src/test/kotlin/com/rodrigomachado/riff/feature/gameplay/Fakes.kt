@@ -17,6 +17,7 @@ class FakeSongPlayer : SongPlayer {
     var prepareFailure: Exception? = null
     var released = false
     override var isCompleted: Boolean = false
+    override var isStarting: Boolean = false
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
     override var positionMs: Long = 0

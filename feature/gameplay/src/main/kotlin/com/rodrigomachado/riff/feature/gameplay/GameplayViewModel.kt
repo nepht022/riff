@@ -108,6 +108,7 @@ class GameplayViewModel @Inject constructor(
             offset,
             hitSounds = spotifyTrackUri == null,
         )
+        session.syncLog = { runCatching { android.util.Log.d("RiffSync", it) } } // DIAGNÓSTICO TEMPORÁRIO
         if (!pauseRequested) session.start()
         GameplayUiState.Ready(
             playable.chart.title,

@@ -212,6 +212,8 @@ class StemSongPlayer(
 
     override val isPlaying: Boolean get() = playing && !released && !isCompleted
 
+    override val isStarting: Boolean get() = isPlaying && sink?.isPresenting == false
+
     override val isCompleted: Boolean
         get() {
             val played = sink?.playedFrames ?: return false

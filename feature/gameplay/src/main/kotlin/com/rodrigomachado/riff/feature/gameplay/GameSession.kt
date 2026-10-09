@@ -35,6 +35,7 @@ class GameSession(
     private var missesHeard = 0
     private var lastJudgmentAt = NEVER
     private var pendingOffsetMs = 0L
+    private var waitingForSound = false
 
     /** Quanto tempo atrás do relógio ainda desenhar (notas perdidas passando e rastros longos). */
     val lookBehindMs: Long = max(MISS_TAIL_MS, engine.notes.maxOfOrNull { it.sustainMs } ?: 0L)
@@ -80,7 +81,8 @@ class GameSession(
 
     /** Avança a partida até o instante atual. Chamado a cada frame. */
     fun tick(): Long {
-        if (timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
+        // Começando (o som ainda não saiu), sincroniza a cada quadro para a pista partir junto com a música.
+        if (waitingForSound || player.isStarting || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
         songTimeMs = clock.positionMs()
         engine.update(songTimeMs)
         val misses = engine.count(Judgment.MISS)
@@ -133,9 +135,16 @@ class GameSession(
     /** Há quanto tempo apareceu o último julgamento. */
     fun judgmentAgeMs(): Long = if (lastJudgmentAt == NEVER) Long.MAX_VALUE else timeSource.nowMs() - lastJudgmentAt
 
+    /** DIAGNÓSTICO TEMPORÁRIO: posição do player e do relógio a cada sincronização. */
+    var syncLog: ((String) -> Unit)? = null
+
     private fun syncClock() {
         val now = timeSource.nowMs()
-        clock.sync(player.positionMs, !player.isPlaying, now)
+        val line = "sync now=$now player=${player.positionMs} clock=${clock.positionMs()} " +
+            "playing=${player.isPlaying} starting=${player.isStarting}"
+        syncLog?.invoke(line)
+        waitingForSound = player.isStarting
+        clock.sync(player.positionMs, !player.isPlaying || waitingForSound, now)
         lastSyncAt = now
     }
 

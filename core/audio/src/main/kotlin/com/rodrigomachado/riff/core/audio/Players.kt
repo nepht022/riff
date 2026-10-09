@@ -18,6 +18,9 @@ interface SongPlayer {
 
     val isPlaying: Boolean
 
+    /** Mandou tocar, mas o som ainda não saiu: a posição fica parada e o jogo espera em vez de adiantar. */
+    val isStarting: Boolean get() = false
+
     val isCompleted: Boolean
 }
 

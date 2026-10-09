@@ -57,18 +57,79 @@ class SpotifySongPlayerTest {
     }
 
     @Test
-    fun playAndPauseApplyAtOnceBeforeSpotifyConfirms() = runTest {
+    fun afterPlayThePositionWaitsUntilSpotifyConfirms() = runTest {
         val player = prepared()
 
         player.play()
-        assertTrue(player.isPlaying)
+        assertTrue(player.isPlaying) // para o jogo não é uma pausa
+        assertTrue(player.isStarting)
         now += 300
-        assertEquals(300L, player.positionMs)
+        assertEquals(0L, player.positionMs) // o Spotify ainda não começou: a pista espera
+
+        emit(state(position = 40))
+        assertFalse(player.isStarting)
+        now += 100
+        assertEquals(140L, player.positionMs)
 
         player.pause()
         assertFalse(player.isPlaying)
         now += 5_000
-        assertEquals(300L, player.positionMs)
+        assertEquals(140L, player.positionMs)
+    }
+
+    @Test
+    fun whilePausedTheLateStateFromSpotifyDoesNotMoveTheHighway() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 30_000))
+        now += 500
+        player.pause() // o jogo para em 30.500
+
+        now += 200
+        emit(state(position = 30_670, isPaused = true)) // o Spotify obedeceu mais tarde
+
+        assertEquals(30_500L, player.positionMs)
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun resumingPutsSpotifyBackWhereTheGameStoppedAndWaitsForIt() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 30_000))
+        now += 500
+        player.pause()
+        now += 200
+        emit(state(position = 30_670, isPaused = true))
+        remote.commands.clear()
+
+        now += 3_000
+        player.play()
+
+        assertEquals(listOf("seek:30500", "resume"), remote.commands)
+        assertTrue(player.isStarting)
+        now += 250
+        assertEquals(30_500L, player.positionMs)
+        emit(state(position = 30_510))
+        now += 100
+        assertEquals(30_610L, player.positionMs)
+    }
+
+    @Test
+    fun spotifyThatNeverResumesPausesTheGame() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 30_000))
+        player.pause()
+        player.play()
+
+        now += SpotifySongPlayer.START_TIMEOUT_MS + 1
+        advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS * 3)
+        runCurrent()
+
+        assertFalse(player.isStarting)
+        assertFalse(player.isPlaying)
+        assertEquals(30_000L, player.positionMs)
     }
 
     @Test

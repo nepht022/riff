@@ -187,4 +187,24 @@ class GameSessionTest {
         assertEquals(Judgment.PERFECT, session.lastJudgment)
         assertEquals(1, sfx.misses)
     }
+
+    @Test
+    fun whileTheSongIsStartingTheHighwayWaitsAndThenFollowsTheSoundAtOnce() {
+        player.positionMs = 30_000
+        val session = session(note(60_000))
+        session.pause()
+        player.isStarting = true
+
+        session.resume()
+        time.now = 200
+        assertEquals(30_000L, session.tick()) // o som ainda não voltou: a pista não anda
+        assertFalse(session.isPaused) // e não é uma pausa (sem menu)
+
+        player.isStarting = false
+        player.positionMs = 30_010
+        time.now = 210 // o próximo quadro, bem antes da sincronização periódica de 500 ms
+        assertEquals(30_010L, session.tick())
+        time.now = 310
+        assertEquals(30_110L, session.tick())
+    }
 }

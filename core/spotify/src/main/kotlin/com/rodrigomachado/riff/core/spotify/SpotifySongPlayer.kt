@@ -14,9 +14,11 @@ import java.io.IOException
 import kotlin.math.abs
 
 /**
- * A música da partida tocando no Spotify. O primeiro [play] toca a faixa do começo; os seguintes retomam.
- * Comandos valem na hora (estado otimista) e os eventos do Spotify confirmam ou corrigem; estados de
- * antes do último comando são descartados. A posição é extrapolada do último estado.
+ * A música da partida tocando no Spotify. O primeiro [play] toca a faixa do começo; os seguintes retomam
+ * do ponto onde o jogo parou. O Spotify demora a obedecer: depois de [play] a posição fica parada
+ * ([isStarting]) até ele confirmar que está tocando; depois de [pause] o jogo fica onde parou, mesmo que o
+ * Spotify pare um pouco depois. Estados de antes do último comando são descartados. A posição é extrapolada
+ * do último estado.
  */
 class SpotifySongPlayer(
     private val remote: SpotifyRemote,
@@ -29,6 +31,10 @@ class SpotifySongPlayer(
     private var completed = false
     private var lastCommandAtMs = Long.MIN_VALUE
     private var startedAtMs = 0L
+    private var starting = false
+
+    /** Onde o Spotify disse que parou (pode ser um pouco depois de onde o jogo parou). */
+    private var spotifyPausedAtMs: Long? = null
 
     // Conexão caiu: a posição fica congelada e o que o Spotify mostrar na volta só vale no próximo play.
     private var disconnected = false
@@ -49,6 +55,7 @@ class SpotifySongPlayer(
                 delay(REFRESH_INTERVAL_MS)
                 remote.refresh()
                 pauseIfOurTrackNeverStarted()
+                pauseIfSpotifyNeverResumed()
             }
         }
     }
@@ -75,7 +82,14 @@ class SpotifySongPlayer(
     private fun onOurTrack(state: PlaybackState) {
         val wasNearTheEnd = sawOurTrack && isPlaying && positionMs >= state.durationMs - NEAR_END_MS
         sawOurTrack = true
-        last = state
+        val pausedByTheGame = last?.isPaused == true
+        if (state.isPaused && pausedByTheGame) {
+            // Pausado pelo jogo (ou esperando o Spotify voltar): a pista fica onde parou.
+            spotifyPausedAtMs = state.positionMs
+        } else {
+            starting = false
+            last = state
+        }
         if (!state.isPaused) return
         val pausedAtTheEnd = state.positionMs >= state.durationMs - END_TOLERANCE_MS
         // Sem autoplay, o Spotify para no começo da mesma faixa quando ela acaba.
@@ -88,8 +102,14 @@ class SpotifySongPlayer(
         val waitingForOurTrack = started && !sawOurTrack && isPlaying
         if (waitingForOurTrack && nowMs() - startedAtMs > START_TIMEOUT_MS) {
             started = false
+            starting = false
             last = last?.frozenAt(0)
         }
+    }
+
+    /** Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre. */
+    private fun pauseIfSpotifyNeverResumed() {
+        if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
     }
 
     override fun play() {
@@ -109,17 +129,24 @@ class SpotifySongPlayer(
             !started -> {
                 started = true
                 startedAtMs = now
+                starting = true
                 remote.play(uri)
-                last = PlaybackState(uri, "", "", 0, 0, isPaused = false, capturedAtElapsedMs = now)
+                last = PlaybackState(uri, "", "", 0, 0, isPaused = true, capturedAtElapsedMs = now)
             }
 
             disconnected -> resumeAfterReconnecting(uri, now)
 
-            else -> {
-                remote.resume()
-                last = last?.copy(isPaused = false, capturedAtElapsedMs = now)
-            }
+            else -> resumeWhereTheGameStopped()
         }
+    }
+
+    private fun resumeWhereTheGameStopped() {
+        val position = positionMs
+        val spotifyAt = spotifyPausedAtMs
+        if (spotifyAt != null && abs(spotifyAt - position) > SEEK_TOLERANCE_MS) remote.seekTo(position)
+        remote.resume()
+        spotifyPausedAtMs = null
+        starting = true
     }
 
     /** Volta a nossa faixa para onde o jogo parou; se o Spotify já estiver lá, só retoma. */
@@ -140,6 +167,8 @@ class SpotifySongPlayer(
     override fun pause() {
         if (!started) return
         val position = positionMs
+        starting = false
+        spotifyPausedAtMs = null
         lastCommandAtMs = nowMs()
         remote.pause()
         last = last?.frozenAt(position)
@@ -157,7 +186,9 @@ class SpotifySongPlayer(
             return if (state.isPaused) state.positionMs else state.positionMs + (nowMs() - state.capturedAtElapsedMs)
         }
 
-    override val isPlaying: Boolean get() = last?.isPaused == false
+    override val isPlaying: Boolean get() = starting || last?.isPaused == false
+
+    override val isStarting: Boolean get() = starting
 
     override val isCompleted: Boolean get() = completed
 
@@ -170,6 +201,7 @@ class SpotifySongPlayer(
         const val END_TOLERANCE_MS = 1_500L
         const val START_TIMEOUT_MS = 5_000L
         const val RESUME_TOLERANCE_MS = 1_000L
+        const val SEEK_TOLERANCE_MS = 50L
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }

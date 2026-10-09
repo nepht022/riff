@@ -44,6 +44,7 @@ class StemSongPlayerTest {
         /** Quantos quadros a próxima escrita aceita (o AudioTrack pausado no meio devolve menos). */
         var acceptNext: Int? = null
         override var playedFrames = 0L
+        override var isPresenting = true
 
         override fun start() {
             started = true
@@ -284,5 +285,22 @@ class StemSongPlayerTest {
         player.renderOnce()
 
         assertEquals(0.25f, sink.lastBlock[0], 1e-6f)
+    }
+
+    @Test
+    fun untilTheSoundComesOutThePlayerIsStarting() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        sink.isPresenting = false
+
+        player.play()
+        assertTrue(player.isStarting)
+        assertTrue(player.isPlaying)
+
+        sink.isPresenting = true
+        assertFalse(player.isStarting)
+        player.pause()
+        assertFalse(player.isStarting)
     }
 }
