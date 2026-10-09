@@ -35,4 +35,7 @@ object AudioModule {
                 sinks = ::AudioTrackSink,
             )
         }
+
+    @Provides
+    fun audioSinks(): AudioSinkFactory = AudioSinkFactory(::AudioTrackSink)
 }
