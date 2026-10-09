@@ -11,7 +11,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
-import kotlin.math.abs
 
 /**
  * A música da partida tocando no Spotify. O primeiro [play] toca a faixa do começo; os seguintes retomam
@@ -121,7 +120,9 @@ class SpotifySongPlayer(
         val now = nowMs()
         lastCommandAtMs = now
         when {
-            !started -> {
+            // Ainda não começou (ou pausou antes de o Spotify começar a nossa faixa): toca do começo, e o prazo
+            // para ela começar conta a partir daqui.
+            !started || (!sawOurTrack && !disconnected) -> {
                 started = true
                 startedAtMs = now
                 starting = true
@@ -148,13 +149,16 @@ class SpotifySongPlayer(
         val back = afterReconnect
         disconnected = false
         afterReconnect = null
-        if (back?.trackUri == uri && abs(back.positionMs - position) <= RESUME_TOLERANCE_MS) {
+        if (back?.trackUri == uri) {
+            remote.seekTo(position)
             remote.resume()
         } else {
             remote.play(uri)
             remote.seekTo(position)
         }
-        last = last?.copy(positionMs = position, isPaused = false, capturedAtElapsedMs = now)
+        // Como numa retomada normal: a pista espera o Spotify confirmar que voltou.
+        starting = true
+        last = last?.copy(positionMs = position, isPaused = true, capturedAtElapsedMs = now)
     }
 
     override fun pause() {
@@ -192,7 +196,6 @@ class SpotifySongPlayer(
         const val CONNECT_TIMEOUT_MS = 15_000L
         const val END_TOLERANCE_MS = 1_500L
         const val START_TIMEOUT_MS = 5_000L
-        const val RESUME_TOLERANCE_MS = 1_000L
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }

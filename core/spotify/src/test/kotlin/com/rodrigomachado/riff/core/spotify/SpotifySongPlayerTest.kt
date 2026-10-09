@@ -50,6 +50,7 @@ class SpotifySongPlayerTest {
 
         player.pause() // antes de começar: não mexe na música do usuário
         player.play()
+        emit(state(position = 0)) // o Spotify começou a nossa faixa
         player.pause()
         player.play()
 
@@ -312,10 +313,11 @@ class SpotifySongPlayerTest {
 
         assertEquals(listOf("play:$ours", "seek:30400"), remote.commands)
         assertTrue(player.isPlaying)
+        assertTrue(player.isStarting)
     }
 
     @Test
-    fun resumingAfterReconnectingOnTheSamePointJustResumes() = runTest {
+    fun resumingAfterReconnectingOnOurTrackSeeksBackAndWaitsForSpotify() = runTest {
         val player = prepared()
         player.play()
         now += 100
@@ -327,7 +329,12 @@ class SpotifySongPlayerTest {
 
         player.play()
 
-        assertEquals(listOf("resume"), remote.commands)
+        assertEquals(listOf("seek:30400", "resume"), remote.commands)
+        assertTrue(player.isStarting) // como numa retomada normal: a pista espera o Spotify voltar
+        now += 300
+        assertEquals(30_400L, player.positionMs)
+        emit(state(position = 30_410))
+        assertFalse(player.isStarting)
     }
 
     @Test
@@ -371,5 +378,22 @@ class SpotifySongPlayerTest {
         emit(state(position = 0, isPaused = true, duration = 200_000)) // sem autoplay: volta ao começo parado
 
         assertTrue(player.isCompleted)
+    }
+
+    @Test
+    fun pausingBeforeOurTrackStartsAndResumingLaterStartsItAgainWithoutAForcedPause() = runTest {
+        val player = prepared()
+        player.play()
+        now += 1_000
+        player.pause() // pausou antes de o Spotify começar a nossa faixa
+        remote.commands.clear()
+        now += 10_000
+
+        player.play()
+        assertEquals(listOf("play:$ours"), remote.commands) // nunca começou: toca do começo de novo
+        now += 2_000
+        advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
+
+        assertTrue(player.isPlaying) // o prazo de 5 s conta da retomada, não do primeiro play
     }
 }
