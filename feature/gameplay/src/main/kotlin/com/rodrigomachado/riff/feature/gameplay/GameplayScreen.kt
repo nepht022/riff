@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.gameplay
 
+import android.os.SystemClock
 import android.provider.Settings.Global
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -171,13 +172,15 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
             val event = awaitPointerEvent()
             val geometry = HighwayGeometry(Size(size.width.toFloat(), size.height.toFloat()))
             for (change in event.changes) {
+                // Quanto o toque esperou até chegar aqui: o julgamento usa o instante em que o dedo encostou ou saiu.
+                val lateBy = SystemClock.uptimeMillis() - change.uptimeMillis
                 if (change.changedToDown()) {
                     val lane = screenLane(geometry.laneAt(change.position.x), leftHanded)
                     lanes[change.id] = lane
-                    session.press(lane)
+                    session.press(lane, lateBy)
                     change.consume()
                 } else if (change.changedToUp()) {
-                    lanes.remove(change.id)?.let(session::release)
+                    lanes.remove(change.id)?.let { session.release(it, lateBy) }
                     change.consume()
                 }
             }

@@ -139,10 +139,11 @@ class GameSession(
         return songTimeMs
     }
 
-    fun press(lane: Int) {
+    /** Toque na [lane]; [lateByMs] é quanto o toque esperou até chegar aqui (o julgamento usa o instante do dedo). */
+    fun press(lane: Int, lateByMs: Long = 0) {
         if (isPaused || rewind != null) return
         fingers[lane]++
-        val judgment = engine.onPress(lane, clock.positionMs())
+        val judgment = engine.onPress(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
         if (judgment == null) {
             onMiss()
             return
@@ -170,10 +171,10 @@ class GameSession(
         guitar?.setGuitarAudible(false)
     }
 
-    fun release(lane: Int) {
+    fun release(lane: Int, lateByMs: Long = 0) {
         if (fingers[lane] == 0) return
         fingers[lane]--
-        if (fingers[lane] == 0) engine.onRelease(lane, clock.positionMs())
+        if (fingers[lane] == 0) engine.onRelease(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
     }
 
     fun isPressed(lane: Int): Boolean = fingers[lane] > 0

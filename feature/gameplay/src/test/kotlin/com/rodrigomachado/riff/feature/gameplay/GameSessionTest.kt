@@ -309,4 +309,14 @@ class GameSessionTest {
         session.release(0)
         assertFalse(session.isPressed(0))
     }
+
+    @Test
+    fun aTapIsJudgedWhenTheFingerTouchedNotWhenTheAppGotToIt() {
+        player.positionMs = 1_080
+        val session = session(note(1_000))
+
+        session.press(0, lateByMs = 70) // o dedo encostou em 1.010; o app só processou em 1.080
+
+        assertEquals(Judgment.PERFECT, session.lastJudgment)
+    }
 }
