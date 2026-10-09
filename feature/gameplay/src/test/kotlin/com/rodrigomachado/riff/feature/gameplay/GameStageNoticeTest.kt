@@ -105,7 +105,13 @@ class GameStageNoticeTest {
     fun pauseAndExitHaveTagsForTheAutomatedJourneys() {
         var paused = false
         var exited = false
-        val session = GameSession(listOf(note(60_000)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), audioOffsetMs = 0)
+        val session = GameSession(
+            listOf(note(60_000)),
+            FakeSongPlayer(),
+            FakeSfxPlayer(),
+            FakeTime(),
+            audioOffsetMs = 0,
+        )
         var isPaused by mutableStateOf(false)
         composeRule.setContent {
             RiffTheme {
