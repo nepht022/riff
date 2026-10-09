@@ -19,7 +19,7 @@ App Android de ritmo, no estilo Guitar Hero, em que o jogador toca junto a músi
 3. **Gameplay:** 5 trilhas, o jogador toca a trilha na linha de acerto. O jogo julga cada toque como Perfeito, Bom ou Erro, conta combo, aplica multiplicador (1x a 4x, sobe a cada 10 acertos seguidos) e suporta notas longas. Segue pausa e troca de faixa do Spotify. Visual de palco com gemas e botões 3D, chama no acerto e sons de acerto e erro (veja `2026-10-07-identidade-visual-design.md`).
 4. **Calibração:** um offset global de áudio, medido com uma batida de referência tocada pelo próprio app, mais um ajuste fino opcional por música.
 5. **Resultado e histórico:** a melhor pontuação por música e dificuldade.
-6. **Configurações:** velocidade das notas, modo canhoto (trilhas espelhadas), dificuldade padrão e volume dos efeitos sonoros.
+6. **Configurações:** velocidade das notas (0,5× a 2,0×), modo canhoto (trilhas espelhadas) e três volumes: geral do app, som de acerto e som de erro. Decisão de 2026-10-09: sem dificuldade padrão; a dificuldade é sempre escolhida no diálogo. O volume geral não muda o Spotify (o SDK não controla o volume dele).
 
 ### Fora do MVP
 Star power, multiplayer, download de mapas da internet, geração automática de notas, input de deslizar ou palhetar, iOS, conta e nuvem, Crashlytics e publicação na Play Store.
@@ -102,8 +102,9 @@ data class GameState(val songTimeMs: Long, val score: Long, val combo: Int, val 
 data class ScoreRecord(val id: Long, val chartId: String, val difficulty: Difficulty, val score: Long,
                        val accuracy: Float, val maxCombo: Int, val perfect: Int, val good: Int,
                        val miss: Int, val playedAtEpochMs: Long)
-data class Settings(val audioOffsetMs: Int, val noteSpeed: Float, val leftHanded: Boolean,
-                    val defaultDifficulty: Difficulty, val sfxVolume: Float /* 0..1, padrão 0,6 */)
+data class Settings(val audioOffsetMs: Int, val noteSpeed: Float /* 0,5..2 */, val leftHanded: Boolean,
+                    val masterVolume: Float /* 0..1, padrão 1 */, val hitVolume: Float /* padrão 0,6 */,
+                    val missVolume: Float /* padrão 0,6 */)
 ```
 
 `Chart.id` é o hash SHA-1 do arquivo de notas, então reimportar o mesmo mapa não duplica nada.
@@ -169,7 +170,7 @@ GitHub Actions a cada PR: ktlint, Detekt, Lint, testes unitários, Kover e `asse
 4. `:core:database`, `:core:datastore`, importação e casamento em `:core:data`, e a tela `:feature:library`.
 5. `:feature:gameplay` + `:feature:results`, jogáveis com um relógio local (sem Spotify), para validar a sensação do jogo. Implementado com o áudio da pasta do mapa (`song.*` ou `guitar.*`); a partida termina no fim do áudio ou 3 s depois da última nota julgada.
 6. `:core:spotify` + `:feature:nowplaying`: sincronização real. Implementado. A conexão é do App Remote SDK 0.8.0 (AAR em `third_party/maven`); "Tocando agora" é a tela inicial. Decisão de 2026-10-08: o modo com o áudio da pasta continua na biblioteca. Validado num Galaxy S25 (Android 16, Spotify 9.1): o pedido de autorização do próprio SDK é bloqueado pelo Android atual, então a autorização usa a biblioteca oficial de login (`com.spotify.android:auth` 5.0.0, escopo `app-remote-control`), aberta a partir da tela do Riff; a conexão parte da Activity em primeiro plano. O app no Developer Dashboard precisa da plataforma Android com o package e o SHA-1 da chave.
-7. `:feature:calibration` + `:feature:settings`.
+7. `:feature:calibration` + `:feature:settings`. Configurações implementadas em 2026-10-09 (tela aberta por "Tocando agora").
 8. Polimento: Baseline Profile e README final.
 
 Os passos 5 e 6 ficam separados para validar o gameplay antes de depender do Spotify. Assim dá para testar com o áudio de qualquer mapa (o `song.ogg` da pasta) tocando localmente, só em modo de depuração.
