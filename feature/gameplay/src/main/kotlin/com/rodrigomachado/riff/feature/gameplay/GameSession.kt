@@ -111,8 +111,10 @@ class GameSession(
         rewind?.let { return rewindStep(it) }
         // A música voltou por fora do jogo (notificação do Spotify, fone): o ajuste feito na pausa vale agora.
         if (pendingOffsetMs != 0L && !isPaused) applyPendingOffset()
-        // Começando (o som ainda não saiu), sincroniza a cada quadro para a pista partir junto com a música.
-        if (waitingForSound || player.isStarting || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
+        // Começando (o som ainda não saiu), ou tocando/pausando por fora do jogo (o relógio discorda do player),
+        // sincroniza neste quadro em vez de esperar a sincronização periódica.
+        val mustSync = waitingForSound || player.isStarting || player.isPlaying == clock.isPaused
+        if (mustSync || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
         songTimeMs = clock.positionMs()
         engine.update(songTimeMs)
         val misses = engine.count(Judgment.MISS)

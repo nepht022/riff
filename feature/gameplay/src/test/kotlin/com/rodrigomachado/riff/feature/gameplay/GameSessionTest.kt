@@ -336,4 +336,18 @@ class GameSessionTest {
         assertEquals(listOf(29_500L), player.seeks) // não voltou mais 0,5 s
         assertEquals(29_500L, session.tick())
     }
+
+    @Test
+    fun whenTheMusicResumesFromOutsideTheHighwayFollowsOnTheNextFrame() {
+        player.positionMs = 30_000
+        val session = session(note(60_000))
+        session.pause()
+        time.now = 100
+
+        player.isPlaying = true // voltou pela notificação do Spotify
+        assertEquals(30_000L, session.tick())
+        time.now = 200 // bem antes da sincronização periódica (500 ms)
+
+        assertEquals(30_100L, session.tick())
+    }
 }
