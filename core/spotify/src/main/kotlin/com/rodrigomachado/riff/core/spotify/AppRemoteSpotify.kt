@@ -92,6 +92,8 @@ class AppRemoteSpotify @Inject constructor(
             // volta na hora e o login abre a partir da tela do Riff (authorize).
             .showAuthView(false)
             .build()
+        // Tem que ser a Activity: com o contexto do app a conexão fica pendurada em "Conectando" (testado no
+        // aparelho em 2026-10-11). O SDK pode segurar a tela até a conexão terminar; é o preço de conectar.
         SpotifyAppRemote.connect(
             activity,
             params,
