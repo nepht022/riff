@@ -396,4 +396,22 @@ class SpotifySongPlayerTest {
 
         assertTrue(player.isPlaying) // o prazo de 5 s conta da retomada, não do primeiro play
     }
+
+    @Test
+    fun reconnectingBeforeOurTrackEverStartedPlaysItFromTheStartWithoutAForcedPause() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 4_000, uri = "spotify:track:outra")) // o Spotify ainda está na música anterior
+        loseConnection() // e a conexão cai antes de ele começar a nossa
+        reconnect(state(position = 5_000, isPaused = true, uri = "spotify:track:outra"))
+        remote.commands.clear()
+        now += 10_000
+
+        player.play()
+        assertEquals(listOf("play:$ours"), remote.commands) // nunca começou: toca do começo
+        now += 2_000
+        advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
+
+        assertTrue(player.isPlaying) // o prazo de 5 s conta desta retomada
+    }
 }

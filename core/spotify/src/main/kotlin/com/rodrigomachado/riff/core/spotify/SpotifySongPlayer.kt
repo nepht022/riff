@@ -120,9 +120,11 @@ class SpotifySongPlayer(
         val now = nowMs()
         lastCommandAtMs = now
         when {
-            // Ainda não começou (ou pausou antes de o Spotify começar a nossa faixa): toca do começo, e o prazo
-            // para ela começar conta a partir daqui.
-            !started || (!sawOurTrack && !disconnected) -> {
+            // Ainda não começou (ou pausou, ou a conexão caiu, antes de o Spotify começar a nossa faixa): toca do
+            // começo, e o prazo para ela começar conta a partir daqui.
+            !started || !sawOurTrack -> {
+                disconnected = false
+                afterReconnect = null
                 started = true
                 startedAtMs = now
                 starting = true
