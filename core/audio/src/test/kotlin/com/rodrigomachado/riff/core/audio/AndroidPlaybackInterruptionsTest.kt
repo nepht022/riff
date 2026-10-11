@@ -63,4 +63,15 @@ class AndroidPlaybackInterruptionsTest {
 
         assertEquals(0, interruptions)
     }
+
+    @Test
+    fun aDeniedFocusRequestPausesRightAfterInsteadOfPlayingOverACall() {
+        shadowOf(audio).setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
+
+        subject.start { interruptions++ }
+        assertEquals(0, interruptions) // não pausa no meio do "continuar"...
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(1, interruptions) // ...mas logo em seguida
+    }
 }

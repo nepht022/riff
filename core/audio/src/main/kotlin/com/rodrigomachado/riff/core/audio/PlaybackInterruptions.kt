@@ -8,6 +8,8 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 
 /**
  * Avisa quando a música da partida deve parar por fora do jogo: perda do foco de áudio (ligação, outro app tocando)
@@ -29,6 +31,7 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
     private var onInterrupted: (() -> Unit)? = null
     private var focus: AudioFocusRequest? = null
     private var listening = false
+    private val main = Handler(Looper.getMainLooper())
 
     private val noisy = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -53,7 +56,10 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
             .build()
         focus?.let(audio::abandonAudioFocusRequest)
         focus = request
-        audio.requestAudioFocus(request)
+        if (audio.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
+            // Negado (por exemplo, no meio de uma ligação): pausa logo depois, fora do "continuar" em andamento.
+            main.post { this.onInterrupted?.invoke() }
+        }
         if (!listening) {
             val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -67,6 +73,7 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
 
     override fun stop() {
         onInterrupted = null
+        main.removeCallbacksAndMessages(null)
         focus?.let(audio::abandonAudioFocusRequest)
         focus = null
         if (listening) {
