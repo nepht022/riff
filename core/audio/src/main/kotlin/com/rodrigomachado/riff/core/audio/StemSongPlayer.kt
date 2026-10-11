@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.audio
 
+import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CancellationException
@@ -21,6 +22,8 @@ class StemSongPlayer(
     private val log: (String, Throwable?) -> Unit = { message, error -> Log.w(TAG, message, error) },
     private val startThread: Boolean = true,
     private val nowMs: () -> Long = { SystemClock.uptimeMillis() },
+    /** Roda na thread de áudio ao começar: prioridade de áudio, para o sistema não atrasá-la com o aparelho ocupado. */
+    private val raiseAudioPriority: () -> Unit = { Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO) },
 ) : StemPlayer {
     private val lock = Object()
 
@@ -107,6 +110,7 @@ class StemSongPlayer(
     }
 
     private fun loop() {
+        raiseAudioPriority()
         while (!released) {
             synchronized(lock) {
                 while (!released && !hasWork()) lock.wait()

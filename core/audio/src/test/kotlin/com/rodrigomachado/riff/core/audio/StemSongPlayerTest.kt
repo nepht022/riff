@@ -93,6 +93,7 @@ class StemSongPlayerTest {
         log = { message, _ -> logged += message },
         startThread = startThread,
         nowMs = { now },
+        raiseAudioPriority = {}, // fora do Android, Process não existe: a thread morreria e o teste passaria por acaso
     )
 
     private fun prepared(startThread: Boolean = false) = player(
@@ -352,5 +353,26 @@ class StemSongPlayerTest {
 
         // A posição apresentada só se atualiza quando lida: lida antes da pausa, ela não fica até 500 ms para trás.
         assertEquals(listOf("posição", "pausa"), sink.calls)
+    }
+
+    @Test
+    fun theAudioThreadAsksForAudioPriority() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val raisedOn = java.util.concurrent.ArrayBlockingQueue<String>(1)
+        val player = StemSongPlayer(
+            guitarUri = "guitar.ogg",
+            backingUris = listOf("song.ogg"),
+            opener = { uri -> sources.getValue(uri) },
+            sinks = { sink },
+            startThread = true,
+            nowMs = { now },
+            raiseAudioPriority = { raisedOn.offer(Thread.currentThread().name) },
+        ).also { runBlocking { it.prepare("guitar.ogg") } }
+
+        val thread = raisedOn.poll(2, java.util.concurrent.TimeUnit.SECONDS)
+        player.release()
+
+        assertEquals("riff-audio", thread)
     }
 }
