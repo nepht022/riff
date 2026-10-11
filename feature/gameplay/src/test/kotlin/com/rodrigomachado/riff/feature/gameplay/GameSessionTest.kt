@@ -397,4 +397,17 @@ class GameSessionTest {
 
         assertTrue(session.isPressed(2))
     }
+
+    @Test
+    fun aTapAtTheEndOfTheWindowProcessedAfterTheNextFrameStillCounts() {
+        val session = session(note(1_000)) // janela de acerto até 1.100
+        player.positionMs = 1_110
+        time.now = GameSession.SYNC_INTERVAL_MS
+        session.tick() // o quadro passou da janela antes de o toque chegar
+
+        session.press(0, lateByMs = 15) // o dedo encostou em 1.095, dentro da janela
+
+        assertEquals(Judgment.GOOD, session.lastJudgment)
+        assertEquals(0, sfx.misses)
+    }
 }

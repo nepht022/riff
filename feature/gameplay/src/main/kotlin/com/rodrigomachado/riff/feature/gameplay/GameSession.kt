@@ -119,7 +119,7 @@ class GameSession(
         val mustSync = waitingForSound || player.isStarting || player.isPlaying == clock.isPaused
         if (mustSync || timeSource.nowMs() - lastSyncAt >= SYNC_INTERVAL_MS) syncClock()
         songTimeMs = clock.positionMs()
-        engine.update(songTimeMs)
+        engine.update(songTimeMs, MISS_GRACE_MS)
         val misses = engine.count(Judgment.MISS)
         if (misses > missesHeard) {
             missesHeard = misses
@@ -222,6 +222,9 @@ class GameSession(
 
     companion object {
         const val SYNC_INTERVAL_MS = 500L
+
+        /** Uns dois quadros: o toque que chega depois do quadro que passou da janela ainda é julgado. */
+        const val MISS_GRACE_MS = 32L
         const val REWIND_ANIMATION_MS = 600L
         const val END_GRACE_MS = 3_000L
         private const val MISS_TAIL_MS = 300L

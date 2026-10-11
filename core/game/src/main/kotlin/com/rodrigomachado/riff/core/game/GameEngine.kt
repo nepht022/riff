@@ -64,9 +64,13 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         (counts[Judgment.PERFECT.ordinal] + HALF * counts[Judgment.GOOD.ordinal]) / notes.size
     }
 
-    fun update(timeMs: Long) {
+    /**
+     * Avança a partida até [timeMs]. [missGraceMs] atrasa só a marcação de erros: um toque feito no fim da janela,
+     * mas processado depois deste quadro, ainda pode acertar a nota.
+     */
+    fun update(timeMs: Long, missGraceMs: Long = 0) {
         songTimeMs = timeMs
-        markMisses(timeMs)
+        markMisses(timeMs - missGraceMs)
         accrueSustains(timeMs)
     }
 
