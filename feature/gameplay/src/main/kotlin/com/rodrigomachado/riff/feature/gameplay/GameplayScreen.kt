@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -166,7 +165,6 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
     session: GameSession,
     leftHanded: Boolean,
 ) {
-    val lanes = mutableMapOf<PointerId, Int>()
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent()
@@ -176,11 +174,10 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
                 val lateBy = SystemClock.uptimeMillis() - change.uptimeMillis
                 if (change.changedToDown()) {
                     val lane = screenLane(geometry.laneAt(change.position.x), leftHanded)
-                    lanes[change.id] = lane
-                    session.press(lane, lateBy)
+                    session.pressPointer(change.id.value, lane, lateBy)
                     change.consume()
                 } else if (change.changedToUp()) {
-                    lanes.remove(change.id)?.let { session.release(it, lateBy) }
+                    session.releasePointer(change.id.value, lateBy)
                     change.consume()
                 }
             }

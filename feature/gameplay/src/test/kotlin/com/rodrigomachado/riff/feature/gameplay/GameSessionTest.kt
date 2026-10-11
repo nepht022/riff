@@ -367,4 +367,34 @@ class GameSessionTest {
 
         assertEquals(listOf(29_500L), player.seeks)
     }
+
+    @Test
+    fun aFingerFromBeforeThePauseDoesNotReleaseAnotherFingersLongNote() {
+        player.positionMs = 1_000
+        val session = session(note(2_000, sustainMs = 3_000))
+        session.pressPointer(pointer = 1, lane = 0) // dedo A fica na tela...
+        session.pause()
+        session.resume()
+        player.positionMs = 2_000
+        time.now = GameSession.SYNC_INTERVAL_MS
+        session.tick()
+
+        session.pressPointer(pointer = 2, lane = 0) // ...o dedo B acerta a nota longa
+        session.releasePointer(pointer = 1) // e o dedo A sai
+
+        assertTrue(session.isPressed(0)) // a nota longa do dedo B continua
+    }
+
+    @Test
+    fun aFingerPlacedDuringThePauseIsIgnoredWhenLifted() {
+        val session = session(note(60_000))
+        session.pause()
+        session.pressPointer(pointer = 7, lane = 2) // ignorado: está pausado
+        session.resume()
+        session.pressPointer(pointer = 8, lane = 2)
+
+        session.releasePointer(pointer = 7)
+
+        assertTrue(session.isPressed(2))
+    }
 }

@@ -33,6 +33,7 @@ class GameSession(
 
     /** Dedos em cada trilha: a trilha só é solta quando o último sai. */
     private val fingers = IntArray(Note.LANE_COUNT)
+    private val pointerLanes = HashMap<Long, Int>()
     private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
     private val lastNoteEndMs = engine.notes.maxOfOrNull { it.timeMs + it.sustainMs } ?: 0L
@@ -75,6 +76,7 @@ class GameSession(
         rewind = null
         player.pause()
         syncClock()
+        pointerLanes.clear()
         for (lane in fingers.indices) {
             if (fingers[lane] == 0) continue
             fingers[lane] = 1 // pausar solta a trilha de vez, com quantos dedos estiverem nela
@@ -144,6 +146,21 @@ class GameSession(
             songTimeMs = clock.positionMs()
         }
         return songTimeMs
+    }
+
+    /**
+     * Dedo [pointer] tocou na [lane]. A partida guarda a trilha de cada dedo aceito: um dedo tocado durante a pausa
+     * (ignorado) ou que já estava na tela quando ela pausou (esquecido) não solta, depois, a trilha de outro dedo.
+     */
+    fun pressPointer(pointer: Long, lane: Int, lateByMs: Long = 0) {
+        if (isPaused || rewind != null) return
+        pointerLanes[pointer] = lane
+        press(lane, lateByMs)
+    }
+
+    fun releasePointer(pointer: Long, lateByMs: Long = 0) {
+        val lane = pointerLanes.remove(pointer) ?: return
+        release(lane, lateByMs)
     }
 
     /** Toque na [lane]; [lateByMs] é quanto o toque esperou até chegar aqui (o julgamento usa o instante do dedo). */
