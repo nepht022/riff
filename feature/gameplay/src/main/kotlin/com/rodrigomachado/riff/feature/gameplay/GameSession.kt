@@ -168,10 +168,15 @@ class GameSession(
         if (isPaused || rewind != null) return
         fingers[lane]++
         val judgment = engine.onPress(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
+        // O toque pode ter marcado como erro uma nota anterior (a do quadro tem folga): conta aqui, para o quadro
+        // seguinte não tocar o erro depois do acerto nem calar a guitarra que este acerto ligou.
+        val missedEarlierNote = engine.count(Judgment.MISS) > missesHeard
+        missesHeard = engine.count(Judgment.MISS)
         if (judgment == null) {
             onMiss()
             return
         }
+        if (missedEarlierNote) sfx.miss()
         // Com a guitarra separada, ela mesma é a resposta do acerto (como no Guitar Hero).
         when {
             guitar != null -> guitar.setGuitarAudible(true)

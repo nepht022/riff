@@ -410,4 +410,20 @@ class GameSessionTest {
         assertEquals(Judgment.GOOD, session.lastJudgment)
         assertEquals(0, sfx.misses)
     }
+
+    @Test
+    fun hittingANoteRightAfterMissingAnotherKeepsTheGuitarOnAndPlaysTheMissOnce() {
+        val session = stemSession(note(1_000, lane = 1), note(1_110, lane = 2))
+        stems.song.positionMs = 1_100
+        time.now = SYNC
+        session.tick() // a nota vermelha ainda não foi marcada como erro (folga)
+
+        time.now = SYNC + 5 // relógio em 1.105
+        session.press(2) // acerta a amarela; o toque marca a vermelha como erro
+        time.now = SYNC + 10
+        session.tick()
+
+        assertEquals(true, stems.audible.last()) // a guitarra do acerto continua ligada
+        assertEquals(1, sfx.misses) // um som de erro, na hora do toque
+    }
 }

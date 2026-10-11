@@ -28,8 +28,8 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Salvar um ajuste de sincronia de um mapa removido no meio da partida pode lançar `SQLiteConstraintException`.
 - A detecção do começo da música supõe que a versão do Spotify começa direto na música e não é cancelável; uma introdução baixa pode exagerar o valor (o jogador refina na pausa).
 - Na calibração, duas corrotinas leem a posição da saída ao mesmo tempo (efeito desprezível).
-- Spotify: reconectar antes de ele ter começado a nossa faixa e continuar força uma pausa (o prazo de 5 s ainda conta do primeiro play).
-- Dedo que ficou na tela durante a pausa ou o retrocesso: ao sair, pode soltar a nota longa de outro dedo na mesma trilha (caso estreito do contador de dedos).
-- Toque nos últimos ~16–30 ms da janela de acerto, processado depois do quadro que marcou o erro, continua erro (falta uma pequena folga na marcação de erros).
-- Se o Android negar o foco de áudio ao continuar (por exemplo, no meio de uma ligação), a música toca assim mesmo.
+- Continuar no meio de uma ligação pausa de novo sem explicar por quê (e, sem retrocesso, alguns ms de música podem tocar antes); uma dica "áudio ocupado" ajudaria.
+- Uma falha ao pedir prioridade de áudio derrubaria a thread de áudio (improvável: a prioridade é permitida a apps).
+- `GameSession.press(lane)`/`release(lane)` ainda são públicos; usados direto, desalinhariam o mapa de dedos (hoje só os testes os usam).
+- Soltar um dedo também pode marcar um erro antes do quadro e religar a guitarra um pouco antes da hora.
 - O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.
