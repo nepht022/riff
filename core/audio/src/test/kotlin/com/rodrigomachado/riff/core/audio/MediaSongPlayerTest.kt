@@ -1,10 +1,13 @@
 package com.rodrigomachado.riff.core.audio
 
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -58,5 +61,45 @@ class MediaSongPlayerTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals(29_500L, song.positionMs)
+    }
+
+    /** MediaPlayer que conta as chamadas: liberar no meio do prepare (em outra thread) quebra o player nativo. */
+    private class WatchedPlayer : MediaPlayer() {
+        var duringPrepare: () -> Unit = {}
+        var preparing = false
+        var releasedWhilePreparing = false
+        var releases = 0
+
+        override fun prepare() {
+            preparing = true
+            duringPrepare()
+            super.prepare()
+            preparing = false
+        }
+
+        override fun release() {
+            if (preparing) releasedWhilePreparing = true
+            releases++
+            super.release()
+        }
+    }
+
+    @Test
+    fun leavingWhileTheSongIsStillLoadingReleasesThePlayerOnlyAfterTheLoad() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val uri = "content://riff/musica.ogg"
+        ShadowMediaPlayer.addMediaInfo(
+            DataSource.toDataSource(context, Uri.parse(uri)),
+            ShadowMediaPlayer.MediaInfo(60_000, 0),
+        )
+        val media = WatchedPlayer()
+        val song = MediaSongPlayer(context, media)
+        media.duringPrepare = { song.release() }
+
+        runBlocking { song.prepare(uri) }
+
+        assertFalse(media.releasedWhilePreparing)
+        assertEquals(1, media.releases)
+        assertTrue(!song.isPlaying)
     }
 }

@@ -18,7 +18,27 @@ class MediaSongPlayer(private val context: Context, private val player: MediaPla
     private var released = false
     private var positionAtRelease = 0L
 
+    // Sair da partida (thread principal) durante o carregamento (IO): liberar o MediaPlayer no meio do prepare
+    // quebra o player nativo, então o release espera o carregamento terminar.
+    private val lock = Any()
+    private var preparing = false
+
     override suspend fun prepare(uri: String) = withContext(Dispatchers.IO) {
+        synchronized(lock) {
+            if (released) return@withContext
+            preparing = true
+        }
+        try {
+            load(uri)
+        } finally {
+            synchronized(lock) {
+                preparing = false
+                if (released) player.release()
+            }
+        }
+    }
+
+    private fun load(uri: String) {
         player.setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
@@ -47,10 +67,12 @@ class MediaSongPlayer(private val context: Context, private val player: MediaPla
     }
 
     override fun release() {
-        if (released) return
-        positionAtRelease = runCatching { player.currentPosition.toLong() }.getOrDefault(0L)
-        released = true
-        player.release()
+        synchronized(lock) {
+            if (released) return
+            if (!preparing) positionAtRelease = runCatching { player.currentPosition.toLong() }.getOrDefault(0L)
+            released = true
+            if (!preparing) player.release()
+        }
     }
 
     override val positionMs: Long get() = if (released) positionAtRelease else player.currentPosition.toLong()
