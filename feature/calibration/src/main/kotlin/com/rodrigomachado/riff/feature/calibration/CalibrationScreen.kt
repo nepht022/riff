@@ -34,6 +34,8 @@ object CalibrationTestTags {
 fun CalibrationScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Depois de salvar (a volta já soou como confirmação); por padrão, o mesmo que [onDone]. */
+    onSaved: () -> Unit = onDone,
     viewModel: CalibrationViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -43,7 +45,7 @@ fun CalibrationScreen(
         onStart = viewModel::start,
         onTap = viewModel::onTap,
         onNudge = viewModel::nudge,
-        onSave = { viewModel.save(onDone) },
+        onSave = { viewModel.save(onSaved) },
         onDone = onDone,
         onReset = { viewModel.reset(onDone) },
         modifier = modifier,

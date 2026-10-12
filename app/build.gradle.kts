@@ -29,6 +29,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(project(":core:model"))
     implementation(project(":core:ui"))
+    implementation(project(":core:audio"))
+    implementation(project(":core:data"))
     implementation(project(":core:spotify"))
     implementation(project(":feature:library"))
     implementation(project(":feature:gameplay"))

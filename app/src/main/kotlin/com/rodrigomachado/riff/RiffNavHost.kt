@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -8,6 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
@@ -31,6 +35,12 @@ import com.rodrigomachado.riff.feature.settings.SettingsScreen
 @Composable
 fun RiffNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
+    val back = remember { BackNavigation() }
+    val playMenuSound = LocalMenuSound.current
+    // Som de voltar ao sair de uma tela, pelo botão Voltar, pelo gesto do celular ou pelo Sair da partida.
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { if (back.onShown(it.id)) playMenuSound(MenuSound.BACK) }
+    }
     NavHost(
         navController,
         startDestination = NowPlayingRoute,
@@ -57,7 +67,7 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             )
         }
-        settingsDestinations(navController)
+        settingsDestinations(navController, back)
         composable<LibraryRoute> { entry ->
             val route = entry.toRoute<LibraryRoute>()
             LibraryScreen(
@@ -66,7 +76,11 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 },
                 onBack = dropUnlessResumed { navController.popBackStack() },
                 match = route.matchTrackUri?.let { TrackToMatch(it, route.matchTrackTitle.orEmpty()) },
-                onMatched = dropUnlessResumed { navController.popBackStack() },
+                // Escolher o mapa já soou como confirmação: a volta automática fica em silêncio.
+                onMatched = dropUnlessResumed {
+                    back.silenceNextReturn()
+                    navController.popBackStack()
+                },
             )
         }
         matchDestinations(navController)
@@ -100,7 +114,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController) 
 }
 
 /** Configurações e calibração, abertas a partir de "Tocando agora". */
-private fun NavGraphBuilder.settingsDestinations(navController: NavHostController) {
+private fun NavGraphBuilder.settingsDestinations(navController: NavHostController, back: BackNavigation) {
     composable<SettingsRoute> {
         SettingsScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
@@ -108,6 +122,13 @@ private fun NavGraphBuilder.settingsDestinations(navController: NavHostControlle
         )
     }
     composable<CalibrationRoute> {
-        CalibrationScreen(onDone = dropUnlessResumed { navController.popBackStack() })
+        CalibrationScreen(
+            onDone = dropUnlessResumed { navController.popBackStack() },
+            // Salvar já soou como confirmação: a volta para as Configurações fica em silêncio.
+            onSaved = dropUnlessResumed {
+                back.silenceNextReturn()
+                navController.popBackStack()
+            },
+        )
     }
 }
