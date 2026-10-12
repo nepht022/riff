@@ -31,7 +31,13 @@ import com.rodrigomachado.riff.feature.settings.SettingsScreen
 @Composable
 fun RiffNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = NowPlayingRoute, modifier = modifier) {
+    NavHost(
+        navController,
+        startDestination = NowPlayingRoute,
+        modifier = modifier,
+        predictivePopEnterTransition = { RiffNavTransitions.backEnter },
+        predictivePopExitTransition = { RiffNavTransitions.backExit },
+    ) {
         composable<NowPlayingRoute> {
             NowPlayingScreen(
                 onPlay = dropUnlessResumed { request ->
@@ -63,28 +69,33 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 onMatched = dropUnlessResumed { navController.popBackStack() },
             )
         }
-        composable<GameplayRoute> { entry ->
-            val route = entry.toRoute<GameplayRoute>()
-            GameplayScreen(
-                onFinished = { scoreId ->
-                    navController.navigate(ResultsRoute(scoreId, route.spotifyTrackUri, route.trackOffsetMs)) {
-                        popUpTo<GameplayRoute> { inclusive = true }
-                    }
-                },
-                onExit = dropUnlessResumed { navController.popBackStack() },
-            )
-        }
-        composable<ResultsRoute> { entry ->
-            val route = entry.toRoute<ResultsRoute>()
-            ResultsScreen(
-                onPlayAgain = dropUnlessResumed { chartId, difficulty ->
-                    navController.navigate(
-                        GameplayRoute(chartId, difficulty.name, route.spotifyTrackUri, route.trackOffsetMs),
-                    ) { popUpTo<ResultsRoute> { inclusive = true } }
-                },
-                onDone = dropUnlessResumed { navController.popBackStack() },
-            )
-        }
+        matchDestinations(navController)
+    }
+}
+
+/** A partida e o resultado. */
+private fun NavGraphBuilder.matchDestinations(navController: NavHostController) {
+    composable<GameplayRoute> { entry ->
+        val route = entry.toRoute<GameplayRoute>()
+        GameplayScreen(
+            onFinished = { scoreId ->
+                navController.navigate(ResultsRoute(scoreId, route.spotifyTrackUri, route.trackOffsetMs)) {
+                    popUpTo<GameplayRoute> { inclusive = true }
+                }
+            },
+            onExit = dropUnlessResumed { navController.popBackStack() },
+        )
+    }
+    composable<ResultsRoute> { entry ->
+        val route = entry.toRoute<ResultsRoute>()
+        ResultsScreen(
+            onPlayAgain = dropUnlessResumed { chartId, difficulty ->
+                navController.navigate(
+                    GameplayRoute(chartId, difficulty.name, route.spotifyTrackUri, route.trackOffsetMs),
+                ) { popUpTo<ResultsRoute> { inclusive = true } }
+            },
+            onDone = dropUnlessResumed { navController.popBackStack() },
+        )
     }
 }
 
