@@ -105,7 +105,8 @@ uv run --with perfetto python3 scripts/quadros_travados.py   # fps e quadros com
 ```
 
 - Celular conectado, desbloqueado, com a tela ligada (tempo de tela longo) e sem economia de bateria; não mexa nele durante a execução (10 a 15 minutos).
-- A música do percurso precisa estar na biblioteca e aparecer sem rolar a lista: por padrão "Smells Like Teen Spirit"; outra com `scripts/desempenho.sh tudo "-Pandroid.testInstrumentationRunnerArguments.riff.song=<nome>"`.
+- A música do percurso precisa estar na biblioteca (o percurso rola a lista até achá-la): por padrão "Smells Like Teen Spirit"; outra com `scripts/desempenho.sh tudo "-Pandroid.testInstrumentationRunnerArguments.riff.song=<nome>"`.
+- O perfil de abertura (`startup-prof.txt`) leva só a abertura do app; a biblioteca e a partida entram no perfil geral. A medição da partida conta só os 20 s de jogo (abrir a música e sair ficam de fora).
 - O app medido substitui o de debug no celular sem apagar os dados (mesma chave). Antes, o script para o app e copia os dados para uma pasta nova em `.copias-dados/<data>/` (fora do git); no fim, reinstala o debug, mesmo se algo falhar.
 - **Restaurar uma cópia** (só se os dados sumirem), com o app de debug instalado e parado (`adb shell am force-stop com.rodrigomachado.riff`): para cada arquivo da pasta, `adb push <arquivo> /data/local/tmp/` e `adb shell "run-as com.rodrigomachado.riff sh -c 'cat /data/local/tmp/<arquivo> > databases/<arquivo>'"` (o `riff_settings.preferences_pb` vai para `files/datastore/`). Apague do aparelho o `riff.db-wal`/`-shm` que não estiver na cópia.
 - **Quando regerar o perfil:** depois de mudanças grandes em telas ou no gameplay. Um perfil desatualizado não quebra nada: só deixa de acelerar o que mudou.

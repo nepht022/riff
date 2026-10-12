@@ -9,7 +9,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Quadros durante 20 s de partida, sem e com o perfil. */
+/** Quadros durante 20 s de partida, sem e com o perfil. Só o jogo conta: abrir a música e sair ficam de fora. */
 @RunWith(AndroidJUnit4::class)
 class GameplayBenchmark {
     @get:Rule
@@ -35,8 +35,9 @@ class GameplayBenchmark {
             startActivityAndWait()
             waitForHome()
             browseLibrary()
+            check(openSong()) { "'${songTitle()}' não está na biblioteca: importe a música ou passe -Priff.song" }
         },
     ) {
-        check(playSong()) { "'${songTitle()}' não está na biblioteca: importe a música ou passe -Priff.song" }
+        tapLanes()
     }
 }
