@@ -14,10 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -75,8 +78,17 @@ private fun ReadyResults(
 ) {
     val record = state.record
     val locale = LocalConfiguration.current.locales[0]
+    val score = remember(record.score, locale) { NumberFormat.getIntegerInstance(locale).format(record.score) }
+    val accuracy = remember(record.accuracy, locale) { NumberFormat.getPercentInstance(locale).format(record.accuracy) }
+    val summary = stringResource(R.string.results_summary, score, accuracy) +
+        if (state.isNewBest) " " + stringResource(R.string.results_new_best) else ""
     Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md),
+        modifier
+            .fillMaxSize()
+            // O TalkBack lê o título do painel quando a tela aparece: o resultado é anunciado sem tocar em nada.
+            .semantics { paneTitle = summary }
+            .verticalScroll(rememberScrollState())
+            .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         PosterTitle(state.title, style = MaterialTheme.typography.headlineMedium)

@@ -23,6 +23,8 @@ fun PosterTitle(
     text: String,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.displayMedium,
+    /** Lido como título pelo TalkBack. O placar usa o mesmo visual sem ser título. */
+    heading: Boolean = true,
 ) {
     Box(modifier.padding(end = BlackShadow, bottom = BlackShadow)) {
         Text(
@@ -37,6 +39,11 @@ fun PosterTitle(
             color = RiffColors.TourRed,
             modifier = Modifier.offset(RedShadow, RedShadow).clearAndSetSemantics {},
         )
-        Text(text, style = style, color = RiffColors.Paper, modifier = Modifier.semantics { heading() })
+        Text(
+            text,
+            style = style,
+            color = RiffColors.Paper,
+            modifier = if (heading) Modifier.semantics { heading() } else Modifier,
+        )
     }
 }

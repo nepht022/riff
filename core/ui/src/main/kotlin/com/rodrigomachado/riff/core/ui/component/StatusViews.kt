@@ -64,7 +64,7 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
         Text(
             message,
             style = MaterialTheme.typography.titleMedium,
-            color = RiffColors.Paper,
+            color = RiffColors.PaperDim, // spec da identidade visual: mensagem em papel apagado
             textAlign = TextAlign.Center,
         )
         PosterButton(

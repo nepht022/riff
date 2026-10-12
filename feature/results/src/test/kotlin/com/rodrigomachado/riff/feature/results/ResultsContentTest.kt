@@ -1,5 +1,8 @@
 package com.rodrigomachado.riff.feature.results
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -57,5 +60,25 @@ class ResultsContentTest {
         composeRule.onNodeWithText("Voltar").performScrollTo().performClick()
 
         assertTrue(done)
+    }
+
+    @Test
+    fun talkBackAnnouncesTheResultWhenTheScreenAppears() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", isNewBest = true),
+                    onPlayAgain = { _, _ -> },
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNode(
+            SemanticsMatcher("resumo do resultado como título do painel") { node ->
+                val pane = node.config.getOrNull(SemanticsProperties.PaneTitle).orEmpty()
+                "48.300" in pane && "88%" in pane && "NOVO RECORDE" in pane
+            },
+        ).assertExists()
     }
 }
