@@ -14,11 +14,18 @@ import java.nio.ByteOrder
 class MediaCodecPcmSource private constructor(private val extractor: MediaExtractor, private val codec: MediaCodec) :
     PcmSource {
     private val info = MediaCodec.BufferInfo()
-    private var output: ByteBuffer? = null
     private var outputIndex = -1
-    private var floatOutput = false
     private var inputDone = false
     private var outputDone = false
+    private val blocks = object : DecodedBlocks {
+        override val channelCount get() = this@MediaCodecPcmSource.channelCount
+        override val floatOutput get() = this@MediaCodecPcmSource.floatOutput
+        override val endOfStream get() = outputDone
+        override fun next() = nextOutput()
+        override fun release() = releaseOutput()
+    }
+    private val reader = PcmBlockReader(blocks)
+    private var floatOutput = false
 
     // Depois de reposicionar: descarta o que o decodificador entregar antes deste quadro.
     private var skipUntilFrame = 0L
@@ -31,43 +38,19 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
 
     /** Lê até o primeiro bloco decodificado, para saber a taxa e os canais reais (o Opus decodifica a 48 kHz). */
     private fun prime() {
-        repeat(PRIME_ATTEMPTS) {
-            if (output != null || outputDone) return
-            nextOutput()
-        }
+        reader.prime(PRIME_ATTEMPTS)
         if (sampleRate == 0) throw IOException("decodificador não entregou áudio")
     }
 
-    override fun read(buffer: FloatArray, maxFrames: Int): Int {
-        val wanted = maxFrames * channelCount
-        var filled = 0
-        while (filled < wanted && (output != null || !outputDone)) {
-            val current = output ?: nextOutput()
-            if (current != null) {
-                filled += copy(current, buffer, filled, wanted - filled)
-                if (!current.hasRemaining()) {
-                    codec.releaseOutputBuffer(outputIndex, false)
-                    output = null
-                    outputIndex = -1
-                }
-            }
-        }
-        return filled / channelCount
-    }
+    override fun read(buffer: FloatArray, maxFrames: Int): Int = reader.read(buffer, maxFrames)
 
-    private fun copy(source: ByteBuffer, target: FloatArray, offset: Int, max: Int): Int {
-        var count = 0
-        if (floatOutput) {
-            while (count < max && source.remaining() >= Float.SIZE_BYTES) target[offset + count++] = source.float
-        } else {
-            while (count < max && source.remaining() >= Short.SIZE_BYTES) {
-                target[offset + count++] = source.short / SHORT_SCALE
-            }
-        }
-        return count
+    private fun releaseOutput() {
+        codec.releaseOutputBuffer(outputIndex, false)
+        outputIndex = -1
     }
 
     private fun nextOutput(): ByteBuffer? {
+        if (outputDone) return null
         feedInput()
         val index = codec.dequeueOutputBuffer(info, TIMEOUT_US)
         if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) readFormat(codec.outputFormat)
@@ -79,7 +62,6 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
         buffer.limit(info.offset + info.size)
         buffer.order(ByteOrder.nativeOrder())
         skipBeforeTarget(buffer)
-        output = buffer
         outputIndex = index
         return buffer
     }
@@ -87,7 +69,7 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
     override fun seekTo(frame: Long) {
         extractor.seekTo(frame * MICROS_PER_SECOND / sampleRate, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
         codec.flush()
-        output = null
+        reader.reset()
         outputIndex = -1
         inputDone = false
         outputDone = false
@@ -135,7 +117,6 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
     companion object {
         private const val TIMEOUT_US = 10_000L
         private const val PRIME_ATTEMPTS = 200
-        private const val SHORT_SCALE = 32_768f
         private const val MICROS_PER_SECOND = 1_000_000L
 
         @Throws(IOException::class)
