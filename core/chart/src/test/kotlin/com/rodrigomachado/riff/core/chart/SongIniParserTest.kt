@@ -34,4 +34,11 @@ class SongIniParserTest {
     fun handlesBomAndCrlf() {
         assertEquals(SongInfo(title = "X"), SongIniParser.parse("﻿[song]\r\nname = X\r\n"))
     }
+
+    @Test
+    fun delayInSecondsIsUsedWhenThereIsNoDelayInMs() {
+        assertEquals(1_500L, SongIniParser.parse("[song]\ndelay_seconds = 1.5").offsetMs)
+        assertEquals(-250L, SongIniParser.parse("[song]\ndelay = 0\ndelay_seconds = -0.25").offsetMs)
+        assertEquals(300L, SongIniParser.parse("[song]\ndelay = 300\ndelay_seconds = 1.5").offsetMs)
+    }
 }

@@ -14,12 +14,6 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **Hoje:** a comparação é local, antes de commitar mudanças de UI.
 - **Quando retomar:** ao criar o repositório remoto. Ativar a comparação no CI com tolerância (por exemplo, 1% de pixels), calibrada na primeira execução.
 
-## `delay_seconds` no song.ini
-
-- **O que é:** o YARG aceita `delay_seconds` no `song.ini` como alternativa ao `delay` (em ms). Aqui só o `delay` é lido.
-- **Efeito:** é raro na prática. Nesses casos, vale o `Offset` do `.chart`.
-- **Quando retomar:** se aparecer um mapa real que use esse campo.
-
 ## Pontos menores em aberto (revisões de 2026-10-09)
 
 Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada depois de reconectar, pausa antes do primeiro início).
