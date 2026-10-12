@@ -1,8 +1,11 @@
 package com.rodrigomachado.riff.core.audio
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 import kotlin.math.pow
@@ -71,5 +74,35 @@ class MusicStartTest {
         val finder = PcmMusicStartFinder { throw IOException("arquivo quebrado") }
 
         assertNull(runBlocking { finder.musicStartMs(listOf("song.ogg")) })
+    }
+
+    @Test
+    fun leavingDuringTheAnalysisStopsDecoding() {
+        val opened = mutableListOf<String>()
+        var reads = 0
+        lateinit var job: Job
+        val finder = PcmMusicStartFinder { uri ->
+            opened += uri
+            object : PcmSource {
+                override val sampleRate = 1_000
+                override val channelCount = 1
+
+                override fun read(buffer: FloatArray, maxFrames: Int): Int {
+                    if (++reads == 3) job.cancel() // o jogador saiu da partida
+                    buffer.fill(0.5f, 0, maxFrames)
+                    return maxFrames
+                }
+
+                override fun close() = Unit
+            }
+        }
+
+        runBlocking {
+            job = launch { finder.musicStartMs(listOf("guitar.ogg", "song.ogg")) }
+            job.join()
+        }
+
+        assertEquals(listOf("guitar.ogg"), opened)
+        assertTrue("leu $reads blocos depois de cancelado", reads <= 4)
     }
 }

@@ -1,6 +1,9 @@
 package com.rodrigomachado.riff.core.audio
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
 
@@ -42,23 +45,28 @@ fun interface MusicStartFinder {
 class PcmMusicStartFinder(private val opener: PcmSourceOpener) : MusicStartFinder {
     override suspend fun musicStartMs(uris: List<String>): Long? = withContext(Dispatchers.IO) { find(uris) }
 
-    private fun find(uris: List<String>): Long? {
+    private suspend fun find(uris: List<String>): Long? {
         var total = DoubleArray(0)
         for (uri in uris) {
-            val power = runCatching { opener.open(uri).use(::windowPower) }.getOrNull() ?: continue
+            // Faixa que não abre ou não decodifica: conta com as outras. Sair da partida interrompe tudo.
+            val power = runCatching { opener.open(uri).use { windowPower(it) } }
+                .onFailure { if (it is CancellationException) throw it }
+                .getOrNull() ?: continue
             if (power.size > total.size) total = total.copyOf(power.size)
             for (i in power.indices) total[i] += power[i]
         }
         return MusicStart.find(total)
     }
 
-    private fun windowPower(source: PcmSource): DoubleArray {
+    /** Decodifica até 30 s; para entre um bloco e outro se a partida for embora (saiu durante o carregamento). */
+    private suspend fun windowPower(source: PcmSource): DoubleArray {
         val window = source.sampleRate * MusicStart.WINDOW_MS / 1_000
         val windows = ANALYZED_MS / MusicStart.WINDOW_MS
         val buffer = FloatArray(window * source.channelCount)
         val power = DoubleArray(windows)
         var count = 0
         while (count < windows) {
+            currentCoroutineContext().ensureActive()
             val frames = source.read(buffer, window)
             if (frames == 0) break
             var sum = 0.0
