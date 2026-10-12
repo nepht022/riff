@@ -38,12 +38,16 @@ class SpotifySongPlayer(
     private var last: PlaybackState? = null
     private var listening: Job? = null
 
+    // Saiu da partida enquanto o Spotify conectava: o prepare não começa a consultar o Spotify depois.
+    private var released = false
+
     override suspend fun prepare(uri: String) {
         remote.connect()
         val connection = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
             remote.connection.first { it == SpotifyConnection.Connected || it is SpotifyConnection.Failed }
         }
         if (connection != SpotifyConnection.Connected) throw IOException("Spotify indisponível: $connection")
+        if (released) return
         trackUri = uri
         listening = scope.launch {
             launch { remote.playback.collect(::onState) }
@@ -173,6 +177,7 @@ class SpotifySongPlayer(
     }
 
     override fun release() {
+        released = true
         listening?.cancel()
         listening = null
         if (started && !completed && isPlaying) remote.pause()

@@ -4,6 +4,7 @@ import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.model.SpotifyError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -413,5 +414,20 @@ class SpotifySongPlayerTest {
         advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
 
         assertTrue(player.isPlaying) // o prazo de 5 s conta desta retomada
+    }
+
+    @Test
+    fun leavingWhileSpotifyIsStillConnectingStopsEverything() = runTest {
+        remote.connectTo = SpotifyConnection.Connecting
+        val player = SpotifySongPlayer(remote, backgroundScope) { now }
+        launch { runCatching { player.prepare(ours) } }
+        runCurrent()
+
+        player.release()
+        remote.connection.value = SpotifyConnection.Connected
+        runCurrent()
+        advanceTimeBy(10_000)
+
+        assertEquals(0, remote.refreshes) // nada fica consultando o Spotify depois de sair da partida
     }
 }
