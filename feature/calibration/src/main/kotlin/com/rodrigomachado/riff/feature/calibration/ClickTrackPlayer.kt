@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.rodrigomachado.riff.core.audio.AudioSink
 import com.rodrigomachado.riff.core.audio.AudioSinkFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -37,8 +38,9 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
                     val count = minOf(CHUNK_FRAMES, total - offset)
                     offset += maxOf(0, sink.write(pcm, offset, count))
                 }
-                waitUntilPlayed(sink, total)
-                watcher.cancel()
+                // Um leitor da posição por vez (ela guarda estado entre leituras): a espera do fim assume a observação.
+                watcher.cancelAndJoin()
+                waitUntilPlayed(sink, total, timeline)
             }
             timeline.clickTimesMs()
         } finally {
@@ -48,11 +50,12 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
     }
 
     /** Espera o fim, mas não para sempre: o sistema às vezes segura o último pedaço e a saída para de andar. */
-    private suspend fun waitUntilPlayed(sink: AudioSink, total: Int) {
+    private suspend fun waitUntilPlayed(sink: AudioSink, total: Int, timeline: ClickTimeline) {
         var last = -1L
         var stalledChecks = 0
         while (currentCoroutineContext().isActive) {
             val played = sink.playedFrames
+            timeline.observe(SystemClock.uptimeMillis(), played)
             if (played >= total) return
             stalledChecks = if (played == last) stalledChecks + 1 else 0
             if (stalledChecks >= STALLED_CHECKS) return
