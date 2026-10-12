@@ -10,6 +10,7 @@
     <string name="gameplay_unavailable_title">Não dá para jogar</string>
     <string name="gameplay_no_audio">Esta pasta não tem áudio (song.ogg, song.mp3…). Por enquanto o jogo toca o áudio da própria pasta; com o Spotify, isso muda.</string>
     <string name="gameplay_chart_missing">Este mapa não está mais na biblioteca ou não tem esta dificuldade.</string>
+    <string name="gameplay_chart_unreadable">Não deu para ler este mapa: o arquivo pode estar corrompido ou ter mudado. Reimporte a biblioteca.</string>
     <string name="gameplay_folder_lost">Perdi o acesso à pasta deste mapa. Escolha a pasta de novo na biblioteca.</string>
     <string name="gameplay_audio_failed">Não consegui tocar o áudio desta pasta.</string>
     <string name="gameplay_unavailable_spotify">Não deu para tocar pelo Spotify. Confira se o app do Spotify está aberto e conectado.</string>

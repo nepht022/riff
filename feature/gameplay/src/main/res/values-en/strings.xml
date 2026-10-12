@@ -10,6 +10,7 @@
     <string name="gameplay_unavailable_title">Can\'t play</string>
     <string name="gameplay_no_audio">This folder has no audio (song.ogg, song.mp3…). For now the game plays the folder\'s own audio; that changes with Spotify.</string>
     <string name="gameplay_chart_missing">This chart is no longer in the library or doesn\'t have this difficulty.</string>
+    <string name="gameplay_chart_unreadable">This chart could not be read: the file may be corrupted or may have changed. Rescan the library.</string>
     <string name="gameplay_folder_lost">Lost access to this chart\'s folder. Choose the folder again in the library.</string>
     <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
     <string name="gameplay_unavailable_spotify">Couldn\'t play through Spotify. Check that the Spotify app is open and connected.</string>

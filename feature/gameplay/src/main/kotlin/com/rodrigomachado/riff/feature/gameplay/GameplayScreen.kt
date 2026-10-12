@@ -311,6 +311,7 @@ private fun KeepScreenOn() {
 private fun UnavailableReason.message(): Int = when (this) {
     UnavailableReason.NO_AUDIO -> R.string.gameplay_no_audio
     UnavailableReason.CHART_MISSING -> R.string.gameplay_chart_missing
+    UnavailableReason.CHART_UNREADABLE -> R.string.gameplay_chart_unreadable
     UnavailableReason.FOLDER_ACCESS_LOST -> R.string.gameplay_folder_lost
     UnavailableReason.AUDIO_FAILED -> R.string.gameplay_audio_failed
     UnavailableReason.SPOTIFY_UNAVAILABLE -> R.string.gameplay_unavailable_spotify

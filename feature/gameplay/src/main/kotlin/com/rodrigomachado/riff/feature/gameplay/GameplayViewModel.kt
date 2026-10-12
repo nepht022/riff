@@ -20,6 +20,7 @@ import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
+import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -36,7 +37,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class UnavailableReason { NO_AUDIO, CHART_MISSING, FOLDER_ACCESS_LOST, AUDIO_FAILED, SPOTIFY_UNAVAILABLE }
+enum class UnavailableReason {
+    NO_AUDIO,
+    CHART_MISSING,
+    CHART_UNREADABLE,
+    FOLDER_ACCESS_LOST,
+    AUDIO_FAILED,
+    SPOTIFY_UNAVAILABLE,
+}
 
 sealed interface GameplayUiState {
     data object Loading : GameplayUiState
@@ -176,10 +184,17 @@ class GameplayViewModel @Inject constructor(
 
     private fun reasonFor(error: Exception): UnavailableReason = when (error) {
         is NoAudioException -> UnavailableReason.NO_AUDIO
+
         is AudioFailedException -> UnavailableReason.AUDIO_FAILED
+
         is SpotifyFailedException -> UnavailableReason.SPOTIFY_UNAVAILABLE
+
         is FolderAccessLostException -> UnavailableReason.FOLDER_ACCESS_LOST
-        else -> UnavailableReason.CHART_MISSING
+
+        is ChartNotFoundException -> UnavailableReason.CHART_MISSING
+
+        // Qualquer outra falha ao carregar é do arquivo do mapa (corrompido ou mudou desde a importação).
+        else -> UnavailableReason.CHART_UNREADABLE
     }
 
     private class NoAudioException : Exception("pasta sem áudio")

@@ -512,4 +512,11 @@ class GameplayViewModelTest {
 
         assertEquals(0, interruptionsCreated)
     }
+
+    @Test
+    fun aCorruptedChartIsExplainedAsUnreadableNotAsMissing() = runTest {
+        loader.result = { throw IllegalStateException("nota inválida na linha 42") } // o leitor do mapa falhou
+
+        assertEquals(GameplayUiState.Unavailable(UnavailableReason.CHART_UNREADABLE), viewModel().uiState.value)
+    }
 }
