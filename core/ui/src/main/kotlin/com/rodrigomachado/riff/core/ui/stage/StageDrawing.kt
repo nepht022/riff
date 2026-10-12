@@ -143,7 +143,8 @@ private val SPARKS = floatArrayOf(-0.45f, 0.75f, 0.1f, 0.95f, 0.4f, 0.62f)
 /** Chama do acerto saindo de [base] (centro do botão), no quadro dado por [progress] (0 a 1). */
 fun DrawScope.drawFlame(cache: StageCache, base: Offset, width: Float, height: Float, progress: Float) {
     val alpha = flameAlpha(progress)
-    if (alpha <= 0f) return
+    // Sem tamanho (Canvas ainda sem medida) ou NaN: o contorno divide pela altura e viraria infinito.
+    if (alpha <= 0f || !(width > 0f) || !(height > 0f)) return
     val h = height * flameScaleY(progress)
     for (layer in 0 until FLAME_LAYERS) {
         val layerWidth = width * FLAME_LAYER_SHAPE[layer * 3]
