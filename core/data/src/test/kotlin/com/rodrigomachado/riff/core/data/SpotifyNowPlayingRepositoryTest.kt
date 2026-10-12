@@ -43,6 +43,22 @@ class SpotifyNowPlayingRepositoryTest {
     }
 
     @Test
+    fun pausingOrMovingInTheSameTrackDoesNotLookUpTheMatchAgain() = runTest {
+        val seen = mutableListOf<NowPlaying?>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { repository.nowPlaying.collect { seen += it } }
+        remote.playback.value = track
+        assertEquals(1, matches.lookups)
+
+        remote.playback.value = track.copy(isPaused = true, positionMs = 30_000) // mesma faixa
+        remote.playback.value = track.copy(positionMs = 31_000)
+
+        assertEquals(1, matches.lookups) // o casamento não muda com a pausa nem com a posição
+        assertEquals(NowPlaying(track.copy(positionMs = 31_000), MatchStatus.NoMatch), seen.last())
+        remote.playback.value = track.copy(trackUri = "spotify:track:y", title = "Outra")
+        assertEquals(2, matches.lookups)
+    }
+
+    @Test
     fun connectIsForwardedToSpotify() {
         repository.connect()
         assertEquals(1, remote.connects)
@@ -71,9 +87,13 @@ class SpotifyNowPlayingRepositoryTest {
 
     private class FakeMatches : TrackMatchRepository {
         var result: MatchStatus = MatchStatus.NoMatch
+        var lookups = 0
         override val changes = MutableStateFlow(0)
 
-        override suspend fun matchFor(track: PlaybackState) = result
+        override suspend fun matchFor(track: PlaybackState): MatchStatus {
+            lookups++
+            return result
+        }
 
         override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
 
