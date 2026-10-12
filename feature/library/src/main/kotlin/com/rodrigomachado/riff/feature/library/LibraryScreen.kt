@@ -40,12 +40,12 @@ import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
-import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.rememberMenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -97,7 +97,7 @@ fun LibraryContent(
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
-    val playMenuSound = LocalMenuSound.current
+    val playMenuSound = rememberMenuSound()
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
         PosterTitle(

@@ -21,7 +21,7 @@ class SoundPoolMenuSounds(context: Context) : MenuSoundPlayer {
         .setMaxStreams(MAX_STREAMS)
         .setAudioAttributes(
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_GAME) // volume de mídia, como os outros sons do app
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build(),
         )
