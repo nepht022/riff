@@ -32,6 +32,7 @@ class LibraryContentTest {
     private var rescans = 0
     private var dismissals = 0
     private var played: Pair<String, Difficulty>? = null
+    private var searched = 0
 
     private fun show(state: LibraryUiState) = composeRule.setContent {
         CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
@@ -43,6 +44,7 @@ class LibraryContentTest {
                     onReportDismissed = { dismissals++ },
                     onPlay = { id, difficulty -> played = id to difficulty },
                     onBack = {},
+                    onSearch = { searched++ },
                 )
             }
         }
@@ -285,6 +287,16 @@ class LibraryContentTest {
         show(LibraryUiState(isLoading = false, hasFolder = true, folderAccessLost = true))
         composeRule.onNodeWithText("Tentar de novo").performClick()
 
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+    }
+
+    @Test
+    fun searchOpensTheEncoreSearchWithANavigateSound() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a"))))
+
+        composeRule.onNodeWithText("Pesquisar").performClick()
+
+        assertEquals(1, searched)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 }

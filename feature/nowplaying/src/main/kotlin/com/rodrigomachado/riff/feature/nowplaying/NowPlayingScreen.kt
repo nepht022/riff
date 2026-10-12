@@ -26,6 +26,7 @@ import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NowPlaying
+import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
@@ -56,6 +57,8 @@ fun NowPlayingScreen(
     onOpenLibrary: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Pesquisar no Encore um mapa para a faixa (sem mapa ou só com sugestão). */
+    onSearch: (PlaybackState) -> Unit = {},
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,6 +73,7 @@ fun NowPlayingScreen(
         onOpenLibrary = onOpenLibrary,
         onOpenSettings = onOpenSettings,
         modifier = modifier,
+        onSearch = onSearch,
     )
 }
 
@@ -83,6 +87,7 @@ fun NowPlayingContent(
     onOpenLibrary: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onSearch: (PlaybackState) -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -111,7 +116,7 @@ fun NowPlayingContent(
                 message = stringResource(R.string.nowplaying_nothing_message),
             )
 
-            is NowPlayingUiState.Playing -> Playing(state.nowPlaying, onPlay, onConfirm, onChooseChart)
+            is NowPlayingUiState.Playing -> Playing(state.nowPlaying, onPlay, onConfirm, onChooseChart, onSearch)
         }
     }
 }
@@ -155,11 +160,26 @@ private fun ChooseOther(onClick: () -> Unit) {
 }
 
 @Composable
+private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
+    Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
+    PosterButton(stringResource(R.string.nowplaying_choose), onClick = onChoose, sound = MenuSound.NAVIGATE)
+    SearchEncore(onSearch)
+}
+
+@Composable
+private fun SearchEncore(onClick: () -> Unit) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
+        Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper)
+    }
+}
+
+@Composable
 private fun Playing(
     nowPlaying: NowPlaying,
     onPlay: (PlayRequest) -> Unit,
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
+    onSearch: (PlaybackState) -> Unit,
 ) {
     val track = nowPlaying.playback
     // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
@@ -199,16 +219,10 @@ private fun Playing(
                     sound = MenuSound.CONFIRM,
                 )
                 ChooseOther { onChooseChart(track.trackUri, track.title) }
+                SearchEncore { onSearch(track) }
             }
 
-            MatchStatus.NoMatch -> {
-                Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
-                PosterButton(
-                    stringResource(R.string.nowplaying_choose),
-                    onClick = { onChooseChart(track.trackUri, track.title) },
-                    sound = MenuSound.NAVIGATE,
-                )
-            }
+            MatchStatus.NoMatch -> NoMatchActions({ onChooseChart(track.trackUri, track.title) }, { onSearch(track) })
         }
     }
     choosing?.let { match ->

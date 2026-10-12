@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Pesquisa e download de mapas no Encore (enchor.us). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".RiffApplication"
         android:icon="@mipmap/ic_launcher"

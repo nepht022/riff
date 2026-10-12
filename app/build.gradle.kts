@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:spotify"))
     implementation(project(":feature:library"))
+    implementation(project(":feature:search"))
     implementation(project(":feature:gameplay"))
     implementation(project(":feature:results"))
     implementation(project(":feature:nowplaying"))

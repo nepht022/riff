@@ -13,6 +13,7 @@ import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NowPlaying
+import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -38,6 +39,7 @@ class NowPlayingContentTest {
     private var retries = 0
     private var libraryOpened = false
     private var settingsOpened = false
+    private var searchedFor: PlaybackState? = null
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
         CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
@@ -50,6 +52,7 @@ class NowPlayingContentTest {
                     onChooseChart = { uri, title -> chooseFor = uri to title },
                     onOpenLibrary = { libraryOpened = true },
                     onOpenSettings = { settingsOpened = true },
+                    onSearch = { searchedFor = it },
                 )
             }
         }
@@ -191,5 +194,15 @@ class NowPlayingContentTest {
         composeRule.onNodeWithText("Expert").performClick()
 
         assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.CONFIRM, MenuSound.CONFIRM), sounds)
+    }
+
+    @Test
+    fun aTrackWithoutAChartOffersToSearchEncoreForIt() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+
+        composeRule.onNodeWithText("Pesquisar no Encore").performClick()
+
+        assertEquals("Bohemian Rhapsody - Remastered 2011", searchedFor?.title)
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 }

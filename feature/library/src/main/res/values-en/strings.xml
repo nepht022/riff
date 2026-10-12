@@ -35,4 +35,5 @@
         <item quantity="one">and %d more folder</item>
         <item quantity="other">and %d more folders</item>
     </plurals>
+    <string name="library_search">Search</string>
 </resources>

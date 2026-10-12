@@ -25,6 +25,8 @@ import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.search.SearchRoute
+import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
 import com.rodrigomachado.riff.feature.settings.SettingsScreen
 
@@ -67,24 +69,22 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
                 },
                 onOpenLibrary = dropUnlessResumed { navController.navigate(LibraryRoute()) },
                 onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
+                onSearch = dropUnlessResumed { track ->
+                    navController.navigate(
+                        SearchRoute(
+                            "${track.artist} ${track.title}",
+                            track.trackUri,
+                            track.title,
+                            track.artist,
+                            track.durationMs,
+                        ),
+                    )
+                },
             )
         }
         settingsDestinations(navController, back)
-        composable<LibraryRoute> { entry ->
-            val route = entry.toRoute<LibraryRoute>()
-            LibraryScreen(
-                onPlay = dropUnlessResumed { chartId, difficulty ->
-                    navController.navigate(GameplayRoute(chartId, difficulty.name))
-                },
-                onBack = dropUnlessResumed { navController.popBackStack() },
-                match = route.matchTrackUri?.let { TrackToMatch(it, route.matchTrackTitle.orEmpty()) },
-                // Escolher o mapa já soou como confirmação: a volta automática fica em silêncio.
-                onMatched = dropUnlessResumed {
-                    back.silenceNextReturn()
-                    navController.popBackStack()
-                },
-            )
-        }
+        libraryDestinations(navController, back)
+        searchDestinations(navController, back)
         matchDestinations(navController)
     }
 }
@@ -111,6 +111,45 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController) 
                 ) { popUpTo<ResultsRoute> { inclusive = true } }
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
+        )
+    }
+}
+
+/** A Biblioteca: jogar com o áudio da pasta ou escolher o mapa de uma música do Spotify. */
+private fun NavGraphBuilder.libraryDestinations(navController: NavHostController, back: BackNavigation) {
+    composable<LibraryRoute> { entry ->
+        val route = entry.toRoute<LibraryRoute>()
+        LibraryScreen(
+            onPlay = dropUnlessResumed { chartId, difficulty ->
+                navController.navigate(GameplayRoute(chartId, difficulty.name))
+            },
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            match = route.matchTrackUri?.let { TrackToMatch(it, route.matchTrackTitle.orEmpty()) },
+            // Escolher o mapa já soou como confirmação: a volta automática fica em silêncio.
+            onMatched = dropUnlessResumed {
+                back.silenceNextReturn()
+                navController.popBackStack()
+            },
+            onSearch = dropUnlessResumed { match ->
+                navController.navigate(SearchRoute(matchTrackUri = match?.trackUri, matchTrackTitle = match?.title))
+            },
+        )
+    }
+}
+
+/** Pesquisa no Encore, aberta pela Biblioteca ou pelo Tocando agora. */
+private fun NavGraphBuilder.searchDestinations(navController: NavHostController, back: BackNavigation) {
+    composable<SearchRoute> {
+        SearchScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onPlay = dropUnlessResumed { chartId, difficulty ->
+                navController.navigate(GameplayRoute(chartId, difficulty.name))
+            },
+            // Baixar já soou como confirmação: a volta automática ao Tocando agora fica em silêncio.
+            onMatched = dropUnlessResumed {
+                back.silenceNextReturn()
+                navController.popBackStack(NowPlayingRoute, inclusive = false)
+            },
         )
     }
 }

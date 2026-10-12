@@ -62,6 +62,8 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     match: TrackToMatch? = null,
     onMatched: () -> Unit = {},
+    /** Pesquisar no Encore; no modo de escolha, com a música do Spotify para casar o mapa baixado. */
+    onSearch: (TrackToMatch?) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,6 +81,7 @@ fun LibraryScreen(
         modifier = modifier,
         matchingTitle = match?.title,
         onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
+        onSearch = { onSearch(match) },
     )
 }
 
@@ -93,13 +96,14 @@ fun LibraryContent(
     modifier: Modifier = Modifier,
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
+    onSearch: () -> Unit = {},
 ) {
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
+        LibraryHeader(onBack, onSearch)
         PosterTitle(
             stringResource(R.string.library_title),
             style = MaterialTheme.typography.displaySmall,
@@ -164,6 +168,17 @@ fun LibraryContent(
 @Composable
 private fun LibraryError(message: String, onRetry: () -> Unit) {
     ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
+}
+
+/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
+@Composable
+private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
+        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearch)) {
+            Text(stringResource(R.string.library_search), color = RiffColors.Paper)
+        }
+    }
 }
 
 @Composable
