@@ -83,4 +83,14 @@ class GameStageTest {
 
         assertTrue(session.isPressed(4))
     }
+
+    @Test
+    fun thePauseButtonStaysInTheCenterWhateverTheScoreWidth() {
+        show()
+
+        // Antes ficava entre o placar e o multiplicador: o placar crescendo empurrava o botão para o lado.
+        val stage = composeRule.onNodeWithTag(GameplayTestTags.STAGE).fetchSemanticsNode().boundsInRoot
+        val pause = composeRule.onNodeWithTag(GameplayTestTags.PAUSE).fetchSemanticsNode().boundsInRoot
+        assertEquals(stage.center.x, pause.center.x, 1f)
+    }
 }

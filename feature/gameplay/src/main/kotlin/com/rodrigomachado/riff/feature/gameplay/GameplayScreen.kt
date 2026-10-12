@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -197,17 +196,15 @@ private fun Hud(
     modifier: Modifier,
 ) {
     Box(modifier.padding(Spacing.md)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
+        // Cada um no seu canto: o placar crescendo não empurra o Pausar, que fica sempre no centro.
+        ScoreText(hud.score, Modifier.align(Alignment.TopStart))
+        TextButton(
+            onClick = onPause,
+            modifier = Modifier.align(Alignment.TopCenter).testTag(GameplayTestTags.PAUSE),
         ) {
-            ScoreText(hud.score)
-            TextButton(onClick = onPause, modifier = Modifier.testTag(GameplayTestTags.PAUSE)) {
-                Text(stringResource(R.string.gameplay_pause), color = RiffColors.Paper)
-            }
-            MultiplierStamp(hud.multiplier)
+            Text(stringResource(R.string.gameplay_pause), color = RiffColors.Paper)
         }
+        MultiplierStamp(hud.multiplier, Modifier.align(Alignment.TopEnd))
         if (hud.combo >= COMBO_MIN_TO_SHOW) {
             Text(
                 stringResource(R.string.gameplay_combo, hud.combo),
