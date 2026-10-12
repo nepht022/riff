@@ -1,6 +1,10 @@
 package com.rodrigomachado.riff.core.data.importer
 
+import com.rodrigomachado.riff.core.chart.sng.ByteArrayRandomRead
+import com.rodrigomachado.riff.core.chart.sng.SngRef
+import com.rodrigomachado.riff.core.chart.sng.SngWriter
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
+import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -17,6 +21,53 @@ class FolderChartImporterTest {
 
     private fun TestScope.importer(maxFileBytes: Long = FolderChartImporter.MAX_FILE_BYTES) =
         FolderChartImporter(source, repository, StandardTestDispatcher(testScheduler), maxFileBytes) { ++clock }
+
+    /** Importador que lê `.sng` (a camada do app por cima da árvore em memória). */
+    private fun TestScope.sngImporter() = FolderChartImporter(
+        SngFolderSource(source) { ByteArrayRandomRead(source.bytes(it)) },
+        repository,
+        StandardTestDispatcher(testScheduler),
+        FolderChartImporter.MAX_FILE_BYTES,
+    ) { ++clock }
+
+    private fun sng(title: String, extra: Map<String, ByteArray> = emptyMap()) = SngWriter.write(
+        mapOf("name" to title, "artist" to "Nirvana"),
+        mapOf("notes.chart" to chartText(title, "Nirvana").toByteArray()) + extra,
+    )
+
+    @Test
+    fun aSngFileIsImportedLikeASongFolder() = runTest {
+        source.file("raiz/Nirvana - Teen Spirit.sng", sng("Smells Like Teen Spirit"))
+
+        val report = sngImporter().import("raiz")
+
+        assertEquals(1, report.importedCount)
+        val chart = repository.charts.single()
+        assertEquals("Smells Like Teen Spirit", chart.title)
+        assertEquals(SngRef.packageUri("raiz/Nirvana - Teen Spirit.sng"), chart.folderUri)
+    }
+
+    @Test
+    fun aCorruptedSngGoesToTheReportAsAnInvalidChart() = runTest {
+        source.file("raiz/quebrado.sng", "isto não é um sng")
+
+        val report = sngImporter().import("raiz")
+
+        assertEquals(ImportFailureKind.INVALID_CHART, report.failures.single().kind)
+        assertEquals("quebrado", report.failures.single().folderName)
+    }
+
+    @Test
+    fun anUnreadableSubfolderKeepsItsSngCharts() = runTest {
+        source.file("raiz/sub/a.sng", sng("A"))
+        source.file("raiz/b/notes.chart", chartText("B", "Banda"))
+        sngImporter().import("raiz")
+        source.revoked += "raiz/sub"
+
+        sngImporter().import("raiz")
+
+        assertEquals(listOf("A", "B"), repository.charts.map { it.title })
+    }
 
     @Test
     fun importsEveryChartFolderInTheTreeAndReportsProgress() = runTest {

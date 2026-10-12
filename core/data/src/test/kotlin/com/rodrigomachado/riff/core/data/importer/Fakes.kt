@@ -25,6 +25,8 @@ class FakeFolderSource : FolderSource {
         declaredSizes[path] = declaredSize
     }
 
+    fun bytes(path: String): ByteArray = files.getValue(path)
+
     fun remove(prefix: String) {
         files.keys.removeAll { it == prefix || it.startsWith("$prefix/") }
     }

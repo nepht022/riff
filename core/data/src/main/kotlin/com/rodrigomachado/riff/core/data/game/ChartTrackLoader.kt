@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.data.game
 
+import com.rodrigomachado.riff.core.chart.ChartAudioFiles
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.IoDispatcher
 import com.rodrigomachado.riff.core.data.folder.FolderEntry
@@ -54,12 +55,11 @@ class FolderChartTrackLoader @Inject constructor(
     }
 
     private fun audioOf(files: List<FolderEntry>): ChartAudio? {
-        fun find(name: String) = EXTENSIONS.firstNotNullOfOrNull { extension ->
-            files.firstOrNull { it.name.equals("$name.$extension", ignoreCase = true) }
-        }
+        val names = files.map { it.name }
+        fun find(name: String) = ChartAudioFiles.find(names, name)?.let { found -> files.first { it.name == found } }
         val song = find("song")
         val guitar = find("guitar")
-        val backing = BACKING_NAMES.mapNotNull(::find)
+        val backing = ChartAudioFiles.BACKING_NAMES.mapNotNull(::find)
         return when {
             guitar != null && backing.isNotEmpty() ->
                 ChartAudio.Stems(guitar.uri, backing.map { it.uri }, fallbackUri = song?.uri ?: guitar.uri)
@@ -70,26 +70,5 @@ class FolderChartTrackLoader @Inject constructor(
 
             else -> null
         }
-    }
-
-    private companion object {
-        val EXTENSIONS = listOf("ogg", "opus", "mp3", "wav")
-
-        /** Nomes das faixas do Clone Hero, menos a guitarra; `song` primeiro. */
-        val BACKING_NAMES = listOf(
-            "song",
-            "rhythm",
-            "bass",
-            "drums",
-            "drums_1",
-            "drums_2",
-            "drums_3",
-            "drums_4",
-            "vocals",
-            "vocals_1",
-            "vocals_2",
-            "keys",
-            "crowd",
-        )
     }
 }

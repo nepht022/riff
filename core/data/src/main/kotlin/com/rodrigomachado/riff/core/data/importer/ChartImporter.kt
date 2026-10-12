@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff.core.data.importer
 
 import com.rodrigomachado.riff.core.chart.ChartParseException
+import com.rodrigomachado.riff.core.chart.sng.InvalidSngException
+import com.rodrigomachado.riff.core.chart.sng.SngRef
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.folder.FileTooLargeException
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
@@ -68,6 +70,9 @@ class FolderChartImporter(
                 importSong(folder, children)
                 return
             }
+            for (child in children.filter { !it.isDirectory && SngRef.isPackageName(it.name) }) {
+                importPackage(child)
+            }
             if (depth >= MAX_DEPTH) return
             for (child in children.filter { it.isDirectory }) {
                 val grandChildren = listOrKeep(child) ?: continue
@@ -75,11 +80,23 @@ class FolderChartImporter(
             }
         }
 
+        /** Um `.sng` é uma pasta de música num arquivo só: lista os arquivos de dentro e importa como pasta. */
+        private suspend fun importPackage(file: FolderEntry) {
+            val folder = FolderEntry(SngRef.packageUri(file.uri), file.name.dropLast(SNG.length), true, file.sizeBytes)
+            val files = listOrKeep(folder) ?: return
+            importSong(folder, files)
+        }
+
         /** Lista a subpasta; se não der, registra a falha, mantém o que já existia dela e devolve null. */
         private suspend fun listOrKeep(folder: FolderEntry): List<FolderEntry>? = try {
             source.listChildren(folder.uri)
         } catch (e: FolderAccessLostException) {
             keep(folder, ImportFailureKind.NO_ACCESS, e.message)
+            null
+        } catch (e: InvalidSngException) {
+            scanned++
+            onProgress(scanned)
+            keep(folder, ImportFailureKind.INVALID_CHART, e.message)
             null
         } catch (e: IOException) {
             keep(folder, ImportFailureKind.UNREADABLE, e.message)
@@ -108,6 +125,8 @@ class FolderChartImporter(
                 imported++
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: InvalidSngException) {
+                keep(folder, ImportFailureKind.INVALID_CHART, e.message)
             } catch (e: ChartParseException) {
                 keep(folder, ImportFailureKind.INVALID_CHART, e.message)
             } catch (e: FileTooLargeException) {
@@ -139,6 +158,7 @@ class FolderChartImporter(
         const val MAX_FILE_BYTES = 16L * 1024 * 1024
         const val MAX_DEPTH = 8
         private val NOTES_FILES = setOf("notes.chart", "notes.mid")
+        private const val SNG = ".sng"
 
         /** Nome legível da raiz a partir do URI do SAF (`.../tree/primary%3ACharts` vira `Charts`). */
         private fun folderNameOf(uri: String): String =

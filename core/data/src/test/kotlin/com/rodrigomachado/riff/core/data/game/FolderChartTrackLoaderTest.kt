@@ -1,5 +1,9 @@
 package com.rodrigomachado.riff.core.data.game
 
+import com.rodrigomachado.riff.core.chart.sng.ByteArrayRandomRead
+import com.rodrigomachado.riff.core.chart.sng.SngRef
+import com.rodrigomachado.riff.core.chart.sng.SngWriter
+import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.importer.FakeChartRepository
 import com.rodrigomachado.riff.core.data.importer.FakeFolderSource
 import com.rodrigomachado.riff.core.data.importer.chartText
@@ -104,5 +108,31 @@ class FolderChartTrackLoaderTest {
             runCatching { loader().load("outro", Difficulty.EXPERT) }.exceptionOrNull() is ChartNotFoundException,
         )
         assertTrue(runCatching { loader().load("id", Difficulty.EASY) }.exceptionOrNull() is ChartNotFoundException)
+    }
+
+    @Test
+    fun theAudioOfASngPointsInsideThePackage() = runTest {
+        source.file(
+            "raiz/x.sng",
+            SngWriter.write(
+                mapOf("name" to "Música"),
+                mapOf(
+                    "notes.chart" to chartText("Música", "Banda").toByteArray(),
+                    "guitar.ogg" to ByteArray(4),
+                    "song.opus" to ByteArray(4),
+                ),
+            ),
+        )
+        registerChart(SngRef.packageUri("raiz/x.sng"))
+        val loader = FolderChartTrackLoader(
+            SngFolderSource(source) { ByteArrayRandomRead(source.bytes(it)) },
+            charts,
+            StandardTestDispatcher(testScheduler),
+        )
+
+        val playable = loader.load("id", Difficulty.EXPERT)
+
+        val song = SngRef.entryUri("raiz/x.sng", "song.opus")
+        assertEquals(ChartAudio.Stems(SngRef.entryUri("raiz/x.sng", "guitar.ogg"), listOf(song), song), playable.audio)
     }
 }

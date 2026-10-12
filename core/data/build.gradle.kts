@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":core:spotify"))
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit4)
+    testImplementation(testFixtures(project(":core:chart")))
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)

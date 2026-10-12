@@ -1,9 +1,12 @@
 package com.rodrigomachado.riff.core.data
 
+import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
+import com.rodrigomachado.riff.core.data.folder.ContentRandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.data.folder.SafFolderAccess
 import com.rodrigomachado.riff.core.data.folder.SafFolderSource
+import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
@@ -40,7 +43,7 @@ abstract class DataBindsModule {
     abstract fun settingsRepository(impl: PreferencesSettingsRepository): SettingsRepository
 
     @Binds
-    abstract fun folderSource(impl: SafFolderSource): FolderSource
+    abstract fun randomReadOpener(impl: ContentRandomReadOpener): RandomReadOpener
 
     @Binds
     abstract fun folderAccess(impl: SafFolderAccess): FolderAccess
@@ -64,6 +67,10 @@ object DataProvidesModule {
     @Provides
     @IoDispatcher
     fun ioDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    /** As pastas do SAF, com cada `.sng` lido como uma pasta de mapa. */
+    @Provides
+    fun folderSource(saf: SafFolderSource, opener: RandomReadOpener): FolderSource = SngFolderSource(saf, opener)
 
     @Provides
     fun chartImporter(
