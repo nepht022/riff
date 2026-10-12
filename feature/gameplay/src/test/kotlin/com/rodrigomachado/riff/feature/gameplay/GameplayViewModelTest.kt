@@ -519,4 +519,19 @@ class GameplayViewModelTest {
 
         assertEquals(GameplayUiState.Unavailable(UnavailableReason.CHART_UNREADABLE), viewModel().uiState.value)
     }
+
+    @Test
+    fun aPermissionRevokedWhileReadingTheChartIsExplainedAsLostFolderAccess() = runTest {
+        loader.result = { throw SecurityException("permissão revogada no meio da leitura") }
+
+        assertEquals(GameplayUiState.Unavailable(UnavailableReason.FOLDER_ACCESS_LOST), viewModel().uiState.value)
+    }
+
+    @Test
+    fun aFailureOutsideTheChartIsNotBlamedOnTheChart() = runTest {
+        loader.result = { playable() }
+        chartOffsets.failure = IllegalStateException("banco indisponível")
+
+        assertEquals(GameplayUiState.Unavailable(UnavailableReason.UNEXPECTED), viewModel().uiState.value)
+    }
 }

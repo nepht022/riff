@@ -44,6 +44,7 @@ enum class UnavailableReason {
     FOLDER_ACCESS_LOST,
     AUDIO_FAILED,
     SPOTIFY_UNAVAILABLE,
+    UNEXPECTED,
 }
 
 sealed interface GameplayUiState {
@@ -106,7 +107,7 @@ class GameplayViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // cada falha vira uma explicação na tela
     private suspend fun load(): GameplayUiState = try {
-        val playable = loader.load(chartId, difficulty)
+        val playable = loader.read(chartId, difficulty)
         val settings = settingsRepository.settings.first()
         val (songPlayer, withoutSeparateGuitar) = prepareSong(playable.audio)
         songPlayer.setVolume(settings.masterVolume)
@@ -193,8 +194,10 @@ class GameplayViewModel @Inject constructor(
 
         is ChartNotFoundException -> UnavailableReason.CHART_MISSING
 
-        // Qualquer outra falha ao carregar é do arquivo do mapa (corrompido ou mudou desde a importação).
-        else -> UnavailableReason.CHART_UNREADABLE
+        // O arquivo do mapa não pôde ser lido (corrompido ou mudou desde a importação).
+        is ChartReadException -> UnavailableReason.CHART_UNREADABLE
+
+        else -> UnavailableReason.UNEXPECTED
     }
 
     private class NoAudioException : Exception("pasta sem áudio")
@@ -280,3 +283,23 @@ class GameplayViewModel @Inject constructor(
 
 /** Quanto a biblioteca volta ao continuar depois de uma pausa. */
 private const val LIBRARY_REWIND_MS = 500L
+
+/** Falha na leitura do arquivo do mapa (corrompido ou mudou desde a importação). */
+private class ChartReadException(cause: Throwable) : Exception("mapa ilegível", cause)
+
+/** Falhas da leitura do mapa ficam separadas das outras (sons, banco): cada uma tem a sua explicação. */
+@Suppress("TooGenericExceptionCaught")
+private suspend fun ChartTrackLoader.read(chartId: String, difficulty: Difficulty) = try {
+    load(chartId, difficulty)
+} catch (e: CancellationException) {
+    throw e
+} catch (e: SecurityException) {
+    // Permissão da pasta revogada no meio da leitura.
+    throw FolderAccessLostException(e.message.orEmpty(), e)
+} catch (e: ChartNotFoundException) {
+    throw e
+} catch (e: FolderAccessLostException) {
+    throw e
+} catch (e: Exception) {
+    throw ChartReadException(e)
+}

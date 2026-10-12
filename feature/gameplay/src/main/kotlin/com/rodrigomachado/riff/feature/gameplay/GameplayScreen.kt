@@ -315,4 +315,5 @@ private fun UnavailableReason.message(): Int = when (this) {
     UnavailableReason.FOLDER_ACCESS_LOST -> R.string.gameplay_folder_lost
     UnavailableReason.AUDIO_FAILED -> R.string.gameplay_audio_failed
     UnavailableReason.SPOTIFY_UNAVAILABLE -> R.string.gameplay_unavailable_spotify
+    UnavailableReason.UNEXPECTED -> R.string.gameplay_unexpected
 }

@@ -136,7 +136,9 @@ class FakeStemPlayer(val song: FakeSongPlayer = FakeSongPlayer()) :
 class FakeChartOffsetRepository : com.rodrigomachado.riff.core.data.ChartOffsetRepository {
     val offsets = mutableMapOf<String, Int>()
 
-    override suspend fun get(chartId: String): Int = offsets[chartId] ?: 0
+    var failure: Exception? = null
+
+    override suspend fun get(chartId: String): Int = failure?.let { throw it } ?: offsets[chartId] ?: 0
 
     override suspend fun save(chartId: String, offsetMs: Int) {
         offsets[chartId] = offsetMs
