@@ -375,4 +375,57 @@ class StemSongPlayerTest {
 
         assertEquals("riff-audio", thread)
     }
+
+    @Test
+    fun ifTheNewOutputFailsToOpenTheSeekIsSkippedAndTheOldOutputKeepsPlaying() {
+        val guitar = FakeSource(frames = 200_000)
+        sources["guitar.ogg"] = guitar
+        sources["song.ogg"] = FakeSource(frames = 200_000)
+        var created = 0
+        val player = StemSongPlayer(
+            guitarUri = "guitar.ogg",
+            backingUris = listOf("song.ogg"),
+            opener = { uri -> sources.getValue(uri) },
+            sinks = { if (created++ == 0) sink else throw IllegalStateException("AudioTrack sem recursos") },
+            log = { message, _ -> logged += message },
+            startThread = false,
+            nowMs = { now },
+        ).also { runBlocking { it.prepare("guitar.ogg") } }
+        player.play()
+        player.renderOnce()
+        player.pause()
+        val before = guitar.position
+
+        player.seekTo(0)
+        player.play()
+
+        assertFalse(sink.released)
+        assertTrue(sink.started)
+        assertEquals(before, guitar.position) // as faixas continuam de onde a saída antiga parou
+        assertTrue(player.renderOnce())
+        assertTrue(logged.any { "voltar" in it })
+    }
+
+    @Test
+    fun aFailureToRaiseThePriorityDoesNotKillTheAudioThread() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = StemSongPlayer(
+            guitarUri = "guitar.ogg",
+            backingUris = listOf("song.ogg"),
+            opener = { uri -> sources.getValue(uri) },
+            sinks = { sink },
+            log = { message, _ -> logged += message },
+            startThread = true,
+            nowMs = { now },
+            raiseAudioPriority = { throw SecurityException("sem permissão") },
+        ).also { runBlocking { it.prepare("guitar.ogg") } }
+
+        player.play()
+        val deadline = System.currentTimeMillis() + 2_000
+        while (sink.written == 0L && System.currentTimeMillis() < deadline) Thread.sleep(10)
+        player.release()
+
+        assertTrue(sink.written > 0)
+    }
 }

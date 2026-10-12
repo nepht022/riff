@@ -109,8 +109,13 @@ class StemSongPlayer(
         if (startThread) audioThread = Thread(::loop, "riff-audio").apply { start() }
     }
 
+    @Suppress("TooGenericExceptionCaught") // sem a prioridade, a música toca assim mesmo
     private fun loop() {
-        raiseAudioPriority()
+        try {
+            raiseAudioPriority()
+        } catch (e: RuntimeException) {
+            log("Sem prioridade de áudio", e)
+        }
         while (!released) {
             synchronized(lock) {
                 while (!released && !hasWork()) lock.wait()
@@ -194,11 +199,21 @@ class StemSongPlayer(
         output.pause()
     }
 
-    /** Só com a música pausada: cada faixa volta ao ponto e uma saída nova começa dali (a antiga tinha o futuro). */
+    /**
+     * Só com a música pausada: cada faixa volta ao ponto e uma saída nova começa dali (a antiga tinha o futuro).
+     * Se a saída nova não abrir, nada muda: a música continua de onde parou na antiga.
+     */
+    @Suppress("TooGenericExceptionCaught") // AudioTrack sem recursos chega como RuntimeException
     override fun seekTo(positionMs: Long) {
         if (released || playing) return
         synchronized(renderLock) {
             val old = sink ?: return
+            val fresh = try {
+                sinks.create(sampleRate)
+            } catch (e: RuntimeException) {
+                log("Não deu para voltar: a saída de áudio nova não abriu", e)
+                return
+            }
             val frame = positionMs * sampleRate / 1_000
             for (track in sources.indices) {
                 ended[track] = runCatching { sources[track].seekTo(frame) }
@@ -207,7 +222,7 @@ class StemSongPlayer(
             }
             old.stop()
             old.release()
-            sink = sinks.create(sampleRate)
+            sink = fresh
             baseFrames = frame
             writtenFrames = 0
             pendingFrames = 0
