@@ -16,7 +16,7 @@ RATE = 44_100
 LANE_NOTES_HZ = [164.81, 196.00, 220.00, 246.94, 293.66]
 HIT_SECONDS = 0.25
 HIT_FADE_SECONDS = 0.06
-HIT_PEAK = 10 ** (-12 / 20)  # −12 dBFS: fica atrás da música
+HIT_PEAK = 10 ** (-12 / 20)  # −12 dB da escala; gravado com 30.000 (não 32.767), o pico real fica em −12,8 dBFS
 
 
 def write(path, samples):
