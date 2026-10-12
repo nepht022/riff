@@ -95,6 +95,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    /** Desistiu de escolher a pasta: sai do erro de acesso e volta à lista (os mapas continuam listados). */
+    fun onFolderPickCancelled() {
+        importState.update { if (it.folderAccessLost) ImportState() else it }
+    }
+
     fun onRescan() {
         viewModelScope.launch { folderStore.rootUri.first()?.let { runImport(it) } }
     }

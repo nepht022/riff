@@ -60,7 +60,7 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let { viewModel.onFolderPicked(it.toString()) }
+        if (uri != null) viewModel.onFolderPicked(uri.toString()) else viewModel.onFolderPickCancelled()
     }
     if (state.matchSaved) LaunchedEffect(Unit) { onMatched() }
     LibraryContent(

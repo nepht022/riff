@@ -105,6 +105,20 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun cancellingThePickerAfterLosingAccessGoesBackToTheList() = runTest {
+        folderStore.rootUri.value = "content://pasta"
+        repository.charts.value = listOf(chart("a"))
+        importer.nextResult = { throw FolderAccessLostException("revogada") }
+        val viewModel = viewModel()
+        viewModel.onRescan()
+
+        viewModel.onFolderPickCancelled() // tocou em "Escolher pasta" e desistiu
+
+        assertFalse(viewModel.uiState.value.folderAccessLost)
+        assertEquals(listOf("a"), viewModel.uiState.value.charts.map { it.id })
+    }
+
+    @Test
     fun folderThatCannotBePersistedShowsError() = runTest {
         folderAccess.failure = SecurityException("não persistível")
         val viewModel = viewModel()

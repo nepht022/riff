@@ -88,10 +88,13 @@ class SafFolderSource @Inject constructor(@ApplicationContext private val contex
 }
 
 class SafFolderAccess @Inject constructor(@ApplicationContext private val context: Context) : FolderAccess {
+    /** Guarda o acesso à pasta escolhida e libera o das anteriores (o Android limita quantas um app guarda). */
     override fun persistReadAccess(folderUri: String) {
-        context.contentResolver.takePersistableUriPermission(
-            Uri.parse(folderUri),
-            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
+        val chosen = Uri.parse(folderUri)
+        val resolver = context.contentResolver
+        resolver.takePersistableUriPermission(chosen, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        resolver.persistedUriPermissions
+            .filter { it.uri != chosen }
+            .forEach { resolver.releasePersistableUriPermission(it.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 }
