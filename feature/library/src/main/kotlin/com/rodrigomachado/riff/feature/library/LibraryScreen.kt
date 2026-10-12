@@ -207,7 +207,10 @@ private fun ImportReportCard(report: ImportReport, onDismiss: () -> Unit) {
                 color = RiffColors.StampError,
             )
             // Até 10 no cartão: uma pasta com centenas de mapas quebrados não vira um cartão sem fim.
-            report.failures.take(MAX_FAILURES_SHOWN).forEach { failure ->
+            // Os erros que pedem ação vêm antes das cópias repetidas, para não ficarem escondidos no "e mais".
+            report.failures.sortedBy { it.kind == ImportFailureKind.DUPLICATE }.take(
+                MAX_FAILURES_SHOWN,
+            ).forEach { failure ->
                 Text(failureText(failure), style = MaterialTheme.typography.bodySmall, color = RiffColors.Ink)
             }
             val more = report.failures.size - MAX_FAILURES_SHOWN

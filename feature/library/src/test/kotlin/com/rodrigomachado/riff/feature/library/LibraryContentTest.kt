@@ -245,4 +245,19 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Pasta 10: não deu para ler os arquivos").assertDoesNotExist()
         composeRule.onNodeWithText("e mais 3 pastas").assertExists()
     }
+
+    @Test
+    fun realErrorsComeBeforeDuplicatesSoTheyAreNotHidden() {
+        val duplicates = List(12) { ImportFailure("Cópia $it", ImportFailureKind.DUPLICATE, "Original $it") }
+        val broken = ImportFailure("Quebrada", ImportFailureKind.INVALID_CHART, "linha 3")
+        show(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                report = ImportReport(importedCount = 12, failures = duplicates + broken),
+            ),
+        )
+
+        composeRule.onNodeWithText("Quebrada: mapa inválido (linha 3)").assertExists()
+    }
 }

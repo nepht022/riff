@@ -20,4 +20,8 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Uma falha ao pedir prioridade de áudio derrubaria a thread de áudio (improvável: a prioridade é permitida a apps).
 - `GameSession.press(lane)`/`release(lane)` ainda são públicos; usados direto, desalinhariam o mapa de dedos (hoje só os testes os usam).
 - Soltar um dedo também pode marcar um erro antes do quadro e religar a guitarra um pouco antes da hora.
+- Partida: falhas fora da leitura do mapa (sons, banco) e permissão revogada no meio da leitura aparecem como "não deu para ler este mapa" em vez do motivo certo.
+- Relatório: o mapa repetido mostra só o nome da pasta ("Song: igual ao de Song" quando há duas pastas "Song" em pacotes diferentes); qual cópia vence depende da ordem de listagem do Android.
+- `song.ini` com `delay_seconds = NaN` (ou infinito) faz o mapa inteiro aparecer como inválido.
+- Trocar para uma pasta cuja importação falha já libera o acesso à pasta antiga (os mapas dela continuam listados, mas não tocam).
 - O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.
