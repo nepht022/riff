@@ -1,12 +1,17 @@
 package com.rodrigomachado.riff.core.audio
 
+import java.util.concurrent.atomic.AtomicIntegerArray
+
 /**
  * Mistura faixas em estéreo intercalado. Cada faixa tem um ganho alvo; a mudança vira uma rampa linear de
  * [rampFrames] quadros, para o corte da guitarra não estalar. [mix] não aloca nada: roda a cada bloco de áudio.
- * Os ganhos podem mudar de outra thread (o toque do jogador); o pior caso é a rampa começar um bloco depois.
+ * Os ganhos alvo mudam em outra thread (o toque do jogador): ficam num [AtomicIntegerArray] (bits do float), que
+ * garante que a thread de áudio veja a mudança no bloco seguinte, sem alocar.
  */
 class StemMixer(private val trackCount: Int, private val rampFrames: Int) {
-    private val target = FloatArray(trackCount) { 1f }
+    private val target = AtomicIntegerArray(trackCount).apply {
+        for (track in 0 until trackCount) set(track, 1f.toRawBits())
+    }
     private val current = FloatArray(trackCount) { 1f }
 
     /** Volume geral do app, aplicado à mistura inteira. */
@@ -14,7 +19,7 @@ class StemMixer(private val trackCount: Int, private val rampFrames: Int) {
     var masterGain = 1f
 
     fun setTargetGain(track: Int, gain: Float) {
-        target[track] = gain.coerceIn(0f, 1f)
+        target.set(track, gain.coerceIn(0f, 1f).toRawBits())
     }
 
     fun currentGain(track: Int): Float = current[track]
@@ -31,7 +36,7 @@ class StemMixer(private val trackCount: Int, private val rampFrames: Int) {
             val input = inputs[track]
             val count = channels[track]
             val valid = minOf(available[track], frames)
-            val goal = target[track]
+            val goal = Float.fromBits(target.get(track))
             var gain = current[track]
             for (frame in 0 until frames) {
                 gain = approach(gain, goal, step)
