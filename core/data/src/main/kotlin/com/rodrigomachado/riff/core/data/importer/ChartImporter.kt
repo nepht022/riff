@@ -13,7 +13,14 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.URLDecoder
 
-data class ImportFailure(val folderName: String, val reason: String)
+/** Por que uma pasta não entrou na biblioteca. A tela mostra o tipo no idioma do aparelho. */
+enum class ImportFailureKind { INVALID_CHART, FILE_TOO_LARGE, UNREADABLE, NO_ACCESS, UNEXPECTED, DUPLICATE }
+
+/**
+ * Pasta que não entrou. [detail] é técnico (linha do erro no mapa, mensagem do sistema) ou, em [ImportFailureKind.DUPLICATE],
+ * o nome da pasta que já tem o mesmo mapa.
+ */
+data class ImportFailure(val folderName: String, val kind: ImportFailureKind, val detail: String? = null)
 
 data class ImportReport(val importedCount: Int, val failures: List<ImportFailure>)
 
@@ -52,6 +59,9 @@ class FolderChartImporter(
         var scanned = 0
         val failures = mutableListOf<ImportFailure>()
 
+        /** Id (conteúdo) de cada mapa já importado nesta varredura, com a pasta dele. */
+        private val seen = mutableMapOf<String, String>()
+
         suspend fun visit(folder: FolderEntry, children: List<FolderEntry>, depth: Int) {
             if (children.any { !it.isDirectory && it.name.lowercase() in NOTES_FILES }) {
                 importSong(folder, children)
@@ -68,16 +78,16 @@ class FolderChartImporter(
         private suspend fun listOrKeep(folder: FolderEntry): List<FolderEntry>? = try {
             source.listChildren(folder.uri)
         } catch (e: FolderAccessLostException) {
-            keep(folder, "sem acesso à pasta: ${e.message}")
+            keep(folder, ImportFailureKind.NO_ACCESS, e.message)
             null
         } catch (e: IOException) {
-            keep(folder, "não foi possível listar: ${e.message}")
+            keep(folder, ImportFailureKind.UNREADABLE, e.message)
             null
         }
 
         /** Pasta que falhou: registra no relatório e mantém o que já estava importado dela. */
-        private suspend fun keep(folder: FolderEntry, reason: String) {
-            failures += ImportFailure(folder.name, reason)
+        private suspend fun keep(folder: FolderEntry, kind: ImportFailureKind, detail: String?) {
+            failures += ImportFailure(folder.name, kind, detail)
             repository.keepFolder(folder.uri, scanId)
         }
 
@@ -86,18 +96,25 @@ class FolderChartImporter(
             scanned++
             onProgress(scanned)
             try {
-                repository.saveScanned(load(folder, children), scanId)
+                val chart = load(folder, children)
+                val original = seen.putIfAbsent(chart.id, folder.name)
+                if (original != null) {
+                    // Mesmo conteúdo em outra pasta: o mapa já está na biblioteca; conta uma vez só.
+                    failures += ImportFailure(folder.name, ImportFailureKind.DUPLICATE, original)
+                    return
+                }
+                repository.saveScanned(chart, scanId)
                 imported++
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ChartParseException) {
-                keep(folder, e.message ?: "mapa inválido")
+                keep(folder, ImportFailureKind.INVALID_CHART, e.message)
             } catch (e: FileTooLargeException) {
-                keep(folder, e.message ?: "arquivo grande demais")
+                keep(folder, ImportFailureKind.FILE_TOO_LARGE, e.message)
             } catch (e: IOException) {
-                keep(folder, "não foi possível ler: ${e.message}")
+                keep(folder, ImportFailureKind.UNREADABLE, e.message)
             } catch (e: Exception) {
-                keep(folder, "erro inesperado: ${e.javaClass.simpleName}: ${e.message}")
+                keep(folder, ImportFailureKind.UNEXPECTED, "${e.javaClass.simpleName}: ${e.message}")
             }
         }
     }

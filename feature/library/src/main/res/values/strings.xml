@@ -23,4 +23,16 @@
     <string name="library_unknown_artist">Artista desconhecido</string>
     <string name="library_match_title">Qual mapa é esta música?</string>
     <string name="library_back">Voltar</string>
+    <string name="library_failure">%1$s: %2$s</string>
+    <string name="library_failure_with_detail">%1$s: %2$s (%3$s)</string>
+    <string name="library_failure_invalid_chart">mapa inválido</string>
+    <string name="library_failure_too_large">arquivo grande demais</string>
+    <string name="library_failure_unreadable">não deu para ler os arquivos</string>
+    <string name="library_failure_no_access">sem acesso à pasta</string>
+    <string name="library_failure_unexpected">erro inesperado</string>
+    <string name="library_failure_duplicate">mapa repetido, igual ao de %1$s</string>
+    <plurals name="library_report_more">
+        <item quantity="one">e mais %d pasta</item>
+        <item quantity="other">e mais %d pastas</item>
+    </plurals>
 </resources>

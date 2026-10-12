@@ -29,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.data.importer.ImportFailure
+import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -204,15 +206,42 @@ private fun ImportReportCard(report: ImportReport, onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.titleSmall,
                 color = RiffColors.StampError,
             )
-            report.failures.forEach { failure ->
+            // Até 10 no cartão: uma pasta com centenas de mapas quebrados não vira um cartão sem fim.
+            report.failures.take(MAX_FAILURES_SHOWN).forEach { failure ->
+                Text(failureText(failure), style = MaterialTheme.typography.bodySmall, color = RiffColors.Ink)
+            }
+            val more = report.failures.size - MAX_FAILURES_SHOWN
+            if (more > 0) {
                 Text(
-                    "${failure.folderName}: ${failure.reason}",
+                    pluralStringResource(R.plurals.library_report_more, more, more),
                     style = MaterialTheme.typography.bodySmall,
                     color = RiffColors.Ink,
                 )
             }
         }
         PosterButton(stringResource(R.string.library_report_ok), onClick = onDismiss)
+    }
+}
+
+private const val MAX_FAILURES_SHOWN = 10
+
+/** "Pasta: motivo", com o motivo no idioma do aparelho e o detalhe técnico só quando ajuda (linha do erro no mapa). */
+@Composable
+private fun failureText(failure: ImportFailure): String {
+    val label = when (failure.kind) {
+        ImportFailureKind.INVALID_CHART -> stringResource(R.string.library_failure_invalid_chart)
+        ImportFailureKind.FILE_TOO_LARGE -> stringResource(R.string.library_failure_too_large)
+        ImportFailureKind.UNREADABLE -> stringResource(R.string.library_failure_unreadable)
+        ImportFailureKind.NO_ACCESS -> stringResource(R.string.library_failure_no_access)
+        ImportFailureKind.UNEXPECTED -> stringResource(R.string.library_failure_unexpected)
+        ImportFailureKind.DUPLICATE -> stringResource(R.string.library_failure_duplicate, failure.detail.orEmpty())
+    }
+    val showDetail = failure.kind == ImportFailureKind.INVALID_CHART || failure.kind == ImportFailureKind.UNEXPECTED
+    val detail = failure.detail?.takeIf { showDetail }
+    return if (detail != null) {
+        stringResource(R.string.library_failure_with_detail, failure.folderName, label, detail)
+    } else {
+        stringResource(R.string.library_failure, failure.folderName, label)
     }
 }
 

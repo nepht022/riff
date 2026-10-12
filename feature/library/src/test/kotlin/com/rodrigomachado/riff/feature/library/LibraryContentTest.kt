@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
+import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -83,14 +84,18 @@ class LibraryContentTest {
                 charts = listOf(chart("a")),
                 report = ImportReport(
                     importedCount = 1,
-                    failures = listOf(ImportFailure("Quebrada", "linha 3: nota inválida")),
+                    failures = listOf(
+                        ImportFailure("Quebrada", ImportFailureKind.INVALID_CHART, "linha 3: nota inválida"),
+                        ImportFailure("Cópia", ImportFailureKind.DUPLICATE, "Original"),
+                    ),
                 ),
             ),
         )
 
         composeRule.onNodeWithText("1 mapa importado").assertExists()
-        composeRule.onNodeWithText("1 pasta com erro").assertExists()
-        composeRule.onNodeWithText("Quebrada: linha 3: nota inválida").assertExists()
+        composeRule.onNodeWithText("2 pastas com erro").assertExists()
+        composeRule.onNodeWithText("Quebrada: mapa inválido (linha 3: nota inválida)").assertExists()
+        composeRule.onNodeWithText("Cópia: mapa repetido, igual ao de Original").assertExists()
         composeRule.onNodeWithText("OK").performClick()
         assertEquals(1, dismissals)
     }
@@ -223,5 +228,21 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
         composeRule.onNodeWithText("Expert").performClick()
         assertEquals("a" to Difficulty.EXPERT, played)
+    }
+
+    @Test
+    fun aLongFailureListShowsTheFirstTenAndHowManyMore() {
+        val failures = List(13) { ImportFailure("Pasta $it", ImportFailureKind.UNREADABLE) }
+        show(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                report = ImportReport(importedCount = 0, failures = failures),
+            ),
+        )
+
+        composeRule.onNodeWithText("Pasta 9: não deu para ler os arquivos").assertExists()
+        composeRule.onNodeWithText("Pasta 10: não deu para ler os arquivos").assertDoesNotExist()
+        composeRule.onNodeWithText("e mais 3 pastas").assertExists()
     }
 }

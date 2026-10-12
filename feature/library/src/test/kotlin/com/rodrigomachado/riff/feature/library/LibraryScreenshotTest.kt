@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
+import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.component.StageBackground
@@ -30,7 +31,16 @@ class LibraryScreenshotTest {
                     chart("2", "Bohemian Rhapsody", "Queen", setOf(Difficulty.EASY, Difficulty.MEDIUM)),
                     chart("3", "Pasta Sem Nome", "", setOf(Difficulty.EASY)),
                 ),
-                report = ImportReport(3, listOf(ImportFailure("Quebrada", "linha 3: nota inválida: abc = N 0 0"))),
+                report = ImportReport(
+                    3,
+                    listOf(
+                        ImportFailure(
+                            "Quebrada",
+                            ImportFailureKind.INVALID_CHART,
+                            "linha 3: nota inválida: abc = N 0 0",
+                        ),
+                    ),
+                ),
             ),
             onPickFolder = {},
             onRescan = {},

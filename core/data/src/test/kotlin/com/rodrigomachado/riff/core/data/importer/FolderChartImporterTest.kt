@@ -43,7 +43,8 @@ class FolderChartImporterTest {
 
         assertEquals(1, report.importedCount)
         assertEquals("Quebrada", report.failures.single().folderName)
-        assertTrue(report.failures.single().reason.contains("linha"))
+        assertEquals(ImportFailureKind.INVALID_CHART, report.failures.single().kind)
+        assertTrue(report.failures.single().detail.orEmpty().contains("linha"))
         assertEquals(listOf("Boa"), repository.charts.map { it.title })
     }
 
@@ -80,7 +81,7 @@ class FolderChartImporterTest {
         val report = importer().import("raiz")
 
         assertEquals(0, report.importedCount)
-        assertTrue(report.failures.single().reason.contains("grande demais"))
+        assertEquals(ImportFailureKind.FILE_TOO_LARGE, report.failures.single().kind)
         assertFalse(source.reads.any { it.contains("Gigante") })
     }
 
@@ -146,7 +147,7 @@ class FolderChartImporterTest {
         val report = importer(maxFileBytes = 100).import("raiz")
 
         assertEquals(0, report.importedCount)
-        assertTrue(report.failures.single().reason.contains("grande demais"))
+        assertEquals(ImportFailureKind.FILE_TOO_LARGE, report.failures.single().kind)
     }
 
     @Test
@@ -159,5 +160,19 @@ class FolderChartImporterTest {
         importer().import("raiz")
 
         assertEquals(listOf("A", "B"), repository.charts.map { it.title })
+    }
+
+    @Test
+    fun theSameChartInTwoFoldersCountsOnceAndTheCopyIsReported() = runTest {
+        source.file("raiz/Original/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/Copia/notes.chart", chartText("Música", "Banda"))
+
+        val report = importer().import("raiz")
+
+        assertEquals(1, report.importedCount)
+        assertEquals(1, repository.charts.size)
+        val duplicate = report.failures.single()
+        assertEquals(ImportFailureKind.DUPLICATE, duplicate.kind)
+        assertEquals(setOf("Original", "Copia"), setOf(duplicate.folderName, duplicate.detail))
     }
 }

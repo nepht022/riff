@@ -23,4 +23,16 @@
     <string name="library_unknown_artist">Unknown artist</string>
     <string name="library_match_title">Which chart is this song?</string>
     <string name="library_back">Back</string>
+    <string name="library_failure">%1$s: %2$s</string>
+    <string name="library_failure_with_detail">%1$s: %2$s (%3$s)</string>
+    <string name="library_failure_invalid_chart">invalid chart</string>
+    <string name="library_failure_too_large">file too large</string>
+    <string name="library_failure_unreadable">the files could not be read</string>
+    <string name="library_failure_no_access">no access to the folder</string>
+    <string name="library_failure_unexpected">unexpected error</string>
+    <string name="library_failure_duplicate">duplicate chart, same as %1$s</string>
+    <plurals name="library_report_more">
+        <item quantity="one">and %d more folder</item>
+        <item quantity="other">and %d more folders</item>
+    </plurals>
 </resources>

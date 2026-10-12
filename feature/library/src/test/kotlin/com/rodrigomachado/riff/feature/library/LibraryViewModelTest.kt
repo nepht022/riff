@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.library
 
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
+import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +52,8 @@ class LibraryViewModelTest {
     fun pickingAFolderPersistsAccessRemembersItAndImports() = runTest {
         importer.nextResult = {
             repository.charts.value = listOf(chart("a"))
-            ImportReport(importedCount = 1, failures = listOf(ImportFailure("Quebrada", "linha 3: nota inválida")))
+            val broken = ImportFailure("Quebrada", ImportFailureKind.INVALID_CHART, "linha 3: nota inválida")
+            ImportReport(importedCount = 1, failures = listOf(broken))
         }
         val viewModel = viewModel()
 
