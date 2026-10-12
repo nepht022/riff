@@ -140,4 +140,11 @@ class RoomTrackMatchRepositoryTest {
         matches.save("spotify:track:x", "a", confidence = 1f, isManual = true) // confirmar de novo não apaga
         assertEquals(0, matches.offsetFor("spotify:track:x", "a"))
     }
+
+    @Test
+    fun adjustingTheSyncOfAChartRemovedDuringTheMatchIsIgnored() = runTest {
+        matches.saveOffset("spotify:track:x", "removido", 3_000)
+
+        assertEquals(null, matches.offsetFor("spotify:track:x", "removido"))
+    }
 }

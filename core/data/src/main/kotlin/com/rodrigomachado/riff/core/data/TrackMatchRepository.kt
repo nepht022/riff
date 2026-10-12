@@ -81,7 +81,7 @@ class RoomTrackMatchRepository @Inject constructor(
                 trackOffsetMs = offsetMs.limited(),
                 offsetChosen = true,
             )
-        dao.upsert(updated)
+        ignoringRemovedChart { dao.upsert(updated) }
         version.update { it + 1 }
     }
 }

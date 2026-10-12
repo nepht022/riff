@@ -46,4 +46,12 @@ class RoomChartOffsetRepositoryTest {
         offsets.save("a", 12_000)
         assertEquals(MAX_SONG_OFFSET_MS, offsets.get("a"))
     }
+
+    @Test
+    fun adjustingAChartRemovedDuringTheMatchIsIgnored() = runTest {
+        // A biblioteca foi reimportada sem o mapa enquanto a partida estava pausada.
+        offsets.save("removido", 30)
+
+        assertEquals(0, offsets.get("removido"))
+    }
 }

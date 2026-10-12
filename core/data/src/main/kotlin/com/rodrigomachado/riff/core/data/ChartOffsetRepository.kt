@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.data
 
+import android.database.sqlite.SQLiteConstraintException
 import com.rodrigomachado.riff.core.database.ChartOffsetDao
 import com.rodrigomachado.riff.core.database.ChartOffsetEntity
 import javax.inject.Inject
@@ -24,9 +25,21 @@ interface ChartOffsetRepository {
 class RoomChartOffsetRepository @Inject constructor(private val dao: ChartOffsetDao) : ChartOffsetRepository {
     override suspend fun get(chartId: String): Int = dao.get(chartId)?.limited() ?: 0
 
-    override suspend fun save(chartId: String, offsetMs: Int) = dao.upsert(
-        ChartOffsetEntity(chartId, offsetMs.limited()),
-    )
+    override suspend fun save(chartId: String, offsetMs: Int) = ignoringRemovedChart {
+        dao.upsert(ChartOffsetEntity(chartId, offsetMs.limited()))
+    }
 }
 
 internal fun Int.limited(): Int = coerceIn(-MAX_SONG_OFFSET_MS, MAX_SONG_OFFSET_MS)
+
+/**
+ * O mapa saiu da biblioteca (reimportada) com a partida em andamento: a chave estrangeira recusa o ajuste, e não há
+ * mais onde guardá-lo. A partida segue com o valor na memória.
+ */
+internal suspend fun ignoringRemovedChart(save: suspend () -> Unit) {
+    try {
+        save()
+    } catch (_: SQLiteConstraintException) {
+        // mapa removido: nada a salvar
+    }
+}
