@@ -80,7 +80,7 @@ class GameSession(
         for (lane in fingers.indices) {
             if (fingers[lane] == 0) continue
             fingers[lane] = 1 // pausar solta a trilha de vez, com quantos dedos estiverem nela
-            release(lane)
+            release(lane, lateByMs = 0)
         }
     }
 
@@ -163,8 +163,11 @@ class GameSession(
         release(lane, lateByMs)
     }
 
-    /** Toque na [lane]; [lateByMs] é quanto o toque esperou até chegar aqui (o julgamento usa o instante do dedo). */
-    fun press(lane: Int, lateByMs: Long = 0) {
+    /**
+     * Toque na [lane]; [lateByMs] é quanto o toque esperou até chegar aqui (o julgamento usa o instante do dedo).
+     * Privado: só por [pressPointer], que guarda a trilha de cada dedo (direto, desalinharia o mapa de dedos).
+     */
+    private fun press(lane: Int, lateByMs: Long) {
         if (isPaused || rewind != null) return
         fingers[lane]++
         val judgment = engine.onPress(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
@@ -200,7 +203,7 @@ class GameSession(
         guitar?.setGuitarAudible(false)
     }
 
-    fun release(lane: Int, lateByMs: Long = 0) {
+    private fun release(lane: Int, lateByMs: Long) {
         if (fingers[lane] == 0) return
         fingers[lane]--
         if (fingers[lane] == 0) engine.onRelease(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
