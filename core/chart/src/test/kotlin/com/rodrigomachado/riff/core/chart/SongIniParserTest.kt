@@ -41,4 +41,11 @@ class SongIniParserTest {
         assertEquals(-250L, SongIniParser.parse("[song]\ndelay = 0\ndelay_seconds = -0.25").offsetMs)
         assertEquals(300L, SongIniParser.parse("[song]\ndelay = 300\ndelay_seconds = 1.5").offsetMs)
     }
+
+    @Test
+    fun aDelayInSecondsThatIsNotANumberIsIgnoredInsteadOfBreakingTheChart() {
+        assertEquals(0L, SongIniParser.parse("[song]\ndelay_seconds = NaN").offsetMs)
+        assertEquals(0L, SongIniParser.parse("[song]\ndelay_seconds = Infinity").offsetMs)
+        assertEquals(0L, SongIniParser.parse("[song]\ndelay_seconds = 1e300").offsetMs)
+    }
 }
