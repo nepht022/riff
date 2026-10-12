@@ -16,12 +16,24 @@ class SafFolderAccessTest {
     fun choosingANewFolderReleasesTheOldOnes() {
         val access = SafFolderAccess(context)
 
-        access.persistReadAccess("content://com.android.externalstorage.documents/tree/primary%3AVelha")
-        access.persistReadAccess("content://com.android.externalstorage.documents/tree/primary%3ANova")
+        access.persistAccess("content://com.android.externalstorage.documents/tree/primary%3AVelha")
+        access.persistAccess("content://com.android.externalstorage.documents/tree/primary%3ANova")
 
         assertEquals(
             listOf(Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ANova")),
             context.contentResolver.persistedUriPermissions.map { it.uri },
         )
+    }
+
+    @Test
+    fun theChosenFolderCanBeWrittenTo() {
+        val access = SafFolderAccess(context)
+        val folder = "content://com.android.externalstorage.documents/tree/primary%3ACharts"
+
+        access.persistAccess(folder)
+
+        // Baixar mapas grava "Baixados pelo Riff" dentro dela.
+        assertEquals(true, access.canWrite(folder))
+        assertEquals(false, access.canWrite("content://com.android.externalstorage.documents/tree/primary%3AOutra"))
     }
 }

@@ -35,6 +35,14 @@ interface ChartImporter {
      * @throws FolderAccessLostException se a raiz não puder ser lida; a biblioteca fica como estava.
      */
     suspend fun import(rootUri: String, onProgress: (scannedFolders: Int) -> Unit = {}): ImportReport
+
+    /**
+     * Importa um `.sng` só (o mapa recém-baixado), sem varrer a pasta.
+     *
+     * @throws com.rodrigomachado.riff.core.chart.sng.InvalidSngException pacote ilegível.
+     * @throws ChartParseException mapa ilegível dentro do pacote.
+     */
+    suspend fun importPackage(fileUri: String, name: String): Chart
 }
 
 class FolderChartImporter(
@@ -55,6 +63,14 @@ class FolderChartImporter(
         )
         repository.removeNotSeenIn(scan.scanId)
         ImportReport(scan.imported, scan.failures)
+    }
+
+    override suspend fun importPackage(fileUri: String, name: String): Chart = withContext(dispatcher) {
+        val folder = FolderEntry(SngRef.packageUri(fileUri), name.removeSuffix(SNG), isDirectory = true, sizeBytes = 0)
+        val chart = load(folder, source.listChildren(folder.uri))
+        // Um id de importação novo: a próxima importação completa vê o arquivo de novo e o mantém.
+        repository.saveScanned(chart, now())
+        chart
     }
 
     private inner class Scan(val scanId: Long, val onProgress: (Int) -> Unit) {

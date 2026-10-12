@@ -15,9 +15,26 @@ interface FolderSource {
 class FileTooLargeException(name: String, maxBytes: Long) :
     java.io.IOException("$name grande demais (mais de ${maxBytes / (1024 * 1024)} MB)")
 
-/** Guarda a permissão de leitura da pasta escolhida para valer depois que o app reiniciar. */
+/** Guarda a permissão da pasta escolhida (leitura e, se o provedor deixar, escrita) para depois que o app reiniciar. */
 interface FolderAccess {
-    fun persistReadAccess(folderUri: String)
+    fun persistAccess(folderUri: String)
+
+    /** A pasta foi escolhida com permissão de gravar (para baixar mapas nela). */
+    fun canWrite(folderUri: String): Boolean
+}
+
+/** Gravação na pasta da biblioteca (baixar mapas). */
+interface FolderWriter {
+    /** Cria [name] em [subfolder] (criada se faltar) dentro da pasta [parentUri]; devolve o URI do arquivo. */
+    suspend fun createFile(parentUri: String, subfolder: String, name: String): String
+
+    fun openOutput(fileUri: String): java.io.OutputStream
+
+    /** Renomeia e devolve o URI novo. */
+    suspend fun rename(fileUri: String, newName: String): String
+
+    /** Apaga, sem erro se já não existir. */
+    suspend fun delete(fileUri: String)
 }
 
 class FolderAccessLostException(message: String, cause: Throwable? = null) : Exception(message, cause)

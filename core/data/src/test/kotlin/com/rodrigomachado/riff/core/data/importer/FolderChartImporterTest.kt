@@ -36,6 +36,18 @@ class FolderChartImporterTest {
     )
 
     @Test
+    fun aSinglePackageIsImportedWithoutTouchingTheRestOfTheLibrary() = runTest {
+        source.file("raiz/a/notes.chart", chartText("A", "Banda"))
+        sngImporter().import("raiz")
+        source.file("raiz/Baixados pelo Riff/Teen.sng", sng("Teen"))
+
+        val chart = sngImporter().importPackage("raiz/Baixados pelo Riff/Teen.sng", "Teen.sng")
+
+        assertEquals("Teen", chart.title)
+        assertEquals(listOf("A", "Teen"), repository.charts.map { it.title })
+    }
+
+    @Test
     fun aSngFileIsImportedLikeASongFolder() = runTest {
         source.file("raiz/Nirvana - Teen Spirit.sng", sng("Smells Like Teen Spirit"))
 

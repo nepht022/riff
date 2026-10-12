@@ -84,7 +84,7 @@ class LibraryViewModel @Inject constructor(
     @Suppress("SwallowedException") // a exceção vira o estado de erro da tela
     fun onFolderPicked(uri: String) {
         try {
-            folderAccess.persistReadAccess(uri)
+            folderAccess.persistAccess(uri)
         } catch (e: SecurityException) {
             importState.value = ImportState(folderAccessLost = true)
             return

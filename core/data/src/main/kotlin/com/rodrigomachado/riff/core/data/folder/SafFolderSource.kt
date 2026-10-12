@@ -88,13 +88,32 @@ class SafFolderSource @Inject constructor(@ApplicationContext private val contex
 }
 
 class SafFolderAccess @Inject constructor(@ApplicationContext private val context: Context) : FolderAccess {
-    /** Guarda o acesso à pasta escolhida e libera o das anteriores (o Android limita quantas um app guarda). */
-    override fun persistReadAccess(folderUri: String) {
+    /**
+     * Guarda o acesso à pasta escolhida (leitura e escrita; só leitura se o provedor não deixar gravar) e libera o
+     * das anteriores (o Android limita quantas um app guarda).
+     */
+    @Suppress("SwallowedException") // provedor só de leitura: fica com a leitura, e a pesquisa explica
+    override fun persistAccess(folderUri: String) {
         val chosen = Uri.parse(folderUri)
         val resolver = context.contentResolver
-        resolver.takePersistableUriPermission(chosen, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            resolver.takePersistableUriPermission(
+                chosen,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        } catch (e: SecurityException) {
+            resolver.takePersistableUriPermission(chosen, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         resolver.persistedUriPermissions
             .filter { it.uri != chosen }
-            .forEach { resolver.releasePersistableUriPermission(it.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            .forEach { old ->
+                // Libera com o que estava guardado: só a leitura deixaria a escrita da pasta antiga presa.
+                val flags = (if (old.isReadPermission) Intent.FLAG_GRANT_READ_URI_PERMISSION else 0) or
+                    (if (old.isWritePermission) Intent.FLAG_GRANT_WRITE_URI_PERMISSION else 0)
+                resolver.releasePersistableUriPermission(old.uri, flags)
+            }
     }
+
+    override fun canWrite(folderUri: String): Boolean =
+        context.contentResolver.persistedUriPermissions.any { it.uri == Uri.parse(folderUri) && it.isWritePermission }
 }

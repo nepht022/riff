@@ -4,8 +4,10 @@ import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.ContentRandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderSource
+import com.rodrigomachado.riff.core.data.folder.FolderWriter
 import com.rodrigomachado.riff.core.data.folder.SafFolderAccess
 import com.rodrigomachado.riff.core.data.folder.SafFolderSource
+import com.rodrigomachado.riff.core.data.folder.SafFolderWriter
 import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
@@ -43,12 +45,6 @@ abstract class DataBindsModule {
     abstract fun settingsRepository(impl: PreferencesSettingsRepository): SettingsRepository
 
     @Binds
-    abstract fun randomReadOpener(impl: ContentRandomReadOpener): RandomReadOpener
-
-    @Binds
-    abstract fun folderAccess(impl: SafFolderAccess): FolderAccess
-
-    @Binds
     abstract fun trackMatchRepository(impl: RoomTrackMatchRepository): TrackMatchRepository
 
     @Binds
@@ -59,6 +55,20 @@ abstract class DataBindsModule {
 
     @Binds
     abstract fun encoreDownloads(impl: RoomEncoreDownloads): EncoreDownloads
+}
+
+/** Acesso à pasta da biblioteca pelo SAF: permissão, leitura por posição (`.sng`) e gravação (downloads). */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class FolderBindsModule {
+    @Binds
+    abstract fun folderAccess(impl: SafFolderAccess): FolderAccess
+
+    @Binds
+    abstract fun randomReadOpener(impl: ContentRandomReadOpener): RandomReadOpener
+
+    @Binds
+    abstract fun folderWriter(impl: SafFolderWriter): FolderWriter
 }
 
 @Module

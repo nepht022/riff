@@ -49,10 +49,14 @@ class FakeFolderAccess : FolderAccess {
     val persisted = mutableListOf<String>()
     var failure: Exception? = null
 
-    override fun persistReadAccess(folderUri: String) {
+    var writable = true
+
+    override fun persistAccess(folderUri: String) {
         failure?.let { throw it }
         persisted += folderUri
     }
+
+    override fun canWrite(folderUri: String) = writable
 }
 
 /** Importador controlável: [nextResult] decide o que acontece; [gate] segura a importação no meio. */
@@ -68,6 +72,8 @@ class FakeChartImporter : ChartImporter {
         gate?.await()
         return nextResult()
     }
+
+    override suspend fun importPackage(fileUri: String, name: String) = error("não usado na biblioteca")
 }
 
 class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
