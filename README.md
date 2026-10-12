@@ -112,14 +112,16 @@ uv run --with perfetto python3 scripts/quadros_travados.py   # fps e quadros com
 - **Quando regerar o perfil:** depois de mudanças grandes em telas ou no gameplay. Um perfil desatualizado não quebra nada: só deixa de acelerar o que mudou.
 - O `frameDurationCpuMs` do Macrobenchmark inclui a espera na fila da tela ("Buffer Stuffing", o app adiantado). Para saber se a partida trava, use o `quadros_travados.py`.
 
-Medido em 2026-10-09 num Galaxy S25 (Android 16, tela a 120 Hz), depois de tirar as alocações por quadro da pista:
+Medido em 2026-10-12 num Galaxy S25 (Android 16, tela a 120 Hz), com o perfil de abertura separado do geral e a medição da partida contando só o jogo:
 
 | Medida | Sem perfil | Com perfil |
 |---|---|---|
-| Abertura até a primeira tela | 185 ms | 148 ms |
+| Abertura até a primeira tela | 188 ms | 163 ms |
 | Partida: quadros por segundo | 120 | 120 |
-| Partida: quadros com atraso do app (em ~2.480) | 2 a 3 | 1 a 2 |
-| Partida: thread principal por quadro | ~2,4 ms | ~2,4 ms |
+| Partida: quadros com atraso do app (em ~2.430) | 0 a 2 | 1 |
+| Partida: CPU por quadro, `frameDurationCpuMs` p50 / p90 | 5,0 / 6,8 ms | 4,3 / 6,0 ms |
+
+Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida contando a navegação), a abertura com perfil deu 148 ms; a variação entre execuções é de algumas dezenas de ms.
 
 ## Créditos e licenças
 
