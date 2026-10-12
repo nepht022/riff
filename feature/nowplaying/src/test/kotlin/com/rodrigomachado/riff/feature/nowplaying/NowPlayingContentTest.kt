@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,8 +11,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.SpotifyError
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,6 +27,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class NowPlayingContentTest {
+    private val sounds = mutableListOf<MenuSound>()
+
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -35,16 +40,18 @@ class NowPlayingContentTest {
     private var settingsOpened = false
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
-        RiffTheme {
-            NowPlayingContent(
-                state = state,
-                onRetry = { retries++ },
-                onPlay = { played = it },
-                onConfirm = { uri, id, confidence -> confirmed = Triple(uri, id, confidence) },
-                onChooseChart = { uri, title -> chooseFor = uri to title },
-                onOpenLibrary = { libraryOpened = true },
-                onOpenSettings = { settingsOpened = true },
-            )
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                NowPlayingContent(
+                    state = state,
+                    onRetry = { retries++ },
+                    onPlay = { played = it },
+                    onConfirm = { uri, id, confidence -> confirmed = Triple(uri, id, confidence) },
+                    onChooseChart = { uri, title -> chooseFor = uri to title },
+                    onOpenLibrary = { libraryOpened = true },
+                    onOpenSettings = { settingsOpened = true },
+                )
+            }
         }
     }
 
@@ -172,5 +179,17 @@ class NowPlayingContentTest {
 
         composeRule.onNodeWithText("Expert").performClick()
         assertEquals(PlayRequest("a", Difficulty.EXPERT, "spotify:track:x", 25), played)
+    }
+
+    @Test
+    fun menuButtonsPlayTheSoundOfTheirRole() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), trackOffsetMs = 0))))
+
+        composeRule.onNodeWithText("Biblioteca").performClick()
+        composeRule.onNodeWithText("Escolher outro").performClick()
+        composeRule.onNodeWithText("Jogar").performClick()
+        composeRule.onNodeWithText("Expert").performClick()
+
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.CONFIRM, MenuSound.CONFIRM), sounds)
     }
 }

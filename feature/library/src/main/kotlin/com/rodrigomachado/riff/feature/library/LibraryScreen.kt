@@ -34,16 +34,19 @@ import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
@@ -94,6 +97,7 @@ fun LibraryContent(
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
+    val playMenuSound = LocalMenuSound.current
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
         PosterTitle(
@@ -120,6 +124,7 @@ fun LibraryContent(
                 message = stringResource(R.string.library_no_folder_message),
                 actionLabel = stringResource(R.string.library_choose_folder),
                 onAction = onPickFolder,
+                actionSound = MenuSound.NAVIGATE,
             )
 
             state.isImporting -> LoadingState(
@@ -131,9 +136,12 @@ fun LibraryContent(
                 message = stringResource(R.string.library_empty_message),
                 actionLabel = stringResource(R.string.library_choose_another_folder),
                 onAction = onPickFolder,
+                actionSound = MenuSound.NAVIGATE,
             )
 
             else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { chart ->
+                // Escolher o mapa da música do Spotify conclui (confirma); senão, abre a escolha da dificuldade.
+                playMenuSound(if (matchingTitle != null) MenuSound.CONFIRM else MenuSound.NAVIGATE)
                 if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
             }
         }
@@ -171,8 +179,8 @@ private fun ChartList(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                PosterButton(stringResource(R.string.library_rescan), onClick = onRescan)
-                TextButton(onClick = onPickFolder) {
+                PosterButton(stringResource(R.string.library_rescan), onClick = onRescan, sound = MenuSound.NAVIGATE)
+                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onPickFolder)) {
                     Text(stringResource(R.string.library_change_folder), color = RiffColors.Paper)
                 }
             }
@@ -222,7 +230,7 @@ private fun ImportReportCard(report: ImportReport, onDismiss: () -> Unit) {
                 )
             }
         }
-        PosterButton(stringResource(R.string.library_report_ok), onClick = onDismiss)
+        PosterButton(stringResource(R.string.library_report_ok), onClick = onDismiss, sound = MenuSound.NAVIGATE)
     }
 }
 

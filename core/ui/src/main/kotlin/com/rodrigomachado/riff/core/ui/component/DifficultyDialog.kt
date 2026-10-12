@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.window.Dialog
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.R
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -54,10 +55,13 @@ fun <T> DifficultyDialog(
                 PosterButton(
                     label(option),
                     onClick = { onChoose(option) },
+                    sound = MenuSound.CONFIRM,
                     modifier = Modifier.testTag(DifficultyDialogTestTags.OPTION),
                 )
             }
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_cancel), color = RiffColors.Paper) }
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, onDismiss),
+            ) { Text(stringResource(R.string.ui_cancel), color = RiffColors.Paper) }
         }
     }
 }

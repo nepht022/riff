@@ -21,8 +21,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
@@ -103,7 +105,7 @@ private fun Message(text: String, action: String, onAction: () -> Unit, secondar
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
         Text(text, style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            PosterButton(action, onClick = onAction)
+            PosterButton(action, onClick = onAction, sound = MenuSound.CONFIRM)
             secondary()
         }
     }
@@ -156,14 +158,16 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             TextButton(
-                onClick = { onNudge(-NUDGE_MS) },
+                onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(-NUDGE_MS) },
             ) { Text(stringResource(R.string.calibration_less), color = RiffColors.Paper) }
             TextButton(
-                onClick = { onNudge(NUDGE_MS) },
+                onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(NUDGE_MS) },
             ) { Text(stringResource(R.string.calibration_more), color = RiffColors.Paper) }
         }
-        PosterButton(stringResource(R.string.calibration_save), onClick = onSave)
-        TextButton(onClick = onRepeat) { Text(stringResource(R.string.calibration_repeat), color = RiffColors.Paper) }
+        PosterButton(stringResource(R.string.calibration_save), onClick = onSave, sound = MenuSound.CONFIRM)
+        TextButton(
+            onClick = withMenuSound(MenuSound.CONFIRM, onRepeat),
+        ) { Text(stringResource(R.string.calibration_repeat), color = RiffColors.Paper) }
     }
 }
 

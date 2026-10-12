@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
@@ -114,6 +115,7 @@ private fun ReadyResults(
         PosterButton(
             stringResource(R.string.results_play_again),
             onClick = { onPlayAgain(record.chartId, record.difficulty) },
+            sound = MenuSound.CONFIRM,
         )
         TextButton(
             onClick = onDone,

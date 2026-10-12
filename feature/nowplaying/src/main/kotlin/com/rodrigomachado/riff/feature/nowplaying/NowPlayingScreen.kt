@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
@@ -36,6 +37,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
@@ -89,10 +91,13 @@ fun NowPlayingContent(
             style = MaterialTheme.typography.displaySmall,
         )
         Row {
-            TextButton(onClick = onOpenLibrary, modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenLibrary),
+                modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY),
+            ) {
                 Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
             }
-            TextButton(onClick = onOpenSettings) {
+            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings)) {
                 Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
             }
         }
@@ -119,6 +124,7 @@ private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary:
             message = stringResource(R.string.nowplaying_not_installed_message),
             actionLabel = stringResource(R.string.nowplaying_open_library),
             onAction = onOpenLibrary,
+            actionSound = MenuSound.NAVIGATE,
         )
 
         SpotifyError.NOT_CONFIGURED -> EmptyState(
@@ -126,6 +132,7 @@ private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary:
             message = stringResource(R.string.nowplaying_not_configured_message),
             actionLabel = stringResource(R.string.nowplaying_open_library),
             onAction = onOpenLibrary,
+            actionSound = MenuSound.NAVIGATE,
         )
 
         else -> ErrorState(stringResource(error.message()), onRetry = onRetry)
@@ -138,6 +145,13 @@ private fun SpotifyError.message(): Int = when (this) {
     SpotifyError.OFFLINE -> R.string.nowplaying_error_offline
     SpotifyError.DISCONNECTED -> R.string.nowplaying_error_disconnected
     else -> R.string.nowplaying_error_unknown
+}
+
+@Composable
+private fun ChooseOther(onClick: () -> Unit) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
+        Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
+    }
 }
 
 @Composable
@@ -166,10 +180,12 @@ private fun Playing(
                     stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist),
                     color = RiffColors.Paper,
                 )
-                PosterButton(stringResource(R.string.nowplaying_play), onClick = { choosingFor = true })
-                TextButton(onClick = { onChooseChart(track.trackUri, track.title) }) {
-                    Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
-                }
+                PosterButton(
+                    stringResource(R.string.nowplaying_play),
+                    onClick = { choosingFor = true },
+                    sound = MenuSound.CONFIRM,
+                )
+                ChooseOther { onChooseChart(track.trackUri, track.title) }
             }
 
             is MatchStatus.Suggested -> {
@@ -180,10 +196,9 @@ private fun Playing(
                 PosterButton(
                     stringResource(R.string.nowplaying_confirm),
                     onClick = { onConfirm(track.trackUri, match.chart.id, match.confidence) },
+                    sound = MenuSound.CONFIRM,
                 )
-                TextButton(onClick = { onChooseChart(track.trackUri, track.title) }) {
-                    Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
-                }
+                ChooseOther { onChooseChart(track.trackUri, track.title) }
             }
 
             MatchStatus.NoMatch -> {
@@ -191,6 +206,7 @@ private fun Playing(
                 PosterButton(
                     stringResource(R.string.nowplaying_choose),
                     onClick = { onChooseChart(track.trackUri, track.title) },
+                    sound = MenuSound.NAVIGATE,
                 )
             }
         }

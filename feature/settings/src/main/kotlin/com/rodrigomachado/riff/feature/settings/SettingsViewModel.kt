@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@Suppress("TooManyFunctions") // uma função por preferência da tela, mais as prévias dos sons
 class SettingsViewModel @Inject constructor(private val repository: SettingsRepository, sfxPlayers: SfxPlayerFactory) :
     ViewModel() {
     /** `null` enquanto as preferências carregam. */
@@ -38,6 +39,8 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
     }
 
     fun setLeftHanded(leftHanded: Boolean) = save { it.copy(leftHanded = leftHanded) }
+
+    fun setMenuSounds(enabled: Boolean) = save { it.copy(menuSounds = enabled) }
 
     fun previewHit() = preview { it.hit(PREVIEW_LANE) }
 

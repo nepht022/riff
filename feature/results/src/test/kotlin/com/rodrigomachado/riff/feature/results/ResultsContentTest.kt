@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.results
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -8,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -80,5 +83,26 @@ class ResultsContentTest {
                 "48.300" in pane && "88%" in pane && "NOVO RECORDE" in pane
             },
         ).assertExists()
+    }
+
+    @Test
+    fun playingAgainConfirms() {
+        val sounds = mutableListOf<MenuSound>()
+        composeRule.setContent {
+            CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+                RiffTheme {
+                    ResultsContent(
+                        ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", isNewBest = false),
+                        onPlayAgain = { _, _ -> },
+                        onDone = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Jogar de novo").performScrollTo().performClick()
+
+        // O Voltar soa pela navegação (a tela sai da pilha), não pelo botão: assim o gesto também soa, uma vez só.
+        assertEquals(listOf(MenuSound.CONFIRM), sounds)
     }
 }

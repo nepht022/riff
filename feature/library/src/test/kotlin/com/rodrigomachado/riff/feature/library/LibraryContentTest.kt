@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.library
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -9,6 +10,8 @@ import com.rodrigomachado.riff.core.data.importer.ImportFailure
 import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,6 +23,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class LibraryContentTest {
+    private val sounds = mutableListOf<MenuSound>()
+
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -29,15 +34,17 @@ class LibraryContentTest {
     private var played: Pair<String, Difficulty>? = null
 
     private fun show(state: LibraryUiState) = composeRule.setContent {
-        RiffTheme {
-            LibraryContent(
-                state = state,
-                onPickFolder = { picks++ },
-                onRescan = { rescans++ },
-                onReportDismissed = { dismissals++ },
-                onPlay = { id, difficulty -> played = id to difficulty },
-                onBack = {},
-            )
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                LibraryContent(
+                    state = state,
+                    onPickFolder = { picks++ },
+                    onRescan = { rescans++ },
+                    onReportDismissed = { dismissals++ },
+                    onPlay = { id, difficulty -> played = id to difficulty },
+                    onBack = {},
+                )
+            }
         }
     }
 
@@ -259,5 +266,17 @@ class LibraryContentTest {
         )
 
         composeRule.onNodeWithText("Quebrada: mapa inválido (linha 3)").assertExists()
+    }
+
+    @Test
+    fun libraryButtonsNavigateAndChoosingTheDifficultyConfirms() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))))
+
+        composeRule.onNodeWithText("Reimportar").performClick()
+        composeRule.onNodeWithText("Trocar pasta").performClick()
+        composeRule.onNodeWithText("Música").performClick()
+        composeRule.onNodeWithText("Expert").performClick()
+
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
     }
 }

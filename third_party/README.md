@@ -8,9 +8,9 @@
 - Por que aqui: o Spotify publica o App Remote só no GitHub, fora do Maven. Um repositório Maven local evita a dependência direta de `.aar`, que o AGP não aceita em módulos de biblioteca.
 - O SDK usa o Gson em tempo de execução; a versão fica no version catalog (`gson`).
 
-## Gravações de guitarra para o som de erro (`sons/`)
+## Gravações de guitarra para os sons de erro e do menu (`sons/`)
 
-Prévias em MP3 baixadas do Freesound, todas com licença **Creative Commons 0** (domínio público, conferida na página de cada uma em 2026-10-08). `scripts/montar_sfx_erro.py` monta com elas as seis variações `core/audio/src/main/res/raw/sfx_miss_*.wav`.
+Prévias em MP3 baixadas do Freesound, todas com licença **Creative Commons 0** (domínio público, conferida na página de cada uma em 2026-10-08). `scripts/montar_sfx_erro.py` monta com elas as seis variações `core/audio/src/main/res/raw/sfx_miss_*.wav`. `scripts/montar_sfx_menu.py` monta os sons dos botões do menu (`sfx_menu_*.wav`).
 
 | Arquivo | Som no Freesound | Autor |
 |---|---|---|

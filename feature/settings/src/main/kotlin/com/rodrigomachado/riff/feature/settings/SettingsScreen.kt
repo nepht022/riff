@@ -27,9 +27,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import java.text.NumberFormat
@@ -38,6 +40,7 @@ import kotlin.math.roundToInt
 object SettingsTestTags {
     const val MASTER_VOLUME = "settings_master_volume"
     const val LEFT_HANDED = "settings_left_handed"
+    const val MENU_SOUNDS = "settings_menu_sounds"
 }
 
 @Composable
@@ -60,6 +63,7 @@ fun SettingsScreen(
         onMissVolume = viewModel::setMissVolume,
         onNoteSpeed = viewModel::setNoteSpeed,
         onLeftHanded = viewModel::setLeftHanded,
+        onMenuSounds = viewModel::setMenuSounds,
         onPreviewHit = viewModel::previewHit,
         onPreviewMiss = viewModel::previewMiss,
         onCalibrate = onCalibrate,
@@ -76,6 +80,7 @@ fun SettingsContent(
     onMissVolume: (Float) -> Unit,
     onNoteSpeed: (Float) -> Unit,
     onLeftHanded: (Boolean) -> Unit,
+    onMenuSounds: (Boolean) -> Unit,
     onPreviewHit: () -> Unit,
     onPreviewMiss: () -> Unit,
     onCalibrate: () -> Unit,
@@ -115,6 +120,13 @@ fun SettingsContent(
                 onPreviewMiss()
             },
         )
+        SwitchRow(
+            title = stringResource(R.string.settings_menu_sounds),
+            hint = stringResource(R.string.settings_menu_sounds_hint),
+            checked = settings.menuSounds,
+            onChange = onMenuSounds,
+            tag = SettingsTestTags.MENU_SOUNDS,
+        )
         Section(stringResource(R.string.settings_game))
         SettingSlider(
             label = stringResource(R.string.settings_note_speed),
@@ -124,7 +136,13 @@ fun SettingsContent(
             range = Settings.MIN_NOTE_SPEED..Settings.MAX_NOTE_SPEED,
             steps = SPEED_STEPS,
         )
-        LeftHandedRow(settings.leftHanded, onLeftHanded)
+        SwitchRow(
+            title = stringResource(R.string.settings_left_handed),
+            hint = stringResource(R.string.settings_left_handed_hint),
+            checked = settings.leftHanded,
+            onChange = onLeftHanded,
+            tag = SettingsTestTags.LEFT_HANDED,
+        )
         CalibrationRow(settings.audioOffsetMs, onCalibrate)
     }
 }
@@ -183,7 +201,9 @@ private fun SettingSlider(
 @Composable
 private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onCalibrate).padding(vertical = Spacing.md),
+        Modifier.fillMaxWidth().clickable(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onCalibrate),
+        ).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -201,23 +221,23 @@ private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
 }
 
 @Composable
-private fun LeftHandedRow(checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun SwitchRow(title: String, hint: String, checked: Boolean, onChange: (Boolean) -> Unit, tag: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
-                stringResource(R.string.settings_left_handed),
+                title,
                 style = MaterialTheme.typography.titleMedium,
                 color = RiffColors.Paper,
             )
             Text(
-                stringResource(R.string.settings_left_handed_hint),
+                hint,
                 style = MaterialTheme.typography.bodySmall,
                 color = RiffColors.PaperDim,
             )
         }
         Switch(
             checked = checked,
-            onCheckedChange = onChange,
+            onCheckedChange = withMenuSound(MenuSound.NAVIGATE, onChange),
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,
@@ -225,7 +245,7 @@ private fun LeftHandedRow(checked: Boolean, onChange: (Boolean) -> Unit) {
                 uncheckedTrackColor = RiffColors.StageBlack,
                 uncheckedBorderColor = RiffColors.PaperDim,
             ),
-            modifier = Modifier.testTag(SettingsTestTags.LEFT_HANDED),
+            modifier = Modifier.testTag(tag),
         )
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.R
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -43,6 +44,7 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    actionSound: MenuSound? = null,
 ) {
     CenteredColumn(modifier) {
         Text(title, style = MaterialTheme.typography.titleLarge, color = RiffColors.Paper, textAlign = TextAlign.Center)
@@ -53,7 +55,7 @@ fun EmptyState(
             textAlign = TextAlign.Center,
         )
         if (actionLabel != null && onAction != null) {
-            PosterButton(actionLabel, onClick = onAction)
+            PosterButton(actionLabel, onClick = onAction, sound = actionSound)
         }
     }
 }
@@ -71,6 +73,7 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
             stringResource(R.string.core_ui_retry),
             onClick = onRetry,
             modifier = Modifier.testTag(StatusViewsTestTags.RETRY),
+            sound = MenuSound.CONFIRM,
         )
     }
 }

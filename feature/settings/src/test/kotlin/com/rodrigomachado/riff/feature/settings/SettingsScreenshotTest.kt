@@ -28,6 +28,7 @@ class SettingsScreenshotTest {
                         onMissVolume = {},
                         onNoteSpeed = {},
                         onLeftHanded = {},
+                        onMenuSounds = {},
                         onPreviewHit = {},
                         onPreviewMiss = {},
                         onCalibrate = {},

@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.settings
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertRangeInfoEquals
@@ -8,7 +9,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,26 +23,32 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class SettingsContentTest {
+    private val sounds = mutableListOf<MenuSound>()
+
     @get:Rule
     val composeRule = createComposeRule()
 
     private var leftHanded: Boolean? = null
+    private var menuSounds: Boolean? = null
     private var back = false
 
     private fun show(settings: Settings = Settings.DEFAULT) = composeRule.setContent {
-        RiffTheme {
-            SettingsContent(
-                settings = settings,
-                onMasterVolume = {},
-                onHitVolume = {},
-                onMissVolume = {},
-                onNoteSpeed = {},
-                onLeftHanded = { leftHanded = it },
-                onPreviewHit = {},
-                onPreviewMiss = {},
-                onCalibrate = {},
-                onBack = { back = true },
-            )
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                SettingsContent(
+                    settings = settings,
+                    onMasterVolume = {},
+                    onHitVolume = {},
+                    onMissVolume = {},
+                    onNoteSpeed = {},
+                    onLeftHanded = { leftHanded = it },
+                    onMenuSounds = { menuSounds = it },
+                    onPreviewHit = {},
+                    onPreviewMiss = {},
+                    onCalibrate = {},
+                    onBack = { back = true },
+                )
+            }
         }
     }
 
@@ -95,6 +104,7 @@ class SettingsContentTest {
                     onMissVolume = {},
                     onNoteSpeed = {},
                     onLeftHanded = {},
+                    onMenuSounds = {},
                     onPreviewHit = {},
                     onPreviewMiss = {},
                     onCalibrate = { opened = true },
@@ -114,5 +124,16 @@ class SettingsContentTest {
         show()
 
         composeRule.onNodeWithText("Não calibrado").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theMenuSoundsSwitchTurnsThemOffWithItsOwnSound() {
+        show()
+
+        composeRule.onNodeWithTag(SettingsTestTags.MENU_SOUNDS).performScrollTo().performClick()
+        composeRule.onNodeWithTag(SettingsTestTags.LEFT_HANDED).performScrollTo().performClick()
+
+        assertEquals(false, menuSounds)
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE), sounds)
     }
 }

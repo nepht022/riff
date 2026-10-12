@@ -1,10 +1,13 @@
 package com.rodrigomachado.riff.feature.calibration
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -16,22 +19,26 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class CalibrationContentTest {
+    private val sounds = mutableListOf<MenuSound>()
+
     @get:Rule
     val composeRule = createComposeRule()
 
     private val events = mutableListOf<String>()
 
     private fun show(state: CalibrationUiState) = composeRule.setContent {
-        RiffTheme {
-            CalibrationContent(
-                state = state,
-                onStart = { events += "start" },
-                onTap = { events += "tap" },
-                onNudge = { events += "nudge:$it" },
-                onSave = { events += "save" },
-                onDone = { events += "done" },
-                onReset = { events += "reset" },
-            )
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                CalibrationContent(
+                    state = state,
+                    onStart = { events += "start" },
+                    onTap = { events += "tap" },
+                    onNudge = { events += "nudge:$it" },
+                    onSave = { events += "save" },
+                    onDone = { events += "done" },
+                    onReset = { events += "reset" },
+                )
+            }
         }
     }
 
@@ -92,5 +99,15 @@ class CalibrationContentTest {
         composeRule.onNodeWithText("Zerar").performClick()
 
         assertEquals(listOf("reset"), events)
+    }
+
+    @Test
+    fun saveConfirmsAndTheNudgesNavigate() {
+        show(CalibrationUiState.Result(latencyMs = 40))
+
+        composeRule.onNodeWithText("+5 ms").performClick()
+        composeRule.onNodeWithText("Salvar").performClick()
+
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
     }
 }

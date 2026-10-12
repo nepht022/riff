@@ -44,7 +44,8 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
 - **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha). No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
 - **Calibração** (Configurações → Calibrar atraso do áudio): toque junto com as batidas para medir o atraso do seu fone ou alto-falante. Útil com fone Bluetooth; com o alto-falante do celular costuma ser melhor deixar em 0 (**Zerar**).
-- **Configurações:** volume geral, do acerto e do erro; velocidade das notas (0,5× a 2×); modo canhoto (trilhas espelhadas).
+- **Configurações:** volume geral, do acerto e do erro; sons do menu (liga e desliga); velocidade das notas (0,5× a 2×); modo canhoto (trilhas espelhadas).
+- **Sons do menu:** os botões fora da partida tocam guitarra, no volume geral: abrir ou escolher algo dá um toque abafado, começar ou salvar dá um power chord (cada um sorteia entre duas gravações) e voltar, pelo botão ou pelo gesto do celular, arrasta a palheta na corda. Durante a partida os botões ficam em silêncio.
 
 ## Desenvolvimento
 
@@ -69,7 +70,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:model` | Modelos de domínio |
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`), e o casamento entre faixa do Spotify e mapa |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
-| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de acerto e erro (SoundPool), gerados por `scripts/gerar_sfx.py` e `scripts/montar_sfx_erro.py` |
+| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
 | `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify, ajustes de sincronia e recordes (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
 | `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
@@ -78,7 +79,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
 | `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
-| `:feature:settings` | Configurações: volume geral, de acerto e de erro, velocidade das notas e modo canhoto |
+| `:feature:settings` | Configurações: volume geral, de acerto e de erro, sons do menu, velocidade das notas e modo canhoto |
 | `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
@@ -125,7 +126,7 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 
 ## Créditos e licenças
 
-- Som de erro: seis variações montadas com gravações de guitarra com licença Creative Commons 0 do Freesound (origem e autores em `third_party/README.md`).
+- Som de erro e sons do menu: montados com gravações de guitarra com licença Creative Commons 0 do Freesound (origem e autores em `third_party/README.md`).
 - Som de acerto e metrônomo da calibração: sintetizados pelo próprio projeto.
 - Fontes New Rocker e Oswald: licença OFL (`core/ui/licenses/`).
 - Nada do Guitar Hero nem de projetos que redesenham seus assets: a pista, as gemas e a chama são desenhadas em código.

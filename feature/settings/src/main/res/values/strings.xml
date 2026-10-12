@@ -13,4 +13,6 @@
     <string name="settings_left_handed_hint">Espelha as trilhas: a verde fica à direita.</string>
     <string name="settings_calibrate">Calibrar atraso do áudio</string>
     <string name="settings_not_calibrated">Não calibrado</string>
+    <string name="settings_menu_sounds">Sons do menu</string>
+    <string name="settings_menu_sounds_hint">Guitarra ao tocar nos botões</string>
 </resources>

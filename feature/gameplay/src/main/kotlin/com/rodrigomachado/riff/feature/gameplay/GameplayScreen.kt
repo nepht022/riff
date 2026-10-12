@@ -40,10 +40,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Judgment
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
 import com.rodrigomachado.riff.core.ui.stage.JudgmentText
 import com.rodrigomachado.riff.core.ui.stage.MultiplierStamp
@@ -256,7 +258,7 @@ private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onRes
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
-        PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume)
+        PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
         SyncAdjuster(songOffsetMs, onAdjustOffset)
         TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
             Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper)
@@ -275,7 +277,7 @@ private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             for ((label, deltaMs) in SYNC_BUTTONS) {
-                TextButton(onClick = { onAdjustOffset(deltaMs) }) {
+                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE) { onAdjustOffset(deltaMs) }) {
                     Text(stringResource(label), color = RiffColors.Paper)
                 }
             }
