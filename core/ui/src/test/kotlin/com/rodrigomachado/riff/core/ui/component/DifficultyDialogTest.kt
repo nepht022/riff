@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.espresso.Espresso
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -84,6 +85,16 @@ class DifficultyDialogTest {
     fun cancellingSoundsLikeGoingBack() {
         show()
         composeRule.onNodeWithText("Cancelar").performClick()
+        assertEquals(listOf(MenuSound.BACK), sounds)
+    }
+
+    @Test
+    fun closingWithTheBackGestureSoundsLikeCancelling() {
+        show()
+
+        Espresso.pressBack() // o gesto de voltar fecha o diálogo (onDismissRequest)
+
+        assertEquals(true, dismissed)
         assertEquals(listOf(MenuSound.BACK), sounds)
     }
 }

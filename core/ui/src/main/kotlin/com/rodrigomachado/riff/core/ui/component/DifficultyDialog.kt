@@ -35,7 +35,9 @@ fun <T> DifficultyDialog(
     onChoose: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    // Fechar sem escolher (Cancelar, gesto de voltar ou toque fora) soa como voltar, venha de onde vier.
+    val dismiss = withMenuSound(MenuSound.BACK, onDismiss)
+    Dialog(onDismissRequest = dismiss) {
         Column(
             Modifier
                 .background(RiffColors.StageBlack, MaterialTheme.shapes.large)
