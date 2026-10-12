@@ -91,10 +91,10 @@ def save(path, samples):
 def main(source, target):
     note, chord, scratch = (load(f"{source}/{name}") for name in (NOTE, CHORD, SCRATCH))
     sounds = {
-        "sfx_menu_navigate_1": lowpass(shape(shift(chord, -5), 0.12, 0.05), 3500),
-        "sfx_menu_navigate_2": lowpass(shape(note, 0.15, 0.07), 3500),
-        "sfx_menu_confirm_1": lowpass(power_chord(note, -5, 0.45, 0.2), 4000),
-        "sfx_menu_confirm_2": lowpass(power_chord(note, -3, 0.25, 0.1), 4000),
+        "sfx_menu_navigate_1": lowpass(shape(shift(chord, -5), 0.22, 0.10), 3500),
+        "sfx_menu_navigate_2": lowpass(shape(note, 0.28, 0.12), 3500),
+        "sfx_menu_confirm_1": lowpass(power_chord(note, -5, 0.70, 0.30), 4000),
+        "sfx_menu_confirm_2": lowpass(power_chord(note, -3, 0.42, 0.18), 4000),
         "sfx_menu_back": lowpass(shape(scratch, 0.35, 0.12), 5000),
     }
     for name, samples in sounds.items():
