@@ -6,6 +6,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -121,10 +122,10 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
 
         @Throws(IOException::class)
         @Suppress("TooGenericExceptionCaught") // erros do MediaCodec chegam como RuntimeException
-        fun open(context: Context, uri: String): MediaCodecPcmSource {
+        fun open(context: Context, uri: String, opener: RandomReadOpener): MediaCodecPcmSource {
             val extractor = MediaExtractor()
             return try {
-                startDecoding(context, uri, extractor)
+                startDecoding(context, uri, opener, extractor)
             } catch (e: IOException) {
                 extractor.release()
                 throw e
@@ -134,8 +135,19 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
             }
         }
 
-        private fun startDecoding(context: Context, uri: String, extractor: MediaExtractor): MediaCodecPcmSource {
-            extractor.setDataSource(context, Uri.parse(uri), null)
+        private fun startDecoding(
+            context: Context,
+            uri: String,
+            opener: RandomReadOpener,
+            extractor: MediaExtractor,
+        ): MediaCodecPcmSource {
+            // Dentro de um .sng, o extrator lê pela fonte de dados do pacote (em qualquer posição: voltar 0,5 s).
+            val packaged = audioDataSource(uri, opener)
+            if (packaged != null) {
+                extractor.setDataSource(packaged)
+            } else {
+                extractor.setDataSource(context, Uri.parse(uri), null)
+            }
             val track = (0 until extractor.trackCount).firstOrNull {
                 extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
             } ?: throw IOException("sem faixa de áudio: $uri")

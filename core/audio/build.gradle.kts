@@ -9,8 +9,10 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:chart"))
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit4)
+    testImplementation(testFixtures(project(":core:chart")))
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
 }

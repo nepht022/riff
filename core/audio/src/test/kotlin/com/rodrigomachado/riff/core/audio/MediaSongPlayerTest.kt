@@ -4,6 +4,7 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,6 +19,8 @@ import org.robolectric.shadows.util.DataSource
 
 @RunWith(RobolectricTestRunner::class)
 class MediaSongPlayerTest {
+    private val noPackages = RandomReadOpener { error("sem .sng neste teste") }
+
     /** Um MediaPlayer que, como no aparelho, falha quando usado depois de liberado. */
     private fun strictPlayer() = MediaPlayer().also {
         shadowOf(
@@ -27,7 +30,7 @@ class MediaSongPlayerTest {
 
     @Test
     fun usingThePlayerAfterReleaseIsHarmless() {
-        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), strictPlayer())
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), noPackages, strictPlayer())
 
         song.release()
 
@@ -41,7 +44,7 @@ class MediaSongPlayerTest {
     @Test
     fun theAppVolumeGoesToThePlayer() {
         val media = MediaPlayer()
-        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), media)
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), noPackages, media)
 
         song.setVolume(0.4f)
 
@@ -55,7 +58,7 @@ class MediaSongPlayerTest {
         val media = MediaPlayer()
         media.setDataSource("musica.ogg")
         media.prepare()
-        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), media)
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), noPackages, media)
 
         song.seekTo(29_500)
         shadowOf(Looper.getMainLooper()).idle()
@@ -93,7 +96,7 @@ class MediaSongPlayerTest {
             ShadowMediaPlayer.MediaInfo(60_000, 0),
         )
         val media = WatchedPlayer()
-        val song = MediaSongPlayer(context, media)
+        val song = MediaSongPlayer(context, noPackages, media)
         media.duringPrepare = { song.release() }
 
         runBlocking { song.prepare(uri) }

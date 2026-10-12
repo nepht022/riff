@@ -4,10 +4,16 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
+import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class MediaSongPlayer(private val context: Context, private val player: MediaPlayer = MediaPlayer()) : SongPlayer {
+/** Um arquivo de áudio só: da pasta do mapa ou de dentro de um `.sng` ([opener] abre o pacote). */
+class MediaSongPlayer(
+    private val context: Context,
+    private val opener: RandomReadOpener,
+    private val player: MediaPlayer = MediaPlayer(),
+) : SongPlayer {
 
     @Volatile
     private var completed = false
@@ -45,7 +51,8 @@ class MediaSongPlayer(private val context: Context, private val player: MediaPla
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build(),
         )
-        player.setDataSource(context, Uri.parse(uri))
+        val packaged = audioDataSource(uri, opener)
+        if (packaged != null) player.setDataSource(packaged) else player.setDataSource(context, Uri.parse(uri))
         player.setOnCompletionListener { completed = true }
         player.prepare()
     }

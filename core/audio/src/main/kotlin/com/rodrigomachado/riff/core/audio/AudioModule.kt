@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.audio
 
 import android.content.Context
+import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,11 +14,8 @@ import javax.inject.Singleton
 object AudioModule {
     @Provides
     @LocalSong
-    fun songPlayers(@ApplicationContext context: Context): SongPlayerFactory = SongPlayerFactory {
-        MediaSongPlayer(
-            context,
-        )
-    }
+    fun songPlayers(@ApplicationContext context: Context, opener: RandomReadOpener): SongPlayerFactory =
+        SongPlayerFactory { MediaSongPlayer(context, opener) }
 
     @Provides
     fun sfxPlayers(@ApplicationContext context: Context): SfxPlayerFactory = SfxPlayerFactory {
@@ -27,19 +25,19 @@ object AudioModule {
     }
 
     @Provides
-    fun stemPlayers(@ApplicationContext context: Context): StemSongPlayerFactory =
+    fun stemPlayers(@ApplicationContext context: Context, opener: RandomReadOpener): StemSongPlayerFactory =
         StemSongPlayerFactory { guitarUri, backingUris ->
             StemSongPlayer(
                 guitarUri,
                 backingUris,
-                opener = { uri -> MediaCodecPcmSource.open(context, uri) },
+                opener = { uri -> MediaCodecPcmSource.open(context, uri, opener) },
                 sinks = ::AudioTrackSink,
             )
         }
 
     @Provides
-    fun musicStarts(@ApplicationContext context: Context): MusicStartFinder =
-        PcmMusicStartFinder { uri -> MediaCodecPcmSource.open(context, uri) }
+    fun musicStarts(@ApplicationContext context: Context, opener: RandomReadOpener): MusicStartFinder =
+        PcmMusicStartFinder { uri -> MediaCodecPcmSource.open(context, uri, opener) }
 
     @Provides
     fun playbackInterruptions(@ApplicationContext context: Context): PlaybackInterruptionsFactory =
