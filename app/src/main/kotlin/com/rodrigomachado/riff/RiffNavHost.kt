@@ -2,7 +2,8 @@ package com.rodrigomachado.riff
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -35,7 +36,8 @@ import com.rodrigomachado.riff.feature.settings.SettingsScreen
 @Composable
 fun RiffNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    val back = remember { BackNavigation() }
+    // Salvo com a tela: girar o celular ou o Android fechar o app em segundo plano não perde as telas abertas.
+    val back = rememberSaveable(saver = Saver({ it.save() }, BackNavigation::restore)) { BackNavigation() }
     val playMenuSound = LocalMenuSound.current
     // Som de voltar ao sair de uma tela, pelo botão Voltar, pelo gesto do celular ou pelo Sair da partida.
     LaunchedEffect(navController) {
