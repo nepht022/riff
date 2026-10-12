@@ -4,8 +4,11 @@ import com.rodrigomachado.riff.core.chart.ChartAudioFiles
 import com.rodrigomachado.riff.core.chart.sng.SngIndex
 import com.rodrigomachado.riff.core.model.Difficulty
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
@@ -33,8 +36,9 @@ class EncoreUnavailableException(cause: Throwable?) : IOException("Encore indisp
 class EncoreFormatException(message: String) : IOException(message)
 
 /** Pesquisa e downloads do Encore (enchor.us). A API não é documentada: o formato mudou → [EncoreFormatException]. */
-class EncoreClient(private val transport: HttpTransport) {
-    suspend fun search(query: String, page: Int): EncorePage {
+class EncoreClient(private val transport: HttpTransport, private val io: CoroutineDispatcher = Dispatchers.IO) {
+    // Tudo em IO: ler o corpo da resposta é rede, e o Android proíbe rede na thread da tela.
+    suspend fun search(query: String, page: Int): EncorePage = withContext(io) {
         val body = JSONObject()
             .put("search", query).put("per_page", PER_PAGE).put("page", page).put("instrument", "guitar")
             .put("difficulty", JSONObject.NULL).put("drumType", JSONObject.NULL).put("drumsReviewed", false)
@@ -43,12 +47,14 @@ class EncoreClient(private val transport: HttpTransport) {
             if (response.code !in 200..299) throw EncoreUnavailableException(IOException("HTTP ${response.code}"))
             response.body.readBytes().decodeToString()
         }
-        return parse(text, page)
+        parse(text, page)
     }
 
     /** Pelo começo do pacote (o índice); null se não deu para saber (a marca só fica de fora). */
+    suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean? = withContext(io) { peek(chart) }
+
     @Suppress("SwallowedException")
-    suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean? = try {
+    private suspend fun peek(chart: EncoreChart): Boolean? = try {
         call { transport.get(chart.downloadUrl, 0L until HEAD_BYTES) }.use { response ->
             if (response.code !in 200..299) return null
             when (val index = SngIndex.parse(response.body.readBytes())) {
@@ -62,7 +68,7 @@ class EncoreClient(private val transport: HttpTransport) {
         null
     }
 
-    suspend fun download(chart: EncoreChart, into: OutputStream, onProgress: (Float) -> Unit) {
+    suspend fun download(chart: EncoreChart, into: OutputStream, onProgress: (Float) -> Unit) = withContext(io) {
         call { transport.get(chart.downloadUrl) }.use { response ->
             if (response.code !in 200..299) throw EncoreUnavailableException(IOException("HTTP ${response.code}"))
             val buffer = ByteArray(BUFFER_BYTES)
