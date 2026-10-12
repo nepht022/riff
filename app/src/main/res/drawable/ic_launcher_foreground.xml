@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Palheta vermelha com contorno de papel, dentro da área segura do ícone adaptativo (66 dp centrais de 108). -->
+<!--
+  Palheta vermelha com contorno de papel e um raio de papel com sombra dura (como os botões do app), dentro da
+  área segura do ícone adaptativo (66 dp centrais de 108).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -15,4 +18,10 @@
         android:fillColor="@color/riff_paper"
         android:fillAlpha="0.35"
         android:pathData="M40,38 C40,33 46,31 52,31 C46,33 43,36 42,41 Z" />
+    <path
+        android:fillColor="@color/riff_ink"
+        android:pathData="M52.98,33.76 L60.98,33.76 L56.98,46.56 L63.38,46.56 L52.18,69.76 L54.58,54.56 L48.18,54.56 Z" />
+    <path
+        android:fillColor="@color/riff_paper"
+        android:pathData="M51.7,32 L59.7,32 L55.7,44.8 L62.1,44.8 L50.9,68 L53.3,52.8 L46.9,52.8 Z" />
 </vector>
