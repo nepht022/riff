@@ -59,6 +59,16 @@ class RiffPreferencesTest {
     }
 
     @Test
+    fun menuSoundsStartOnAndCanBeTurnedOff() = runTest {
+        val preferences = RiffPreferences(InMemoryPreferencesStore())
+        assertEquals(true, preferences.settings.first().menuSounds)
+
+        preferences.updateSettings { it.copy(menuSounds = false) }
+
+        assertEquals(false, preferences.settings.first().menuSounds)
+    }
+
+    @Test
     fun theOldSingleEffectsVolumeCarriesOverToHitAndMiss() = runTest {
         val store = InMemoryPreferencesStore()
         store.edit { it[floatPreferencesKey("sfx_volume")] = 0.25f }

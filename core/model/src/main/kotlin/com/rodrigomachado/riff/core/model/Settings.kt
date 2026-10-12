@@ -3,7 +3,8 @@ package com.rodrigomachado.riff.core.model
 /**
  * Preferências do jogador. [audioOffsetMs] negativo compensa atraso de áudio (fone Bluetooth).
  * Volumes vão de 0 (desligado) a 1: [masterVolume] multiplica todos os sons do app (não o Spotify, cujo
- * volume o SDK não controla); [hitVolume] e [missVolume] são os sons de acerto e de erro.
+ * volume o SDK não controla); [hitVolume] e [missVolume] são os sons de acerto e de erro. [menuSounds] liga os sons
+ * de guitarra dos botões do menu (no volume geral).
  */
 data class Settings(
     val audioOffsetMs: Int,
@@ -12,6 +13,7 @@ data class Settings(
     val masterVolume: Float,
     val hitVolume: Float,
     val missVolume: Float,
+    val menuSounds: Boolean = true,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }

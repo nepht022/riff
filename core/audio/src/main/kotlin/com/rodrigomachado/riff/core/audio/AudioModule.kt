@@ -6,6 +6,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -43,6 +44,11 @@ object AudioModule {
     @Provides
     fun playbackInterruptions(@ApplicationContext context: Context): PlaybackInterruptionsFactory =
         PlaybackInterruptionsFactory { AndroidPlaybackInterruptions(context) }
+
+    /** Um só para o app: os sons do menu ficam carregados enquanto ele vive. */
+    @Provides
+    @Singleton
+    fun menuSounds(@ApplicationContext context: Context): MenuSoundPlayer = SoundPoolMenuSounds(context)
 
     @Provides
     fun audioSinks(): AudioSinkFactory = AudioSinkFactory(::AudioTrackSink)

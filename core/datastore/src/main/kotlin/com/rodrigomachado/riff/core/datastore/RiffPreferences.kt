@@ -34,6 +34,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[MASTER_VOLUME] = updated.masterVolume
             prefs[HIT_VOLUME] = updated.hitVolume
             prefs[MISS_VOLUME] = updated.missVolume
+            prefs[MENU_SOUNDS] = updated.menuSounds
             prefs.remove(LEGACY_SFX_VOLUME)
             prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
         }
@@ -56,6 +57,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             masterVolume = volume(MASTER_VOLUME) ?: default.masterVolume,
             hitVolume = volume(HIT_VOLUME) ?: legacyEffects ?: default.hitVolume,
             missVolume = volume(MISS_VOLUME) ?: legacyEffects ?: default.missVolume,
+            menuSounds = this[MENU_SOUNDS] ?: default.menuSounds,
         )
     }
 
@@ -69,6 +71,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val MASTER_VOLUME = floatPreferencesKey("master_volume")
         val HIT_VOLUME = floatPreferencesKey("hit_volume")
         val MISS_VOLUME = floatPreferencesKey("miss_volume")
+        val MENU_SOUNDS = booleanPreferencesKey("menu_sounds")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")
