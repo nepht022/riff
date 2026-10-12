@@ -115,9 +115,9 @@ fun LibraryContent(
         when {
             state.isLoading -> LoadingState()
 
-            state.folderAccessLost -> ErrorState(stringResource(R.string.library_access_lost), onRetry = onPickFolder)
+            state.folderAccessLost -> LibraryError(stringResource(R.string.library_access_lost), onPickFolder)
 
-            state.importFailed -> ErrorState(stringResource(R.string.library_import_failed), onRetry = onRescan)
+            state.importFailed -> LibraryError(stringResource(R.string.library_import_failed), onRescan)
 
             !state.hasFolder -> EmptyState(
                 title = stringResource(R.string.library_no_folder_title),
@@ -158,6 +158,12 @@ fun LibraryContent(
             onDismiss = { choosingId = null },
         )
     }
+}
+
+/** Os erros da biblioteca levam a escolher a pasta ou reimportar: navegar, não confirmar. */
+@Composable
+private fun LibraryError(message: String, onRetry: () -> Unit) {
+    ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
 }
 
 @Composable

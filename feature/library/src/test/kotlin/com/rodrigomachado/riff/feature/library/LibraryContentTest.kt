@@ -279,4 +279,12 @@ class LibraryContentTest {
 
         assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
     }
+
+    @Test
+    fun theErrorButtonsNavigateLikeChoosingAFolderAndRescanning() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, folderAccessLost = true))
+        composeRule.onNodeWithText("Tentar de novo").performClick()
+
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+    }
 }

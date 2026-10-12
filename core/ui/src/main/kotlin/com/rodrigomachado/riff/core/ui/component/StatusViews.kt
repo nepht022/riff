@@ -61,7 +61,12 @@ fun EmptyState(
 }
 
 @Composable
-fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+fun ErrorState(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    retrySound: MenuSound = MenuSound.CONFIRM,
+) {
     CenteredColumn(modifier) {
         Text(
             message,
@@ -73,7 +78,7 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
             stringResource(R.string.core_ui_retry),
             onClick = onRetry,
             modifier = Modifier.testTag(StatusViewsTestTags.RETRY),
-            sound = MenuSound.CONFIRM,
+            sound = retrySound,
         )
     }
 }
