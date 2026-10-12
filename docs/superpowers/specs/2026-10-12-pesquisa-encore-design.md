@@ -1,6 +1,6 @@
 # Riff: pesquisar e baixar mapas do Encore (e ler `.sng`)
 
-Data: 2026-10-12 · Status: aprovado em conversa, aguardando revisão da especificação escrita
+Data: 2026-10-12 · Status: implementado em 2026-10-12
 Complementa: `2026-10-05-riff-design.md` (biblioteca e modo Spotify) e `2026-10-08`/`2026-10-09` (guitarra separada, sincronia)
 
 ## 1. Objetivo

@@ -36,8 +36,15 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
    - `notes.chart` ou `notes.mid` (as notas) e `song.ini` (nome, artista, atraso);
    - o áudio: `song.ogg`, `.opus`, `.mp3` ou `.wav`.
 3. **Guitarra separada:** se a subpasta tiver `guitar.*` e pelo menos uma faixa de acompanhamento (`song`, `rhythm`, `bass`, `drums`, `drums_1` a `drums_4`, `vocals`, `vocals_1`, `vocals_2`, `keys`, `crowd`), o Riff toca todas juntas e corta só a guitarra no erro.
-4. Ainda não são lidos: mapas `.sng` (o formato compactado do Encore); desembrulhe-os numa pasta comum.
+4. Mapas `.sng` (o pacote do Encore e do YARG, um arquivo por música) são lidos direto: é só colocar o arquivo na pasta.
 5. Não use mapas da Harmonix/Neversoft (rips de Rock Band ou Guitar Hero): são conteúdo protegido. Prefira mapas feitos pela comunidade.
+
+## Pesquisar e baixar mapas
+
+- **Biblioteca → Pesquisar:** digite a música ou o artista. A lista mostra os mapas da comunidade no Encore (enchor.us), sem rips de jogos oficiais (Harmonix, Neversoft), com as dificuldades da guitarra e a marca **Guitarra separada** quando o pacote traz a guitarra à parte. **Baixar** grava o `.sng` em "Baixados pelo Riff", dentro da pasta da biblioteca, e o mapa já entra na lista (**Jogar**). Os que você já tem aparecem como "Já na biblioteca".
+- **Tocando agora → Pesquisar no Encore** (faixa sem mapa ou só com sugestão): a pesquisa já vem com o artista e o título, os mais parecidos primeiro; o mapa baixado fica casado com a faixa e você volta com **Jogar**.
+- Na primeira vez, o Riff pede para escolher a pasta de novo, agora com permissão de gravar nela (**Permitir**).
+- O pacote vem com o áudio da música (uso pessoal). A API do Encore não é oficial: se ela mudar, a pesquisa avisa que o Riff precisa ser atualizado.
 
 ## Jogar
 
@@ -68,14 +75,16 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:app` | Activity, Application com Hilt e navegação Tocando agora → Jogo → Resultado (e a Biblioteca); Baseline Profile em `src/release/generated/baselineProfiles` |
 | `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista (com `StageCache`, sem alocar por quadro), com screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
-| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid` e `song.ini`), e o casamento entre faixa do Spotify e mapa |
+| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`), e o casamento entre faixa do Spotify e mapa |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
 | `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
 | `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify, ajustes de sincronia e recordes (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
 | `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
-| `:core:data` | Repositório de mapas, acesso a pastas por SAF e importador de mapas |
+| `:core:data` | Repositório de mapas, acesso a pastas por SAF (leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
+| `:core:encore` | Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
 | `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
+| `:feature:search` | Pesquisa no Encore: resultados, download com progresso e Jogar |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
 | `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
@@ -129,12 +138,13 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 - Som de erro e sons do menu: montados com gravações de guitarra com licença Creative Commons 0 do Freesound (origem e autores em `third_party/README.md`).
 - Som de acerto e metrônomo da calibração: sintetizados pelo próprio projeto.
 - Fontes New Rocker e Oswald: licença OFL (`core/ui/licenses/`).
+- Mapas baixados pela pesquisa: Encore (enchor.us), feitos pela comunidade do Clone Hero.
 - Nada do Guitar Hero nem de projetos que redesenham seus assets: a pista, as gemas e a chama são desenhadas em código.
 
 ## Status
 
 O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify, guitarra separada, configurações, calibração e polimento.
 
-Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: ler mapas `.sng` e separar a guitarra dentro do app.
+Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: separar a guitarra dentro do app.
 
 Cada mudança no uso do app atualiza a seção correspondente deste README.
