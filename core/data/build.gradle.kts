@@ -11,6 +11,7 @@ android {
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:chart"))
+    implementation(project(":core:encore"))
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":core:spotify"))

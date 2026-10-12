@@ -32,6 +32,12 @@ class SafFolderWriter @Inject constructor(@ApplicationContext private val contex
     override fun openOutput(fileUri: String): OutputStream =
         resolver.openOutputStream(Uri.parse(fileUri), "w") ?: throw IOException("não deu para gravar $fileUri")
 
+    override suspend fun nameOf(fileUri: String): String = withContext(Dispatchers.IO) {
+        resolver.query(Uri.parse(fileUri), arrayOf(Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: throw IOException("sem nome para $fileUri")
+    }
+
     override suspend fun rename(fileUri: String, newName: String): String = withContext(Dispatchers.IO) {
         (
             DocumentsContract.renameDocument(resolver, Uri.parse(fileUri), newName)

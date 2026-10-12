@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff.core.data
 
 import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
+import com.rodrigomachado.riff.core.data.download.ChartDownloader
+import com.rodrigomachado.riff.core.data.download.EncoreChartDownloader
 import com.rodrigomachado.riff.core.data.folder.ContentRandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderSource
@@ -69,6 +71,9 @@ abstract class FolderBindsModule {
 
     @Binds
     abstract fun folderWriter(impl: SafFolderWriter): FolderWriter
+
+    @Binds
+    abstract fun chartDownloader(impl: EncoreChartDownloader): ChartDownloader
 }
 
 @Module

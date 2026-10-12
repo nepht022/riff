@@ -30,6 +30,9 @@ interface FolderWriter {
 
     fun openOutput(fileUri: String): java.io.OutputStream
 
+    /** O nome do arquivo como a pasta mostra (o URI do SAF vem codificado e nem sempre traz o nome). */
+    suspend fun nameOf(fileUri: String): String
+
     /** Renomeia e devolve o URI novo. */
     suspend fun rename(fileUri: String, newName: String): String
 
