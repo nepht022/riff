@@ -73,6 +73,9 @@ class SearchViewModel @Inject constructor(
     val uiState: StateFlow<SearchUiState> = state.asStateFlow()
 
     private var page = 1
+
+    // A busca confirmada: o Carregar mais continua ela, mesmo que o campo tenha sido editado depois.
+    private var lastQuery = ""
     private var searching: Job? = null
     private val guitarChecks = Semaphore(MAX_PEEKS)
     private val checked = mutableSetOf<String>()
@@ -86,10 +89,12 @@ class SearchViewModel @Inject constructor(
 
     fun search() {
         val query = state.value.query.trim()
-        if (query.isNotEmpty()) load(query, append = false)
+        if (query.isEmpty()) return
+        lastQuery = query
+        load(query, append = false)
     }
 
-    fun loadMore() = load(state.value.query.trim(), append = true)
+    fun loadMore() = load(lastQuery, append = true)
 
     private fun load(query: String, append: Boolean) {
         searching?.cancel()
@@ -104,8 +109,10 @@ class SearchViewModel @Inject constructor(
                     track,
                 ).map { ResultItem(it, readyState(it, owned), separateGuitar = null) }
                 state.update {
+                    // A página seguinte pode repetir mapas (a ordem do Encore muda): a lista não repete a chave.
+                    val shown = it.results.map { item -> item.chart.md5 }.toSet()
                     it.copy(
-                        results = if (append) it.results + items else items,
+                        results = if (append) it.results + items.filter { item -> item.chart.md5 !in shown } else items,
                         hasMore = result.hasMore,
                         isSearching = false,
                         error = if (!append && items.isEmpty()) SearchError.NOTHING_FOUND else null,

@@ -48,6 +48,25 @@ class FolderChartImporterTest {
     }
 
     @Test
+    fun theSongInfoOfASngComesFromItsMetadata() = runTest {
+        // Mapa sem nome nem artista nas notas (como um notes.mid): o .sng traz isso nos metadados, sem song.ini.
+        source.file(
+            "raiz/pacote.sng",
+            SngWriter.write(
+                mapOf("name" to "Lithium", "artist" to "Nirvana", "charter" to "highfine", "song_length" to "257000"),
+                mapOf("notes.chart" to chartText(title = null, artist = null).toByteArray()),
+            ),
+        )
+
+        sngImporter().import("raiz")
+
+        val chart = repository.charts.single()
+        assertEquals("Lithium" to "Nirvana", chart.title to chart.artist)
+        assertEquals("highfine", chart.charter)
+        assertEquals(257_000L, chart.durationMs)
+    }
+
+    @Test
     fun aSngFileIsImportedLikeASongFolder() = runTest {
         source.file("raiz/Nirvana - Teen Spirit.sng", sng("Smells Like Teen Spirit"))
 

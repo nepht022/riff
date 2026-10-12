@@ -117,4 +117,14 @@ class EncoreClientTest {
         assertEquals("abcd", out.toString())
         assertEquals(1f, progress.last())
     }
+
+    @Test
+    fun aConnectionThatDropsWhileTheAnswerArrivesIsUnavailable() {
+        val dropping = object : java.io.InputStream() {
+            override fun read(): Int = throw java.net.SocketTimeoutException("caiu no meio")
+        }
+        transport.post = HttpResponse(201, null, dropping)
+
+        assertThrows(EncoreUnavailableException::class.java) { runBlocking { client.search("x", 1) } }
+    }
 }

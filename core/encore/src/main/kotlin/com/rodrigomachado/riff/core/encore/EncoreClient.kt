@@ -43,9 +43,12 @@ class EncoreClient(private val transport: HttpTransport, private val io: Corouti
             .put("search", query).put("per_page", PER_PAGE).put("page", page).put("instrument", "guitar")
             .put("difficulty", JSONObject.NULL).put("drumType", JSONObject.NULL).put("drumsReviewed", false)
             .put("sort", JSONObject.NULL).put("source", "api")
-        val text = call { transport.post("$API/search", body.toString()) }.use { response ->
-            if (response.code !in 200..299) throw EncoreUnavailableException(IOException("HTTP ${response.code}"))
-            response.body.readBytes().decodeToString()
+        // Ler a resposta também é rede: a conexão pode cair no meio, e isso é "Encore indisponível".
+        val text = call {
+            transport.post("$API/search", body.toString()).use { response ->
+                if (response.code !in 200..299) throw EncoreUnavailableException(IOException("HTTP ${response.code}"))
+                response.body.readBytes().decodeToString()
+            }
         }
         parse(text, page)
     }
@@ -85,9 +88,11 @@ class EncoreClient(private val transport: HttpTransport, private val io: Corouti
         }
     }
 
-    private suspend fun call(request: suspend () -> HttpResponse): HttpResponse = try {
+    private suspend fun <T> call(request: suspend () -> T): T = try {
         request()
     } catch (e: CancellationException) {
+        throw e
+    } catch (e: EncoreUnavailableException) {
         throw e
     } catch (e: IOException) {
         throw EncoreUnavailableException(e)

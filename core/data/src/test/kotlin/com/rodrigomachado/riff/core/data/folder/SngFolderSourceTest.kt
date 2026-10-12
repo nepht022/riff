@@ -28,7 +28,10 @@ class SngFolderSourceTest {
     fun aPackageIsListedLikeAFolderWithItsFilesAndSizes() = runTest {
         val children = source.listChildren(SngRef.packageUri("raiz/a.sng"))
 
-        assertEquals(listOf("notes.chart" to 5L, "song.opus" to 300L), children.map { it.name to it.sizeBytes })
+        // Os arquivos do índice e o song.ini montado dos metadados (o .sng não traz um).
+        assertEquals(listOf("notes.chart", "song.opus", "song.ini"), children.map { it.name })
+        assertEquals(listOf(5L, 300L), children.take(2).map { it.sizeBytes })
+        assertEquals("[song]\nname = A", String(source.read(children[2], maxBytes = 1_000)))
         assertEquals(SngRef.entryUri("raiz/a.sng", "song.opus"), children[1].uri)
         assertArrayEquals(audio, source.read(children[1], maxBytes = 1_000))
     }

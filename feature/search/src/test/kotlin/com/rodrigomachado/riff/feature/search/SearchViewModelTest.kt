@@ -245,17 +245,20 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun loadMoreAppendsTheNextPage() = runTest {
+    fun loadMoreContinuesTheConfirmedSearchWithoutRepeatingResults() = runTest {
         transport.postBody = fixture.replace("\"found\": 8", "\"found\": 60")
         val vm = viewModel(SearchRoute(query = "teen spirit"))
         advanceUntilIdle()
         assertEquals(true, vm.uiState.value.hasMore)
+        vm.onQueryChange("outra coisa") // editou o campo sem pesquisar
 
         vm.loadMore()
         advanceUntilIdle()
 
-        assertEquals(2, JSONObject(checkNotNull(transport.lastJson)).getInt("page"))
-        assertEquals(4, vm.uiState.value.results.size) // a mesma página de novo, só para o teste
+        val sent = JSONObject(checkNotNull(transport.lastJson))
+        assertEquals("teen spirit" to 2, sent.getString("search") to sent.getInt("page"))
+        // A página seguinte repetiu os mesmos mapas: a lista não pode ter a mesma chave duas vezes.
+        assertEquals(2, vm.uiState.value.results.size)
     }
 
     @Test
