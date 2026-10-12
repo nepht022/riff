@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Pesquisar</string>
+    <string name="search_back">Voltar</string>
+    <string name="search_hint">Música ou artista</string>
+    <string name="search_action">Pesquisar</string>
+    <string name="search_download">Baixar</string>
+    <string name="search_play">Jogar</string>
+    <string name="search_in_library">Já na biblioteca</string>
+    <string name="search_separate_guitar">Guitarra separada</string>
+    <string name="search_more">Carregar mais</string>
+    <string name="search_unavailable">Não deu para falar com o Encore.</string>
+    <string name="search_format_changed">A pesquisa do Encore mudou; o Riff precisa ser atualizado.</string>
+    <string name="search_nothing">Nada encontrado para \"%1$s\".</string>
+    <string name="search_write_needed">Para baixar, o Riff precisa gravar na pasta da biblioteca. Escolha a mesma pasta e permita.</string>
+    <string name="search_allow">Permitir</string>
+    <string name="search_failed_network">O download falhou.</string>
+    <string name="search_failed_broken">O arquivo baixado veio com defeito.</string>
+    <string name="search_failed_storage">Não deu para gravar na pasta.</string>
+    <string name="search_failed_no_folder">Escolha a pasta da biblioteca primeiro.</string>
+    <string name="search_retry">Tentar de novo</string>
+    <string name="search_credit">Mapas do Encore (enchor.us), feitos pela comunidade.</string>
+</resources>
