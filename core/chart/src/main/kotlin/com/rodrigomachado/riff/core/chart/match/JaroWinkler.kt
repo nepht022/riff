@@ -7,6 +7,7 @@ import kotlin.math.min
 object JaroWinkler {
     private const val PREFIX_SCALE = 0.1
     private const val MAX_PREFIX = 4
+    private const val BOOST_THRESHOLD = 0.7
 
     fun similarity(a: String, b: String): Double {
         if (a == b) return 1.0
@@ -18,8 +19,9 @@ object JaroWinkler {
         val m = matches.toDouble()
         val transpositions = countHalfTranspositions(a, b, aMatched, bMatched) / 2.0
         val jaro = (m / a.length + m / b.length + (m - transpositions) / m) / 3
+        // Winkler padrão: o bônus do começo igual só vale para textos que já são parecidos.
         val prefix = a.zip(b).takeWhile { it.first == it.second }.size.coerceAtMost(MAX_PREFIX)
-        return jaro + prefix * PREFIX_SCALE * (1 - jaro)
+        return if (jaro < BOOST_THRESHOLD) jaro else jaro + prefix * PREFIX_SCALE * (1 - jaro)
     }
 
     /** Caracteres iguais dentro da janela de busca; marca quais foram casados em cada texto. */

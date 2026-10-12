@@ -20,6 +20,7 @@ object TextNormalizer {
     // Letras e números de qualquer escrita (japonês, cirílico...), para nomes não latinos não sumirem.
     // Letras e números de qualquer escrita (japonês, cirílico...), para nomes não latinos não sumirem.
     private val NOT_ALPHANUMERIC = Regex("[^\\p{L}\\p{N}]+")
+    private val APOSTROPHES = Regex("['’‘ʼ]")
 
     fun normalize(text: String): String {
         val withoutExtras = text
@@ -31,7 +32,7 @@ object TextNormalizer {
         return withoutAccents
             .lowercase()
             .replace("&", " and ")
-            .replace("'", "")
+            .replace(APOSTROPHES, "") // reto e tipográficos: "Don’t" casa com "Don't"
             .replace(NOT_ALPHANUMERIC, " ")
             .trim()
     }

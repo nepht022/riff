@@ -17,4 +17,10 @@ class JaroWinklerTest {
         assertEquals(0.0, JaroWinkler.similarity("", "riff"), 0.0)
         assertEquals(0.0, JaroWinkler.similarity("abc", "xyz"), 0.0)
     }
+
+    @Test
+    fun theSharedPrefixOnlyHelpsWhenTheTextsAreAlreadySimilar() {
+        // Jaro de 5/9 (abaixo de 0,7): o começo igual "abc" não pode empurrar para perto de uma sugestão.
+        assertEquals(5.0 / 9, JaroWinkler.similarity("abcxxxxxx", "abcyyyyyy"), 1e-9)
+    }
 }

@@ -38,4 +38,10 @@ class TextNormalizerTest {
         assertEquals("米津玄師", n("米津玄師"))
         assertEquals("кино", n("Кино"))
     }
+
+    @Test
+    fun typographicApostrophesAreRemovedLikeStraightOnes() {
+        assertEquals(n("Don't Stop Me Now"), n("Don’t Stop Me Now"))
+        assertEquals("dont stop me now", n("Don‘t Stop Me Now"))
+    }
 }
