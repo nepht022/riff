@@ -130,4 +130,30 @@ class ChartFileParserTest {
         assertEquals(null, info.title)
         assertEquals(null, info.artist)
     }
+
+    @Test
+    fun anOpenNoteCountsAsThePreviousNoteForTheNaturalHopo() {
+        // Resolução 192: HOPO natural até 65 ticks. Verde, aberta 48 ticks depois, verde 48 ticks depois.
+        val chart = """
+            [Song]
+            {
+              Resolution = 192
+            }
+            [SyncTrack]
+            {
+              0 = B 120000
+            }
+            [ExpertSingle]
+            {
+              0 = N 0 0
+              48 = N 7 0
+              96 = N 0 0
+            }
+        """.trimIndent()
+
+        val notes = ChartFileParser.parse(chart).tracks.getValue(Difficulty.EXPERT)
+
+        assertEquals(2, notes.size) // a aberta não é jogada
+        assertEquals(true, notes[1].isHopo) // como no Clone Hero: verde logo depois da aberta é HOPO
+    }
 }

@@ -23,6 +23,8 @@ internal data class RawChord(
     val lengthsByLane: Map<Int, Long>,
     val forcing: Forcing = Forcing.NONE,
     val isTap: Boolean = false,
+    /** .chart: tem nota aberta (N 7). Não é jogada, mas conta como a nota anterior para o HOPO natural. */
+    val hasOpen: Boolean = false,
 )
 
 /** Converte acordes em ticks em [Note]s em ms, calculando HOPO natural e forçado. */
@@ -30,7 +32,11 @@ internal object NoteAssembler {
     fun assemble(chords: List<RawChord>, tempoMap: TempoMap, hopoThresholdTicks: Long): List<Note> {
         val notes = ArrayList<Note>()
         var previous: RawChord? = null
-        for (chord in chords.filter { it.lengthsByLane.isNotEmpty() }.sortedBy { it.tick }) {
+        for (chord in chords.filter { it.lengthsByLane.isNotEmpty() || it.hasOpen }.sortedBy { it.tick }) {
+            if (chord.lengthsByLane.isEmpty()) {
+                previous = chord // só a aberta: não vira nota, mas é a anterior da próxima (como no Clone Hero)
+                continue
+            }
             val isHopo = chord.isTap || resolveHopo(chord, previous, hopoThresholdTicks)
             val startMs = tempoMap.tickToMs(chord.tick)
             for ((lane, lengthTicks) in chord.lengthsByLane.toSortedMap()) {

@@ -15,6 +15,7 @@ object ChartFileParser {
     private const val DEFAULT_RESOLUTION = 192
     private const val FORCED_FLAG = 5
     private const val TAP_FLAG = 6
+    private const val OPEN_FRET = 7
 
     // Limite do HOPO natural do Clone Hero: 65/192 de semínima.
     private const val HOPO_THRESHOLD_NUMERATOR = 65L
@@ -87,6 +88,7 @@ object ChartFileParser {
         val lengths = mutableMapOf<Int, Long>()
         var forced = false
         var tap = false
+        var open = false
     }
 
     private fun readChords(entries: List<Entry>): List<RawChord> {
@@ -104,13 +106,19 @@ object ChartFileParser {
             val chord = byTick.getOrPut(tick) { ChordBuilder() }
             when (fret) {
                 in 0 until Note.LANE_COUNT -> chord.lengths[fret] = length
+
                 FORCED_FLAG -> chord.forced = true
+
                 TAP_FLAG -> chord.tap = true
-                else -> Unit // 7 = nota aberta, fora do MVP
+
+                // A aberta não é jogada, mas conta para o HOPO da nota seguinte.
+                OPEN_FRET -> chord.open = true
+
+                else -> Unit
             }
         }
         return byTick.map { (tick, chord) ->
-            RawChord(tick, chord.lengths, if (chord.forced) Forcing.FLIP else Forcing.NONE, chord.tap)
+            RawChord(tick, chord.lengths, if (chord.forced) Forcing.FLIP else Forcing.NONE, chord.tap, chord.open)
         }
     }
 }
