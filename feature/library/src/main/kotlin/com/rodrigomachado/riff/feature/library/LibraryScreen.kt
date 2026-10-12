@@ -16,9 +16,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
@@ -62,7 +63,7 @@ fun LibraryScreen(
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) viewModel.onFolderPicked(uri.toString()) else viewModel.onFolderPickCancelled()
     }
-    if (state.matchSaved) LaunchedEffect(Unit) { onMatched() }
+    MatchSavedReturn(state.matchSaved, onMatched)
     LibraryContent(
         state = state,
         onPickFolder = { pickFolder.launch(null) },
@@ -218,4 +219,17 @@ private fun ImportReportCard(report: ImportReport, onDismiss: () -> Unit) {
 /** Carimbo com a dificuldade mais alta do mapa. */
 private fun difficultyBadge(difficulty: Difficulty): @Composable () -> Unit = {
     StatusBadge(stringResource(difficultyLabel(difficulty.ordinal)), BadgeTone.NEUTRAL)
+}
+
+/**
+ * Depois de salvar o casamento com o Spotify, volta para a tela anterior — só com a tela em primeiro plano. A
+ * navegação em segundo plano é descartada; se o app saiu durante o salvamento, volta quando a tela reaparecer.
+ */
+@Composable
+internal fun MatchSavedReturn(matchSaved: Boolean, onMatched: () -> Unit) {
+    val currentOnMatched by rememberUpdatedState(onMatched)
+    LifecycleResumeEffect(matchSaved) {
+        if (matchSaved) currentOnMatched()
+        onPauseOrDispose {}
+    }
 }
