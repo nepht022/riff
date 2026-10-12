@@ -127,13 +127,14 @@ class SettingsContentTest {
     }
 
     @Test
-    fun theMenuSoundsSwitchTurnsThemOffWithItsOwnSound() {
+    fun theMenuSoundsSwitchTurnsThemOffSilently() {
         show()
 
         composeRule.onNodeWithTag(SettingsTestTags.MENU_SOUNDS).performScrollTo().performClick()
         composeRule.onNodeWithTag(SettingsTestTags.LEFT_HANDED).performScrollTo().performClick()
 
         assertEquals(false, menuSounds)
-        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE), sounds)
+        // O interruptor dos sons não soa por conta própria (ao desligar, ainda estaria ligado): o app soa ao ligar.
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 }

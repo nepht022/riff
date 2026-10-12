@@ -30,4 +30,15 @@ class MenuSoundGateTest {
 
         assertEquals(emptyList<Pair<MenuSound, Float>>(), played)
     }
+
+    @Test
+    fun turningTheSoundsOnSoundsOnceAsFeedback() {
+        val on = Settings.DEFAULT
+        val off = Settings.DEFAULT.copy(menuSounds = false)
+
+        assertEquals(true, menuSoundsTurnedOn(off, on))
+        assertEquals(false, menuSoundsTurnedOn(on, off))
+        assertEquals(false, menuSoundsTurnedOn(on, on.copy(masterVolume = 0.5f)))
+        assertEquals(false, menuSoundsTurnedOn(null, on)) // abrir o app não é ligar
+    }
 }

@@ -10,14 +10,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -42,6 +45,13 @@ class MainActivity : ComponentActivity() {
             val settings = settingsRepository.settings.collectAsState(initial = null)
             // Criada uma vez e lendo a preferência na hora do toque: mudar as Configurações não recompõe o app.
             val playMenuSound: (MenuSound) -> Unit = remember { { playMenuSound(menuSounds, settings.value, it) } }
+            LaunchedEffect(Unit) {
+                var previous: Settings? = null
+                snapshotFlow { settings.value }.collect { current ->
+                    if (menuSoundsTurnedOn(previous, current)) playMenuSound(MenuSound.NAVIGATE)
+                    previous = current
+                }
+            }
             CompositionLocalProvider(LocalMenuSound provides playMenuSound) {
                 RiffApp()
             }

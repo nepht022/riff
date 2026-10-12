@@ -120,13 +120,7 @@ fun SettingsContent(
                 onPreviewMiss()
             },
         )
-        SwitchRow(
-            title = stringResource(R.string.settings_menu_sounds),
-            hint = stringResource(R.string.settings_menu_sounds_hint),
-            checked = settings.menuSounds,
-            onChange = onMenuSounds,
-            tag = SettingsTestTags.MENU_SOUNDS,
-        )
+        MenuSoundsRow(settings.menuSounds, onMenuSounds)
         Section(stringResource(R.string.settings_game))
         SettingSlider(
             label = stringResource(R.string.settings_note_speed),
@@ -220,8 +214,28 @@ private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
     }
 }
 
+/** Sem som próprio: ao desligar, ainda estariam ligados; o app soa quando eles voltam a ser ligados. */
 @Composable
-private fun SwitchRow(title: String, hint: String, checked: Boolean, onChange: (Boolean) -> Unit, tag: String) {
+private fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
+    SwitchRow(
+        title = stringResource(R.string.settings_menu_sounds),
+        hint = stringResource(R.string.settings_menu_sounds_hint),
+        checked = checked,
+        onChange = onChange,
+        tag = SettingsTestTags.MENU_SOUNDS,
+        sound = null,
+    )
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    hint: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    tag: String,
+    sound: MenuSound? = MenuSound.NAVIGATE,
+) {
     Row(Modifier.fillMaxWidth().padding(vertical = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
@@ -237,7 +251,7 @@ private fun SwitchRow(title: String, hint: String, checked: Boolean, onChange: (
         }
         Switch(
             checked = checked,
-            onCheckedChange = withMenuSound(MenuSound.NAVIGATE, onChange),
+            onCheckedChange = if (sound == null) onChange else withMenuSound(sound, onChange),
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,
