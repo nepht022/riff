@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
@@ -39,7 +40,13 @@ object PosterButtonTestTags {
 
 /** Botão principal de pôster: vermelho, texto em papel, sombra dura que some ao pressionar. */
 @Composable
-fun PosterButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun PosterButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    sound: MenuSound? = null,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
@@ -62,7 +69,7 @@ fun PosterButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifie
                     indication = null,
                     enabled = enabled,
                     role = Role.Button,
-                    onClick = onClick,
+                    onClick = withMenuSound(sound, onClick),
                 )
                 .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
