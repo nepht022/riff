@@ -121,7 +121,9 @@ class ChartFileParserTest {
 
     @Test
     fun emptyTextFieldsInTheSongSectionCountAsMissing() {
-        val chart = fullChart.replace("Name = \"Minha Música\"", "Name = \"\"").replace("Artist = \"Banda\"", "Artist = \"  \"")
+        val chart = fullChart
+            .replace("Name = \"Minha Música\"", "Name = \"\"")
+            .replace("Artist = \"Banda\"", "Artist = \"  \"")
 
         val info = ChartFileParser.parse(chart).info
 
