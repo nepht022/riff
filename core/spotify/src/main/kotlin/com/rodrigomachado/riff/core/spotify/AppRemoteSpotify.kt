@@ -22,15 +22,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.resume
 
 /**
  * [SpotifyRemote] com o App Remote SDK. Uma conexão por processo; reconecta sozinho se ela cair.
@@ -49,7 +45,9 @@ class AppRemoteSpotify @Inject constructor(
     private val playbackState = MutableStateFlow<PlaybackState?>(null)
     private var remote: SpotifyAppRemote? = null
     private var subscription: Subscription<PlayerState>? = null
-    private var reconnectAttempt = 0
+    private val reconnector = Reconnector(scope) {
+        if (connectionState.value is SpotifyConnection.Failed) connect()
+    }
     private var connectWhenVisible = false
     private var triedAuthorization = false
 
@@ -101,7 +99,7 @@ class AppRemoteSpotify @Inject constructor(
                 override fun onConnected(appRemote: SpotifyAppRemote) {
                     Log.i(TAG, "Conectado ao Spotify")
                     remote = appRemote
-                    reconnectAttempt = 0
+                    reconnector.connected()
                     connectionState.value = SpotifyConnection.Connected
                     subscribe(appRemote)
                 }
@@ -151,28 +149,19 @@ class AppRemoteSpotify @Inject constructor(
         remote = null
         playbackState.value = null
         connectionState.value = SpotifyConnection.Failed(error)
-        if (ReconnectPolicy.shouldRetry(error)) {
-            val wait = ReconnectPolicy.delayMs(reconnectAttempt++)
-            scope.launch {
-                delay(wait)
-                if (connectionState.value is SpotifyConnection.Failed) connect()
-            }
-        }
+        reconnector.lost(error)
     }
 
     override suspend fun refresh(): PlaybackState? {
         val appRemote = remote ?: return null
         // A hora do pedido, não a da resposta: uma resposta lenta não pode parecer mais nova que um comando.
         val requestedAt = SystemClock.elapsedRealtime()
-        return suspendCancellableCoroutine { continuation ->
+        val state = awaitCallback<PlayerState>(REFRESH_TIMEOUT_MS) { onResult, onError ->
             appRemote.playerApi.playerState
-                .setResultCallback { state ->
-                    val playback = state.toPlaybackState(requestedAt)
-                    playbackState.value = playback
-                    if (continuation.isActive) continuation.resume(playback)
-                }
-                .setErrorCallback { if (continuation.isActive) continuation.resume(null) }
-        }
+                .setResultCallback { onResult(it) }
+                .setErrorCallback { onError() }
+        } ?: return null
+        return state.toPlaybackState(requestedAt).also { playbackState.value = it }
     }
 
     override fun play(trackUri: String) {
@@ -193,6 +182,7 @@ class AppRemoteSpotify @Inject constructor(
 
     private companion object {
         const val TAG = "RiffSpotify"
+        const val REFRESH_TIMEOUT_MS = 2_000L
         const val APP_REMOTE_SCOPE = "app-remote-control"
         const val AUTH_RESULT_KEY = "riff-spotify-auth"
         const val SPOTIFY_SDK_PACKAGE = "com.spotify.sdk"
