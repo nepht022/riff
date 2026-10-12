@@ -53,6 +53,9 @@ abstract class DataBindsModule {
 
     @Binds
     abstract fun chartOffsetRepository(impl: RoomChartOffsetRepository): ChartOffsetRepository
+
+    @Binds
+    abstract fun encoreDownloads(impl: RoomEncoreDownloads): EncoreDownloads
 }
 
 @Module

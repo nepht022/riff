@@ -74,3 +74,10 @@ data class ScoreEntity(
     foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
 )
 data class ChartOffsetEntity(@PrimaryKey val chartId: String, val offsetMs: Int)
+
+/** Mapas baixados do Encore (md5 do pacote), à parte da tabela de mapas: a importação regrava aquela linha. */
+@Entity(
+    tableName = "encore_charts",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+)
+data class EncoreChartEntity(@PrimaryKey val chartId: String, val md5: String)

@@ -66,6 +66,26 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun version3BecomesVersion4KeepingTheLibraryAndAddingTheEncoreTable() {
+        helper.createDatabase(3).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId) VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(4).apply {
+            execSQL("INSERT INTO encore_charts (chartId, md5) VALUES ('a', 'm5')")
+            prepare("SELECT COUNT(*) FROM charts").use {
+                it.step()
+                assertEquals(1L, it.getLong(0))
+            }
+            close()
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

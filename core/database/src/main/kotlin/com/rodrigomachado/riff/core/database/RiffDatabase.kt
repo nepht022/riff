@@ -14,12 +14,14 @@ import androidx.sqlite.execSQL
         TrackMatchEntity::class,
         ScoreEntity::class,
         ChartOffsetEntity::class,
+        EncoreChartEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3, spec = MarkChosenOffsets::class),
+        AutoMigration(from = 3, to = 4),
     ],
 )
 abstract class RiffDatabase : RoomDatabase() {
@@ -30,6 +32,8 @@ abstract class RiffDatabase : RoomDatabase() {
     abstract fun scoreDao(): ScoreDao
 
     abstract fun chartOffsetDao(): ChartOffsetDao
+
+    abstract fun encoreChartDao(): EncoreChartDao
 }
 
 /** Na versão 2, um ajuste diferente de 0 só existia se alguém o escolheu: continua valendo. */
