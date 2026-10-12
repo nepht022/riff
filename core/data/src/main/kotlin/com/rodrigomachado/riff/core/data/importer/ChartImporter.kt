@@ -27,7 +27,8 @@ data class ImportReport(val importedCount: Int, val failures: List<ImportFailure
 interface ChartImporter {
     /**
      * Varre a pasta [rootUri] e as subpastas, importa cada pasta de música e apaga da biblioteca
-     * os mapas cujas pastas sumiram. [onProgress] recebe quantas pastas de música já foram lidas.
+     * os mapas cujas pastas sumiram. [onProgress] recebe quantas pastas de música já foram lidas; ele roda na
+     * thread de IO da importação (quem atualiza a tela usa um estado seguro entre threads, como um `StateFlow`).
      *
      * @throws FolderAccessLostException se a raiz não puder ser lida; a biblioteca fica como estava.
      */
