@@ -15,4 +15,11 @@
     <string name="settings_not_calibrated">Not calibrated</string>
     <string name="settings_menu_sounds">Menu sounds</string>
     <string name="settings_menu_sounds_hint">Guitar when tapping buttons</string>
+    <string name="settings_ai_section">AI separated guitar</string>
+    <string name="settings_ai_usage">%1$d songs · %2$s</string>
+    <string name="settings_ai_delete">Delete separations</string>
+    <string name="settings_ai_delete_confirm">Delete the guitars separated by AI? You can separate them again later.</string>
+    <string name="settings_ai_delete_yes">Delete</string>
+    <string name="settings_ai_delete_no">Cancel</string>
+    <string name="settings_ai_ask_again">Ask again</string>
 </resources>

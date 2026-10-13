@@ -1,9 +1,14 @@
 package com.rodrigomachado.riff.feature.settings
 
 import com.rodrigomachado.riff.core.audio.SfxPlayer
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AiSeparationState
+import com.rodrigomachado.riff.core.data.SeparatedFiles
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.File
 
 class FakeSettingsRepository(initial: Settings = Settings.DEFAULT) : SettingsRepository {
     override val settings = MutableStateFlow(initial)
@@ -35,4 +40,22 @@ class FakeSfxPlayer : SfxPlayer {
     override fun release() {
         released = true
     }
+}
+
+class FakeAiSeparations : AiSeparationRepository {
+    val calls = mutableListOf<String>()
+    override val separatedIds = MutableStateFlow(emptySet<String>())
+    override val usage = MutableStateFlow(SeparationUsage(0, 0))
+    override suspend fun stateOf(chartId: String): AiSeparationState? = null
+    override suspend fun separatedFiles(chartId: String): SeparatedFiles? = null
+    override fun workDir(chartId: String) = File("x")
+    override suspend fun commit(chartId: String, workDir: File) = Unit
+    override suspend fun decline(chartId: String) = Unit
+    override suspend fun resetDeclines() {
+        calls += "resetDeclines"
+    }
+    override suspend fun deleteAll() {
+        calls += "deleteAll"
+    }
+    override suspend fun pruneOrphans() = Unit
 }

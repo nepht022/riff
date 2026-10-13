@@ -1,11 +1,13 @@
 package com.rodrigomachado.riff.feature.settings
 
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -19,6 +21,7 @@ import org.junit.Test
 class SettingsViewModelTest {
     private val repository = FakeSettingsRepository()
     private val sfx = FakeSfxPlayer()
+    private val separations = FakeAiSeparations()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -27,7 +30,7 @@ class SettingsViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository) { sfx }
+        val viewModel = SettingsViewModel(repository, separations) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -94,5 +97,19 @@ class SettingsViewModelTest {
         viewModel.release()
 
         assertTrue(sfx.released)
+    }
+
+    @Test
+    fun theAiSectionShowsTheUsageAndDeletesOrAsksAgain() = runTest {
+        separations.usage.value = SeparationUsage(songs = 12, bytes = 96_000_000)
+        val vm = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.separationUsage.collect {} }
+
+        assertEquals(SeparationUsage(12, 96_000_000), vm.separationUsage.value)
+        vm.deleteSeparations()
+        vm.askAgain()
+        advanceUntilIdle()
+
+        assertEquals(listOf("deleteAll", "resetDeclines"), separations.calls)
     }
 }

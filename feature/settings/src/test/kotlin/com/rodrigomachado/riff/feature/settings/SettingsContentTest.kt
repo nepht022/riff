@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -32,25 +33,31 @@ class SettingsContentTest {
     private var menuSounds: Boolean? = null
     private var back = false
 
-    private fun show(settings: Settings = Settings.DEFAULT) = composeRule.setContent {
-        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
-            RiffTheme {
-                SettingsContent(
-                    settings = settings,
-                    onMasterVolume = {},
-                    onHitVolume = {},
-                    onMissVolume = {},
-                    onNoteSpeed = {},
-                    onLeftHanded = { leftHanded = it },
-                    onMenuSounds = { menuSounds = it },
-                    onPreviewHit = {},
-                    onPreviewMiss = {},
-                    onCalibrate = {},
-                    onBack = { back = true },
-                )
+    private val events = mutableListOf<String>()
+
+    private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
+        composeRule.setContent {
+            CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+                RiffTheme {
+                    SettingsContent(
+                        settings = settings,
+                        onMasterVolume = {},
+                        onHitVolume = {},
+                        onMissVolume = {},
+                        onNoteSpeed = {},
+                        onLeftHanded = { leftHanded = it },
+                        onMenuSounds = { menuSounds = it },
+                        onPreviewHit = {},
+                        onPreviewMiss = {},
+                        onCalibrate = {},
+                        onBack = { back = true },
+                        separationUsage = separationUsage,
+                        onDeleteSeparations = { events += "delete" },
+                        onAskAgain = { events += "askAgain" },
+                    )
+                }
             }
         }
-    }
 
     @Test
     fun showsEverySettingWithItsCurrentValue() {
@@ -136,5 +143,18 @@ class SettingsContentTest {
         assertEquals(false, menuSounds)
         // O interruptor dos sons não soa por conta própria (ao desligar, ainda estaria ligado): o app soa ao ligar.
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+    }
+
+    @Test
+    fun theAiSectionDeletesAfterConfirmingAndAsksAgain() {
+        show(Settings.DEFAULT, separationUsage = SeparationUsage(12, 96_000_000))
+
+        composeRule.onNodeWithText("GUITARRA SEPARADA POR IA").performScrollTo().assertExists()
+        composeRule.onNodeWithText("12 músicas · 96 MB").assertExists()
+        composeRule.onNodeWithText("Apagar separações").performScrollTo().performClick()
+        composeRule.onNodeWithText("Apagar").performClick() // confirmação
+        composeRule.onNodeWithText("Perguntar de novo").performScrollTo().performClick()
+
+        assertEquals(listOf("delete", "askAgain"), events)
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
@@ -53,6 +54,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
+    val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
     val current = settings
     if (current == null) {
         LoadingState(modifier)
@@ -71,6 +73,9 @@ fun SettingsScreen(
         onCalibrate = onCalibrate,
         onBack = onBack,
         modifier = modifier,
+        separationUsage = usage,
+        onDeleteSeparations = viewModel::deleteSeparations,
+        onAskAgain = viewModel::askAgain,
     )
 }
 
@@ -88,6 +93,9 @@ fun SettingsContent(
     onCalibrate: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    separationUsage: SeparationUsage = SeparationUsage(0, 0),
+    onDeleteSeparations: () -> Unit = {},
+    onAskAgain: () -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
@@ -144,11 +152,12 @@ fun SettingsContent(
             tag = SettingsTestTags.LEFT_HANDED,
         )
         CalibrationRow(settings.audioOffsetMs, onCalibrate)
+        AiSeparationSection(separationUsage, onDeleteSeparations, onAskAgain)
     }
 }
 
 @Composable
-private fun Section(title: String) {
+internal fun Section(title: String) {
     Text(
         title.uppercase(),
         style = MaterialTheme.typography.labelLarge,

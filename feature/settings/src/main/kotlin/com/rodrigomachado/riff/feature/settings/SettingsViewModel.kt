@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,8 +17,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 @Suppress("TooManyFunctions") // uma função por preferência da tela, mais as prévias dos sons
-class SettingsViewModel @Inject constructor(private val repository: SettingsRepository, sfxPlayers: SfxPlayerFactory) :
-    ViewModel() {
+class SettingsViewModel @Inject constructor(
+    private val repository: SettingsRepository,
+    private val separations: AiSeparationRepository,
+    sfxPlayers: SfxPlayerFactory,
+) : ViewModel() {
     /** `null` enquanto as preferências carregam. */
     val uiState: StateFlow<Settings?> =
         repository.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
@@ -27,6 +32,18 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
 
     // O último valor pedido: a gravação é assíncrona e a prévia logo depois precisa do volume novo.
     private var latest: Settings? = null
+
+    /** Quantas músicas a IA separou e o espaço que ocupam. */
+    val separationUsage: StateFlow<SeparationUsage> = separations.usage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeparationUsage(0, 0))
+
+    fun deleteSeparations() {
+        viewModelScope.launch { separations.deleteAll() }
+    }
+
+    fun askAgain() {
+        viewModelScope.launch { separations.resetDeclines() }
+    }
 
     fun setMasterVolume(volume: Float) = save { it.copy(masterVolume = volume.coerceIn(0f, 1f)) }
 
