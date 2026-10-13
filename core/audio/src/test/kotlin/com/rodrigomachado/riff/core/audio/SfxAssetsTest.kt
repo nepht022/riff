@@ -2,7 +2,6 @@ package com.rodrigomachado.riff.core.audio
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -35,26 +34,14 @@ class SfxAssetsTest {
     }
 
     @Test
-    fun eachLaneHasAShortQuietGuitarNote() {
-        val limit = (Short.MAX_VALUE * 10.0.pow(-12.0 / 20)).toInt() // −12 dBFS
-        for (lane in 1..5) {
-            check("sfx_hit_$lane.wav", maxSeconds = 0.3)
-            assertTrue("sfx_hit_$lane.wav alto demais", peak("sfx_hit_$lane.wav") <= limit)
-        }
+    fun theHitSoundsAreGone() {
+        // Sem guitarra separada a música toca inteira e só o erro faz som (2026-10-13).
+        assertFalse(file("sfx_hit.wav").exists())
+        (1..5).forEach { assertFalse("sfx_hit_$it.wav ainda existe", file("sfx_hit_$it.wav").exists()) }
     }
 
     @Test
-    fun eachLaneSoundsDifferent() {
-        val sounds = (1..5).map { file("sfx_hit_$it.wav").readBytes().toList() }
-        assertEquals(5, sounds.toSet().size)
-        assertNotEquals(sounds[0], sounds[4])
-    }
-
-    @Test
-    fun theOldClickIsGone() = assertFalse(file("sfx_hit.wav").exists())
-
-    @Test
-    fun eachMissVariationIsShortAndAboveTheHitSound() {
+    fun eachMissVariationIsShortAndNotTooLoud() {
         val limit = (Short.MAX_VALUE * 10.0.pow(-9.0 / 20)).toInt() + 1 // −9 dBFS
         for (variation in 1..6) {
             check("sfx_miss_$variation.wav", maxSeconds = 0.4)

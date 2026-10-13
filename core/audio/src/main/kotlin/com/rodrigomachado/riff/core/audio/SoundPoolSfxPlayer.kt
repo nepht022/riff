@@ -17,18 +17,12 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
                 .build(),
         )
         .build()
-    private val hitSounds = HIT_SOUNDS.map { pool.load(context, it, 1) }
     private val missSounds = MISS_SOUNDS.map { pool.load(context, it, 1) }
     private val misses = MissSoundPicker(missSounds.size)
     private val handler = Handler(Looper.getMainLooper())
     private var missStream = 0
     private var missLevel = 0f
-    private var hitVolume = DEFAULT_VOLUME
     private var missVolume = DEFAULT_VOLUME
-
-    override fun hit(lane: Int) {
-        play(hitSounds[lane.coerceIn(hitSounds.indices)], hitVolume)
-    }
 
     /** Um som de erro por vez: o novo encerra o anterior com um fade curto (spec da guitarra separada). */
     override fun miss() {
@@ -38,9 +32,8 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
         missStream = play(missSounds[choice.index], missLevel)
     }
 
-    override fun setVolumes(hit: Float, miss: Float) {
-        hitVolume = hit.coerceIn(0f, 1f)
-        missVolume = miss.coerceIn(0f, 1f)
+    override fun setMissVolume(volume: Float) {
+        missVolume = volume.coerceIn(0f, 1f)
     }
 
     override fun release() {
@@ -66,7 +59,6 @@ class SoundPoolSfxPlayer(context: Context) : SfxPlayer {
         const val DEFAULT_VOLUME = 0.6f
         const val FADE_STEPS = 5
         const val FADE_STEP_MS = 5L // 5 passos de 5 ms: o fade de 25 ms
-        val HIT_SOUNDS = listOf(R.raw.sfx_hit_1, R.raw.sfx_hit_2, R.raw.sfx_hit_3, R.raw.sfx_hit_4, R.raw.sfx_hit_5)
         val MISS_SOUNDS = listOf(
             R.raw.sfx_miss_1,
             R.raw.sfx_miss_2,

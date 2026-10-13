@@ -15,13 +15,13 @@ class GameSessionTest {
         GameSession(notes.toList(), player, sfx, time, audioOffsetMs = 0).also { it.start() }
 
     @Test
-    fun hitPlaysTheHitSoundLightsTheFlameAndShowsTheJudgment() {
+    fun aHitIsSilentLightsTheFlameAndShowsTheJudgment() {
         player.positionMs = 1_000
         val session = session(note(1_000, lane = 2))
 
         session.press(2)
 
-        assertEquals(listOf(2), sfx.hitLanes) // o som da trilha tocada
+        assertEquals(0, sfx.misses) // acertar não faz som: a guitarra da música é a resposta
         assertEquals(Judgment.PERFECT, session.lastJudgment)
         assertEquals(0f, session.flameProgress(2), 0.001f)
         time.now = 125
@@ -125,7 +125,6 @@ class GameSessionTest {
         session.press(1)
 
         assertEquals(listOf(true), stems.audible)
-        assertEquals(0, sfx.hits)
     }
 
     @Test
@@ -175,15 +174,13 @@ class GameSessionTest {
     }
 
     @Test
-    fun withoutHitSoundsAHitIsSilentButMissesStillSound() {
+    fun aHitIsSilentButAMissStillSounds() {
         player.positionMs = 1_000
-        val session = GameSession(listOf(note(1_000)), player, sfx, time, audioOffsetMs = 0, hitSounds = false)
-            .also { it.start() }
+        val session = session(note(1_000))
 
         session.press(0)
         session.press(1)
 
-        assertEquals(emptyList<Int>(), sfx.hitLanes)
         assertEquals(Judgment.PERFECT, session.lastJudgment)
         assertEquals(1, sfx.misses)
     }

@@ -32,7 +32,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[NOTE_SPEED] = updated.noteSpeed
             prefs[LEFT_HANDED] = updated.leftHanded
             prefs[MASTER_VOLUME] = updated.masterVolume
-            prefs[HIT_VOLUME] = updated.hitVolume
+            prefs.remove(LEGACY_HIT_VOLUME)
             prefs[MISS_VOLUME] = updated.missVolume
             prefs[MENU_SOUNDS] = updated.menuSounds
             prefs.remove(LEGACY_SFX_VOLUME)
@@ -46,7 +46,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
 
     private fun Preferences.toSettings(): Settings {
         val default = Settings.DEFAULT
-        // O volume único de antes (sfx_volume) vale para acerto e erro até o jogador mexer neles.
+        // O volume único de antes (sfx_volume) vale para o erro até o jogador mexer nele.
         val legacyEffects = volume(LEGACY_SFX_VOLUME)
         return Settings(
             audioOffsetMs = this[AUDIO_OFFSET_MS] ?: default.audioOffsetMs,
@@ -55,7 +55,6 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
                 ?: default.noteSpeed,
             leftHanded = this[LEFT_HANDED] ?: default.leftHanded,
             masterVolume = volume(MASTER_VOLUME) ?: default.masterVolume,
-            hitVolume = volume(HIT_VOLUME) ?: legacyEffects ?: default.hitVolume,
             missVolume = volume(MISS_VOLUME) ?: legacyEffects ?: default.missVolume,
             menuSounds = this[MENU_SOUNDS] ?: default.menuSounds,
         )
@@ -69,7 +68,9 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val NOTE_SPEED = floatPreferencesKey("note_speed")
         val LEFT_HANDED = booleanPreferencesKey("left_handed")
         val MASTER_VOLUME = floatPreferencesKey("master_volume")
-        val HIT_VOLUME = floatPreferencesKey("hit_volume")
+
+        // O som de acerto saiu do app (2026-10-13): o valor antigo é ignorado e apagado na próxima gravação.
+        val LEGACY_HIT_VOLUME = floatPreferencesKey("hit_volume")
         val MISS_VOLUME = floatPreferencesKey("miss_volume")
         val MENU_SOUNDS = booleanPreferencesKey("menu_sounds")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")

@@ -59,12 +59,10 @@ fun SettingsScreen(
     SettingsContent(
         settings = current,
         onMasterVolume = viewModel::setMasterVolume,
-        onHitVolume = viewModel::setHitVolume,
         onMissVolume = viewModel::setMissVolume,
         onNoteSpeed = viewModel::setNoteSpeed,
         onLeftHanded = viewModel::setLeftHanded,
         onMenuSounds = viewModel::setMenuSounds,
-        onPreviewHit = viewModel::previewHit,
         onPreviewMiss = viewModel::previewMiss,
         onCalibrate = onCalibrate,
         onBack = onBack,
@@ -76,12 +74,10 @@ fun SettingsScreen(
 fun SettingsContent(
     settings: Settings,
     onMasterVolume: (Float) -> Unit,
-    onHitVolume: (Float) -> Unit,
     onMissVolume: (Float) -> Unit,
     onNoteSpeed: (Float) -> Unit,
     onLeftHanded: (Boolean) -> Unit,
     onMenuSounds: (Boolean) -> Unit,
-    onPreviewHit: () -> Unit,
     onPreviewMiss: () -> Unit,
     onCalibrate: () -> Unit,
     onBack: () -> Unit,
@@ -101,15 +97,6 @@ fun SettingsContent(
             onCommit = onMasterVolume,
             hint = stringResource(R.string.settings_master_volume_hint),
             modifier = Modifier.testTag(SettingsTestTags.MASTER_VOLUME),
-        )
-        SettingSlider(
-            label = stringResource(R.string.settings_hit_volume),
-            value = settings.hitVolume,
-            text = ::percent,
-            onCommit = {
-                onHitVolume(it)
-                onPreviewHit()
-            },
         )
         SettingSlider(
             label = stringResource(R.string.settings_miss_volume),

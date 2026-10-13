@@ -26,7 +26,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameplayViewModelTest {
     private val loader = FakeChartTrackLoader()
-    private val settings = FakeSettingsRepository(Settings.DEFAULT.copy(hitVolume = 0.3f, audioOffsetMs = -40))
+    private val settings = FakeSettingsRepository(Settings.DEFAULT.copy(missVolume = 0.3f, audioOffsetMs = -40))
     private val scores = FakeScoreRepository()
     private val player = FakeSongPlayer()
     private val sfx = FakeSfxPlayer()
@@ -107,7 +107,7 @@ class GameplayViewModelTest {
         assertTrue(state is GameplayUiState.Ready)
         assertEquals("raiz/a/song.ogg", player.preparedUri)
         assertTrue(player.isPlaying)
-        assertEquals(0.3f, sfx.hitVolume)
+        assertEquals(0.3f, sfx.missVolume)
     }
 
     @Test
@@ -300,13 +300,12 @@ class GameplayViewModelTest {
 
     @Test
     fun theSavedVolumesReachTheSongAndTheEffects() = runTest {
-        settings.settings.value = Settings.DEFAULT.copy(masterVolume = 0.5f, hitVolume = 0.6f, missVolume = 1f)
+        settings.settings.value = Settings.DEFAULT.copy(masterVolume = 0.5f, missVolume = 1f)
         loader.result = { playable() }
 
         viewModel()
 
         assertEquals(0.5f, player.appVolume, 1e-6f)
-        assertEquals(0.3f, sfx.hitVolume, 1e-6f)
         assertEquals(0.5f, sfx.missVolume, 1e-6f)
     }
 
@@ -372,11 +371,11 @@ class GameplayViewModelTest {
         state.session.press(0)
 
         assertTrue(state.session.lastJudgment != null)
-        assertEquals(0, sfx.hits)
+        assertEquals(0, sfx.misses)
     }
 
     @Test
-    fun libraryModeKeepsTheHitSound() = runTest {
+    fun aChartWithoutSeparateGuitarPlaysWholeWithNoHitSound() = runTest {
         loader.result = { playable() }
         val state = viewModel().uiState.value as GameplayUiState.Ready
         player.positionMs = 1_040
@@ -385,8 +384,9 @@ class GameplayViewModelTest {
 
         state.session.press(0)
 
+        // Como no Spotify: a música inteira já toca a guitarra; acertar não faz som, só o erro faz.
         assertTrue(state.session.lastJudgment != null)
-        assertEquals(1, sfx.hits)
+        assertEquals(0, sfx.misses)
     }
 
     @Test
