@@ -8,6 +8,11 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **Hoje:** a comparação é local, antes de commitar mudanças de UI.
 - **Quando retomar:** ao criar o repositório remoto. Ativar a comparação no CI com tolerância (por exemplo, 1% de pixels), calibrada na primeira execução.
 
+## Ideias para depois
+
+- **Fila de separações (guitarra por IA):** hoje é uma por vez ("Já tem uma separação em andamento"). Uma fila deixaria escolher várias músicas e o celular separaria todas em sequência (por exemplo, carregando à noite), com o ícone mostrando quantas faltam.
+- **Backup do projeto:** o repositório só existe neste PC, sem remoto. Um repositório privado (GitHub, por exemplo) protege contra perda do disco; ao criar, ativar também a comparação de screenshots no CI (seção acima). Só com o usuário escolhendo onde.
+
 ## Pontos menores em aberto (revisões de 2026-10-09 a 2026-10-13)
 
 Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada depois de reconectar, pausa antes do primeiro início).
