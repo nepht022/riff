@@ -1,8 +1,12 @@
 package com.rodrigomachado.riff.feature.search
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -18,15 +22,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
+import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 /** Originais | Versões e o interruptor "Só com guitarra separada". */
 @Composable
 internal fun FilterRow(state: SearchUiState, onShowVersions: (Boolean) -> Unit, onOnlyGuitar: (Boolean) -> Unit) {
     val onlyGuitar = withMenuSound(MenuSound.NAVIGATE, onOnlyGuitar)
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
         Choice(stringResource(R.string.search_originals), selected = !state.versions) { onShowVersions(false) }
         Choice(stringResource(R.string.search_versions), selected = state.versions) { onShowVersions(true) }
     }
@@ -55,9 +61,16 @@ internal fun FilterRow(state: SearchUiState, onShowVersions: (Boolean) -> Unit, 
 
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
+    // Texto selecionável, não TextButton: sem recuo nem largura mínima, alinha à esquerda com o resto da tela.
+    Box(
+        Modifier
+            .heightIn(min = 48.dp)
+            .selectable(selected, role = Role.Tab, onClick = withMenuSound(MenuSound.NAVIGATE, onClick)),
+        contentAlignment = Alignment.CenterStart,
+    ) {
         Text(
             label,
+            style = MaterialTheme.typography.labelLarge,
             color = if (selected) RiffColors.Paper else RiffColors.PaperDim,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             textDecoration = if (selected) TextDecoration.Underline else TextDecoration.None,

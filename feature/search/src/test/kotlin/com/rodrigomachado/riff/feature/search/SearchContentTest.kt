@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.search
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -184,5 +185,16 @@ class SearchContentTest {
 
         composeRule.onNodeWithText("Nenhum mapa com guitarra separada nos 62 resultados.").assertExists()
         composeRule.onNodeWithText("Procurar mais").assertDoesNotExist()
+    }
+
+    @Test
+    fun theFilterChoicesLineUpWithTheRestOfTheScreen() {
+        show(SearchUiState(query = "x"))
+
+        val choice = composeRule.onNodeWithText("Originais", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val toggle = composeRule.onNodeWithText("Só com guitarra separada", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertEquals(toggle.left.value, choice.left.value, 0.5f)
     }
 }
