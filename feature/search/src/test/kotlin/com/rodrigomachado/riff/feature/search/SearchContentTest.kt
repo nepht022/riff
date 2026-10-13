@@ -197,4 +197,12 @@ class SearchContentTest {
             .getUnclippedBoundsInRoot()
         assertEquals(toggle.left.value, choice.left.value, 0.5f)
     }
+
+    @Test
+    fun theScreenIsCalledPesquisaAndTheButtonPesquisar() {
+        show(SearchUiState(query = "x"))
+
+        composeRule.onNodeWithText("Pesquisa").assertExists()
+        composeRule.onNodeWithText("Pesquisar").assertExists()
+    }
 }

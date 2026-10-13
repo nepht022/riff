@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="search_title">Pesquisar</string>
+    <string name="search_title">Pesquisa</string>
     <string name="search_back">Voltar</string>
     <string name="search_hint">Música ou artista</string>
     <string name="search_action">Pesquisar</string>
