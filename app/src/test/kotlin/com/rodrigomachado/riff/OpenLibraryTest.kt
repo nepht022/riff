@@ -15,4 +15,12 @@ class OpenLibraryTest {
         assertFalse(opensLibrary(Intent()))
         assertFalse(opensLibrary(null))
     }
+
+    @Test
+    fun theRequestIsUsedOnlyOnceSoRotatingTheScreenDoesNotOpenTheLibraryAgain() {
+        val intent = Intent().putExtra("riff.abrir_biblioteca", true)
+
+        assertTrue(consumeOpenLibrary(intent))
+        assertFalse(consumeOpenLibrary(intent))
+    }
 }

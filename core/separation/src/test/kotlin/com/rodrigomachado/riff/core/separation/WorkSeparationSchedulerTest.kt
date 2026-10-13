@@ -12,7 +12,15 @@ import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,6 +46,13 @@ class WorkSeparationSchedulerTest {
         override fun freeBytes() = 1L shl 30
     }
     private lateinit var scheduler: WorkSeparationScheduler
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @After
+    fun tearDown() = scope.cancel()
+
+    private fun awaitStatus(expected: (SeparationStatus) -> Boolean, on: SeparationProgress = progress) =
+        runBlocking { withTimeout(10_000) { on.status.first(expected) } }
 
     @Before
     fun setUp() {
@@ -45,7 +60,7 @@ class WorkSeparationSchedulerTest {
             context,
             Configuration.Builder().setExecutor(SynchronousExecutor()).setWorkerFactory(WaitingWorkers).build(),
         )
-        scheduler = WorkSeparationScheduler(context, progress, device)
+        scheduler = WorkSeparationScheduler(context, progress, device, scope)
     }
 
     private fun work() = WorkManager.getInstance(context).getWorkInfosForUniqueWork(UNIQUE_WORK).get()
@@ -73,6 +88,20 @@ class WorkSeparationSchedulerTest {
         scheduler.cancel()
 
         assertEquals(WorkInfo.State.CANCELLED, work().single().state)
+        awaitStatus({ it == SeparationStatus.Idle })
+    }
+
+    @Test
+    fun afterTheProcessDiesTheRunningWorkIsShownAgain() {
+        scheduler.start("m", "Música")
+        val fresh = SeparationProgress() // o processo morreu: o estado em memória recomeça em Idle
+
+        WorkSeparationScheduler(context, fresh, device, scope)
+
+        assertEquals(
+            SeparationStatus.Running("m", "Música", 0f, null),
+            awaitStatus({ it is SeparationStatus.Running }, on = fresh),
+        )
     }
 
     @Test

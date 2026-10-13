@@ -15,6 +15,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.io.File
 import java.io.FileInputStream
 import java.nio.channels.FileChannel
@@ -32,6 +35,11 @@ abstract class SeparationBindsModule {
 object SeparationModule {
     @Provides
     @Singleton
+    @SeparationScope
+    fun scope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @Provides
+    @Singleton
     fun deviceInfo(@ApplicationContext context: Context, @SeparationsDir dir: File): DeviceInfo =
         AndroidDeviceInfo(context, dir)
 
@@ -47,8 +55,8 @@ object SeparationModule {
     ): GuitarSeparationRunner = GuitarSeparationRunner(
         repo = repo,
         probe = probe,
-        loader = { uri, scratch ->
-            SongPcmLoader { MediaCodecPcmSource.open(context, it, opener) }.load(uri, scratch)
+        loader = { uri, scratch, keepGoing ->
+            SongPcmLoader { MediaCodecPcmSource.open(context, it, opener) }.load(uri, scratch, keepGoing)
         },
         models = { useArena -> OrtDemucsModel(modelBuffer(context), useArena = useArena) },
         sinks = { dir -> M4aStemSink(dir) },

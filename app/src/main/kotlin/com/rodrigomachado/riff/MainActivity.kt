@@ -45,7 +45,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        openLibrary.value = opensLibrary(intent)
+        // Só numa tela nova: restaurada (rotação, processo recriado), o pedido já foi atendido.
+        openLibrary.value = savedInstanceState == null && consumeOpenLibrary(intent)
         // O tema é sempre escuro: os ícones das barras do sistema ficam claros
         // mesmo com o aparelho no modo claro.
         enableEdgeToEdge(
@@ -75,7 +76,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (opensLibrary(intent)) openLibrary.value = true
+        if (consumeOpenLibrary(intent)) openLibrary.value = true
     }
 }
 

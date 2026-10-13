@@ -34,7 +34,11 @@ class GuitarSeparationRunnerTest {
     private val repo = RunnerRepository()
     private val probe = object : ChartAudioProbe {
         var audio: ChartAudio? = ChartAudio.Single("content://m/song.opus")
-        override suspend fun audioOf(chartId: String) = audio
+        var failure: Exception? = null
+        override suspend fun audioOf(chartId: String): ChartAudio? {
+            failure?.let { throw it }
+            return audio
+        }
     }
     private var free = 1L shl 30
     private val device = object : DeviceInfo {
@@ -66,18 +70,22 @@ class GuitarSeparationRunnerTest {
     class RecordingSink : ClosableStemSink {
         var frames = 0
         var finished = false
+        var aborted = false
         override fun write(guitar: FloatArray, backing: FloatArray, frames: Int) {
             this.frames += frames
         }
         override fun finish() {
             finished = true
         }
+        override fun abort() {
+            aborted = true
+        }
     }
 
     private fun runner(frames: Int = 400_000) = GuitarSeparationRunner(
         repo = repo,
         probe = probe,
-        loader = { _, _ -> songHandle(frames) },
+        loader = { _, _, _ -> songHandle(frames) },
         models = { EchoModel() },
         sinks = { RecordingSink().also(sinks::add) },
         progress = progress,
@@ -151,5 +159,22 @@ class GuitarSeparationRunnerTest {
         assertEquals(SeparationStatus.Idle, progress.status.value)
         assertFalse(File(tmp.root, "m.tmp").exists())
         assertTrue(repo.committed.isEmpty())
+        assertTrue(sinks.single().aborted) // os encoders não ficam abertos
+    }
+
+    @Test
+    fun aFolderThatCannotBeReadFailsInsteadOfStayingRunning() = runTest {
+        probe.failure = IOException("pasta sumiu")
+
+        assertFalse(runner().run("m", "Música"))
+
+        assertEquals(SeparationStatus.Failed("Música", SeparationFailure.ERROR), progress.status.value)
+    }
+
+    @Test
+    fun aSuccessfulSeparationDoesNotAbortTheFiles() = runTest {
+        runner().run("m", "Música")
+
+        assertFalse(sinks.single().aborted)
     }
 }

@@ -130,7 +130,15 @@ class LibraryViewModel @Inject constructor(
         val running = scheduler.status.value
         if (running is SeparationStatus.Running && running.chartId == chartId) return false
         if (separations.stateOf(chartId) != null) return false
-        return probe.audioOf(chartId)?.let { it !is ChartAudio.Stems } ?: false
+        // Sem conseguir ler a pasta (apagada, sem permissão), não pergunta: a partida mostra o erro de sempre.
+        val audio = try {
+            probe.audioOf(chartId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+            null
+        }
+        return audio != null && audio !is ChartAudio.Stems
     }
 
     fun onSeparate() {
@@ -145,7 +153,8 @@ class LibraryViewModel @Inject constructor(
     fun onPlayWithoutSeparating() {
         val ask = promptState.value.prompt ?: return
         viewModelScope.launch {
-            separations.decline(ask.chartId)
+            // Ocupado com outra separação, "jogar sem separar" é só por agora: a pergunta volta da próxima vez.
+            if (!ask.busy) separations.decline(ask.chartId)
             promptState.value = PromptState(play = PlayRequestLibrary(ask.chartId, ask.difficulty))
         }
     }

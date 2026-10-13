@@ -58,12 +58,9 @@ class SeparationNotifications(private val context: Context) {
         }
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName)
             ?.putExtra(OPEN_LIBRARY_EXTRA, true)
-        val pending = PendingIntent.getActivity(
-            context,
-            0,
-            open,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+        val pending = open?.let {
+            PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        }
         return NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentIntent(pending)

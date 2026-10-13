@@ -136,5 +136,9 @@ class FakeScheduler : SeparationScheduler {
 
 class FakeAudioProbe : ChartAudioProbe {
     val audio = mutableMapOf<String, ChartAudio>()
-    override suspend fun audioOf(chartId: String) = audio[chartId]
+    var failure: Exception? = null
+    override suspend fun audioOf(chartId: String): ChartAudio? {
+        failure?.let { throw it }
+        return audio[chartId]
+    }
 }

@@ -29,10 +29,14 @@ class SeparationWorker @AssistedInject constructor(
         notifications.foregroundInfo(SeparationStatus.Running(chartId, title, 0f, null))
 
     override suspend fun doWork(): Result = coroutineScope {
-        setForeground(getForegroundInfo())
+        // O Android 12+ não deixa virar primeiro plano com o app em segundo plano (ex.: retomada depois de
+        // reiniciar o celular): a separação segue sem a notificação de progresso.
+        var foreground = tryForeground(getForegroundInfo())
         val updates = launch {
             progress.status.collect { status ->
-                if (status is SeparationStatus.Running) setForeground(notifications.foregroundInfo(status))
+                if (foreground && status is SeparationStatus.Running) {
+                    foreground = tryForeground(notifications.foregroundInfo(status))
+                }
             }
         }
         val ok = runner.run(chartId, title)
@@ -44,6 +48,13 @@ class SeparationWorker @AssistedInject constructor(
             notifications.failed(status)
         }
         if (ok) Result.success() else Result.failure()
+    }
+
+    private suspend fun tryForeground(info: ForegroundInfo): Boolean = try {
+        setForeground(info)
+        true
+    } catch (@Suppress("SwallowedException") e: IllegalStateException) {
+        false
     }
 
     companion object {

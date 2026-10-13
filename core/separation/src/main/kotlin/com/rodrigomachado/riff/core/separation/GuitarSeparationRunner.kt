@@ -8,6 +8,7 @@ import com.rodrigomachado.riff.core.model.SeparationStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import java.io.Closeable
 import java.io.File
 
@@ -17,7 +18,8 @@ interface SongPcmHandle :
     Closeable
 
 fun interface SongLoader {
-    fun load(uri: String, scratch: File): SongPcmHandle
+    /** [keepGoing] falso interrompe a decodificação (cancelamento) com CancellationException. */
+    fun load(uri: String, scratch: File, keepGoing: () -> Boolean): SongPcmHandle
 }
 
 /**
@@ -40,13 +42,15 @@ class GuitarSeparationRunner(
     @Suppress("TooGenericExceptionCaught") // falha do modelo, do decodificador ou de memória: a música fica como estava
     suspend fun run(chartId: String, title: String): Boolean {
         if (device.freeBytes() < MIN_FREE_BYTES) return failed(title, SeparationFailure.NO_SPACE)
-        val uri = probe.audioOf(chartId)?.singleUri ?: return failed(title, SeparationFailure.NO_AUDIO)
-        val work = repo.workDir(chartId)
-        val running = SeparationStatus.Running(chartId, title, progress = 0f, remainingMs = null)
-        progress.set(running)
+        var work: File? = null
         return try {
-            separate(uri, work, running)
-            repo.commit(chartId, work)
+            // Tudo dentro do try: nenhuma falha deixa o ícone preso em "separando".
+            val uri = probe.audioOf(chartId)?.singleUri ?: return failed(title, SeparationFailure.NO_AUDIO)
+            val dir = repo.workDir(chartId).also { work = it }
+            val running = SeparationStatus.Running(chartId, title, progress = 0f, remainingMs = null)
+            progress.set(running)
+            separate(uri, dir, running)
+            repo.commit(chartId, dir)
             progress.set(SeparationStatus.Idle)
             true
         } catch (e: CancellationException) {
@@ -56,35 +60,51 @@ class GuitarSeparationRunner(
             Log.w(TAG, "não deu para separar $chartId", e)
             failed(title, SeparationFailure.ERROR)
         } finally {
-            work.deleteRecursively()
+            work?.deleteRecursively()
         }
     }
 
     private suspend fun separate(uri: String, work: File, running: SeparationStatus.Running) {
-        loader.load(uri, scratch).use { song ->
+        val context = currentCoroutineContext()
+        loader.load(uri, scratch) { context.isActive }.use { song ->
             models.create(useArena = device.totalRamBytes >= ARENA_RAM_BYTES).use { model ->
                 val sink = sinks.create(work)
-                val started = System.nanoTime()
-                var current = running
-                GuitarSeparator(model).separate(
-                    song,
-                    sink,
-                    onChunk = { done, total ->
-                        val elapsedMs = (System.nanoTime() - started) / NANOS_PER_MS
-                        current = current.copy(
-                            progress = done.toFloat() / total,
-                            remainingMs = elapsedMs / done * (total - done),
-                        )
-                        progress.set(current)
-                    },
-                    checkpoint = {
-                        currentCoroutineContext().ensureActive()
-                        thermal.awaitCool { paused -> progress.set(current.copy(pausedForHeat = paused)) }
-                    },
-                )
-                sink.finish()
+                var finished = false
+                try {
+                    separateInto(song, model, sink, running)
+                    sink.finish()
+                    finished = true
+                } finally {
+                    if (!finished) sink.abort()
+                }
             }
         }
+    }
+
+    private suspend fun separateInto(
+        song: SongPcm,
+        model: DemucsModel,
+        sink: StemSink,
+        running: SeparationStatus.Running,
+    ) {
+        val started = System.nanoTime()
+        var current = running
+        GuitarSeparator(model).separate(
+            song,
+            sink,
+            onChunk = { done, total ->
+                val elapsedMs = (System.nanoTime() - started) / NANOS_PER_MS
+                current = current.copy(
+                    progress = done.toFloat() / total,
+                    remainingMs = elapsedMs / done * (total - done),
+                )
+                progress.set(current)
+            },
+            checkpoint = {
+                currentCoroutineContext().ensureActive()
+                thermal.awaitCool { paused -> progress.set(current.copy(pausedForHeat = paused)) }
+            },
+        )
     }
 
     private fun failed(title: String, reason: SeparationFailure): Boolean {

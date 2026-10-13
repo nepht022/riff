@@ -13,6 +13,9 @@ import java.nio.ByteOrder
 interface ClosableStemSink : StemSink {
     /** Fecha os arquivos; sem isto eles ficam inválidos. */
     fun finish()
+
+    /** Desiste (falha ou cancelamento): libera os codificadores sem fechar os arquivos. */
+    fun abort()
 }
 
 fun interface StemSinkFactory {
@@ -22,7 +25,12 @@ fun interface StemSinkFactory {
 /** Grava a guitarra e o resto em `.m4a` (AAC 160 kb/s, 44,1 kHz estéreo) na pasta da separação. */
 class M4aStemSink(dir: File) : ClosableStemSink {
     private val guitar = AacFile(File(dir, SEPARATED_GUITAR))
-    private val backing = AacFile(File(dir, SEPARATED_BACKING))
+    private val backing = try {
+        AacFile(File(dir, SEPARATED_BACKING))
+    } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
+        guitar.release()
+        throw e
+    }
 
     override fun write(guitar: FloatArray, backing: FloatArray, frames: Int) {
         this.guitar.write(guitar, frames)
@@ -32,6 +40,11 @@ class M4aStemSink(dir: File) : ClosableStemSink {
     override fun finish() {
         guitar.finish()
         backing.finish()
+    }
+
+    override fun abort() {
+        guitar.release()
+        backing.release()
     }
 }
 
@@ -43,6 +56,15 @@ private class AacFile(file: File) {
     private var framesWritten = 0L
 
     init {
+        try {
+            configure()
+        } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
+            release()
+            throw e
+        }
+    }
+
+    private fun configure() {
         val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, Demucs.SAMPLE_RATE, 2).apply {
             setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
             setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
@@ -82,6 +104,12 @@ private class AacFile(file: File) {
         codec.release()
         muxer.stop()
         muxer.release()
+    }
+
+    /** Libera tudo sem terminar o arquivo (que fica inválido e é apagado com a pasta temporária). */
+    fun release() {
+        runCatching { codec.release() }
+        runCatching { muxer.release() }
     }
 
     private fun drain(untilEnd: Boolean) {

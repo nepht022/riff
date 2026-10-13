@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.separation
 
 import com.rodrigomachado.riff.core.audio.PcmSource
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.min
@@ -23,32 +24,47 @@ class ResamplingPcmSource(private val source: PcmSource, targetRate: Int) : PcmS
     private var nextOut = 0L
     private val block = FloatArray(BLOCK * channelCount)
 
+    // O kernel tabelado (com interpolação linear): seno e cossenos por amostra deixavam a decodificação lenta.
+    private val table = FloatArray(TAPS * RESOLUTION + 2) { kernel(it.toDouble() / RESOLUTION).toFloat() }
+    private val weights = FloatArray(2 * TAPS)
+
     override fun read(buffer: FloatArray, maxFrames: Int): Int {
         if (source.sampleRate == sampleRate) return source.read(buffer, maxFrames)
         var produced = 0
         while (produced < maxFrames) {
             val center = nextOut * step
             if (!ensure(floor(center).toLong() + TAPS + 1)) break
-            for (c in 0 until channelCount) buffer[produced * channelCount + c] = interpolate(c, center)
+            val first = floor(center).toLong() - TAPS + 1
+            for (t in 0 until 2 * TAPS) weights[t] = tableAt(abs(center - (first + t)))
+            for (c in 0 until channelCount) buffer[produced * channelCount + c] = interpolate(c, first)
             produced++
             nextOut++
         }
         return produced
     }
 
-    private fun interpolate(c: Int, center: Double): Float {
-        val first = floor(center).toLong() - TAPS + 1
-        var sum = 0.0
-        for (j in first..first + 2 * TAPS - 1) {
+    private fun interpolate(c: Int, first: Long): Float {
+        var sum = 0f
+        for (t in 0 until 2 * TAPS) {
+            val j = first + t
             val i = (j - historyStart).toInt()
             if (j < 0 || i >= available) continue
-            sum += history[c][i] * kernel(center - j)
+            sum += history[c][i] * weights[t]
         }
-        return sum.toFloat()
+        return sum
+    }
+
+    private fun tableAt(x: Double): Float {
+        val position = x * RESOLUTION
+        val index = position.toInt()
+        if (index >= TAPS * RESOLUTION) return 0f
+        val fraction = (position - index).toFloat()
+        return table[index] + (table[index + 1] - table[index]) * fraction
     }
 
     private fun kernel(x: Double): Double {
         if (x == 0.0) return cutoff
+        if (x >= TAPS) return 0.0
         val window = 0.42 + 0.5 * cos(PI * x / TAPS) + 0.08 * cos(2 * PI * x / TAPS)
         return sin(PI * cutoff * x) / (PI * x) * window
     }
@@ -86,5 +102,6 @@ class ResamplingPcmSource(private val source: PcmSource, targetRate: Int) : PcmS
     private companion object {
         const val TAPS = 32
         const val BLOCK = 4096
+        const val RESOLUTION = 512
     }
 }

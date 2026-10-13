@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.separation
 
 import com.rodrigomachado.riff.core.audio.PcmSource
 import com.rodrigomachado.riff.core.audio.PcmSourceOpener
+import kotlinx.coroutines.CancellationException
 import java.io.BufferedOutputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -53,13 +54,13 @@ class FileSong internal constructor(
 
 /** Decodifica a música inteira para 44,1 kHz estéreo e calcula a média e o desvio do mono (Welford). */
 class SongPcmLoader(private val opener: PcmSourceOpener) {
-    fun load(uri: String, scratch: File): FileSong {
+    fun load(uri: String, scratch: File, keepGoing: () -> Boolean = { true }): FileSong {
         val file = File.createTempFile("musica", ".f32", scratch)
         val stats = MonoStats()
         try {
             ResamplingPcmSource(opener.open(uri), Demucs.SAMPLE_RATE).use { source ->
                 DataOutputStream(BufferedOutputStream(file.outputStream(), BUFFER)).use { out ->
-                    copyStereo(source, out, stats)
+                    copyStereo(source, out, stats, keepGoing)
                 }
             }
         } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
@@ -69,10 +70,11 @@ class SongPcmLoader(private val opener: PcmSourceOpener) {
         return FileSong(file, stats.count.toInt(), stats.mean.toFloat(), stats.std().toFloat())
     }
 
-    private fun copyStereo(source: PcmSource, out: DataOutputStream, stats: MonoStats) {
+    private fun copyStereo(source: PcmSource, out: DataOutputStream, stats: MonoStats, keepGoing: () -> Boolean) {
         val channels = source.channelCount
         val buffer = FloatArray(BLOCK * channels)
         while (true) {
+            if (!keepGoing()) throw CancellationException("separação cancelada durante a decodificação")
             val n = source.read(buffer, BLOCK)
             if (n == 0) break
             for (k in 0 until n) {

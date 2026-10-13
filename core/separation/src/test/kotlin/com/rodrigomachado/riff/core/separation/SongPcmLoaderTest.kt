@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.separation
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -44,5 +45,17 @@ class SongPcmLoaderTest {
             assertEquals(1f, song.sample(1, 50))
             assertFalse(song.std.isNaN())
         }
+    }
+
+    @Test
+    fun cancellingDuringTheDecodeStopsAndCleansUp() {
+        var blocks = 0
+        val long = FloatArray(2 * 500_000)
+        val loader = SongPcmLoader { ArrayPcmSource(long, 48_000, 2) }
+
+        val error = runCatching { loader.load("x", tmp.root) { ++blocks < 3 } }.exceptionOrNull()
+
+        assertTrue(error is kotlinx.coroutines.CancellationException)
+        assertEquals(0, tmp.root.listFiles()!!.size)
     }
 }

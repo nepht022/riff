@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.separation
 
 import com.rodrigomachado.riff.core.audio.PcmSource
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.sin
 
@@ -50,5 +51,19 @@ class ResamplingPcmSourceTest {
 
         assertEquals(1000, source.read(buffer, 1000))
         assertEquals(input[1999], buffer[1999])
+    }
+
+    @Test
+    fun aMinuteOfStereoResamplesQuickly() {
+        val input = FloatArray(2 * 48_000 * 60) { (0.3 * sin(it * 0.01)).toFloat() }
+        val source = ResamplingPcmSource(ArrayPcmSource(input, 48_000, 2), 44_100)
+        val buffer = FloatArray(2 * 4096)
+
+        val started = System.nanoTime()
+        while (source.read(buffer, 4096) > 0) Unit
+        val seconds = (System.nanoTime() - started) / 1e9
+
+        // Uma música de 4 min decodificava em ~30 s no S25 só por causa disto; o limite é folgado para o PC.
+        assertTrue("levou $seconds s", seconds < 4.0)
     }
 }

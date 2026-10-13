@@ -296,4 +296,31 @@ class LibraryViewModelTest {
 
         assertEquals(setOf("m"), viewModel().uiState.value.aiSeparated)
     }
+
+    @Test
+    fun aChartWhoseFolderIsGoneStillGoesToPlayInsteadOfCrashing() = runTest {
+        probe.failure = com.rodrigomachado.riff.core.data.folder.FolderAccessLostException("pasta sumiu")
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun playingFromABusyPromptDoesNotRememberADecline() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.start("outra", "Outra")
+        val vm = viewModel()
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+        vm.onSeparate()
+
+        vm.onPlayWithoutSeparating()
+        advanceUntilIdle()
+
+        assertNull(separations.states["m"])
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
 }
