@@ -139,6 +139,8 @@ class ChartDownloaderTest {
 
 /** Grava na árvore em memória; [created] lista os arquivos que ficaram na pasta de downloads. */
 private class TreeWriter(private val tree: FakeFolderSource) : FolderWriter {
+    override suspend fun deleteDocument(fileUri: String) = true
+
     private val paths = mutableSetOf<String>()
 
     fun created() = paths.toList()

@@ -43,6 +43,10 @@ class FakeChartRepository : ChartRepository {
         charts.value = charts.value + chart
     }
 
+    override suspend fun remove(ids: Collection<String>) {
+        charts.value = charts.value.filterNot { it.id in ids }
+    }
+
     override suspend fun removeNotSeenIn(scanId: Long) = Unit
 
     override suspend fun keepFolder(folderUri: String, scanId: Long) = Unit

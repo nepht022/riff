@@ -36,6 +36,9 @@ abstract class ChartDao {
     @Query("SELECT * FROM charts WHERE id = :id")
     abstract suspend fun get(id: String): ChartWithDifficulties?
 
+    @Query("DELETE FROM charts WHERE id IN (:ids)")
+    abstract suspend fun deleteAll(ids: List<String>)
+
     @Query("DELETE FROM charts WHERE lastSeenScanId != :scanId")
     abstract suspend fun deleteNotSeenIn(scanId: Long)
 

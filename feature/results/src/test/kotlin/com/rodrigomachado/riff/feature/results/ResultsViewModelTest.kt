@@ -31,6 +31,8 @@ class FakeScores(private val records: List<ScoreRecord>) : ScoreRepository {
 }
 
 class FakeCharts : ChartRepository {
+    override suspend fun remove(ids: Collection<String>) = Unit
+
     override fun observeCharts(): Flow<List<Chart>> = flowOf(emptyList())
 
     override suspend fun getChart(id: String) =

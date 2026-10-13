@@ -76,6 +76,10 @@ class FakeChartRepository : ChartRepository {
         }
     }
 
+    override suspend fun remove(ids: Collection<String>) {
+        stored.value = stored.value - ids.toSet()
+    }
+
     override suspend fun removeNotSeenIn(scanId: Long) {
         removedScans += scanId
         stored.value = stored.value.filterValues { it.second == scanId }

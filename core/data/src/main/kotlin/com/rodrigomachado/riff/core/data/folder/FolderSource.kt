@@ -38,6 +38,9 @@ interface FolderWriter {
 
     /** Apaga, sem erro se já não existir. */
     suspend fun delete(fileUri: String)
+
+    /** Apaga o arquivo ou a pasta (com o conteúdo); verdadeiro se apagou ou se já não existia. */
+    suspend fun deleteDocument(fileUri: String): Boolean
 }
 
 class FolderAccessLostException(message: String, cause: Throwable? = null) : Exception(message, cause)

@@ -18,6 +18,8 @@ import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
+import com.rodrigomachado.riff.core.data.library.ChartDeleter
+import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -70,7 +72,7 @@ abstract class DataBindsModule {
     abstract fun chartAudioProbe(impl: FolderChartAudioProbe): ChartAudioProbe
 }
 
-/** Acesso à pasta da biblioteca pelo SAF: permissão, leitura por posição (`.sng`) e gravação (downloads). */
+/** Acesso à pasta da biblioteca pelo SAF: permissão, leitura por posição (`.sng`), gravação (downloads) e exclusão. */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class FolderBindsModule {
@@ -85,6 +87,9 @@ abstract class FolderBindsModule {
 
     @Binds
     abstract fun chartDownloader(impl: EncoreChartDownloader): ChartDownloader
+
+    @Binds
+    abstract fun chartDeleter(impl: FolderChartDeleter): ChartDeleter
 }
 
 @Module

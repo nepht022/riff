@@ -12,6 +12,9 @@ interface ChartRepository {
     /** Grava (ou atualiza) um mapa encontrado na importação [scanId]. */
     suspend fun saveScanned(chart: Chart, scanId: Long)
 
+    /** Tira os mapas da biblioteca (o recorde, os ajustes e a separação saem junto, em cascata). */
+    suspend fun remove(ids: Collection<String>)
+
     /** Apaga os mapas que não apareceram na importação [scanId] (pastas que sumiram). */
     suspend fun removeNotSeenIn(scanId: Long)
 

@@ -103,6 +103,8 @@ class SpotifyNowPlayingRepositoryTest {
     }
 
     private class FakeCharts : ChartRepository {
+        override suspend fun remove(ids: Collection<String>) = Unit
+
         override fun observeCharts(): Flow<List<Chart>> = MutableStateFlow(emptyList())
 
         override suspend fun getChart(id: String): Chart? = null

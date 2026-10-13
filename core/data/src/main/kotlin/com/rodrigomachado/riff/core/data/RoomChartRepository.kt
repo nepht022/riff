@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class RoomChartRepository @Inject constructor(private val dao: ChartDao) : ChartRepository {
+    override suspend fun remove(ids: Collection<String>) = dao.deleteAll(ids.toList())
+
     override fun observeCharts(): Flow<List<Chart>> = dao.observeAll().map { rows -> rows.mapNotNull { it.toModel() } }
 
     override suspend fun getChart(id: String): Chart? = dao.get(id)?.toModel()

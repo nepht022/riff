@@ -45,6 +45,18 @@ class SafFolderWriter @Inject constructor(@ApplicationContext private val contex
             ).toString()
     }
 
+    override suspend fun deleteDocument(fileUri: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            DocumentsContract.deleteDocument(resolver, Uri.parse(fileUri))
+        } catch (@Suppress("SwallowedException") e: java.io.FileNotFoundException) {
+            true // já não existe
+        } catch (@Suppress("SwallowedException") e: SecurityException) {
+            false
+        } catch (@Suppress("SwallowedException") e: IllegalArgumentException) {
+            false
+        }
+    }
+
     override suspend fun delete(fileUri: String) {
         withContext(Dispatchers.IO) { runCatching { DocumentsContract.deleteDocument(resolver, Uri.parse(fileUri)) } }
     }
