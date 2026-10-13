@@ -31,4 +31,7 @@ object DatabaseModule {
 
     @Provides
     fun encoreChartDao(database: RiffDatabase): EncoreChartDao = database.encoreChartDao()
+
+    @Provides
+    fun aiSeparationDao(database: RiffDatabase): AiSeparationDao = database.aiSeparationDao()
 }

@@ -1,9 +1,8 @@
 package com.rodrigomachado.riff.core.data.game
 
-import com.rodrigomachado.riff.core.chart.ChartAudioFiles
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.IoDispatcher
-import com.rodrigomachado.riff.core.data.folder.FolderEntry
 import com.rodrigomachado.riff.core.data.folder.FolderSource
 import com.rodrigomachado.riff.core.data.importer.ChartFolderReader
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
@@ -44,6 +43,7 @@ interface ChartTrackLoader {
 class FolderChartTrackLoader @Inject constructor(
     private val source: FolderSource,
     private val charts: ChartRepository,
+    private val separations: AiSeparationRepository,
     @IoDispatcher private val dispatcher: CoroutineDispatcher,
 ) : ChartTrackLoader {
     override suspend fun load(chartId: String, difficulty: Difficulty): PlayableChart = withContext(dispatcher) {
@@ -51,24 +51,19 @@ class FolderChartTrackLoader @Inject constructor(
         val children = source.listChildren(chart.folderUri)
         val loaded = ChartFolderReader.read(source, children, FolderChartImporter.MAX_FILE_BYTES)
         val notes = loaded.tracks[difficulty] ?: throw ChartNotFoundException("mapa $chartId sem $difficulty")
-        PlayableChart(chart, difficulty, notes, audioOf(children.filter { !it.isDirectory }))
+        val audio = ChartAudioFinder.find(children.filter { !it.isDirectory })
+        PlayableChart(chart, difficulty, notes, withAiSeparation(chartId, audio))
     }
 
-    private fun audioOf(files: List<FolderEntry>): ChartAudio? {
-        val names = files.map { it.name }
-        fun find(name: String) = ChartAudioFiles.find(names, name)?.let { found -> files.first { it.name == found } }
-        val song = find("song")
-        val guitar = find("guitar")
-        val backing = ChartAudioFiles.BACKING_NAMES.mapNotNull(::find)
-        return when {
-            guitar != null && backing.isNotEmpty() ->
-                ChartAudio.Stems(guitar.uri, backing.map { it.uri }, fallbackUri = song?.uri ?: guitar.uri)
-
-            song != null -> ChartAudio.Single(song.uri)
-
-            guitar != null -> ChartAudio.Single(guitar.uri)
-
-            else -> null
-        }
+    /** Sem guitarra separada na pasta, usa a da IA (se houver), com o áudio original de reserva. */
+    private suspend fun withAiSeparation(chartId: String, audio: ChartAudio?): ChartAudio? {
+        if (audio is ChartAudio.Stems) return audio
+        val files = separations.separatedFiles(chartId) ?: return audio
+        val guitar = "file://" + files.guitar.invariantSeparatorsPath
+        return ChartAudio.Stems(
+            guitar,
+            listOf("file://" + files.backing.invariantSeparatorsPath),
+            fallbackUri = audio?.singleUri ?: guitar,
+        )
     }
 }

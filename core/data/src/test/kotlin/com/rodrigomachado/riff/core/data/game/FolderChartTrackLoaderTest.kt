@@ -3,6 +3,8 @@ package com.rodrigomachado.riff.core.data.game
 import com.rodrigomachado.riff.core.chart.sng.ByteArrayRandomRead
 import com.rodrigomachado.riff.core.chart.sng.SngRef
 import com.rodrigomachado.riff.core.chart.sng.SngWriter
+import com.rodrigomachado.riff.core.data.FakeAiSeparationRepository
+import com.rodrigomachado.riff.core.data.SeparatedFiles
 import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.importer.FakeChartRepository
 import com.rodrigomachado.riff.core.data.importer.FakeFolderSource
@@ -17,12 +19,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class FolderChartTrackLoaderTest {
     private val source = FakeFolderSource()
     private val charts = FakeChartRepository()
+    private val separations = FakeAiSeparationRepository()
 
-    private fun TestScope.loader() = FolderChartTrackLoader(source, charts, StandardTestDispatcher(testScheduler))
+    private fun TestScope.loader() = FolderChartTrackLoader(
+        source,
+        charts,
+        separations,
+        StandardTestDispatcher(testScheduler),
+    )
 
     private suspend fun registerChart(folder: String) = charts.saveScanned(
         Chart("id", "Música", "Banda", null, null, null, folder, ChartFormat.CHART, setOf(Difficulty.EXPERT)),
@@ -127,6 +136,7 @@ class FolderChartTrackLoaderTest {
         val loader = FolderChartTrackLoader(
             SngFolderSource(source) { ByteArrayRandomRead(source.bytes(it)) },
             charts,
+            separations,
             StandardTestDispatcher(testScheduler),
         )
 
@@ -134,5 +144,29 @@ class FolderChartTrackLoaderTest {
 
         val song = SngRef.entryUri("raiz/x.sng", "song.opus")
         assertEquals(ChartAudio.Stems(SngRef.entryUri("raiz/x.sng", "guitar.ogg"), listOf(song), song), playable.audio)
+    }
+
+    @Test
+    fun anAiSeparationBecomesStemsWithTheSongAsFallback() = runTest {
+        source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/M/song.opus", "música")
+        registerChart("raiz/M")
+        separations.files["id"] = SeparatedFiles(File("/sep/x/guitar.m4a"), File("/sep/x/backing.m4a"))
+
+        assertEquals(
+            ChartAudio.Stems("file:///sep/x/guitar.m4a", listOf("file:///sep/x/backing.m4a"), "raiz/M/song.opus"),
+            loader().load("id", Difficulty.EXPERT).audio,
+        )
+    }
+
+    @Test
+    fun theChartsOwnStemsWinOverTheAiOnes() = runTest {
+        source.file("raiz/M/notes.chart", chartText("Música", "Banda"))
+        source.file("raiz/M/guitar.ogg", "guitarra")
+        source.file("raiz/M/song.ogg", "música")
+        registerChart("raiz/M")
+        separations.files["id"] = SeparatedFiles(File("/sep/x/guitar.m4a"), File("/sep/x/backing.m4a"))
+
+        assertEquals("raiz/M/guitar.ogg", (loader().load("id", Difficulty.EXPERT).audio as ChartAudio.Stems).guitarUri)
     }
 }

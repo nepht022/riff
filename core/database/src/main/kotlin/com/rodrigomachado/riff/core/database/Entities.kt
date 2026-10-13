@@ -81,3 +81,15 @@ data class ChartOffsetEntity(@PrimaryKey val chartId: String, val offsetMs: Int)
     foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
 )
 data class EncoreChartEntity(@PrimaryKey val chartId: String, val md5: String)
+
+/** Separação da guitarra pela IA: SEPARATED (arquivos em filesDir/separacoes) ou DECLINED ("Jogar sem separar"). */
+@Entity(
+    tableName = "ai_separations",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+)
+data class AiSeparationEntity(
+    @PrimaryKey val chartId: String,
+    val state: String,
+    val bytes: Long,
+    val createdAtEpochMs: Long,
+)

@@ -86,6 +86,28 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun version4BecomesVersion5AddingTheAiSeparations() {
+        helper.createDatabase(4).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId) VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(5).apply {
+            execSQL(
+                "INSERT INTO ai_separations (chartId, state, bytes, createdAtEpochMs) VALUES ('a', 'SEPARATED', 9, 1)",
+            )
+            prepare("SELECT COUNT(*) FROM charts").use {
+                it.step()
+                assertEquals(1L, it.getLong(0))
+            }
+            close()
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }
