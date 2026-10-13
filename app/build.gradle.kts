@@ -10,6 +10,8 @@ android {
         applicationId = "com.rodrigomachado.riff"
         versionCode = 1
         versionName = "0.1.0"
+        // Só celulares (ARM): as bibliotecas x86 do ONNX Runtime (~80 MB) servem apenas a emuladores e PCs.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
