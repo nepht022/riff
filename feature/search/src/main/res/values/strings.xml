@@ -20,4 +20,10 @@
     <string name="search_failed_no_folder">Escolha a pasta da biblioteca primeiro.</string>
     <string name="search_retry">Tentar de novo</string>
     <string name="search_credit">Mapas do Encore (enchor.us), feitos pela comunidade.</string>
+    <string name="search_originals">Originais</string>
+    <string name="search_versions">Versões</string>
+    <string name="search_only_separate_guitar">Só com guitarra separada</string>
+    <string name="search_guitar_progress">Procurando mapas com guitarra separada… %1$d de %2$d</string>
+    <string name="search_guitar_none">Nenhum mapa com guitarra separada nos primeiros %1$d resultados.</string>
+    <string name="search_guitar_more">Procurar mais</string>
 </resources>

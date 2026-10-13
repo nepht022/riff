@@ -72,6 +72,9 @@ fun SearchScreen(
         onAllowWrite = { pickFolder.launch(state.folderUri?.let(Uri::parse)) },
         onBack = onBack,
         modifier = modifier,
+        onShowVersions = viewModel::showVersions,
+        onOnlySeparateGuitar = viewModel::onlySeparateGuitar,
+        onSearchMoreWithGuitar = viewModel::searchMoreWithGuitar,
     )
 }
 
@@ -86,6 +89,9 @@ fun SearchContent(
     onAllowWrite: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onShowVersions: (Boolean) -> Unit = {},
+    onOnlySeparateGuitar: (Boolean) -> Unit = {},
+    onSearchMoreWithGuitar: () -> Unit = {},
 ) {
     var choosing by remember { mutableStateOf<Pair<EncoreChart, ItemState.Ready>?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
@@ -98,7 +104,9 @@ fun SearchContent(
             color = RiffColors.PaperDim,
             modifier = Modifier.padding(vertical = Spacing.xs),
         )
+        FilterRow(state, onShowVersions, onOnlySeparateGuitar)
         if (!state.canWrite) WriteNeeded(onAllowWrite)
+        state.guitarSearch?.let { GuitarSearchStatus(it, state.results.isEmpty(), onSearchMoreWithGuitar) }
         when {
             state.isSearching && state.results.isEmpty() -> LoadingState()
             state.error != null && state.results.isEmpty() -> SearchFailure(state.error, state.query, onSearch)

@@ -69,6 +69,31 @@ class SearchScreenshotTest {
         )
     }
 
+    @Test
+    fun guitarFilter() = snapshot("Search_guitar_filter") {
+        SearchContent(
+            state = SearchUiState(
+                query = "metallica",
+                onlySeparateGuitar = true,
+                guitarSearch = GuitarSearch(checked = 37, limit = 100, running = true),
+                results = listOf(
+                    ResultItem(
+                        chart("a", "Battery", "Metallica", "Miscellany", Difficulty.entries.toSet()),
+                        ItemState.Available,
+                        separateGuitar = true,
+                    ),
+                ),
+            ),
+            onQueryChange = {},
+            onSearch = {},
+            onLoadMore = {},
+            onDownload = {},
+            onPlay = { _, _ -> },
+            onAllowWrite = {},
+            onBack = {},
+        )
+    }
+
     private fun snapshot(name: String, content: @Composable () -> Unit) {
         captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme { StageBackground(Modifier.fillMaxSize()) { content() } }

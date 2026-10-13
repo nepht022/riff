@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "pt-rBR")
+@Config(qualifiers = "pt-rBR-w411dp-h1200dp")
 class SearchContentTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -46,6 +46,9 @@ class SearchContentTest {
                     onPlay = { id, difficulty -> events += "play:$id:$difficulty" },
                     onAllowWrite = { events += "allow" },
                     onBack = { events += "back" },
+                    onShowVersions = { events += "versions:$it" },
+                    onOnlySeparateGuitar = { events += "guitar:$it" },
+                    onSearchMoreWithGuitar = { events += "more-guitar" },
                 )
             }
         }
@@ -132,5 +135,40 @@ class SearchContentTest {
         composeRule.onNodeWithText("O arquivo baixado veio com defeito.").assertExists()
         composeRule.onNodeWithText("Tentar de novo").performClick()
         assertEquals(listOf("download:a"), events)
+    }
+
+    @Test
+    fun theFiltersSoundLikeNavigatingAndReportTheChoice() {
+        show(SearchUiState(query = "x"))
+
+        composeRule.onNodeWithText("Versões").performClick()
+        composeRule.onNodeWithText("Só com guitarra separada").performClick()
+
+        assertEquals(listOf("versions:true", "guitar:true"), events)
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE), sounds)
+    }
+
+    @Test
+    fun theGuitarSearchShowsItsProgress() {
+        show(
+            SearchUiState(query = "x", onlySeparateGuitar = true, guitarSearch = GuitarSearch(37, 100, running = true)),
+        )
+
+        composeRule.onNodeWithText("Procurando mapas com guitarra separada… 37 de 100").assertExists()
+    }
+
+    @Test
+    fun nothingFoundWithTheGuitarFilterOffersToSearchMore() {
+        show(
+            SearchUiState(
+                query = "x",
+                onlySeparateGuitar = true,
+                guitarSearch = GuitarSearch(100, 100, running = false),
+            ),
+        )
+
+        composeRule.onNodeWithText("Nenhum mapa com guitarra separada nos primeiros 100 resultados.").assertExists()
+        composeRule.onNodeWithText("Procurar mais").performClick()
+        assertEquals(listOf("more-guitar"), events)
     }
 }
