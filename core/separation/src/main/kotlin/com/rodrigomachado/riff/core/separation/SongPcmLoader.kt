@@ -3,7 +3,6 @@ package com.rodrigomachado.riff.core.separation
 import com.rodrigomachado.riff.core.audio.PcmSource
 import com.rodrigomachado.riff.core.audio.PcmSourceOpener
 import java.io.BufferedOutputStream
-import java.io.Closeable
 import java.io.DataOutputStream
 import java.io.File
 import java.io.RandomAccessFile
@@ -20,8 +19,7 @@ class FileSong internal constructor(
     override val frames: Int,
     override val mean: Float,
     override val std: Float,
-) : SongPcm,
-    Closeable {
+) : SongPcmHandle {
     private val access = RandomAccessFile(file, "r")
     private val bytes = ByteBuffer.allocate(WINDOW * BYTES_PER_FRAME).order(ByteOrder.LITTLE_ENDIAN)
     private val window = FloatArray(WINDOW * 2)
