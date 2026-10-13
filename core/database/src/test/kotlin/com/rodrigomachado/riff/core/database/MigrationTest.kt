@@ -111,4 +111,23 @@ class MigrationTest {
     private companion object {
         const val DB = "migration-test"
     }
+
+    @Test
+    fun version5BecomesVersion6WithChartsWithoutTheSeparateGuitarMarkUntilRescanned() {
+        helper.createDatabase(5).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId) VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(6).apply {
+            prepare("SELECT separateGuitar FROM charts").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

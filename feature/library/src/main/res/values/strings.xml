@@ -42,5 +42,6 @@
     <string name="library_separate_busy">Já tem uma separação em andamento</string>
     <string name="library_separate">Separar</string>
     <string name="library_play_without_separating">Jogar sem separar</string>
+    <string name="library_separate_guitar">Guitarra separada</string>
     <string name="library_ai_separated">Guitarra separada IA</string>
 </resources>

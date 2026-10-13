@@ -257,4 +257,24 @@ class FolderChartImporterTest {
         assertEquals(ImportFailureKind.DUPLICATE, duplicate.kind)
         assertEquals(setOf("Original", "Copia"), setOf(duplicate.folderName, duplicate.detail))
     }
+
+    @Test
+    fun aChartWithItsOwnSeparateGuitarIsMarked() = runTest {
+        source.file("raiz/com/notes.chart", chartText("Com", "Banda"))
+        source.file("raiz/com/guitar.ogg", "guitarra")
+        source.file("raiz/com/song.ogg", "resto")
+        source.file("raiz/sem/notes.chart", chartText("Sem", "Banda"))
+        source.file("raiz/sem/song.ogg", "música")
+        source.file(
+            "raiz/pacote.sng",
+            sng("Pacote", mapOf("guitar.opus" to ByteArray(4), "rhythm.opus" to ByteArray(4))),
+        )
+
+        sngImporter().import("raiz")
+
+        assertEquals(
+            mapOf("Com" to true, "Pacote" to true, "Sem" to false),
+            repository.charts.associate { it.title to it.separateGuitar },
+        )
+    }
 }

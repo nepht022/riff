@@ -20,6 +20,8 @@ data class ChartEntity(
     val format: String,
     /** Importação em que o mapa foi visto por último; os não vistos na mais recente são apagados. */
     val lastSeenScanId: Long,
+    /** Guitarra separada na pasta (anotada na importação; mapas antigos ficam sem até reimportar). */
+    @ColumnInfo(defaultValue = "0") val separateGuitar: Boolean = false,
 )
 
 @Entity(

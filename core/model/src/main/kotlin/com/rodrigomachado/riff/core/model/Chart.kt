@@ -15,4 +15,6 @@ data class Chart(
     val folderUri: String,
     val format: ChartFormat,
     val difficulties: Set<Difficulty>,
+    /** A pasta do mapa já traz a guitarra à parte (`guitar.*` e o resto da banda). */
+    val separateGuitar: Boolean = false,
 )

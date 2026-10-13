@@ -26,7 +26,7 @@ class RoomChartRepository @Inject constructor(private val dao: ChartDao) : Chart
 }
 
 private fun Chart.toEntity(scanId: Long) =
-    ChartEntity(id, title, artist, album, charter, durationMs, folderUri, format.name, scanId)
+    ChartEntity(id, title, artist, album, charter, durationMs, folderUri, format.name, scanId, separateGuitar)
 
 /** Linha com formato desconhecido (versão futura do app) é ignorada em vez de quebrar a lista. */
 private fun ChartWithDifficulties.toModel(): Chart? {
@@ -43,5 +43,6 @@ private fun ChartWithDifficulties.toModel(): Chart? {
         difficulties = difficulties.mapNotNull { row ->
             Difficulty.entries.firstOrNull { it.name == row.difficulty }
         }.toSet(),
+        separateGuitar = chart.separateGuitar,
     )
 }

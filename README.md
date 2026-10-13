@@ -52,6 +52,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - Na Biblioteca, ao jogar uma música sem a guitarra separada (a maioria dos mapas do Encore), o Riff pergunta **Separar a guitarra com IA?** depois da dificuldade. **Separar** começa a separação em segundo plano; **Jogar sem separar** joga com a música inteira e fica guardado (não pergunta de novo).
 - A separação roda no próprio celular, sem internet: o modelo Demucs (htdemucs_6s) com o ONNX Runtime na CPU. No Galaxy S25, uma música de 3:30 leva cerca de 2 minutos e usa até ~2,8 GB de RAM enquanto roda (celulares com menos de 8 GB usam um modo mais econômico e mais lento).
 - Enquanto separa, aparece um ícone (palheta com anel de progresso) no topo das telas; tocar nele mostra a porcentagem, o tempo restante e **Cancelar**. A notificação do Android acompanha e avisa no fim. Se o celular esquentar demais, a separação pausa e continua quando esfriar.
+- Mapas que já vêm com a guitarra à parte mostram **GUITARRA SEPARADA** na Biblioteca e não perguntam nada (a marca é anotada na importação: para mapas antigos, toque em **Reimportar** uma vez).
 - Pronta, a música ganha a marca **GUITARRA SEPARADA IA** e passa a jogar como as que já vêm com a guitarra à parte: a guitarra some quando você erra.
 - Cada música separada ocupa ~7 MB (guitarra e resto em `.m4a`, no espaço do app). Nas **Configurações**, a seção "Guitarra separada por IA" mostra o espaço, **Apagar separações** e **Perguntar de novo** (nas músicas em que você escolheu jogar sem separar).
 

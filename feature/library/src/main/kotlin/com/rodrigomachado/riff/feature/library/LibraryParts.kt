@@ -48,6 +48,9 @@ internal fun ChartBadges(chart: Chart, aiSeparated: Boolean) {
         chart.difficulties.maxOrNull()?.let {
             StatusBadge(stringResource(difficultyLabel(it.ordinal)), BadgeTone.NEUTRAL)
         }
-        if (aiSeparated) StatusBadge(stringResource(R.string.library_ai_separated), BadgeTone.SUCCESS)
+        when {
+            chart.separateGuitar -> StatusBadge(stringResource(R.string.library_separate_guitar), BadgeTone.SUCCESS)
+            aiSeparated -> StatusBadge(stringResource(R.string.library_ai_separated), BadgeTone.SUCCESS)
+        }
     }
 }

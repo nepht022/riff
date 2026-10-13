@@ -8,6 +8,8 @@ import com.rodrigomachado.riff.core.data.folder.FileTooLargeException
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.folder.FolderEntry
 import com.rodrigomachado.riff.core.data.folder.FolderSource
+import com.rodrigomachado.riff.core.data.game.ChartAudio
+import com.rodrigomachado.riff.core.data.game.ChartAudioFinder
 import com.rodrigomachado.riff.core.model.Chart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -167,6 +169,7 @@ class FolderChartImporter(
             folderUri = folder.uri,
             format = loaded.format,
             difficulties = loaded.tracks.keys,
+            separateGuitar = ChartAudioFinder.find(children.filter { !it.isDirectory }) is ChartAudio.Stems,
         )
     }
 

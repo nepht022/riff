@@ -377,4 +377,18 @@ class LibraryContentTest {
 
         assertEquals(listOf("difficulty:a:EXPERT"), events)
     }
+
+    @Test
+    fun aChartThatCameWithItsOwnGuitarShowsTheMark() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música").copy(separateGuitar = true)),
+            ),
+        )
+
+        composeRule.onNodeWithText("GUITARRA SEPARADA").assertExists()
+        composeRule.onNodeWithText("GUITARRA SEPARADA IA").assertDoesNotExist()
+    }
 }

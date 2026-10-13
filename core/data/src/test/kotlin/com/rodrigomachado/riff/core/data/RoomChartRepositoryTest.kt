@@ -58,4 +58,11 @@ class RoomChartRepositoryTest {
 
         assertEquals(listOf("outro"), repository.observeCharts().first().map { it.id })
     }
+
+    @Test
+    fun theSeparateGuitarMarkIsKept() = runTest {
+        repository.saveScanned(chart.copy(separateGuitar = true), scanId = 1)
+
+        assertEquals(true, repository.observeCharts().first().single().separateGuitar)
+    }
 }
