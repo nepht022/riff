@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -170,11 +171,12 @@ private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     }
 }
 
-/** O botão principal e a alternativa lado a lado. */
+/** O botão principal e a alternativa lado a lado, centralizados. */
 @Composable
 private fun ActionRow(content: @Composable RowScope.() -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -236,5 +237,16 @@ class NowPlayingContentTest {
         val a = composeRule.onAllNodesWithText(first).onLast().getUnclippedBoundsInRoot()
         val b = composeRule.onAllNodesWithText(second).onLast().getUnclippedBoundsInRoot()
         assertTrue("$first: $a, $second: $b", b.left >= a.right && b.top < a.bottom && a.top < b.bottom)
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun playAndChooseOtherAreCentered() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+
+        val play = composeRule.onAllNodesWithText("Jogar").onLast().getUnclippedBoundsInRoot()
+        val other = composeRule.onAllNodesWithText("Escolher outro").onLast().getUnclippedBoundsInRoot()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertEquals((root.left + root.right).value / 2, (play.left + other.right).value / 2, 1f)
     }
 }
