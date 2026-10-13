@@ -44,7 +44,9 @@ Modelo `htdemucs_6s` (Demucs v4, MIT, o único aberto que separa guitarra com es
 Na Biblioteca, ao tocar numa música sem guitarra separada (pasta, `.sng` ou baixada), sem separação pela IA e sem recusa guardada, depois de escolher a dificuldade:
 
 > **Separar a guitarra com IA?**
-> A guitarra some quando você erra, como no Teen Spirit. Leva uns 2 minutos, usa bastante o processador e pode esquentar o celular. Fica guardado: só precisa fazer uma vez por música.
+> Separar a guitarra faz com que o som da mesma suma ao errar notas e só apareça ao acertá-las, aumentando a imersão. O processo leva em torno de 3 minutos e pode esquentar o celular. As músicas com separação se mantêm armazenadas no dispositivo.
+
+(Texto definido pelo usuário em 2026-10-13, depois da implementação.)
 > **[Separar]** · Jogar sem separar
 
 - **Separar:** começa a separação em segundo plano e fecha a pergunta; o usuário continua na Biblioteca (não joga agora).

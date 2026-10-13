@@ -37,7 +37,7 @@
     </plurals>
     <string name="library_search">Search</string>
     <string name="library_separate_title">Separate the guitar with AI?</string>
-    <string name="library_separate_message">The guitar drops out when you miss, like in Teen Spirit. It takes about 2 minutes, works the processor hard and can warm the phone up. It is saved: only once per song.</string>
+    <string name="library_separate_message">Separating the guitar makes its sound drop out when you miss notes and come back only when you hit them, for more immersion. It takes around 3 minutes and can warm the phone up. Separated songs stay stored on the device.</string>
     <string name="library_separate_low_memory">It may not work on this phone.</string>
     <string name="library_separate_busy">A separation is already running</string>
     <string name="library_separate">Separate</string>

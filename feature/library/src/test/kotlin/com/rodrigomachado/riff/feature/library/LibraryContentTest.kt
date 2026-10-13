@@ -343,6 +343,7 @@ class LibraryContentTest {
         )
 
         composeRule.onNodeWithText("Separar a guitarra com IA?").assertExists()
+        composeRule.onNodeWithText("só apareça ao acertá-las", substring = true).assertExists()
         composeRule.onNodeWithText("Pode não funcionar neste celular.", substring = true).assertExists()
         composeRule.onNodeWithText("Separar").performClick()
         composeRule.onNodeWithText("Jogar sem separar").performClick()
