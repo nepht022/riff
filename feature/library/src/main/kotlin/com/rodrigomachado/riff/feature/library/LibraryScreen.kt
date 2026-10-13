@@ -102,6 +102,16 @@ fun LibraryScreen(
         },
         onPlayWithoutSeparating = viewModel::onPlayWithoutSeparating,
         onPromptDismissed = viewModel::onPromptDismissed,
+        deletion = DeletionCallbacks(
+            onDelete = { viewModel.onDeleteRequested(listOf(it)) },
+            onStartSelecting = viewModel::onStartSelecting,
+            onToggle = viewModel::onToggleSelected,
+            onCancelSelecting = viewModel::onCancelSelecting,
+            onDeleteSelected = viewModel::onDeleteSelected,
+            onConfirm = viewModel::onDeleteConfirmed,
+            onDismiss = viewModel::onDeleteDismissed,
+            onFailureShown = viewModel::onDeletionFailureShown,
+        ),
     )
 }
 
@@ -121,6 +131,7 @@ fun LibraryContent(
     onSeparate: () -> Unit = {},
     onPlayWithoutSeparating: () -> Unit = {},
     onPromptDismissed: () -> Unit = {},
+    deletion: DeletionCallbacks = DeletionCallbacks(),
 ) {
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -134,7 +145,7 @@ fun LibraryContent(
         )
         matchingTitle?.let { MatchHeader(it) }
         LibraryBody(state, onPickFolder, onRescan) {
-            ChartList(state, onPickFolder, onRescan, onReportDismissed) { chart ->
+            ChartList(state, onPickFolder, onRescan, onReportDismissed, deletion) { chart ->
                 // Escolher o mapa da música do Spotify conclui (confirma); senão, abre a escolha da dificuldade.
                 playMenuSound(if (matchingTitle != null) MenuSound.CONFIRM else MenuSound.NAVIGATE)
                 if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
@@ -145,6 +156,7 @@ fun LibraryContent(
         DifficultyChoice(chart, onClose = { choosingId = null }, onChosen = onDifficultyChosen)
     }
     state.prompt?.let { SeparationPrompt(it, onSeparate, onPlayWithoutSeparating, onPromptDismissed) }
+    DeletionDialogs(state.deletion, deletion, onAllow = onPickFolder)
 }
 
 /** Carregando, erro, sem pasta, importando, vazia — ou a lista ([list]). */
@@ -214,6 +226,7 @@ private fun ChartList(
     onPickFolder: () -> Unit,
     onRescan: () -> Unit,
     onReportDismissed: () -> Unit,
+    deletion: DeletionCallbacks,
     onChartClick: (Chart) -> Unit,
 ) {
     LazyColumn(
@@ -222,24 +235,30 @@ private fun ChartList(
         contentPadding = PaddingValues(vertical = Spacing.md),
     ) {
         item {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PosterButton(stringResource(R.string.library_rescan), onClick = onRescan, sound = MenuSound.NAVIGATE)
-                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onPickFolder)) {
-                    Text(stringResource(R.string.library_change_folder), color = RiffColors.Paper)
-                }
+            if (state.deletion.selecting) {
+                SelectionActions(state.deletion.selected.size, deletion)
+            } else {
+                ListActions(onRescan, onPickFolder, deletion.onStartSelecting)
             }
         }
         state.report?.let { item { ImportReportCard(it, onReportDismissed) } }
         items(state.charts, key = { it.id }) { chart ->
-            TrackCard(
+            DeletableChart(
                 title = chart.title,
-                artist = chart.artist.ifBlank { stringResource(R.string.library_unknown_artist) },
-                onClick = { onChartClick(chart) },
-                badge = { ChartBadges(chart, aiSeparated = chart.id in state.aiSeparated) },
-            )
+                chartId = chart.id,
+                selecting = state.deletion.selecting,
+                selected = chart.id in state.deletion.selected,
+                canDelete = chart.id !in state.protectedIds,
+                callbacks = deletion,
+            ) { modifier, onClickOverride ->
+                TrackCard(
+                    title = chart.title,
+                    artist = chart.artist.ifBlank { stringResource(R.string.library_unknown_artist) },
+                    modifier = modifier,
+                    onClick = onClickOverride ?: { onChartClick(chart) },
+                    badge = { ChartBadges(chart, aiSeparated = chart.id in state.aiSeparated) },
+                )
+            }
         }
     }
 }

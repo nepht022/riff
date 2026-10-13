@@ -100,6 +100,27 @@ class LibraryScreenshotTest {
         )
     }
 
+    @Test
+    fun selectingToDelete() = snapshot("Library_selecting") {
+        LibraryContent(
+            state = LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(
+                    chart("1", "Through the Fire and Flames", "DragonForce", setOf(Difficulty.HARD, Difficulty.EXPERT)),
+                    chart("2", "Bohemian Rhapsody", "Queen", setOf(Difficulty.EASY, Difficulty.MEDIUM)),
+                    chart("3", "Smells Like Teen Spirit", "Nirvana", setOf(Difficulty.EXPERT)),
+                ),
+                deletion = DeletionState(selecting = true, selected = setOf("1", "3")),
+            ),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+            onBack = {},
+        )
+    }
+
     private fun snapshot(name: String, content: @Composable () -> Unit) {
         captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme { StageBackground(Modifier.fillMaxSize()) { content() } }

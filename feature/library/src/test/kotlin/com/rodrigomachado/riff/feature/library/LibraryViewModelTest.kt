@@ -38,6 +38,7 @@ class LibraryViewModelTest {
     private val scheduler = FakeScheduler()
     private val probe = FakeAudioProbe()
     private val settings = FakeSettingsRepository()
+    private val deleter = FakeChartDeleter(repository)
     private val song = Chart("m", "Música", "Banda", null, null, null, "u", ChartFormat.CHART, setOf(Difficulty.EXPERT))
 
     @Before
@@ -57,6 +58,7 @@ class LibraryViewModelTest {
             scheduler,
             probe,
             settings,
+            deleter,
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
@@ -357,5 +359,97 @@ class LibraryViewModelTest {
         assertNull(vm.uiState.value.prompt)
         assertNull(vm.uiState.value.play)
         assertNull(separations.states["m"])
+    }
+
+    private fun libraryWith(vararg charts: Chart) {
+        folderStore.rootUri.value = "raiz"
+        repository.charts.value = charts.toList()
+    }
+
+    private fun at(id: String, folder: String) =
+        Chart(id, "Música $id", "Banda", null, null, null, folder, ChartFormat.CHART, setOf(Difficulty.EXPERT))
+
+    @Test
+    fun theXAsksToConfirmNamingTheSongAndWhatGoesWithIt() = runTest {
+        libraryWith(at("a", "raiz/A"))
+        deleter.nested = 1
+        val vm = viewModel()
+
+        vm.onDeleteRequested(listOf("a"))
+        advanceUntilIdle()
+
+        assertEquals(DeleteAsk(listOf("a"), title = "Música a", alsoDeleted = 1), vm.uiState.value.deletion.ask)
+    }
+
+    @Test
+    fun confirmingDeletesAndLeavesSelection() = runTest {
+        libraryWith(at("a", "raiz/A"), at("b", "raiz/B"), at("c", "raiz/C"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("a")
+        vm.onToggleSelected("c")
+        vm.onToggleSelected("a")
+        vm.onToggleSelected("b")
+        assertEquals(setOf("b", "c"), vm.uiState.value.deletion.selected)
+
+        vm.onDeleteSelected()
+        advanceUntilIdle()
+        assertEquals(DeleteAsk(listOf("b", "c"), title = null, alsoDeleted = 0), vm.uiState.value.deletion.ask)
+        vm.onDeleteConfirmed()
+        advanceUntilIdle()
+
+        assertEquals(listOf(listOf("b", "c")), deleter.deleted)
+        assertEquals(listOf("a"), vm.uiState.value.charts.map { it.id })
+        assertEquals(DeletionState(), vm.uiState.value.deletion)
+    }
+
+    @Test
+    fun aFailedDeletionIsReported() = runTest {
+        libraryWith(at("a", "raiz/A"))
+        deleter.failing = setOf("a")
+        val vm = viewModel()
+        vm.onDeleteRequested(listOf("a"))
+        advanceUntilIdle()
+
+        vm.onDeleteConfirmed()
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.deletion.failed)
+        vm.onDeletionFailureShown()
+        assertEquals(0, vm.uiState.value.deletion.failed)
+    }
+
+    @Test
+    fun aChartLooseInTheRootCannotBeDeleted() = runTest {
+        libraryWith(at("solto", "raiz"), at("a", "raiz/A"))
+
+        assertEquals(setOf("solto"), viewModel().uiState.value.protectedIds)
+    }
+
+    @Test
+    fun withoutPermissionToWriteItAsksToAllowFirst() = runTest {
+        libraryWith(at("a", "raiz/A"))
+        folderAccess.writable = false
+        val vm = viewModel()
+
+        vm.onDeleteRequested(listOf("a"))
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.deletion.needsPermission)
+        assertNull(vm.uiState.value.deletion.ask)
+    }
+
+    @Test
+    fun deletingTheSongBeingSeparatedStopsTheSeparation() = runTest {
+        libraryWith(at("a", "raiz/A"))
+        scheduler.start("a", "Música a")
+        val vm = viewModel()
+        vm.onDeleteRequested(listOf("a"))
+        advanceUntilIdle()
+
+        vm.onDeleteConfirmed()
+        advanceUntilIdle()
+
+        assertTrue(scheduler.cancelled)
     }
 }

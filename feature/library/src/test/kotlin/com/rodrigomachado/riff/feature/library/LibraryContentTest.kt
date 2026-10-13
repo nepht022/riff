@@ -1,10 +1,13 @@
 package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -395,5 +398,106 @@ class LibraryContentTest {
 
         composeRule.onNodeWithText("GUITARRA SEPARADA").assertExists()
         composeRule.onNodeWithText("GUITARRA SEPARADA IA").assertDoesNotExist()
+    }
+
+    private fun showDeletion(state: LibraryUiState) = composeRule.setContent {
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                LibraryContent(
+                    state = state,
+                    onPickFolder = { events += "pick" },
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> events += "play" },
+                    onBack = {},
+                    deletion = DeletionCallbacks(
+                        onDelete = { events += "delete:$it" },
+                        onStartSelecting = { events += "select" },
+                        onToggle = { events += "toggle:$it" },
+                        onCancelSelecting = { events += "cancelSelect" },
+                        onDeleteSelected = { events += "deleteSelected" },
+                        onConfirm = { events += "confirm" },
+                        onDismiss = { events += "dismiss" },
+                        onFailureShown = { events += "failureShown" },
+                    ),
+                )
+            }
+        }
+    }
+
+    private val two = listOf(chart("a", title = "Música A"), chart("b", title = "Solta na raiz"))
+
+    @Test
+    fun eachChartHasARedXExceptTheOneLooseInTheRoot() {
+        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two, protectedIds = setOf("b")))
+
+        composeRule.onAllNodesWithContentDescription("Excluir", substring = true).assertCountEquals(1)
+        composeRule.onNodeWithContentDescription("Excluir Música A").performClick()
+
+        assertEquals(listOf("delete:a"), events)
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+    }
+
+    @Test
+    fun selectingShowsCheckboxesAndDeletesTheChosenOnes() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        composeRule.onNodeWithText("Solta na raiz").performClick()
+        composeRule.onNodeWithText("Excluir (1)").performClick()
+        composeRule.onNodeWithText("Cancelar").performClick()
+
+        assertEquals(listOf("toggle:b", "deleteSelected", "cancelSelect"), events)
+    }
+
+    @Test
+    fun theSelectButtonSitsWithReimport() {
+        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
+
+        composeRule.onNodeWithText("Selecionar").performClick()
+
+        assertEquals(listOf("select"), events)
+    }
+
+    @Test
+    fun theConfirmationWarnsItCannotBeUndone() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(ask = DeleteAsk(listOf("a"), title = "Música A", alsoDeleted = 2)),
+            ),
+        )
+
+        composeRule.onNodeWithText("Excluir \u201cMúsica A\u201d?").assertExists()
+        composeRule.onNodeWithText("Não dá para desfazer", substring = true).assertExists()
+        composeRule.onNodeWithText("mais 2 mapas", substring = true).assertExists()
+        composeRule.onAllNodesWithText("Excluir").onLast().performClick()
+
+        assertEquals(listOf("confirm"), events)
+        assertEquals(listOf(MenuSound.CONFIRM), sounds)
+    }
+
+    @Test
+    fun aFailureAndThePermissionRequestAreShown() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(needsPermission = true),
+            ),
+        )
+
+        composeRule.onNodeWithText("Permitir").performClick()
+
+        assertEquals(listOf("pick"), events)
     }
 }

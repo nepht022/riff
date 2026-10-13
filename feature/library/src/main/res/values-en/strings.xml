@@ -44,4 +44,26 @@
     <string name="library_play_without_separating">Without separating</string>
     <string name="library_separate_guitar">Separate guitar</string>
     <string name="library_ai_separated">AI separated guitar</string>
+    <string name="library_select">Select</string>
+    <string name="library_delete_selected">Delete (%1$d)</string>
+    <string name="library_delete_cancel">Cancel</string>
+    <string name="library_delete_one">Delete %1$s</string>
+    <string name="library_delete">Delete</string>
+    <string name="library_delete_title_one">Delete “%1$s”?</string>
+    <plurals name="library_delete_title_many">
+        <item quantity="one">Delete %1$d chart?</item>
+        <item quantity="other">Delete %1$d charts?</item>
+    </plurals>
+    <string name="library_delete_message">Deletes the chart folder from the phone, with the AI separated guitar and the high score. This cannot be undone.</string>
+    <plurals name="library_delete_nested">
+        <item quantity="one">%1$d more chart inside the folder goes too.</item>
+        <item quantity="other">%1$d more charts inside the folder go too.</item>
+    </plurals>
+    <string name="library_delete_permission">To delete, Riff needs permission to change the library folder. Choose the same folder again.</string>
+    <string name="library_delete_allow">Allow</string>
+    <plurals name="library_delete_failed">
+        <item quantity="one">Could not delete %1$d chart.</item>
+        <item quantity="other">Could not delete %1$d charts.</item>
+    </plurals>
+    <string name="library_delete_ok">OK</string>
 </resources>

@@ -12,6 +12,8 @@ import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.ImportReport
+import com.rodrigomachado.riff.core.data.library.ChartDeleter
+import com.rodrigomachado.riff.core.data.library.DeletionResult
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -136,7 +138,10 @@ class FakeScheduler : SeparationScheduler {
         status.value = SeparationStatus.Running(chartId, title, 0f, null)
         return true
     }
-    override fun cancel() = Unit
+    var cancelled = false
+    override fun cancel() {
+        cancelled = true
+    }
     override fun dismissFailure() = Unit
 }
 
@@ -154,5 +159,18 @@ class FakeSettingsRepository(initial: Settings = Settings.DEFAULT) : SettingsRep
 
     override suspend fun update(transform: (Settings) -> Settings) {
         settings.value = transform(settings.value)
+    }
+}
+
+class FakeChartDeleter(private val charts: FakeChartRepository) : ChartDeleter {
+    val deleted = mutableListOf<List<String>>()
+    var failing = emptySet<String>()
+    var nested = 0
+    override suspend fun alsoDeleted(chartIds: Collection<String>) = nested
+    override suspend fun delete(chartIds: Collection<String>): DeletionResult {
+        deleted += chartIds.toList()
+        val ok = chartIds.filterNot { it in failing }
+        charts.remove(ok)
+        return DeletionResult(deleted = ok.size, failed = chartIds.size - ok.size)
     }
 }

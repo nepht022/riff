@@ -15,6 +15,8 @@ import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.ImportReport
+import com.rodrigomachado.riff.core.data.library.ChartDeleter
+import com.rodrigomachado.riff.core.data.library.LibraryFolders
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.SeparationStatus
@@ -46,7 +48,23 @@ data class LibraryUiState(
     val prompt: SeparationAsk? = null,
     /** Pronto para jogar (a tela navega e avisa com onPlayHandled). */
     val play: PlayRequestLibrary? = null,
+    /** Excluir mapas: o modo de seleção, a confirmação e os avisos. */
+    val deletion: DeletionState = DeletionState(),
+    /** Mapas soltos na raiz da biblioteca: apagar a pasta deles apagaria a biblioteca inteira. */
+    val protectedIds: Set<String> = emptySet(),
 )
+
+data class DeletionState(
+    val selecting: Boolean = false,
+    val selected: Set<String> = emptySet(),
+    val ask: DeleteAsk? = null,
+    /** Quantos mapas não deu para excluir (0 = nenhum aviso). */
+    val failed: Int = 0,
+    val needsPermission: Boolean = false,
+)
+
+/** "Excluir?" — [title] quando é um mapa só; [alsoDeleted] mapas dentro das pastas vão junto. */
+data class DeleteAsk(val ids: List<String>, val title: String?, val alsoDeleted: Int)
 
 data class SeparationAsk(
     val chartId: String,
@@ -80,11 +98,13 @@ class LibraryViewModel @Inject constructor(
     private val scheduler: SeparationScheduler,
     private val probe: ChartAudioProbe,
     private val settings: SettingsRepository,
+    private val deleter: ChartDeleter,
 ) : ViewModel() {
     private val importState = MutableStateFlow(ImportState())
     private val matchSaved = MutableStateFlow(false)
     private val promptState = MutableStateFlow(PromptState())
-    private val separation = combine(promptState, separations.separatedIds) { prompt, ids -> prompt to ids }
+    private val deletionState = MutableStateFlow(DeletionState())
+    private val extras = combine(promptState, separations.separatedIds, deletionState, ::Triple)
 
     val uiState: StateFlow<LibraryUiState> =
         combine(
@@ -92,8 +112,8 @@ class LibraryViewModel @Inject constructor(
             folderStore.rootUri,
             importState,
             matchSaved,
-            separation,
-        ) { charts, rootUri, import, saved, (prompt, separated) ->
+            extras,
+        ) { charts, rootUri, import, saved, (prompt, separated, deletion) ->
             LibraryUiState(
                 isLoading = false,
                 hasFolder = rootUri != null,
@@ -107,6 +127,8 @@ class LibraryViewModel @Inject constructor(
                 aiSeparated = separated,
                 prompt = prompt.prompt,
                 play = prompt.play,
+                deletion = deletion,
+                protectedIds = charts.filter { LibraryFolders.isRoot(it.folderUri, rootUri) }.map { it.id }.toSet(),
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
@@ -165,6 +187,51 @@ class LibraryViewModel @Inject constructor(
             promptState.value = PromptState(play = PlayRequestLibrary(ask.chartId, ask.difficulty))
         }
     }
+
+    fun onStartSelecting() {
+        deletionState.value = DeletionState(selecting = true)
+    }
+
+    fun onToggleSelected(chartId: String) = deletionState.update {
+        it.copy(selected = if (chartId in it.selected) it.selected - chartId else it.selected + chartId)
+    }
+
+    fun onCancelSelecting() {
+        deletionState.value = DeletionState()
+    }
+
+    fun onDeleteSelected() = onDeleteRequested(
+        uiState.value.charts.map { it.id }.filter { it in deletionState.value.selected },
+    )
+
+    /** O X de um mapa ou o "Excluir (n)": confere a permissão de gravar e pede confirmação. */
+    fun onDeleteRequested(chartIds: List<String>) {
+        if (chartIds.isEmpty()) return
+        viewModelScope.launch {
+            val root = folderStore.rootUri.first()
+            if (root == null || !folderAccess.canWrite(root)) {
+                deletionState.update { it.copy(needsPermission = true) }
+                return@launch
+            }
+            val title = chartIds.singleOrNull()?.let { id -> uiState.value.charts.firstOrNull { it.id == id }?.title }
+            deletionState.update { it.copy(ask = DeleteAsk(chartIds, title, deleter.alsoDeleted(chartIds))) }
+        }
+    }
+
+    fun onDeleteDismissed() = deletionState.update { it.copy(ask = null, needsPermission = false) }
+
+    fun onDeleteConfirmed() {
+        val ask = deletionState.value.ask ?: return
+        deletionState.update { it.copy(ask = null) }
+        viewModelScope.launch {
+            val running = scheduler.status.value
+            if (running is SeparationStatus.Running && running.chartId in ask.ids) scheduler.cancel()
+            val result = deleter.delete(ask.ids)
+            deletionState.value = DeletionState(failed = result.failed)
+        }
+    }
+
+    fun onDeletionFailureShown() = deletionState.update { it.copy(failed = 0) }
 
     fun onPromptDismissed() {
         promptState.value = PromptState()

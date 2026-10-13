@@ -44,4 +44,26 @@
     <string name="library_play_without_separating">Sem separar</string>
     <string name="library_separate_guitar">Guitarra separada</string>
     <string name="library_ai_separated">Guitarra separada IA</string>
+    <string name="library_select">Selecionar</string>
+    <string name="library_delete_selected">Excluir (%1$d)</string>
+    <string name="library_delete_cancel">Cancelar</string>
+    <string name="library_delete_one">Excluir %1$s</string>
+    <string name="library_delete">Excluir</string>
+    <string name="library_delete_title_one">Excluir “%1$s”?</string>
+    <plurals name="library_delete_title_many">
+        <item quantity="one">Excluir %1$d mapa?</item>
+        <item quantity="other">Excluir %1$d mapas?</item>
+    </plurals>
+    <string name="library_delete_message">Apaga do celular a pasta do mapa, com a guitarra separada pela IA e o recorde. Não dá para desfazer.</string>
+    <plurals name="library_delete_nested">
+        <item quantity="one">Junto vai mais %1$d mapa que está dentro da pasta.</item>
+        <item quantity="other">Junto vão mais %1$d mapas que estão dentro da pasta.</item>
+    </plurals>
+    <string name="library_delete_permission">Para excluir, o Riff precisa de permissão para mudar a pasta da biblioteca. Escolha a mesma pasta de novo.</string>
+    <string name="library_delete_allow">Permitir</string>
+    <plurals name="library_delete_failed">
+        <item quantity="one">Não deu para excluir %1$d mapa.</item>
+        <item quantity="other">Não deu para excluir %1$d mapas.</item>
+    </plurals>
+    <string name="library_delete_ok">OK</string>
 </resources>
