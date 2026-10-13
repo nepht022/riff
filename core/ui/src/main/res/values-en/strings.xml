@@ -2,4 +2,12 @@
     <string name="core_ui_retry">Try again</string>
     <string name="ui_choose_difficulty">Choose difficulty</string>
     <string name="ui_cancel">Cancel</string>
+    <string name="ui_separation_open">Guitar separation</string>
+    <string name="ui_separation_running">Separating the guitar… %1$d%%</string>
+    <string name="ui_separation_remaining">about %1$d min</string>
+    <string name="ui_separation_paused">Paused to cool down…</string>
+    <string name="ui_separation_cancel">Cancel</string>
+    <string name="ui_separation_failed">Couldn\'t separate the guitar of %1$s</string>
+    <string name="ui_separation_no_space">Not enough space on the phone</string>
+    <string name="ui_separation_ok">OK</string>
 </resources>

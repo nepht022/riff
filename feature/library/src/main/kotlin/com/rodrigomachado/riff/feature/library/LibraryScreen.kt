@@ -42,6 +42,7 @@ import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
@@ -173,8 +174,13 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
 /** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
 @Composable
 private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
+        SeparationIndicator()
         TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearch)) {
             Text(stringResource(R.string.library_search), color = RiffColors.Paper)
         }

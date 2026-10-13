@@ -36,7 +36,7 @@ import com.rodrigomachado.riff.feature.settings.SettingsScreen
  * primeiro plano, para um toque duplo não navegar duas vezes.
  */
 @Composable
-fun RiffNavHost(modifier: Modifier = Modifier) {
+fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onLibraryOpened: () -> Unit = {}) {
     val navController = rememberNavController()
     // Salvo com a tela: girar o celular ou o Android fechar o app em segundo plano não perde as telas abertas.
     val back = rememberSaveable(saver = Saver({ it.save() }, BackNavigation::restore)) { BackNavigation() }
@@ -44,6 +44,12 @@ fun RiffNavHost(modifier: Modifier = Modifier) {
     // Som de voltar ao sair de uma tela, pelo botão Voltar, pelo gesto do celular ou pelo Sair da partida.
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { if (back.onShown(it.id)) playMenuSound(MenuSound.BACK) }
+    }
+    LaunchedEffect(openLibrary) {
+        if (openLibrary) {
+            navController.navigate(LibraryRoute()) { launchSingleTop = true }
+            onLibraryOpened()
+        }
     }
     NavHost(
         navController,

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -38,6 +39,7 @@ import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
@@ -98,7 +100,7 @@ fun NowPlayingContent(
             Modifier.padding(top = Spacing.md),
             style = MaterialTheme.typography.displaySmall,
         )
-        Row {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE, onOpenLibrary),
                 modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY),
@@ -108,6 +110,8 @@ fun NowPlayingContent(
             TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings)) {
                 Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
             }
+            Spacer(Modifier.weight(1f))
+            SeparationIndicator()
         }
         when (state) {
             NowPlayingUiState.Connecting -> LoadingState(message = stringResource(R.string.nowplaying_connecting))

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,6 +42,7 @@ import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
@@ -95,7 +97,11 @@ fun SearchContent(
 ) {
     var choosing by remember { mutableStateOf<Pair<EncoreChart, ItemState.Ready>?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.search_back), color = RiffColors.Paper) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.search_back), color = RiffColors.Paper) }
+            Spacer(Modifier.weight(1f))
+            SeparationIndicator()
+        }
         PosterTitle(stringResource(R.string.search_title), style = MaterialTheme.typography.displaySmall)
         QueryRow(state.query, onQueryChange, onSearch)
         Text(
