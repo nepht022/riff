@@ -17,6 +17,8 @@ Decisões do usuário (2026-10-13):
 - Alternância **Originais | Versões**: versões são covers, remixes, ao vivo, medleys (pelo título).
 - Sem guitarra separada, **todos** os mapas (pasta, `.sng`, baixados) tocam inteiros, **sem som de acerto**, só com o som de erro. O som de acerto sai do app.
 
+**Mudança (2026-10-13, depois da implementação):** o usuário pediu o som de acerto de volta. A remoção (§3, último item) foi revertida: sem guitarra separada, no modo Biblioteca, o acerto volta a tocar o som curto e o controle volta às Configurações; no Spotify o acerto segue sem som.
+
 Suposições aceitas: a alternância começa em Originais; os filtros valem também na pesquisa aberta pelo Tocando agora.
 
 ## 2. Filtros na pesquisa
