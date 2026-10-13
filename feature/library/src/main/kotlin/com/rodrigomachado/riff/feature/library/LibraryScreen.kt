@@ -1,5 +1,7 @@
 package com.rodrigomachado.riff.feature.library
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -16,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
@@ -35,17 +38,13 @@ import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
-import com.rodrigomachado.riff.core.ui.component.BadgeTone
-import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
-import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
-import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.component.rememberMenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -72,6 +71,16 @@ fun LibraryScreen(
         if (uri != null) viewModel.onFolderPicked(uri.toString()) else viewModel.onFolderPickCancelled()
     }
     MatchSavedReturn(state.matchSaved, onMatched)
+    LaunchedEffect(state.play) {
+        state.play?.let {
+            onPlay(it.chartId, it.difficulty)
+            viewModel.onPlayHandled()
+        }
+    }
+    // A notificação mostra o progresso; sem a permissão (Android 13+), a separação roda do mesmo jeito.
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        viewModel.onSeparate()
+    }
     LibraryContent(
         state = state,
         onPickFolder = { pickFolder.launch(null) },
@@ -83,6 +92,16 @@ fun LibraryScreen(
         matchingTitle = match?.title,
         onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
         onSearch = { onSearch(match) },
+        onDifficultyChosen = viewModel::onDifficultyChosen,
+        onSeparate = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.onSeparate()
+            }
+        },
+        onPlayWithoutSeparating = viewModel::onPlayWithoutSeparating,
+        onPromptDismissed = viewModel::onPromptDismissed,
     )
 }
 
@@ -98,6 +117,10 @@ fun LibraryContent(
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
     onSearch: () -> Unit = {},
+    onDifficultyChosen: (Chart, Difficulty) -> Unit = { chart, difficulty -> onPlay(chart.id, difficulty) },
+    onSeparate: () -> Unit = {},
+    onPlayWithoutSeparating: () -> Unit = {},
+    onPromptDismissed: () -> Unit = {},
 ) {
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -109,42 +132,9 @@ fun LibraryContent(
             stringResource(R.string.library_title),
             style = MaterialTheme.typography.displaySmall,
         )
-        matchingTitle?.let { title ->
-            Text(
-                stringResource(R.string.library_match_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = RiffColors.Paper,
-            )
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = RiffColors.PaperDim)
-        }
-        when {
-            state.isLoading -> LoadingState()
-
-            state.folderAccessLost -> LibraryError(stringResource(R.string.library_access_lost), onPickFolder)
-
-            state.importFailed -> LibraryError(stringResource(R.string.library_import_failed), onRescan)
-
-            !state.hasFolder -> EmptyState(
-                title = stringResource(R.string.library_no_folder_title),
-                message = stringResource(R.string.library_no_folder_message),
-                actionLabel = stringResource(R.string.library_choose_folder),
-                onAction = onPickFolder,
-                actionSound = MenuSound.NAVIGATE,
-            )
-
-            state.isImporting -> LoadingState(
-                message = stringResource(R.string.library_importing, state.scannedFolders),
-            )
-
-            state.charts.isEmpty() && state.report?.failures.isNullOrEmpty() -> EmptyState(
-                title = stringResource(R.string.library_empty_title),
-                message = stringResource(R.string.library_empty_message),
-                actionLabel = stringResource(R.string.library_choose_another_folder),
-                onAction = onPickFolder,
-                actionSound = MenuSound.NAVIGATE,
-            )
-
-            else -> ChartList(state.charts, state.report, onPickFolder, onRescan, onReportDismissed) { chart ->
+        matchingTitle?.let { MatchHeader(it) }
+        LibraryBody(state, onPickFolder, onRescan) {
+            ChartList(state, onPickFolder, onRescan, onReportDismissed) { chart ->
                 // Escolher o mapa da música do Spotify conclui (confirma); senão, abre a escolha da dificuldade.
                 playMenuSound(if (matchingTitle != null) MenuSound.CONFIRM else MenuSound.NAVIGATE)
                 if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
@@ -152,16 +142,47 @@ fun LibraryContent(
         }
     }
     choosing?.let { chart ->
-        DifficultyDialog(
-            title = chart.title,
-            options = chart.difficulties.sorted(),
-            label = { stringResource(difficultyLabel(it.ordinal)) },
-            onChoose = { difficulty ->
-                choosingId = null
-                onPlay(chart.id, difficulty)
-            },
-            onDismiss = { choosingId = null },
+        DifficultyChoice(chart, onClose = { choosingId = null }, onChosen = onDifficultyChosen)
+    }
+    state.prompt?.let { SeparationPrompt(it, onSeparate, onPlayWithoutSeparating, onPromptDismissed) }
+}
+
+/** Carregando, erro, sem pasta, importando, vazia — ou a lista ([list]). */
+@Composable
+private fun LibraryBody(
+    state: LibraryUiState,
+    onPickFolder: () -> Unit,
+    onRescan: () -> Unit,
+    list: @Composable () -> Unit,
+) {
+    when {
+        state.isLoading -> LoadingState()
+
+        state.folderAccessLost -> LibraryError(stringResource(R.string.library_access_lost), onPickFolder)
+
+        state.importFailed -> LibraryError(stringResource(R.string.library_import_failed), onRescan)
+
+        !state.hasFolder -> EmptyState(
+            title = stringResource(R.string.library_no_folder_title),
+            message = stringResource(R.string.library_no_folder_message),
+            actionLabel = stringResource(R.string.library_choose_folder),
+            onAction = onPickFolder,
+            actionSound = MenuSound.NAVIGATE,
         )
+
+        state.isImporting -> LoadingState(
+            message = stringResource(R.string.library_importing, state.scannedFolders),
+        )
+
+        state.charts.isEmpty() && state.report?.failures.isNullOrEmpty() -> EmptyState(
+            title = stringResource(R.string.library_empty_title),
+            message = stringResource(R.string.library_empty_message),
+            actionLabel = stringResource(R.string.library_choose_another_folder),
+            onAction = onPickFolder,
+            actionSound = MenuSound.NAVIGATE,
+        )
+
+        else -> list()
     }
 }
 
@@ -189,8 +210,7 @@ private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
 
 @Composable
 private fun ChartList(
-    charts: List<Chart>,
-    report: ImportReport?,
+    state: LibraryUiState,
     onPickFolder: () -> Unit,
     onRescan: () -> Unit,
     onReportDismissed: () -> Unit,
@@ -212,13 +232,13 @@ private fun ChartList(
                 }
             }
         }
-        report?.let { item { ImportReportCard(it, onReportDismissed) } }
-        items(charts, key = { it.id }) { chart ->
+        state.report?.let { item { ImportReportCard(it, onReportDismissed) } }
+        items(state.charts, key = { it.id }) { chart ->
             TrackCard(
                 title = chart.title,
                 artist = chart.artist.ifBlank { stringResource(R.string.library_unknown_artist) },
                 onClick = { onChartClick(chart) },
-                badge = chart.difficulties.maxOrNull()?.let { highest -> difficultyBadge(highest) },
+                badge = { ChartBadges(chart, aiSeparated = chart.id in state.aiSeparated) },
             )
         }
     }
@@ -281,11 +301,6 @@ private fun failureText(failure: ImportFailure): String {
     } else {
         stringResource(R.string.library_failure, failure.folderName, label)
     }
-}
-
-/** Carimbo com a dificuldade mais alta do mapa. */
-private fun difficultyBadge(difficulty: Difficulty): @Composable () -> Unit = {
-    StatusBadge(stringResource(difficultyLabel(difficulty.ordinal)), BadgeTone.NEUTRAL)
 }
 
 /**

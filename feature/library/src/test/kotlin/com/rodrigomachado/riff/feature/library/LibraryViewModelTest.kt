@@ -1,15 +1,21 @@
 package com.rodrigomachado.riff.feature.library
 
+import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
+import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
 import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
+import com.rodrigomachado.riff.core.model.Chart
+import com.rodrigomachado.riff.core.model.ChartFormat
+import com.rodrigomachado.riff.core.model.Difficulty
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -28,6 +34,10 @@ class LibraryViewModelTest {
     private val folderAccess = FakeFolderAccess()
     private val importer = FakeChartImporter()
     private val matches = FakeTrackMatchRepository()
+    private val separations = FakeAiSeparations()
+    private val scheduler = FakeScheduler()
+    private val probe = FakeAudioProbe()
+    private val song = Chart("m", "Música", "Banda", null, null, null, "u", ChartFormat.CHART, setOf(Difficulty.EXPERT))
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -36,7 +46,16 @@ class LibraryViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.viewModel(): LibraryViewModel {
-        val viewModel = LibraryViewModel(repository, folderStore, importer, folderAccess, matches)
+        val viewModel = LibraryViewModel(
+            repository,
+            folderStore,
+            importer,
+            folderAccess,
+            matches,
+            separations,
+            scheduler,
+            probe,
+        )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -165,5 +184,116 @@ class LibraryViewModelTest {
 
         assertEquals(listOf(Triple("spotify:track:x", "a", true)), matches.saved)
         assertTrue(viewModel.uiState.value.matchSaved)
+    }
+
+    @Test
+    fun aSongWithoutSeparateGuitarAsksBeforePlaying() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(SeparationAsk("m", "Música", Difficulty.EXPERT, lowMemory = false), vm.uiState.value.prompt)
+        assertNull(vm.uiState.value.play)
+    }
+
+    @Test
+    fun aSongWithItsOwnGuitarPlaysRightAway() = runTest {
+        probe.audio["m"] = ChartAudio.Stems("g", listOf("s"), "s")
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun aDeclinedOrSeparatedSongPlaysRightAway() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        separations.states["m"] = AiSeparationState.DECLINED
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun playingWithoutSeparatingIsRememberedAndPlays() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        val vm = viewModel()
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        vm.onPlayWithoutSeparating()
+        advanceUntilIdle()
+
+        assertEquals(AiSeparationState.DECLINED, separations.states["m"])
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+        assertNull(vm.uiState.value.prompt)
+
+        vm.onPlayHandled()
+        assertNull(vm.uiState.value.play)
+    }
+
+    @Test
+    fun separatingStartsInTheBackgroundAndDoesNotPlay() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        val vm = viewModel()
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        vm.onSeparate()
+
+        assertEquals(listOf("m"), scheduler.started)
+        assertNull(vm.uiState.value.prompt)
+        assertNull(vm.uiState.value.play)
+    }
+
+    @Test
+    fun aSecondSeparationSaysOneIsRunning() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.start("outra", "Outra")
+        val vm = viewModel()
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        vm.onSeparate()
+
+        assertEquals(true, vm.uiState.value.prompt?.busy)
+    }
+
+    @Test
+    fun theSongBeingSeparatedPlaysWholeWithoutAsking() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.start("m", "Música")
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun aRescanPrunesSeparationsOfSongsThatLeft() = runTest {
+        folderStore.rootUri.value = "content://pasta"
+        importer.nextResult = { ImportReport(importedCount = 1, failures = emptyList()) }
+        val vm = viewModel()
+
+        vm.onRescan()
+        advanceUntilIdle()
+
+        assertEquals(1, separations.pruned)
+    }
+
+    @Test
+    fun separatedSongsAreMarked() = runTest {
+        separations.separatedIds.value = setOf("m")
+
+        assertEquals(setOf("m"), viewModel().uiState.value.aiSeparated)
     }
 }

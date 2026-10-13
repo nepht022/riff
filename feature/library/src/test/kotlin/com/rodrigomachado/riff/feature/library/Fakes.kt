@@ -1,16 +1,25 @@
 package com.rodrigomachado.riff.feature.library
 
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
+import com.rodrigomachado.riff.core.data.SeparatedFiles
+import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
+import com.rodrigomachado.riff.core.data.game.ChartAudio
+import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.SeparationStatus
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.File
 
 fun chart(
     id: String,
@@ -90,4 +99,42 @@ class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRep
     override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null
 
     override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) = Unit
+}
+
+class FakeAiSeparations : AiSeparationRepository {
+    val states = mutableMapOf<String, AiSeparationState>()
+    var pruned = 0
+    override val separatedIds = MutableStateFlow(emptySet<String>())
+    override val usage = MutableStateFlow(SeparationUsage(0, 0))
+    override suspend fun stateOf(chartId: String) = states[chartId]
+    override suspend fun separatedFiles(chartId: String): SeparatedFiles? = null
+    override fun workDir(chartId: String) = File("x")
+    override suspend fun commit(chartId: String, workDir: File) = Unit
+    override suspend fun decline(chartId: String) {
+        states[chartId] = AiSeparationState.DECLINED
+    }
+    override suspend fun resetDeclines() = Unit
+    override suspend fun deleteAll() = Unit
+    override suspend fun pruneOrphans() {
+        pruned++
+    }
+}
+
+class FakeScheduler : SeparationScheduler {
+    override val status = MutableStateFlow<SeparationStatus>(SeparationStatus.Idle)
+    override var lowMemoryDevice = false
+    val started = mutableListOf<String>()
+    override fun start(chartId: String, title: String): Boolean {
+        if (status.value is SeparationStatus.Running) return false
+        started += chartId
+        status.value = SeparationStatus.Running(chartId, title, 0f, null)
+        return true
+    }
+    override fun cancel() = Unit
+    override fun dismissFailure() = Unit
+}
+
+class FakeAudioProbe : ChartAudioProbe {
+    val audio = mutableMapOf<String, ChartAudio>()
+    override suspend fun audioOf(chartId: String) = audio[chartId]
 }

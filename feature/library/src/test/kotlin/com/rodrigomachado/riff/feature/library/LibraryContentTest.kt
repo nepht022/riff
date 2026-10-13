@@ -299,4 +299,82 @@ class LibraryContentTest {
         assertEquals(1, searched)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
+
+    private val events = mutableListOf<String>()
+
+    private fun showWithPrompt(state: LibraryUiState) = composeRule.setContent {
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                LibraryContent(
+                    state = state,
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> events += "play" },
+                    onBack = {},
+                    onDifficultyChosen = { c, d -> events += "difficulty:${c.id}:$d" },
+                    onSeparate = { events += "separate" },
+                    onPlayWithoutSeparating = { events += "playWithout" },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun theAiBadgeShowsOnSeparatedSongs() {
+        val song = chart("a", title = "Música")
+        showWithPrompt(
+            LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(song), aiSeparated = setOf("a")),
+        )
+
+        composeRule.onNodeWithText("GUITARRA SEPARADA IA").assertExists()
+    }
+
+    @Test
+    fun thePromptOffersToSeparateOrPlay() {
+        val song = chart("a", title = "Música")
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(song),
+                prompt = SeparationAsk("a", "Música", Difficulty.EXPERT, lowMemory = true),
+            ),
+        )
+
+        composeRule.onNodeWithText("Separar a guitarra com IA?").assertExists()
+        composeRule.onNodeWithText("Pode não funcionar neste celular.", substring = true).assertExists()
+        composeRule.onNodeWithText("Separar").performClick()
+        composeRule.onNodeWithText("Jogar sem separar").performClick()
+
+        assertEquals(listOf("separate", "playWithout"), events)
+        assertEquals(listOf(MenuSound.CONFIRM, MenuSound.CONFIRM), sounds)
+    }
+
+    @Test
+    fun aBusyPromptOnlyOffersToPlay() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música")),
+                prompt = SeparationAsk("a", "Música", Difficulty.EXPERT, lowMemory = false, busy = true),
+            ),
+        )
+
+        composeRule.onNodeWithText("Já tem uma separação em andamento").assertExists()
+        composeRule.onNodeWithText("Separar").assertDoesNotExist()
+    }
+
+    @Test
+    fun choosingADifficultyGoesThroughTheViewModel() {
+        showWithPrompt(
+            LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))),
+        )
+
+        composeRule.onNodeWithText("Música").performClick()
+        composeRule.onNodeWithText("Expert").performClick()
+
+        assertEquals(listOf("difficulty:a:EXPERT"), events)
+    }
 }

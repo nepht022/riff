@@ -62,6 +62,44 @@ class LibraryScreenshotTest {
         )
     }
 
+    @Test
+    fun aiSeparatedAndThePrompt() = snapshot("Library_ai_separation") {
+        LibraryContent(
+            state = LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(
+                    chart("1", "Smells Like Teen Spirit", "Nirvana", setOf(Difficulty.EXPERT)),
+                    chart("2", "Enter Sandman", "Metallica", setOf(Difficulty.HARD, Difficulty.EXPERT)),
+                ),
+                aiSeparated = setOf("1"),
+                prompt = SeparationAsk("2", "Enter Sandman", Difficulty.EXPERT, lowMemory = false),
+            ),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+            onBack = {},
+        )
+    }
+
+    @Test
+    fun aiSeparatedBadge() = snapshot("Library_ai_badge") {
+        LibraryContent(
+            state = LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("1", "Smells Like Teen Spirit", "Nirvana", setOf(Difficulty.EXPERT))),
+                aiSeparated = setOf("1"),
+            ),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+            onBack = {},
+        )
+    }
+
     private fun snapshot(name: String, content: @Composable () -> Unit) {
         captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme { StageBackground(Modifier.fillMaxSize()) { content() } }
