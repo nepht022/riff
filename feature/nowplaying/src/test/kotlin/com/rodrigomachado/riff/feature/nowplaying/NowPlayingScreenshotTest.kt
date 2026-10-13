@@ -27,6 +27,11 @@ class NowPlayingScreenshotTest {
         content(NowPlayingUiState.Playing(playing(MatchStatus.Suggested(chart(), 0.9f))))
     }
 
+    @Test
+    fun noMatch() = snapshot("NowPlaying_no_match") {
+        content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+    }
+
     @Composable
     private fun content(state: NowPlayingUiState) = NowPlayingContent(
         state = state,

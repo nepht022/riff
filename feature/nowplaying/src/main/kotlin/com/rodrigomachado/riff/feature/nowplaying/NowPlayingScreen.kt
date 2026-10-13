@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.nowplaying
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -162,8 +164,20 @@ private fun ChooseOther(onClick: () -> Unit) {
 @Composable
 private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
-    PosterButton(stringResource(R.string.nowplaying_choose), onClick = onChoose, sound = MenuSound.NAVIGATE)
-    SearchEncore(onSearch)
+    ActionRow {
+        PosterButton(stringResource(R.string.nowplaying_choose), onClick = onChoose, sound = MenuSound.NAVIGATE)
+        SearchEncore(onSearch)
+    }
+}
+
+/** O botão principal e a alternativa lado a lado. */
+@Composable
+private fun ActionRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
 }
 
 @Composable
@@ -200,12 +214,14 @@ private fun Playing(
                     stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist),
                     color = RiffColors.Paper,
                 )
-                PosterButton(
-                    stringResource(R.string.nowplaying_play),
-                    onClick = { choosingFor = true },
-                    sound = MenuSound.CONFIRM,
-                )
-                ChooseOther { onChooseChart(track.trackUri, track.title) }
+                ActionRow {
+                    PosterButton(
+                        stringResource(R.string.nowplaying_play),
+                        onClick = { choosingFor = true },
+                        sound = MenuSound.CONFIRM,
+                    )
+                    ChooseOther { onChooseChart(track.trackUri, track.title) }
+                }
             }
 
             is MatchStatus.Suggested -> {
@@ -213,12 +229,14 @@ private fun Playing(
                     stringResource(R.string.nowplaying_suggestion, match.chart.title, match.chart.artist),
                     color = RiffColors.Paper,
                 )
-                PosterButton(
-                    stringResource(R.string.nowplaying_confirm),
-                    onClick = { onConfirm(track.trackUri, match.chart.id, match.confidence) },
-                    sound = MenuSound.CONFIRM,
-                )
-                ChooseOther { onChooseChart(track.trackUri, track.title) }
+                ActionRow {
+                    PosterButton(
+                        stringResource(R.string.nowplaying_confirm),
+                        onClick = { onConfirm(track.trackUri, match.chart.id, match.confidence) },
+                        sound = MenuSound.CONFIRM,
+                    )
+                    ChooseOther { onChooseChart(track.trackUri, track.title) }
+                }
                 SearchEncore { onSearch(track) }
             }
 

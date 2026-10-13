@@ -4,8 +4,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -204,5 +207,34 @@ class NowPlayingContentTest {
 
         assertEquals("Bohemian Rhapsody - Remastered 2011", searchedFor?.title)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun searchEncoreSitsBesideChooseChart() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+        assertBeside("Escolher mapa", "Pesquisar no Encore")
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun chooseOtherSitsBesideConfirm() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Suggested(chart(), 0.9f))))
+        assertBeside("Confirmar mapa", "Escolher outro")
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun chooseOtherSitsBesidePlay() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+        assertBeside("Jogar", "Escolher outro")
+    }
+
+    /** Na mesma linha: o segundo começa à direita do primeiro e as alturas se cruzam. */
+    private fun assertBeside(first: String, second: String) {
+        // O último com o texto: "Confirmar mapa" também é a etiqueta do cartão, que vem antes.
+        val a = composeRule.onAllNodesWithText(first).onLast().getUnclippedBoundsInRoot()
+        val b = composeRule.onAllNodesWithText(second).onLast().getUnclippedBoundsInRoot()
+        assertTrue("$first: $a, $second: $b", b.left >= a.right && b.top < a.bottom && a.top < b.bottom)
     }
 }
