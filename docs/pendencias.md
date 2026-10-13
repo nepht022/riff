@@ -37,6 +37,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Pesquisa no Encore: a API não é documentada (vista no código do Bridge); se mudar, a pesquisa avisa "o Riff precisa ser atualizado". O filtro de rips oficiais é uma lista de estúdios e ícones de setlist: um rip com outro ícone pode passar.
 - Pesquisa: dois downloads ao mesmo tempo com o mesmo "Artista - Nome" podem gerar um nome sem ".sng" (o mapa some no Reimportar); Reimportar enquanto um download termina pode apagar o mapa recém-baixado; sair da tela entre a importação e o registro deixa um mapa sem o arquivo.
 - Pesquisa: escolher outra pasta em "Permitir" troca a raiz e libera a antiga sem reimportar (os mapas listados param de abrir até o Reimportar).
-- Pesquisa: a marca "Guitarra separada" não volta numa segunda busca do mesmo mapa; a consulta do começo do arquivo confia que o servidor respeita o Range; página só com rips mostra "Nada encontrado" sem o Carregar mais.
+- Pesquisa: a consulta do começo do arquivo confia que o servidor respeita o Range.
 - `.sng`: checagem de limites com overflow num pacote forjado (vira falha, sem crash); descritor não fechado quando a abertura falha; cada abertura lê 256 KB (importação de centenas de pacotes fica mais lenta); `.part` órfão se o sistema matar o app no meio do download; nome cortado em caracteres, não em bytes.
 - O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.

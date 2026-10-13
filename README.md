@@ -2,7 +2,7 @@
 
 Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não é publicado na Play Store; veja a seção 3 da especificação). As notas vêm de mapas do Clone Hero que você mesmo importa. Há dois jeitos de jogar:
 
-- **Biblioteca, para jogar:** a música vem da pasta do mapa. Se a pasta traz a guitarra separada, ela some quando você erra e volta quando acerta, como no Guitar Hero. Ao continuar depois de uma pausa, a pista volta 0,5 s, como uma fita, para você retomar no ritmo.
+- **Biblioteca, para jogar:** a música vem da pasta do mapa. Se a pasta traz a guitarra separada, ela some quando você erra e volta quando acerta, como no Guitar Hero. Sem ela, a música toca inteira e só o erro faz som. Ao continuar depois de uma pausa, a pista volta 0,5 s, como uma fita, para você retomar no ritmo.
 - **Tocando agora (Spotify), para ouvir e tocar junto:** o Riff acompanha a faixa que está tocando no Spotify e procura o mapa dela na biblioteca. A sincronia é ajustada automaticamente pelo começo da música no áudio do mapa, e você refina na pausa. Aqui a música segue de onde parou ao continuar e o acerto não faz som.
 
 - Especificação: `docs/superpowers/specs/2026-10-05-riff-design.md` (e as especificações de cada etapa na mesma pasta)
@@ -42,6 +42,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 ## Pesquisar e baixar mapas
 
 - **Biblioteca → Pesquisar:** digite a música ou o artista. A lista mostra os mapas da comunidade no Encore (enchor.us), sem rips de jogos oficiais (Harmonix, Neversoft), com as dificuldades da guitarra e a marca **Guitarra separada** quando o pacote traz a guitarra à parte. **Baixar** grava o `.sng` em "Baixados pelo Riff", dentro da pasta da biblioteca, e o mapa já entra na lista (**Jogar**). Os que você já tem aparecem como "Já na biblioteca".
+- **Originais | Versões** escolhe entre as gravações originais e covers, remixes, ao vivo e medleys (pelo título). **Só com guitarra separada** procura nas páginas seguintes sozinho até achar 10 mapas ou conferir 100 resultados; **Procurar mais** confere outros 100.
 - **Tocando agora → Pesquisar no Encore** (faixa sem mapa ou só com sugestão): a pesquisa já vem com o artista e o título, os mais parecidos primeiro; o mapa baixado fica casado com a faixa e você volta com **Jogar**.
 - Na primeira vez, o Riff pede para escolher a pasta de novo, agora com permissão de gravar nela (**Permitir**).
 - O pacote vem com o áudio da música (uso pessoal). A API do Encore não é oficial: se ela mudar, a pesquisa avisa que o Riff precisa ser atualizado.
@@ -51,7 +52,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
 - **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha). No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
 - **Calibração** (Configurações → Calibrar atraso do áudio): toque junto com as batidas para medir o atraso do seu fone ou alto-falante. Útil com fone Bluetooth; com o alto-falante do celular costuma ser melhor deixar em 0 (**Zerar**).
-- **Configurações:** volume geral, do acerto e do erro; sons do menu (liga e desliga); velocidade das notas (0,5× a 2×); modo canhoto (trilhas espelhadas).
+- **Configurações:** volume geral e do erro; sons do menu (liga e desliga); velocidade das notas (0,5× a 2×); modo canhoto (trilhas espelhadas).
 - **Sons do menu:** os botões fora da partida tocam guitarra, no volume geral: abrir ou escolher algo dá um toque abafado, começar ou salvar dá um power chord (cada um sorteia entre duas gravações) e voltar, pelo botão ou pelo gesto do celular, arrasta a palheta na corda. Durante a partida os botões ficam em silêncio.
 
 ## Desenvolvimento
@@ -77,7 +78,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:model` | Modelos de domínio |
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`), e o casamento entre faixa do Spotify e mapa |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
-| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
+| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de erro e menu (SoundPool), gerados por `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
 | `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify, ajustes de sincronia e recordes (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
 | `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
@@ -88,7 +89,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
 | `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
-| `:feature:settings` | Configurações: volume geral, de acerto e de erro, sons do menu, velocidade das notas e modo canhoto |
+| `:feature:settings` | Configurações: volume geral e de erro, sons do menu, velocidade das notas e modo canhoto |
 | `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
@@ -136,7 +137,7 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 ## Créditos e licenças
 
 - Som de erro e sons do menu: montados com gravações de guitarra com licença Creative Commons 0 do Freesound (origem e autores em `third_party/README.md`).
-- Som de acerto e metrônomo da calibração: sintetizados pelo próprio projeto.
+- Metrônomo da calibração: sintetizado pelo próprio projeto.
 - Fontes New Rocker e Oswald: licença OFL (`core/ui/licenses/`).
 - Mapas baixados pela pesquisa: Encore (enchor.us), feitos pela comunidade do Clone Hero.
 - Nada do Guitar Hero nem de projetos que redesenham seus assets: a pista, as gemas e a chama são desenhadas em código.
