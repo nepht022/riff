@@ -62,7 +62,7 @@ class SeparationNotifications(private val context: Context) {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
         return NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setSmallIcon(R.drawable.ic_stat_separation)
             .setContentIntent(pending)
             .setOnlyAlertOnce(true)
     }

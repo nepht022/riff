@@ -164,4 +164,11 @@ class SettingsContentTest {
 
         composeRule.onNodeWithText("1 música · 8,6 MB").performScrollTo().assertExists()
     }
+
+    @Test
+    fun withNothingSeparatedItSaysSo() {
+        show(Settings.DEFAULT, separationUsage = SeparationUsage(0, 0))
+
+        composeRule.onNodeWithText("Nenhuma música separada").performScrollTo().assertExists()
+    }
 }

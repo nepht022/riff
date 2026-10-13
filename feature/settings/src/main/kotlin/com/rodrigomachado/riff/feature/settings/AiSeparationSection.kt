@@ -24,12 +24,16 @@ internal fun AiSeparationSection(usage: SeparationUsage, onDelete: () -> Unit, o
     var confirming by rememberSaveable { mutableStateOf(false) }
     Section(stringResource(R.string.settings_ai_section))
     Text(
-        pluralStringResource(
-            R.plurals.settings_ai_usage,
-            usage.songs,
-            usage.songs,
-            Formatter.formatShortFileSize(LocalContext.current, usage.bytes),
-        ),
+        if (usage.songs == 0) {
+            stringResource(R.string.settings_ai_usage_none)
+        } else {
+            pluralStringResource(
+                R.plurals.settings_ai_usage,
+                usage.songs,
+                usage.songs,
+                Formatter.formatShortFileSize(LocalContext.current, usage.bytes),
+            )
+        },
         style = MaterialTheme.typography.bodyLarge,
         color = RiffColors.Paper,
     )

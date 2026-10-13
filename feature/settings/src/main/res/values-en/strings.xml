@@ -16,6 +16,7 @@
     <string name="settings_menu_sounds">Menu sounds</string>
     <string name="settings_menu_sounds_hint">Guitar when tapping buttons</string>
     <string name="settings_ai_section">AI separated guitar</string>
+    <string name="settings_ai_usage_none">No songs separated</string>
     <plurals name="settings_ai_usage">
         <item quantity="one">%1$d song · %2$s</item>
         <item quantity="other">%1$d songs · %2$s</item>
