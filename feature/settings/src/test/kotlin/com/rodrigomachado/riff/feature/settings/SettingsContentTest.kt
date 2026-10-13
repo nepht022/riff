@@ -38,10 +38,12 @@ class SettingsContentTest {
                 SettingsContent(
                     settings = settings,
                     onMasterVolume = {},
+                    onHitVolume = {},
                     onMissVolume = {},
                     onNoteSpeed = {},
                     onLeftHanded = { leftHanded = it },
                     onMenuSounds = { menuSounds = it },
+                    onPreviewHit = {},
                     onPreviewMiss = {},
                     onCalibrate = {},
                     onBack = { back = true },
@@ -57,6 +59,7 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Configurações").assertExists()
         composeRule.onNodeWithText("Volume geral").assertExists()
         composeRule.onNodeWithText("80%").assertExists()
+        composeRule.onNodeWithText("Som de acerto").assertExists()
         composeRule.onNodeWithText("Som de erro").assertExists()
         composeRule.onNodeWithText("Velocidade das notas").performScrollTo()
         composeRule.onNodeWithText("1,25×").assertExists()
@@ -97,10 +100,12 @@ class SettingsContentTest {
                 SettingsContent(
                     settings = Settings.DEFAULT.copy(audioOffsetMs = -42),
                     onMasterVolume = {},
+                    onHitVolume = {},
                     onMissVolume = {},
                     onNoteSpeed = {},
                     onLeftHanded = {},
                     onMenuSounds = {},
+                    onPreviewHit = {},
                     onPreviewMiss = {},
                     onCalibrate = { opened = true },
                     onBack = {},
@@ -131,13 +136,5 @@ class SettingsContentTest {
         assertEquals(false, menuSounds)
         // O interruptor dos sons não soa por conta própria (ao desligar, ainda estaria ligado): o app soa ao ligar.
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
-    }
-
-    @Test
-    fun thereIsNoHitSoundControl() {
-        show()
-
-        composeRule.onNodeWithText("Som de acerto").assertDoesNotExist()
-        composeRule.onNodeWithText("Som de erro").assertExists()
     }
 }

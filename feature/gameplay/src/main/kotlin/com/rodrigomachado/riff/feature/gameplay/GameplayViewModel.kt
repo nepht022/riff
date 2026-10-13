@@ -113,7 +113,7 @@ class GameplayViewModel @Inject constructor(
         songPlayer.setVolume(settings.masterVolume)
         val effects = sfxPlayers.create().also {
             sfx = it
-            it.setMissVolume(settings.effectiveMissVolume)
+            it.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         }
         songOffsetMs = spotifyTrackUri?.let { spotifyOffsets.forTrack(it, chartId, trackOffsetMs, playable.audio) }
             ?: chartOffsets.get(chartId)
@@ -124,6 +124,7 @@ class GameplayViewModel @Inject constructor(
             effects,
             timeSource,
             offset,
+            hitSounds = spotifyTrackUri == null,
             // Na biblioteca o jogador veio jogar: volta um pouco para retomar. No Spotify veio ouvir: segue.
             rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )

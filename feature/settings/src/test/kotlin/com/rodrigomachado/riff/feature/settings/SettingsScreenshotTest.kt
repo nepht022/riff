@@ -22,12 +22,14 @@ class SettingsScreenshotTest {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
                     SettingsContent(
-                        settings = Settings.DEFAULT.copy(missVolume = 0.3f, leftHanded = true),
+                        settings = Settings.DEFAULT.copy(hitVolume = 0.3f, leftHanded = true),
                         onMasterVolume = {},
+                        onHitVolume = {},
                         onMissVolume = {},
                         onNoteSpeed = {},
                         onLeftHanded = {},
                         onMenuSounds = {},
+                        onPreviewHit = {},
                         onPreviewMiss = {},
                         onCalibrate = {},
                         onBack = {},

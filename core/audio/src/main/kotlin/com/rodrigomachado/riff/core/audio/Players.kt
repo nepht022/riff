@@ -27,12 +27,15 @@ interface SongPlayer {
     val isCompleted: Boolean
 }
 
-/** O som de erro, tocado no instante do toque (o acerto não faz som: a guitarra da música é a resposta). */
+/** Sons de acerto e erro, tocados no instante do toque. */
 interface SfxPlayer {
+    /** Acerto na [lane] (0 a 4): cada trilha tem a sua nota. */
+    fun hit(lane: Int)
+
     fun miss()
 
-    /** Volume do erro, de 0 (desligado) a 1, já multiplicado pelo volume geral. */
-    fun setMissVolume(volume: Float)
+    /** Volumes de acerto e de erro, de 0 (desligado) a 1, já multiplicados pelo volume geral. */
+    fun setVolumes(hit: Float, miss: Float)
 
     fun release()
 }

@@ -59,19 +59,24 @@ class FakeSongPlayer : SongPlayer {
 }
 
 class FakeSfxPlayer : SfxPlayer {
+    val hitLanes = mutableListOf<Int>()
+    val hits: Int get() = hitLanes.size
     var misses = 0
-
-    // Sem setter público: setMissVolume é o da interface.
-    val missVolume: Float get() = lastMissVolume
-    private var lastMissVolume = -1f
+    var hitVolume = -1f
+    var missVolume = -1f
     var released = false
+
+    override fun hit(lane: Int) {
+        hitLanes += lane
+    }
 
     override fun miss() {
         misses++
     }
 
-    override fun setMissVolume(volume: Float) {
-        lastMissVolume = volume
+    override fun setVolumes(hit: Float, miss: Float) {
+        hitVolume = hit
+        missVolume = miss
     }
 
     override fun release() {

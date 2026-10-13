@@ -30,6 +30,8 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
 
     fun setMasterVolume(volume: Float) = save { it.copy(masterVolume = volume.coerceIn(0f, 1f)) }
 
+    fun setHitVolume(volume: Float) = save { it.copy(hitVolume = volume.coerceIn(0f, 1f)) }
+
     fun setMissVolume(volume: Float) = save { it.copy(missVolume = volume.coerceIn(0f, 1f)) }
 
     fun setNoteSpeed(speed: Float) = save {
@@ -39,6 +41,8 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
     fun setLeftHanded(leftHanded: Boolean) = save { it.copy(leftHanded = leftHanded) }
 
     fun setMenuSounds(enabled: Boolean) = save { it.copy(menuSounds = enabled) }
+
+    fun previewHit() = preview { it.hit(PREVIEW_LANE) }
 
     fun previewMiss() = preview { it.miss() }
 
@@ -51,7 +55,7 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
     private fun preview(play: (SfxPlayer) -> Unit) {
         if (released) return
         val settings = latest ?: uiState.value ?: return
-        sfx.setMissVolume(settings.effectiveMissVolume)
+        sfx.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         play(sfx)
     }
 
@@ -65,5 +69,6 @@ class SettingsViewModel @Inject constructor(private val repository: SettingsRepo
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val PREVIEW_LANE = 2 // a nota do meio (amarela)
     }
 }

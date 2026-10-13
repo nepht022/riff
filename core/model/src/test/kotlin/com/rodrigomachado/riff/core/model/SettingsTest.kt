@@ -9,16 +9,17 @@ class SettingsTest {
     @Test
     fun defaultsAreFullAppVolumeAndSixtyPercentEffects() {
         assertEquals(1f, Settings.DEFAULT.masterVolume)
+        assertEquals(0.6f, Settings.DEFAULT.hitVolume)
         assertEquals(0.6f, Settings.DEFAULT.missVolume)
         assertEquals(1f, Settings.DEFAULT.noteSpeed)
     }
 
     @Test
     fun volumesGoFromSilentToFull() {
-        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 0f, missVolume = 0f) }
-        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 1f, missVolume = 1f) }
+        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 0f, hitVolume = 0f, missVolume = 0f) }
+        assertDoesNotThrow { Settings.DEFAULT.copy(masterVolume = 1f, hitVolume = 1f, missVolume = 1f) }
         assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(masterVolume = 1.1f) }
-        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(missVolume = -0.1f) }
+        assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(hitVolume = -0.1f) }
         assertThrows<IllegalArgumentException> { Settings.DEFAULT.copy(missVolume = Float.NaN) }
     }
 
@@ -31,9 +32,10 @@ class SettingsTest {
     }
 
     @Test
-    fun theMissSoundIsScaledByTheAppVolume() {
-        val settings = Settings.DEFAULT.copy(masterVolume = 0.5f, missVolume = 1f)
+    fun effectsAreScaledByTheAppVolume() {
+        val settings = Settings.DEFAULT.copy(masterVolume = 0.5f, hitVolume = 0.6f, missVolume = 1f)
 
+        assertEquals(0.3f, settings.effectiveHitVolume, 1e-6f)
         assertEquals(0.5f, settings.effectiveMissVolume, 1e-6f)
     }
 }
