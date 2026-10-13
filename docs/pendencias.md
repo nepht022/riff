@@ -8,7 +8,7 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 - **Hoje:** a comparação é local, antes de commitar mudanças de UI.
 - **Quando retomar:** ao criar o repositório remoto. Ativar a comparação no CI com tolerância (por exemplo, 1% de pixels), calibrada na primeira execução.
 
-## Pontos menores em aberto (revisões de 2026-10-09 a 2026-10-12)
+## Pontos menores em aberto (revisões de 2026-10-09 a 2026-10-13)
 
 Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada depois de reconectar, pausa antes do primeiro início).
 
@@ -39,4 +39,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Pesquisa: escolher outra pasta em "Permitir" troca a raiz e libera a antiga sem reimportar (os mapas listados param de abrir até o Reimportar).
 - Pesquisa: a consulta do começo do arquivo confia que o servidor respeita o Range.
 - `.sng`: checagem de limites com overflow num pacote forjado (vira falha, sem crash); descritor não fechado quando a abertura falha; cada abertura lê 256 KB (importação de centenas de pacotes fica mais lenta); `.part` órfão se o sistema matar o app no meio do download; nome cortado em caracteres, não em bytes.
+- Pesquisa: trocar Originais/Versões com "Só com guitarra separada" ligado mostra a contagem do outro modo ("37 de 100" vira "0 de 100").
+- Pesquisa: em Versões, quando quase nada passa no filtro, a procura por guitarra separada pode buscar muitas páginas (não há limite de páginas, só de conferidos); e confere o lote inteiro mesmo depois do 10º achado.
+- Guitarra por IA: se o Android fechar o app no meio da separação, o arquivo temporário da decodificação (~85 MB numa música de 4 min) fica no cache.
+- Guitarra por IA: o mínimo de 50 MB livres é menor que esse temporário; num celular quase cheio a falha aparece como "não deu para separar" em vez de "pouco espaço".
+- Guitarra por IA: cada trecho copia ~85 MB na heap (saídas do modelo); em celulares com heap pequena pode faltar memória.
+- Guitarra por IA: reimportar exatamente no fim de uma separação pode apagar os arquivos recém-gravados (a linha fica marcada, a música toca inteira com a marca IA).
+- Guitarra por IA: a leitura do arquivo decodificado supõe que uma leitura enche a janela de 8 s (vale para arquivos locais; um laço seria mais seguro).
+- Guitarra por IA: uma música que decodifica vazia mostra o erro genérico.
+- Biblioteca: um toque para jogar pode se perder se a navegação estiver bloqueada naquele instante (o pedido é descartado junto).
 - O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.
