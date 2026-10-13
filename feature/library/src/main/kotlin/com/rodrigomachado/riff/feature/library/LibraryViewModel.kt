@@ -3,9 +3,11 @@ package com.rodrigomachado.riff.feature.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.SeparationScheduler
+import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
@@ -77,6 +79,7 @@ class LibraryViewModel @Inject constructor(
     private val separations: AiSeparationRepository,
     private val scheduler: SeparationScheduler,
     private val probe: ChartAudioProbe,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
     private val importState = MutableStateFlow(ImportState())
     private val matchSaved = MutableStateFlow(false)
@@ -129,7 +132,11 @@ class LibraryViewModel @Inject constructor(
     private suspend fun needsAsking(chartId: String): Boolean {
         val running = scheduler.status.value
         if (running is SeparationStatus.Running && running.chartId == chartId) return false
-        if (separations.stateOf(chartId) != null) return false
+        when (separations.stateOf(chartId)) {
+            AiSeparationState.SEPARATED -> return false
+            AiSeparationState.DECLINED -> if (!settings.settings.first().askSeparationAlways) return false
+            null -> Unit
+        }
         // Sem conseguir ler a pasta (apagada, sem permissão), não pergunta: a partida mostra o erro de sempre.
         val audio = try {
             probe.audioOf(chartId)

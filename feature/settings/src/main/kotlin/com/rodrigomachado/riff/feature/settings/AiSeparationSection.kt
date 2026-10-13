@@ -28,7 +28,12 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 /** Guitarra separada por IA: o espaço usado, apagar as separações (com confirmação) e perguntar de novo. */
 @Composable
-internal fun AiSeparationSection(usage: SeparationUsage, onDelete: () -> Unit, onAskAgain: () -> Unit) {
+internal fun AiSeparationSection(
+    usage: SeparationUsage,
+    onDelete: () -> Unit,
+    askAlways: Boolean,
+    onAskAlways: (Boolean) -> Unit,
+) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     Section(stringResource(R.string.settings_ai_section))
     ActionRow(
@@ -36,10 +41,12 @@ internal fun AiSeparationSection(usage: SeparationUsage, onDelete: () -> Unit, o
         value = usageText(usage),
         onClick = withMenuSound(MenuSound.NAVIGATE) { confirming = true },
     )
-    ActionRow(
+    SwitchRow(
         title = stringResource(R.string.settings_ai_ask_again),
         hint = stringResource(R.string.settings_ai_ask_again_hint),
-        onClick = withMenuSound(MenuSound.CONFIRM, onAskAgain),
+        checked = askAlways,
+        onChange = onAskAlways,
+        tag = SettingsTestTags.ASK_ALWAYS,
     )
     if (confirming) {
         AlertDialog(

@@ -114,4 +114,14 @@ class RiffPreferencesTest {
         assertEquals(Settings.DEFAULT, preferences.settings.first())
         assertNull(preferences.libraryRootUri.first())
     }
+
+    @Test
+    fun askingAlwaysToSeparateStartsOffAndCanBeTurnedOn() = runTest {
+        val preferences = RiffPreferences(InMemoryPreferencesStore())
+        assertEquals(false, preferences.settings.first().askSeparationAlways)
+
+        preferences.updateSettings { it.copy(askSeparationAlways = true) }
+
+        assertEquals(true, preferences.settings.first().askSeparationAlways)
+    }
 }

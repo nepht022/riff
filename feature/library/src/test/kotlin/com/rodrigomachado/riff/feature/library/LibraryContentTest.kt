@@ -3,6 +3,8 @@ package com.rodrigomachado.riff.feature.library
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -315,6 +317,7 @@ class LibraryContentTest {
                     onDifficultyChosen = { c, d -> events += "difficulty:${c.id}:$d" },
                     onSeparate = { events += "separate" },
                     onPlayWithoutSeparating = { events += "playWithout" },
+                    onPromptDismissed = { events += "back" },
                 )
             }
         }
@@ -346,10 +349,11 @@ class LibraryContentTest {
         composeRule.onNodeWithText("só apareça ao acertá-las", substring = true).assertExists()
         composeRule.onNodeWithText("Pode não funcionar neste celular.", substring = true).assertExists()
         composeRule.onNodeWithText("Separar").performClick()
-        composeRule.onNodeWithText("Jogar sem separar").performClick()
+        composeRule.onNodeWithText("Sem separar").performClick()
+        composeRule.onAllNodesWithText("Voltar").onLast().performClick() // o do diálogo (o outro é o da tela)
 
-        assertEquals(listOf("separate", "playWithout"), events)
-        assertEquals(listOf(MenuSound.CONFIRM, MenuSound.CONFIRM), sounds)
+        assertEquals(listOf("separate", "playWithout", "back"), events)
+        assertEquals(listOf(MenuSound.CONFIRM, MenuSound.CONFIRM, MenuSound.BACK), sounds)
     }
 
     @Test

@@ -26,5 +26,5 @@
     <string name="settings_ai_delete_yes">Delete</string>
     <string name="settings_ai_delete_no">Cancel</string>
     <string name="settings_ai_ask_again">Ask again</string>
-    <string name="settings_ai_ask_again_hint">Asks again for the songs you chose to play without separating.</string>
+    <string name="settings_ai_ask_again_hint">On: asks for every song without a separate guitar, even the ones you played \"Without separating\".</string>
 </resources>

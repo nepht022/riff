@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.SeparatedFiles
 import com.rodrigomachado.riff.core.data.SeparationScheduler
+import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
@@ -16,6 +17,7 @@ import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import com.rodrigomachado.riff.core.model.SeparationUsage
+import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,5 +142,13 @@ class FakeAudioProbe : ChartAudioProbe {
     override suspend fun audioOf(chartId: String): ChartAudio? {
         failure?.let { throw it }
         return audio[chartId]
+    }
+}
+
+class FakeSettingsRepository(initial: Settings = Settings.DEFAULT) : SettingsRepository {
+    override val settings = MutableStateFlow(initial)
+
+    override suspend fun update(transform: (Settings) -> Settings) {
+        settings.value = transform(settings.value)
     }
 }

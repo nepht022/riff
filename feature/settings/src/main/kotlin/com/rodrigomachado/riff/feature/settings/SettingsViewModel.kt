@@ -41,9 +41,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { separations.deleteAll() }
     }
 
-    fun askAgain() {
-        viewModelScope.launch { separations.resetDeclines() }
-    }
+    fun setAskSeparationAlways(always: Boolean) = save { it.copy(askSeparationAlways = always) }
 
     fun setMasterVolume(volume: Float) = save { it.copy(masterVolume = volume.coerceIn(0f, 1f)) }
 

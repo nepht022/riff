@@ -37,6 +37,7 @@ class LibraryViewModelTest {
     private val separations = FakeAiSeparations()
     private val scheduler = FakeScheduler()
     private val probe = FakeAudioProbe()
+    private val settings = FakeSettingsRepository()
     private val song = Chart("m", "Música", "Banda", null, null, null, "u", ChartFormat.CHART, setOf(Difficulty.EXPERT))
 
     @Before
@@ -55,6 +56,7 @@ class LibraryViewModelTest {
             separations,
             scheduler,
             probe,
+            settings,
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
@@ -322,5 +324,38 @@ class LibraryViewModelTest {
 
         assertNull(separations.states["m"])
         assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun withAskAlwaysOnADeclinedSongAsksAgainButASeparatedOneDoesNot() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        probe.audio["s"] = ChartAudio.Single("u/s.opus")
+        separations.states["m"] = AiSeparationState.DECLINED
+        separations.states["s"] = AiSeparationState.SEPARATED
+        settings.settings.value = settings.settings.value.copy(askSeparationAlways = true)
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+        assertEquals("m", vm.uiState.value.prompt?.chartId)
+
+        vm.onPromptDismissed()
+        vm.onDifficultyChosen(song.copy(id = "s"), Difficulty.EXPERT)
+        advanceUntilIdle()
+        assertEquals(PlayRequestLibrary("s", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
+    fun backClosesThePromptWithoutPlayingOrRemembering() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        val vm = viewModel()
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        vm.onPromptDismissed()
+
+        assertNull(vm.uiState.value.prompt)
+        assertNull(vm.uiState.value.play)
+        assertNull(separations.states["m"])
     }
 }

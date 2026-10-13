@@ -26,5 +26,5 @@
     <string name="settings_ai_delete_yes">Apagar</string>
     <string name="settings_ai_delete_no">Cancelar</string>
     <string name="settings_ai_ask_again">Perguntar de novo</string>
-    <string name="settings_ai_ask_again_hint">Volta a perguntar nas músicas em que você escolheu jogar sem separar.</string>
+    <string name="settings_ai_ask_again_hint">Ligado: pergunta em toda música sem guitarra separada, mesmo nas que você jogou \"Sem separar\".</string>
 </resources>

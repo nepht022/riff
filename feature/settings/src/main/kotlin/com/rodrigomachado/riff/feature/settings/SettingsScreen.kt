@@ -44,6 +44,7 @@ object SettingsTestTags {
     const val MASTER_VOLUME = "settings_master_volume"
     const val LEFT_HANDED = "settings_left_handed"
     const val MENU_SOUNDS = "settings_menu_sounds"
+    const val ASK_ALWAYS = "settings_ask_separation_always"
 }
 
 @Composable
@@ -75,7 +76,7 @@ fun SettingsScreen(
         modifier = modifier,
         separationUsage = usage,
         onDeleteSeparations = viewModel::deleteSeparations,
-        onAskAgain = viewModel::askAgain,
+        onAskAlways = viewModel::setAskSeparationAlways,
     )
 }
 
@@ -95,7 +96,7 @@ fun SettingsContent(
     modifier: Modifier = Modifier,
     separationUsage: SeparationUsage = SeparationUsage(0, 0),
     onDeleteSeparations: () -> Unit = {},
-    onAskAgain: () -> Unit = {},
+    onAskAlways: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
@@ -152,7 +153,7 @@ fun SettingsContent(
             tag = SettingsTestTags.LEFT_HANDED,
         )
         CalibrationRow(settings.audioOffsetMs, onCalibrate)
-        AiSeparationSection(separationUsage, onDeleteSeparations, onAskAgain)
+        AiSeparationSection(separationUsage, onDeleteSeparations, settings.askSeparationAlways, onAskAlways)
     }
 }
 
@@ -243,7 +244,7 @@ private fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     title: String,
     hint: String,
     checked: Boolean,

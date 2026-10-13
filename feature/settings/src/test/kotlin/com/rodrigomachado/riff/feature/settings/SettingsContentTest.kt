@@ -54,7 +54,7 @@ class SettingsContentTest {
                         onBack = { back = true },
                         separationUsage = separationUsage,
                         onDeleteSeparations = { events += "delete" },
-                        onAskAgain = { events += "askAgain" },
+                        onAskAlways = { events += "askAlways:$it" },
                     )
                 }
             }
@@ -154,9 +154,9 @@ class SettingsContentTest {
         composeRule.onNodeWithText("12 músicas · 96 MB").assertExists()
         composeRule.onNodeWithText("Apagar separações").performScrollTo().performClick()
         composeRule.onNodeWithText("Apagar").performClick() // confirmação
-        composeRule.onNodeWithText("Perguntar de novo").performScrollTo().performClick()
+        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).performScrollTo().performClick()
 
-        assertEquals(listOf("delete", "askAgain"), events)
+        assertEquals(listOf("delete", "askAlways:true"), events)
     }
 
     @Test
@@ -184,6 +184,7 @@ class SettingsContentTest {
                 .getUnclippedBoundsInRoot()
             assertEquals(action, calibrate.left.value, bounds.left.value, 0.5f)
         }
-        composeRule.onNodeWithText("jogar sem separar", substring = true).performScrollTo().assertExists()
+        composeRule.onNodeWithText("Sem separar", substring = true).performScrollTo().assertExists()
+        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).assertIsOff()
     }
 }

@@ -46,7 +46,7 @@ Na Biblioteca, ao tocar numa música sem guitarra separada (pasta, `.sng` ou bai
 > **Separar a guitarra com IA?**
 > Separar a guitarra faz com que o som da mesma suma ao errar notas e só apareça ao acertá-las, aumentando a imersão. O processo leva em torno de 3 minutos e pode esquentar o celular. As músicas com separação se mantêm armazenadas no dispositivo.
 
-(Texto definido pelo usuário em 2026-10-13, depois da implementação.)
+(Texto definido pelo usuário em 2026-10-13, depois da implementação.) Botões: **Voltar** (fecha sem jogar) à esquerda; **Sem separar** e **Separar**, em destaque, à direita. Nas Configurações, **Perguntar de novo** virou um interruptor (desligado de fábrica): ligado, pergunta mesmo nas músicas em que se escolheu "Sem separar"; as já separadas nunca perguntam.
 > **[Separar]** · Jogar sem separar
 
 - **Separar:** começa a separação em segundo plano e fecha a pergunta; o usuário continua na Biblioteca (não joga agora).

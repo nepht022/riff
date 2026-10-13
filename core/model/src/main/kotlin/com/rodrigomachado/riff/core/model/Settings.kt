@@ -14,6 +14,8 @@ data class Settings(
     val hitVolume: Float,
     val missVolume: Float,
     val menuSounds: Boolean = true,
+    /** Perguntar se quer separar a guitarra com IA mesmo nas músicas em que já escolheu "Sem separar". */
+    val askSeparationAlways: Boolean = false,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }
