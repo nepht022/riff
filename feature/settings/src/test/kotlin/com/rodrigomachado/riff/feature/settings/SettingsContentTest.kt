@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertRangeInfoEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -170,5 +171,19 @@ class SettingsContentTest {
         show(Settings.DEFAULT, separationUsage = SeparationUsage(0, 0))
 
         composeRule.onNodeWithText("Nenhuma música separada").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theAiActionsLineUpWithTheOtherSettingsAndExplainAskingAgain() {
+        show(Settings.DEFAULT, separationUsage = SeparationUsage(1, 8_600_000))
+
+        val calibrate = composeRule.onNodeWithText("Calibrar atraso do áudio", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        for (action in listOf("Apagar separações", "Perguntar de novo")) {
+            val bounds = composeRule.onNodeWithText(action, useUnmergedTree = true).performScrollTo()
+                .getUnclippedBoundsInRoot()
+            assertEquals(action, calibrate.left.value, bounds.left.value, 0.5f)
+        }
+        composeRule.onNodeWithText("jogar sem separar", substring = true).performScrollTo().assertExists()
     }
 }
