@@ -45,11 +45,13 @@ class FakeTransport : HttpTransport {
     var failFromPage: Int? = null
     var rangeBody: ByteArray? = null
     var peekGate: CompletableDeferred<Unit>? = null
+    var searchGate: CompletableDeferred<Unit>? = null
     var lastJson: String? = null
     var searches = 0
     var peeks = 0
 
     override suspend fun post(url: String, json: String): HttpResponse {
+        searchGate?.await()
         failure?.let { throw it }
         val page = JSONObject(json).getInt("page")
         failFromPage?.let { if (page >= it) throw java.net.UnknownHostException("api.enchor.us") }
@@ -434,5 +436,53 @@ class SearchViewModelTest {
         assertEquals(listOf("m2"), vm.uiState.value.results.map { it.chart.md5 })
         assertEquals(SearchError.UNAVAILABLE, vm.uiState.value.error)
         assertEquals(false, vm.uiState.value.guitarSearch?.running)
+    }
+
+    @Test
+    fun aFilterChangedWhileThePageLoadsStillShowsTheResults() = runTest {
+        transport.pages = listOf(page(c("a", "A"), c("v", "A (Live)"), found = 2))
+        transport.searchGate = CompletableDeferred() // segura a primeira página
+        val vm = viewModel(SearchRoute(query = "x"))
+        runCurrent()
+
+        vm.showVersions(true)
+        checkNotNull(transport.searchGate).complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(false, vm.uiState.value.isSearching)
+        assertEquals(listOf("v"), vm.uiState.value.results.map { it.chart.md5 })
+    }
+
+    @Test
+    fun aNewSearchThatFailsDoesNotLeaveTheGuitarSearchRunning() = runTest {
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        transport.peekGate = CompletableDeferred() // a procura fica no meio
+        vm.onlySeparateGuitar(true)
+        runCurrent()
+
+        transport.failFromPage = 1
+        vm.search()
+        advanceUntilIdle()
+
+        assertEquals(SearchError.UNAVAILABLE, vm.uiState.value.error)
+        assertEquals(false, vm.uiState.value.guitarSearch?.running)
+        assertEquals(false, vm.uiState.value.isSearching)
+    }
+
+    @Test
+    fun loadMoreWithTheGuitarFilterLooksForMoreMaps() = runTest {
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        transport.stems = (0 until 12).map { "m0-$it" }.toSet() + "m2-5"
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        vm.loadMore()
+        advanceUntilIdle()
+
+        assertEquals(true, "m2-5" in vm.uiState.value.results.map { it.chart.md5 })
     }
 }

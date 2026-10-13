@@ -94,6 +94,7 @@ class SearchViewModel @Inject constructor(
     private var page = 0
     private var hasMore = false
     private var guitarLimit = GUITAR_LIMIT
+    private var guitarTarget = GUITAR_TARGET
     private var guitarRunning = false
     private var filling: Job? = null
     private val guitarChecks = Semaphore(MAX_PEEKS)
@@ -113,11 +114,19 @@ class SearchViewModel @Inject constructor(
         page = 0
         hasMore = false
         guitarLimit = GUITAR_LIMIT
+        guitarTarget = GUITAR_TARGET
         state.update { it.copy(results = emptyList(), error = null, guitarSearch = null) }
-        restart { if (loadNextPage()) fill() }
+        restart { fill() }
     }
 
-    fun loadMore() = restart { if (loadNextPage()) fill() }
+    /** Com o filtro de guitarra, Carregar mais procura mais mapas com guitarra separada. */
+    fun loadMore() {
+        if (state.value.onlySeparateGuitar) {
+            searchMoreWithGuitar()
+        } else {
+            restart { if (loadNextPage()) fill() }
+        }
+    }
 
     fun showVersions(versions: Boolean) {
         state.update { it.copy(versions = versions) }
@@ -131,23 +140,35 @@ class SearchViewModel @Inject constructor(
         restart { fill() }
     }
 
-    /** Mais [GUITAR_LIMIT] mapas conferidos na procura por guitarra separada. */
+    /** Mais [GUITAR_TARGET] encontrados ou mais [GUITAR_LIMIT] conferidos na procura por guitarra separada. */
     fun searchMoreWithGuitar() {
-        guitarLimit += GUITAR_LIMIT
+        guitarTarget = visible().size + GUITAR_TARGET
+        guitarLimit = guitarChecked() + GUITAR_LIMIT
         restart { fill() }
     }
 
-    /** Uma procura por vez: mudar a busca ou um filtro para a anterior. */
+    /**
+     * Uma procura por vez: mudar a busca ou um filtro para a anterior. A nova espera a anterior terminar de parar,
+     * para os indicadores que ela desliga ao parar não apagarem os da nova.
+     */
     private fun restart(block: suspend () -> Unit) {
-        filling?.cancel()
-        filling = viewModelScope.launch { block() }
+        val previous = filling
+        previous?.cancel()
+        filling = viewModelScope.launch {
+            previous?.join()
+            block()
+        }
     }
 
     /**
      * Completa a lista pelos filtros: sem o de guitarra, busca a próxima página se nada ficou visível; com ele,
      * confere os pacotes (e busca páginas) até [GUITAR_TARGET] encontrados ou [guitarLimit] conferidos.
      */
-    private suspend fun fill() = if (state.value.onlySeparateGuitar) fillWithGuitar() else fillWithoutGuitar()
+    private suspend fun fill() {
+        // A primeira página pode ter sido interrompida por um filtro: busca de novo.
+        if (page == 0 && lastQuery.isNotEmpty() && !loadNextPage()) return
+        if (state.value.onlySeparateGuitar) fillWithGuitar() else fillWithoutGuitar()
+    }
 
     /** Sem o filtro de guitarra: página vazia depois dos filtros busca a próxima; a marca é conferida nos visíveis. */
     private suspend fun fillWithoutGuitar() {
@@ -163,18 +184,21 @@ class SearchViewModel @Inject constructor(
     private suspend fun fillWithGuitar() {
         guitarRunning = true
         publish()
-        while (visible().size < GUITAR_TARGET && guitarChecked() < guitarLimit) {
-            val pending = candidates().filter { it.chart.md5 !in separate }.take(guitarLimit - guitarChecked())
-            val progressed = if (pending.isNotEmpty()) {
-                peekAll(pending)
-                true
-            } else {
-                hasMore && loadNextPage()
+        try {
+            while (visible().size < guitarTarget && guitarChecked() < guitarLimit) {
+                val pending = candidates().filter { it.chart.md5 !in separate }.take(guitarLimit - guitarChecked())
+                val progressed = if (pending.isNotEmpty()) {
+                    peekAll(pending)
+                    true
+                } else {
+                    hasMore && loadNextPage()
+                }
+                if (!progressed) break
             }
-            if (!progressed) break
+        } finally {
+            guitarRunning = false
+            publish()
         }
-        guitarRunning = false
-        publish()
     }
 
     /** Lê a próxima página do Encore; falso se não deu (o erro fica na tela). */
@@ -182,14 +206,16 @@ class SearchViewModel @Inject constructor(
         state.update { it.copy(isSearching = true) }
         return try {
             val result = encore.search(lastQuery, page + 1)
-            page = result.page
-            hasMore = result.hasMore
             val owned = downloads.md5s.first()
             val shown = loaded.map { it.chart.md5 }.toSet()
             // A página seguinte pode repetir mapas (a ordem do Encore muda): a lista não repete a chave.
-            loaded += ordered(result.charts, track).filter { it.md5 !in shown }
+            val fresh = ordered(result.charts, track).filter { it.md5 !in shown }
                 .map { ResultItem(it, readyState(it, owned), separateGuitar = null) }
-            state.update { it.copy(isSearching = false) }
+            // Só avança depois de ler tudo: interrompida antes, a página é pedida de novo.
+            page = result.page
+            hasMore = result.hasMore
+            loaded += fresh
+            state.update { it.copy(isSearching = false, error = null) }
             publish()
             true
         } catch (e: EncoreFormatException) {
@@ -198,6 +224,8 @@ class SearchViewModel @Inject constructor(
         } catch (e: EncoreUnavailableException) {
             Log.w(TAG, "Encore indisponível", e)
             failed(SearchError.UNAVAILABLE)
+        } finally {
+            state.update { it.copy(isSearching = false) }
         }
     }
 
