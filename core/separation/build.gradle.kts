@@ -5,8 +5,6 @@ plugins {
 
 android {
     namespace = "com.rodrigomachado.riff.core.separation"
-    // O modelo é lido direto do APK (mapeado em memória): não pode estar comprimido.
-    androidResources { noCompress += "onnx" }
     defaultConfig { consumerProguardFiles("consumer-rules.pro") }
     testOptions { unitTests.isIncludeAndroidResources = true }
 }

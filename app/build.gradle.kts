@@ -14,6 +14,10 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+    // O modelo da separação por IA é mapeado direto do APK: o asset não pode ser comprimido (só aqui vale).
+    androidResources {
+        noCompress += "onnx"
+    }
     buildTypes {
         release {
             isMinifyEnabled = true

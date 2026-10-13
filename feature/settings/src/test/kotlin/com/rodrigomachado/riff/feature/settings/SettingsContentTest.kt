@@ -157,4 +157,11 @@ class SettingsContentTest {
 
         assertEquals(listOf("delete", "askAgain"), events)
     }
+
+    @Test
+    fun oneSeparatedSongIsSingular() {
+        show(Settings.DEFAULT, separationUsage = SeparationUsage(1, 8_600_000))
+
+        composeRule.onNodeWithText("1 música · 8,6 MB").performScrollTo().assertExists()
+    }
 }

@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
@@ -23,8 +24,9 @@ internal fun AiSeparationSection(usage: SeparationUsage, onDelete: () -> Unit, o
     var confirming by rememberSaveable { mutableStateOf(false) }
     Section(stringResource(R.string.settings_ai_section))
     Text(
-        stringResource(
-            R.string.settings_ai_usage,
+        pluralStringResource(
+            R.plurals.settings_ai_usage,
+            usage.songs,
             usage.songs,
             Formatter.formatShortFileSize(LocalContext.current, usage.bytes),
         ),

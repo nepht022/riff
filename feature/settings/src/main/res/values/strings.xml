@@ -16,7 +16,10 @@
     <string name="settings_menu_sounds">Sons do menu</string>
     <string name="settings_menu_sounds_hint">Guitarra ao tocar nos botões</string>
     <string name="settings_ai_section">Guitarra separada por IA</string>
-    <string name="settings_ai_usage">%1$d músicas · %2$s</string>
+    <plurals name="settings_ai_usage">
+        <item quantity="one">%1$d música · %2$s</item>
+        <item quantity="other">%1$d músicas · %2$s</item>
+    </plurals>
     <string name="settings_ai_delete">Apagar separações</string>
     <string name="settings_ai_delete_confirm">Apagar as guitarras separadas pela IA? Dá para separar de novo depois.</string>
     <string name="settings_ai_delete_yes">Apagar</string>

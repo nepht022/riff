@@ -47,6 +47,14 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - Na primeira vez, o Riff pede para escolher a pasta de novo, agora com permissão de gravar nela (**Permitir**).
 - O pacote vem com o áudio da música (uso pessoal). A API do Encore não é oficial: se ela mudar, a pesquisa avisa que o Riff precisa ser atualizado.
 
+## Guitarra separada por IA
+
+- Na Biblioteca, ao jogar uma música sem a guitarra separada (a maioria dos mapas do Encore), o Riff pergunta **Separar a guitarra com IA?** depois da dificuldade. **Separar** começa a separação em segundo plano; **Jogar sem separar** joga com a música inteira e fica guardado (não pergunta de novo).
+- A separação roda no próprio celular, sem internet: o modelo Demucs (htdemucs_6s) com o ONNX Runtime na CPU. No Galaxy S25, uma música de 3:30 leva cerca de 2 minutos e usa até ~2,8 GB de RAM enquanto roda (celulares com menos de 8 GB usam um modo mais econômico e mais lento).
+- Enquanto separa, aparece um ícone (palheta com anel de progresso) no topo das telas; tocar nele mostra a porcentagem, o tempo restante e **Cancelar**. A notificação do Android acompanha e avisa no fim. Se o celular esquentar demais, a separação pausa e continua quando esfriar.
+- Pronta, a música ganha a marca **GUITARRA SEPARADA IA** e passa a jogar como as que já vêm com a guitarra à parte: a guitarra some quando você erra.
+- Cada música separada ocupa ~7 MB (guitarra e resto em `.m4a`, no espaço do app). Nas **Configurações**, a seção "Guitarra separada por IA" mostra o espaço, **Apagar separações** e **Perguntar de novo** (nas músicas em que você escolheu jogar sem separar).
+
 ## Jogar
 
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
@@ -84,6 +92,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
 | `:core:data` | Repositório de mapas, acesso a pastas por SAF (leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
 | `:core:encore` | Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
+| `:core:separation` | Guitarra separada por IA: o modelo htdemucs_6s em ONNX (`scripts/exportar_modelo_ia.sh`), a STFT e a separação por trechos portadas do demucs.onnx, a decodificação, a gravação em `.m4a` e o trabalho em segundo plano (WorkManager) |
 | `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 | `:feature:search` | Pesquisa no Encore: resultados, download com progresso e Jogar |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
@@ -138,6 +147,7 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 
 - Som de erro e sons do menu: montados com gravações de guitarra com licença Creative Commons 0 do Freesound (origem e autores em `third_party/README.md`).
 - Som de acerto e metrônomo da calibração: sintetizados pelo próprio projeto.
+- Separação da guitarra: modelo Demucs v4 htdemucs_6s (Meta, MIT), adaptado para ONNX pelo demucs.onnx (Sevag Hanssian, MIT); ONNX Runtime (Microsoft, MIT); JTransforms (Piotr Wendykier, BSD-2).
 - Fontes New Rocker e Oswald: licença OFL (`core/ui/licenses/`).
 - Mapas baixados pela pesquisa: Encore (enchor.us), feitos pela comunidade do Clone Hero.
 - Nada do Guitar Hero nem de projetos que redesenham seus assets: a pista, as gemas e a chama são desenhadas em código.
