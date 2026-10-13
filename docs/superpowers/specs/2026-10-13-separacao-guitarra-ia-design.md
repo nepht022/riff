@@ -64,8 +64,8 @@ Notificação do Android durante a separação (obrigatória para continuar com 
 
 ### Biblioteca
 
-- **GUITARRA SEPARADA:** o mapa já veio com a guitarra à parte (hoje).
-- **GUITARRA SEPARADA IA:** separada pelo Riff. Jogar usa a guitarra separada.
+- **GUITARRA SEPARADA IA:** separada pelo Riff, abaixo da marca da dificuldade. Jogar usa a guitarra separada.
+- A marca "GUITARRA SEPARADA" (mapa que já veio com a guitarra à parte) existe só na pesquisa do Encore; a Biblioteca não sabe isso sem abrir a pasta e continua sem ela (corrigido em 2026-10-13, ao planejar).
 
 ### Configurações
 
