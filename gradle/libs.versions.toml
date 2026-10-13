@@ -1,4 +1,9 @@
 [versions]
+onnxruntime = "1.31.0"
+# Só para os testes no PC: as versões 1.19+ quebram com o msvcp140.dll antigo que vem no Java do Android Studio.
+onnxruntimeJvm = "1.18.0"
+jtransforms = "3.2"
+work = "2.12.0"
 spotifyAppRemote = "0.8.0"
 spotifyAuth = "5.0.0"
 gson = "2.14.0"
@@ -31,6 +36,13 @@ uiautomator = "2.4.0"
 androidxTestExtJunit = "1.3.0"
 
 [libraries]
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
+onnxruntime-jvm = { module = "com.microsoft.onnxruntime:onnxruntime", version.ref = "onnxruntimeJvm" }
+jtransforms = { module = "com.github.wendykierp:JTransforms", version.ref = "jtransforms" }
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
+androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "androidxHilt" }
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "androidxHilt" }
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
 androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
 androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
