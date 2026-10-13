@@ -15,11 +15,13 @@ import com.rodrigomachado.riff.core.encore.EncoreChart
 import com.rodrigomachado.riff.core.encore.EncoreClient
 import com.rodrigomachado.riff.core.encore.EncoreFormatException
 import com.rodrigomachado.riff.core.encore.EncoreUnavailableException
+import com.rodrigomachado.riff.core.encore.VersionTitles
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +41,15 @@ data class SearchUiState(
     val canWrite: Boolean = true,
     val folderUri: String? = null,
     val matched: Boolean = false,
+    /** Falso: as gravações originais; verdadeiro: covers, remixes, ao vivo, medleys. */
+    val versions: Boolean = false,
+    val onlySeparateGuitar: Boolean = false,
+    /** A procura de mapas com guitarra separada (só com o filtro ligado). */
+    val guitarSearch: GuitarSearch? = null,
 )
+
+/** [checked] mapas conferidos de [limit] nesta procura; [running] enquanto ela continua. */
+data class GuitarSearch(val checked: Int, val limit: Int, val running: Boolean)
 
 data class ResultItem(val chart: EncoreChart, val state: ItemState, val separateGuitar: Boolean?)
 
@@ -57,6 +67,7 @@ sealed interface ItemState {
 enum class SearchError { UNAVAILABLE, FORMAT_CHANGED, NOTHING_FOUND }
 
 @HiltViewModel
+@Suppress("TooManyFunctions") // busca, filtros, procura automática e download moram juntos: dividem o mesmo estado
 class SearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val encore: EncoreClient,
@@ -72,13 +83,20 @@ class SearchViewModel @Inject constructor(
     private val state = MutableStateFlow(SearchUiState(query = savedStateHandle["query"] ?: ""))
     val uiState: StateFlow<SearchUiState> = state.asStateFlow()
 
-    private var page = 1
-
-    // A busca confirmada: o Carregar mais continua ela, mesmo que o campo tenha sido editado depois.
+    // A busca confirmada: o Carregar mais e a procura automática continuam ela, mesmo com o campo editado.
     private var lastQuery = ""
-    private var searching: Job? = null
+
+    // Tudo que veio do Encore nesta busca (sem repetir), na ordem; a lista visível sai dos filtros.
+    private val loaded = mutableListOf<ResultItem>()
+
+    // Guitarra separada por md5, guardada durante a tela (null: não deu para conferir).
+    private val separate = mutableMapOf<String, Boolean?>()
+    private var page = 0
+    private var hasMore = false
+    private var guitarLimit = GUITAR_LIMIT
+    private var guitarRunning = false
+    private var filling: Job? = null
     private val guitarChecks = Semaphore(MAX_PEEKS)
-    private val checked = mutableSetOf<String>()
 
     init {
         viewModelScope.launch { refreshWriteAccess() }
@@ -91,67 +109,147 @@ class SearchViewModel @Inject constructor(
         val query = state.value.query.trim()
         if (query.isEmpty()) return
         lastQuery = query
-        load(query, append = false)
+        loaded.clear()
+        page = 0
+        hasMore = false
+        guitarLimit = GUITAR_LIMIT
+        state.update { it.copy(results = emptyList(), error = null, guitarSearch = null) }
+        restart { if (loadNextPage()) fill() }
     }
 
-    fun loadMore() = load(lastQuery, append = true)
+    fun loadMore() = restart { if (loadNextPage()) fill() }
 
-    private fun load(query: String, append: Boolean) {
-        searching?.cancel()
-        searching = viewModelScope.launch {
-            state.update { it.copy(isSearching = true, error = null) }
-            try {
-                val result = encore.search(query, if (append) page + 1 else 1)
-                page = result.page
-                val owned = downloads.md5s.first()
-                val items = ordered(
-                    result.charts,
-                    track,
-                ).map { ResultItem(it, readyState(it, owned), separateGuitar = null) }
-                state.update {
-                    // A página seguinte pode repetir mapas (a ordem do Encore muda): a lista não repete a chave.
-                    val shown = it.results.map { item -> item.chart.md5 }.toSet()
-                    it.copy(
-                        results = if (append) it.results + items.filter { item -> item.chart.md5 !in shown } else items,
-                        hasMore = result.hasMore,
-                        isSearching = false,
-                        error = if (!append && items.isEmpty()) SearchError.NOTHING_FOUND else null,
-                    )
-                }
-                items.forEach { checkSeparateGuitar(it.chart) }
-            } catch (e: EncoreFormatException) {
-                Log.w(TAG, "A resposta do Encore mudou", e)
-                state.update { it.copy(isSearching = false, error = SearchError.FORMAT_CHANGED) }
-            } catch (e: EncoreUnavailableException) {
-                Log.w(TAG, "Encore indisponível", e)
-                state.update { it.copy(isSearching = false, error = SearchError.UNAVAILABLE) }
+    fun showVersions(versions: Boolean) {
+        state.update { it.copy(versions = versions) }
+        publish()
+        restart { fill() }
+    }
+
+    fun onlySeparateGuitar(enabled: Boolean) {
+        state.update { it.copy(onlySeparateGuitar = enabled) }
+        publish()
+        restart { fill() }
+    }
+
+    /** Mais [GUITAR_LIMIT] mapas conferidos na procura por guitarra separada. */
+    fun searchMoreWithGuitar() {
+        guitarLimit += GUITAR_LIMIT
+        restart { fill() }
+    }
+
+    /** Uma procura por vez: mudar a busca ou um filtro para a anterior. */
+    private fun restart(block: suspend () -> Unit) {
+        filling?.cancel()
+        filling = viewModelScope.launch { block() }
+    }
+
+    /**
+     * Completa a lista pelos filtros: sem o de guitarra, busca a próxima página se nada ficou visível; com ele,
+     * confere os pacotes (e busca páginas) até [GUITAR_TARGET] encontrados ou [guitarLimit] conferidos.
+     */
+    private suspend fun fill() = if (state.value.onlySeparateGuitar) fillWithGuitar() else fillWithoutGuitar()
+
+    /** Sem o filtro de guitarra: página vazia depois dos filtros busca a próxima; a marca é conferida nos visíveis. */
+    private suspend fun fillWithoutGuitar() {
+        var autoPages = 0
+        while (visible().isEmpty() && hasMore && autoPages < MAX_AUTO_PAGES) {
+            autoPages++
+            if (!loadNextPage()) return
+        }
+        peekAll(visible().filter { it.chart.md5 !in separate })
+    }
+
+    /** Com o filtro: confere pacotes (e busca páginas) até [GUITAR_TARGET] encontrados ou [guitarLimit] conferidos. */
+    private suspend fun fillWithGuitar() {
+        guitarRunning = true
+        publish()
+        while (visible().size < GUITAR_TARGET && guitarChecked() < guitarLimit) {
+            val pending = candidates().filter { it.chart.md5 !in separate }.take(guitarLimit - guitarChecked())
+            val progressed = if (pending.isNotEmpty()) {
+                peekAll(pending)
+                true
+            } else {
+                hasMore && loadNextPage()
+            }
+            if (!progressed) break
+        }
+        guitarRunning = false
+        publish()
+    }
+
+    /** Lê a próxima página do Encore; falso se não deu (o erro fica na tela). */
+    private suspend fun loadNextPage(): Boolean {
+        state.update { it.copy(isSearching = true) }
+        return try {
+            val result = encore.search(lastQuery, page + 1)
+            page = result.page
+            hasMore = result.hasMore
+            val owned = downloads.md5s.first()
+            val shown = loaded.map { it.chart.md5 }.toSet()
+            // A página seguinte pode repetir mapas (a ordem do Encore muda): a lista não repete a chave.
+            loaded += ordered(result.charts, track).filter { it.md5 !in shown }
+                .map { ResultItem(it, readyState(it, owned), separateGuitar = null) }
+            state.update { it.copy(isSearching = false) }
+            publish()
+            true
+        } catch (e: EncoreFormatException) {
+            Log.w(TAG, "A resposta do Encore mudou", e)
+            failed(SearchError.FORMAT_CHANGED)
+        } catch (e: EncoreUnavailableException) {
+            Log.w(TAG, "Encore indisponível", e)
+            failed(SearchError.UNAVAILABLE)
+        }
+    }
+
+    private fun failed(error: SearchError): Boolean {
+        state.update { it.copy(isSearching = false, error = error) }
+        return false
+    }
+
+    /** No máximo [MAX_PEEKS] ao mesmo tempo; cada md5 uma vez por tela. */
+    private suspend fun peekAll(items: List<ResultItem>) = coroutineScope {
+        items.forEach { item ->
+            launch {
+                separate[item.chart.md5] = guitarChecks.withPermit { encore.hasSeparateGuitar(item.chart) }
+                publish()
             }
         }
+    }
+
+    private fun candidates() = loaded.filter { VersionTitles.isVersion(it.chart.name) == state.value.versions }
+
+    /** Conferidos entre os candidatos desta busca (os já conferidos para a marca contam). */
+    private fun guitarChecked() = candidates().count { it.chart.md5 in separate }
+
+    private fun visible() = candidates()
+        .filter { !state.value.onlySeparateGuitar || separate[it.chart.md5] == true }
+        .map { it.copy(separateGuitar = separate[it.chart.md5]) }
+
+    private fun publish() = state.update { s ->
+        val results = visible()
+        // Busca terminada sem nada visível (o filtro de guitarra tem a mensagem dele).
+        val finished = page > 0 && !hasMore && !s.isSearching
+        val nothing = finished && results.isEmpty() && !s.onlySeparateGuitar
+        s.copy(
+            results = results,
+            hasMore = hasMore,
+            error = s.error ?: if (nothing) SearchError.NOTHING_FOUND else null,
+            guitarSearch = if (s.onlySeparateGuitar) {
+                GuitarSearch(
+                    guitarChecked(),
+                    guitarLimit,
+                    guitarRunning,
+                )
+            } else {
+                null
+            },
+        )
     }
 
     private suspend fun readyState(chart: EncoreChart, owned: Set<String>): ItemState {
         if (chart.md5 !in owned) return ItemState.Available
         val id = downloads.chartIdOf(chart.md5) ?: return ItemState.Available
         return ItemState.Ready(id, chart.guitarDifficulties)
-    }
-
-    /** No máximo 3 ao mesmo tempo; cada md5 uma vez por tela. A marca chega depois dos resultados. */
-    private fun checkSeparateGuitar(chart: EncoreChart) {
-        if (!checked.add(chart.md5)) return
-        viewModelScope.launch {
-            val separate = guitarChecks.withPermit { encore.hasSeparateGuitar(chart) } ?: return@launch
-            state.update { s ->
-                s.copy(
-                    results = s.results.map {
-                        if (it.chart.md5 == chart.md5) {
-                            it.copy(separateGuitar = separate)
-                        } else {
-                            it
-                        }
-                    },
-                )
-            }
-        }
     }
 
     fun download(chart: EncoreChart) {
@@ -186,13 +284,18 @@ class SearchViewModel @Inject constructor(
         state.update { it.copy(folderUri = root, canWrite = root != null && folderAccess.canWrite(root)) }
     }
 
-    private fun setItem(md5: String, item: ItemState) = state.update { s ->
-        s.copy(results = s.results.map { if (it.chart.md5 == md5) it.copy(state = item) else it })
+    private fun setItem(md5: String, item: ItemState) {
+        val at = loaded.indexOfFirst { it.chart.md5 == md5 }
+        if (at >= 0) loaded[at] = loaded[at].copy(state = item)
+        publish()
     }
 
     private companion object {
         const val TAG = "RiffSearch"
         const val MAX_PEEKS = 3
+        const val GUITAR_TARGET = 10
+        const val GUITAR_LIMIT = 100
+        const val MAX_AUTO_PAGES = 5
     }
 }
 

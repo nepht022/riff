@@ -35,20 +35,66 @@ import java.io.IOException
 
 class FakeTransport : HttpTransport {
     var postBody: String? = null
+
+    /** Corpo de cada página (a página pedida vem no JSON); vazio usa [postBody]. */
+    var pages: List<String> = emptyList()
+
+    /** md5 dos pacotes com guitarra separada; os outros só têm song.opus. */
+    var stems: Set<String> = emptySet()
     var failure: IOException? = null
+    var failFromPage: Int? = null
     var rangeBody: ByteArray? = null
+    var peekGate: CompletableDeferred<Unit>? = null
     var lastJson: String? = null
+    var searches = 0
+    var peeks = 0
 
     override suspend fun post(url: String, json: String): HttpResponse {
         failure?.let { throw it }
+        val page = JSONObject(json).getInt("page")
+        failFromPage?.let { if (page >= it) throw java.net.UnknownHostException("api.enchor.us") }
         lastJson = json
-        return HttpResponse(201, null, checkNotNull(postBody).byteInputStream())
+        searches++
+        val body = if (pages.isEmpty()) checkNotNull(postBody) else pages.getOrElse(page - 1) { EMPTY_PAGE }
+        return HttpResponse(201, null, body.byteInputStream())
     }
 
     override suspend fun get(url: String, range: LongRange?): HttpResponse {
-        val body = rangeBody ?: return HttpResponse(404, null, "".byteInputStream())
-        return HttpResponse(206, null, body.inputStream())
+        peeks++
+        peekGate?.await()
+        rangeBody?.let { return HttpResponse(206, null, it.inputStream()) }
+        if (pages.isEmpty()) return HttpResponse(404, null, "".byteInputStream())
+        val md5 = url.substringAfterLast('/').substringBefore('.').substringBefore('_')
+        val files = if (md5 in stems) {
+            mapOf(
+                "guitar.ogg" to ByteArray(4),
+                "song.ogg" to ByteArray(4),
+            )
+        } else {
+            mapOf("song.opus" to ByteArray(4))
+        }
+        return HttpResponse(206, null, SngWriter.write(mapOf("name" to md5), files).inputStream())
     }
+
+    private companion object {
+        const val EMPTY_PAGE = """{"found": 0, "out_of": 0, "page": 1, "data": []}"""
+    }
+}
+
+private val STEMS = mapOf("guitar.ogg" to ByteArray(4), "song.ogg" to ByteArray(4))
+private val SINGLE = mapOf("song.opus" to ByteArray(4))
+
+/** Um resultado do Encore para as páginas falsas. */
+fun c(md5: String, name: String) = md5 to name
+
+/** Página no formato da resposta do Encore, com mapas de guitarra (Expert) da comunidade. */
+fun page(vararg charts: Pair<String, String>, found: Int): String {
+    val data = charts.joinToString(",") { (md5, name) ->
+        """{"name": "$name", "artist": "Banda", "charter": "charter", "icon": "", "diff_guitar": 2,
+            "md5": "$md5", "hasVideoBackground": false, "song_length": 200000,
+            "notesData": {"noteCounts": [{"instrument": "guitar", "difficulty": "expert", "count": 100}]}}"""
+    }
+    return """{"found": $found, "out_of": $found, "page": 1, "data": [$data]}"""
 }
 
 class FakeDownloader : ChartDownloader {
@@ -271,5 +317,122 @@ class SearchViewModelTest {
         advanceUntilIdle()
 
         assertEquals(true, vm.uiState.value.results.first().separateGuitar)
+    }
+
+    @Test
+    fun originalsHideVersionsAndVersionsShowOnlyThem() = runTest {
+        transport.pages = listOf(page(c("a", "Enter Sandman"), c("b", "Enter Sandman (Metallica cover)"), found = 2))
+        val vm = viewModel(SearchRoute(query = "sandman"))
+        advanceUntilIdle()
+        assertEquals(listOf("a"), vm.uiState.value.results.map { it.chart.md5 })
+
+        vm.showVersions(true)
+
+        assertEquals(listOf("b"), vm.uiState.value.results.map { it.chart.md5 })
+    }
+
+    @Test
+    fun aPageEmptyAfterTheFiltersFetchesTheNextOne() = runTest {
+        transport.pages = listOf(page(c("a", "X (cover)"), found = 50), page(c("b", "X"), found = 50))
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("b"), vm.uiState.value.results.map { it.chart.md5 })
+    }
+
+    @Test
+    fun theGuitarFilterKeepsFetchingUntilItFindsTenOrChecksAHundred() = runTest {
+        // 4 páginas de 25: só 1 mapa com guitarra separada em cada.
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "Música $p $i") }, found = 200) }
+        transport.stems = setOf("m0-3", "m1-7", "m2-1", "m3-9")
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertEquals(setOf("m0-3", "m1-7", "m2-1", "m3-9"), vm.uiState.value.results.map { it.chart.md5 }.toSet())
+        assertEquals(GuitarSearch(checked = 100, limit = 100, running = false), vm.uiState.value.guitarSearch)
+        assertEquals(4, transport.searches)
+    }
+
+    @Test
+    fun theGuitarFilterStopsAtTenFound() = runTest {
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "Música $p $i") }, found = 200) }
+        transport.stems = (0 until 12).map { "m0-$it" }.toSet()
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertEquals(true, vm.uiState.value.results.size >= 10)
+        assertEquals(1, transport.searches) // achou na primeira página, sem buscar mais
+    }
+
+    @Test
+    fun searchMoreChecksAnotherHundred() = runTest {
+        transport.pages = (0 until 8).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        vm.searchMoreWithGuitar()
+        advanceUntilIdle()
+
+        assertEquals(200, vm.uiState.value.guitarSearch?.checked)
+    }
+
+    @Test
+    fun theMarkIsRememberedAndNotCheckedAgain() = runTest {
+        transport.pages = listOf(page(c("a", "A"), c("b", "B"), found = 2))
+        transport.stems = setOf("a")
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        val peeks = transport.peeks
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+        vm.showVersions(true)
+        vm.showVersions(false)
+        advanceUntilIdle()
+
+        assertEquals(listOf("a"), vm.uiState.value.results.map { it.chart.md5 })
+        assertEquals(peeks, transport.peeks) // os dois já tinham sido conferidos pela marca
+    }
+
+    @Test
+    fun aNewSearchStopsTheOldOne() = runTest {
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        transport.peekGate = CompletableDeferred() // segura as conferências
+        vm.onlySeparateGuitar(true)
+        runCurrent()
+
+        vm.onQueryChange("y")
+        transport.pages = listOf(page(c("z", "Z"), found = 1))
+        vm.search()
+        checkNotNull(transport.peekGate).complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(true, vm.uiState.value.results.all { it.chart.md5 == "z" })
+    }
+
+    @Test
+    fun encoreGoingDownMidSearchKeepsWhatWasFound() = runTest {
+        transport.pages = listOf(page(*Array(25) { i -> c("m$i", "M $i") }, found = 100))
+        transport.stems = setOf("m2")
+        transport.failFromPage = 2
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertEquals(listOf("m2"), vm.uiState.value.results.map { it.chart.md5 })
+        assertEquals(SearchError.UNAVAILABLE, vm.uiState.value.error)
+        assertEquals(false, vm.uiState.value.guitarSearch?.running)
     }
 }
