@@ -48,7 +48,7 @@ class M4aStemSink(dir: File) : ClosableStemSink {
     }
 }
 
-private class AacFile(file: File) {
+internal class AacFile(file: File) {
     private val codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
     private val muxer = MediaMuxer(file.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
     private val info = MediaCodec.BufferInfo()

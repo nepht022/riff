@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.PowerManager
 import com.rodrigomachado.riff.core.audio.MediaCodecPcmSource
+import com.rodrigomachado.riff.core.audio.PcmSourceOpener
 import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.SeparationScheduler
@@ -30,9 +31,18 @@ abstract class SeparationBindsModule {
     abstract fun scheduler(impl: WorkSeparationScheduler): SeparationScheduler
 }
 
+/** O atraso do codificador AAC deste aparelho, medido uma vez por processo (na primeira separação). */
+private class OnceInt {
+    @Volatile private var value: Int? = null
+
+    fun get(compute: () -> Int): Int = value ?: compute().also { value = it }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object SeparationModule {
+    private val encoderDelay = OnceInt()
+
     @Provides
     @Singleton
     @SeparationScope
@@ -59,7 +69,10 @@ object SeparationModule {
             SongPcmLoader { MediaCodecPcmSource.open(context, it, opener) }.load(uri, scratch, keepGoing)
         },
         models = { useArena -> OrtDemucsModel(modelBuffer(context), useArena = useArena) },
-        sinks = { dir -> M4aStemSink(dir) },
+        sinks = { dir ->
+            val decoder = PcmSourceOpener { MediaCodecPcmSource.open(context, it, opener) }
+            SkippingStemSink(M4aStemSink(dir), encoderDelay.get { EncoderDelay.measure(context.cacheDir, decoder) })
+        },
         progress = progress,
         device = device,
         thermal = thermalGate(context),
