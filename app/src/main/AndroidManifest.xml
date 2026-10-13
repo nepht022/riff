@@ -25,6 +25,7 @@
         <!-- O ONNX Runtime (separação da guitarra) traz telemetria que liga a rede toda vez que o app abre: fora. -->
         <provider
             android:name="ai.onnxruntime.TelemetryInitializer"
+            tools:ignore="MissingClass"
             tools:node="remove" />
 
         <!-- O WorkManager é iniciado pelo RiffApplication (com a fábrica do Hilt), não pelo androidx.startup. -->
