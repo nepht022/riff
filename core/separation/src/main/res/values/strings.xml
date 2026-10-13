@@ -1,0 +1,8 @@
+<resources>
+    <string name="separation_channel">Guitarra separada por IA</string>
+    <string name="separation_running">Separando a guitarra… %1$d%%</string>
+    <string name="separation_paused">Pausado para esfriar…</string>
+    <string name="separation_done">Guitarra separada: %1$s</string>
+    <string name="separation_failed">Não deu para separar a guitarra de %1$s</string>
+    <string name="separation_no_space">Pouco espaço no celular</string>
+</resources>
