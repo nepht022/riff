@@ -75,6 +75,11 @@ internal fun GuitarSearchStatus(search: GuitarSearch, nothingShown: Boolean, onS
             color = RiffColors.PaperDim,
         )
 
+        nothingShown && !search.canSearchMore -> Text(
+            stringResource(R.string.search_guitar_none_all, search.checked),
+            color = RiffColors.Paper,
+        )
+
         nothingShown -> Column {
             Text(stringResource(R.string.search_guitar_none, search.checked), color = RiffColors.Paper)
             TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearchMore)) {

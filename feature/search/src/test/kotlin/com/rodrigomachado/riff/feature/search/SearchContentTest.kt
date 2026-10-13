@@ -171,4 +171,18 @@ class SearchContentTest {
         composeRule.onNodeWithText("Procurar mais").performClick()
         assertEquals(listOf("more-guitar"), events)
     }
+
+    @Test
+    fun whenTheSearchRanOutThereIsNoSearchMore() {
+        show(
+            SearchUiState(
+                query = "x",
+                onlySeparateGuitar = true,
+                guitarSearch = GuitarSearch(62, 100, running = false, canSearchMore = false),
+            ),
+        )
+
+        composeRule.onNodeWithText("Nenhum mapa com guitarra separada nos 62 resultados.").assertExists()
+        composeRule.onNodeWithText("Procurar mais").assertDoesNotExist()
+    }
 }

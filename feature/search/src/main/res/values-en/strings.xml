@@ -25,5 +25,6 @@
     <string name="search_only_separate_guitar">Separate guitar only</string>
     <string name="search_guitar_progress">Looking for separate-guitar charts… %1$d of %2$d</string>
     <string name="search_guitar_none">No separate-guitar chart in the first %1$d results.</string>
+    <string name="search_guitar_none_all">No separate-guitar chart in the %1$d results.</string>
     <string name="search_guitar_more">Search more</string>
 </resources>

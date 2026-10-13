@@ -485,4 +485,44 @@ class SearchViewModelTest {
 
         assertEquals(true, "m2-5" in vm.uiState.value.results.map { it.chart.md5 })
     }
+
+    @Test
+    fun whenTheSearchRanOutThereIsNothingMoreToLookFor() = runTest {
+        transport.pages = listOf(page(c("a", "A"), c("b", "B"), found = 2))
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertEquals(GuitarSearch(2, 100, running = false, canSearchMore = false), vm.uiState.value.guitarSearch)
+        assertEquals(false, vm.uiState.value.hasMore)
+    }
+
+    @Test
+    fun whileTheGuitarSearchRunsThereIsNoLoadMore() = runTest {
+        transport.pages = (0 until 4).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        transport.peekGate = CompletableDeferred() // a procura fica no meio
+        vm.onlySeparateGuitar(true)
+        runCurrent()
+
+        assertEquals(true, vm.uiState.value.guitarSearch?.running)
+        assertEquals(false, vm.uiState.value.hasMore)
+        checkNotNull(transport.peekGate).complete(Unit)
+    }
+
+    @Test
+    fun nothingFoundWithMoreToCheckOffersOnlySearchMore() = runTest {
+        transport.pages = (0 until 8).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertEquals(true, vm.uiState.value.guitarSearch?.canSearchMore)
+        assertEquals(false, vm.uiState.value.hasMore) // o Procurar mais da mensagem basta
+    }
 }

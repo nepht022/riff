@@ -25,5 +25,6 @@
     <string name="search_only_separate_guitar">Só com guitarra separada</string>
     <string name="search_guitar_progress">Procurando mapas com guitarra separada… %1$d de %2$d</string>
     <string name="search_guitar_none">Nenhum mapa com guitarra separada nos primeiros %1$d resultados.</string>
+    <string name="search_guitar_none_all">Nenhum mapa com guitarra separada nos %1$d resultados.</string>
     <string name="search_guitar_more">Procurar mais</string>
 </resources>

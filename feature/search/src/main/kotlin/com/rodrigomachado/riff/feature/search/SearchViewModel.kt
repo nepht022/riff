@@ -49,7 +49,13 @@ data class SearchUiState(
 )
 
 /** [checked] mapas conferidos de [limit] nesta procura; [running] enquanto ela continua. */
-data class GuitarSearch(val checked: Int, val limit: Int, val running: Boolean)
+data class GuitarSearch(
+    val checked: Int,
+    val limit: Int,
+    val running: Boolean,
+    /** Falso quando o Encore não tem mais páginas e todos os resultados já foram conferidos. */
+    val canSearchMore: Boolean = true,
+)
 
 data class ResultItem(val chart: EncoreChart, val state: ItemState, val separateGuitar: Boolean?)
 
@@ -258,15 +264,18 @@ class SearchViewModel @Inject constructor(
         // Busca terminada sem nada visível (o filtro de guitarra tem a mensagem dele).
         val finished = page > 0 && !hasMore && !s.isSearching
         val nothing = finished && results.isEmpty() && !s.onlySeparateGuitar
+        val canSearchMore = hasMore || candidates().any { it.chart.md5 !in separate }
         s.copy(
             results = results,
-            hasMore = hasMore,
+            // Com o filtro de guitarra, o Carregar mais só aparece parado e com resultados (sem eles, o Procurar mais).
+            hasMore = if (s.onlySeparateGuitar) canSearchMore && !guitarRunning && results.isNotEmpty() else hasMore,
             error = s.error ?: if (nothing) SearchError.NOTHING_FOUND else null,
             guitarSearch = if (s.onlySeparateGuitar) {
                 GuitarSearch(
                     guitarChecked(),
                     guitarLimit,
                     guitarRunning,
+                    canSearchMore,
                 )
             } else {
                 null
