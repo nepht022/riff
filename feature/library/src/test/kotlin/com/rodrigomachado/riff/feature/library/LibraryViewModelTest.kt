@@ -217,6 +217,7 @@ class LibraryViewModelTest {
     fun aDeclinedOrSeparatedSongPlaysRightAway() = runTest {
         probe.audio["m"] = ChartAudio.Single("u/song.opus")
         separations.states["m"] = AiSeparationState.DECLINED
+        settings.settings.value = settings.settings.value.copy(askSeparationAlways = false)
         val vm = viewModel()
 
         vm.onDifficultyChosen(song, Difficulty.EXPERT)

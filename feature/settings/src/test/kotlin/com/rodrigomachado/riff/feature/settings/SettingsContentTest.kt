@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.settings
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -156,7 +157,7 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Apagar").performClick() // confirmação
         composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).performScrollTo().performClick()
 
-        assertEquals(listOf("delete", "askAlways:true"), events)
+        assertEquals(listOf("delete", "askAlways:false"), events)
     }
 
     @Test
@@ -185,6 +186,6 @@ class SettingsContentTest {
             assertEquals(action, calibrate.left.value, bounds.left.value, 0.5f)
         }
         composeRule.onNodeWithText("Sem separar", substring = true).performScrollTo().assertExists()
-        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).assertIsOff()
+        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).assertIsOn()
     }
 }

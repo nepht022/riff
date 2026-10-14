@@ -2,10 +2,17 @@ package com.rodrigomachado.riff.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.rodrigomachado.riff.core.model.FretStyle
+import com.rodrigomachado.riff.core.model.HighwayArt
+import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.model.TrackLook
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -116,12 +123,50 @@ class RiffPreferencesTest {
     }
 
     @Test
-    fun askingAlwaysToSeparateStartsOffAndCanBeTurnedOn() = runTest {
+    fun askingAlwaysToSeparateStartsOnAndCanBeTurnedOff() = runTest {
         val preferences = RiffPreferences(InMemoryPreferencesStore())
-        assertEquals(false, preferences.settings.first().askSeparationAlways)
-
-        preferences.updateSettings { it.copy(askSeparationAlways = true) }
-
         assertEquals(true, preferences.settings.first().askSeparationAlways)
+
+        preferences.updateSettings { it.copy(askSeparationAlways = false) }
+
+        assertEquals(false, preferences.settings.first().askSeparationAlways)
+    }
+
+    @Test
+    fun theTrackLookIsSavedByName() = runTest {
+        val preferences = RiffPreferences(InMemoryPreferencesStore())
+
+        preferences.updateSettings {
+            it.copy(
+                highwayBackground = HighwayBackground.NEON,
+                highwayArt = HighwayArt.WINGED_SKULL,
+                noteStyle = NoteStyle.SKULLS,
+                fretStyle = FretStyle.SPEAKERS,
+                showChartImage = false,
+            )
+        }
+
+        val settings = preferences.settings.first()
+        assertEquals(
+            TrackLook(HighwayBackground.NEON, HighwayArt.WINGED_SKULL, NoteStyle.SKULLS, FretStyle.SPEAKERS),
+            settings.trackLook,
+        )
+        assertEquals(false, settings.showChartImage)
+    }
+
+    @Test
+    fun anOptionThatNoLongerExistsFallsBackToTheDefault() = runTest {
+        val store = InMemoryPreferencesStore()
+        store.edit { it[stringPreferencesKey("highway_background")] = "DISCO_BALL" }
+
+        assertEquals(HighwayBackground.STAGE, RiffPreferences(store).settings.first().highwayBackground)
+    }
+
+    @Test
+    fun askingAlwaysIsOnEvenIfTheOldPreferenceWasSavedOff() = runTest {
+        val store = InMemoryPreferencesStore()
+        store.edit { it[booleanPreferencesKey("ask_separation_always")] = false }
+
+        assertEquals(true, RiffPreferences(store).settings.first().askSeparationAlways)
     }
 }

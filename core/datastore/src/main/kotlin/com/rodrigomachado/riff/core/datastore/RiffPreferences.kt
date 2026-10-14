@@ -36,6 +36,12 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[MISS_VOLUME] = updated.missVolume
             prefs[MENU_SOUNDS] = updated.menuSounds
             prefs[ASK_SEPARATION_ALWAYS] = updated.askSeparationAlways
+            prefs[HIGHWAY_BACKGROUND] = updated.highwayBackground.name
+            prefs[HIGHWAY_ART] = updated.highwayArt.name
+            prefs[NOTE_STYLE] = updated.noteStyle.name
+            prefs[FRET_STYLE] = updated.fretStyle.name
+            prefs[SHOW_CHART_IMAGE] = updated.showChartImage
+            prefs.remove(LEGACY_ASK_SEPARATION_ALWAYS)
             prefs.remove(LEGACY_SFX_VOLUME)
             prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
         }
@@ -60,6 +66,11 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             missVolume = volume(MISS_VOLUME) ?: legacyEffects ?: default.missVolume,
             menuSounds = this[MENU_SOUNDS] ?: default.menuSounds,
             askSeparationAlways = this[ASK_SEPARATION_ALWAYS] ?: default.askSeparationAlways,
+            highwayBackground = enumOr(this[HIGHWAY_BACKGROUND], default.highwayBackground),
+            highwayArt = enumOr(this[HIGHWAY_ART], default.highwayArt),
+            noteStyle = enumOr(this[NOTE_STYLE], default.noteStyle),
+            fretStyle = enumOr(this[FRET_STYLE], default.fretStyle),
+            showChartImage = this[SHOW_CHART_IMAGE] ?: default.showChartImage,
         )
     }
 
@@ -74,9 +85,21 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val HIT_VOLUME = floatPreferencesKey("hit_volume")
         val MISS_VOLUME = floatPreferencesKey("miss_volume")
         val MENU_SOUNDS = booleanPreferencesKey("menu_sounds")
-        val ASK_SEPARATION_ALWAYS = booleanPreferencesKey("ask_separation_always")
+
+        // A v2 nasceu ligada para todos; a chave antiga (desligada de fábrica) só é apagada.
+        val ASK_SEPARATION_ALWAYS = booleanPreferencesKey("ask_separation_always_v2")
+        val LEGACY_ASK_SEPARATION_ALWAYS = booleanPreferencesKey("ask_separation_always")
+        val HIGHWAY_BACKGROUND = stringPreferencesKey("highway_background")
+        val HIGHWAY_ART = stringPreferencesKey("highway_art")
+        val NOTE_STYLE = stringPreferencesKey("note_style")
+        val FRET_STYLE = stringPreferencesKey("fret_style")
+        val SHOW_CHART_IMAGE = booleanPreferencesKey("show_chart_image")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")
     }
 }
+
+/** Nome gravado de uma opção; um nome que não existe mais (versão antiga ou futura) volta ao padrão. */
+private inline fun <reified E : Enum<E>> enumOr(name: String?, default: E): E =
+    name?.let { n -> enumValues<E>().firstOrNull { it.name == n } } ?: default
