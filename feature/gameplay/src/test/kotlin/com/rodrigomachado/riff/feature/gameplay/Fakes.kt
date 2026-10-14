@@ -179,3 +179,24 @@ class FakePlaybackInterruptions : com.rodrigomachado.riff.core.audio.PlaybackInt
     /** Uma ligação, outro app tocando ou o fone desconectado. */
     fun interrupt() = onInterrupted?.invoke()
 }
+
+/** Imagem de mentira: o ViewModel só repassa a imagem do mapa para a tela. */
+class FakeImage : androidx.compose.ui.graphics.ImageBitmap {
+    override val width = 1
+    override val height = 1
+    override val config = androidx.compose.ui.graphics.ImageBitmapConfig.Argb8888
+    override val hasAlpha = false
+    override val colorSpace = androidx.compose.ui.graphics.colorspace.ColorSpaces.Srgb
+
+    override fun prepareToDraw() = Unit
+
+    override fun readPixels(
+        buffer: IntArray,
+        startX: Int,
+        startY: Int,
+        width: Int,
+        height: Int,
+        bufferOffset: Int,
+        stride: Int,
+    ) = Unit
+}
