@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
+import com.rodrigomachado.riff.core.model.FretStyle
+import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.ui.theme.LaneColors
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
@@ -102,6 +104,7 @@ fun DrawScope.drawGem(
     if (!(radius > 0f)) return // zero, negativo ou NaN: nada a desenhar
     val base = LaneColors.forLane(lane)
     val color = if (missed) base.copy(alpha = MISSED_GEM_ALPHA) else base
+    if (cache.look.notes != NoteStyle.DISCS) return drawStyledGem(cache, cache.look.notes, center, radius, color, hopo)
     val top = Offset(0f, -GEM_SIDE)
     withTransform({
         translate(center.x, center.y)
@@ -125,10 +128,15 @@ fun DrawScope.drawFretButton(cache: StageCache, center: Offset, radius: Float, l
         scale(radius, radius, Offset.Zero)
     }) {
         if (pressed) oval(color.copy(alpha = 0.35f), Offset.Zero, 1.35f, TILT * 1.6f)
-        oval(Color.Black, Offset(0f, TILT * 0.35f), 1f, TILT)
-        oval(cache.chrome, Offset.Zero, 1f, TILT)
-        oval(color, Offset.Zero, 0.82f, TILT * 0.82f)
-        oval(cache.fretInner(lane, pressed), Offset.Zero, FRET_INNER, TILT * FRET_INNER)
+        val style = cache.look.frets
+        if (style == FretStyle.DISCS) {
+            oval(Color.Black, Offset(0f, TILT * 0.35f), 1f, TILT)
+            oval(cache.chrome, Offset.Zero, 1f, TILT)
+            oval(color, Offset.Zero, 0.82f, TILT * 0.82f)
+            oval(cache.fretInner(lane, pressed), Offset.Zero, FRET_INNER, TILT * FRET_INNER)
+        } else {
+            drawStyledButton(cache, style, color, pressed)
+        }
     }
 }
 

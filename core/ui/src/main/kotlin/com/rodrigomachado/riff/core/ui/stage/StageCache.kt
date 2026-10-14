@@ -185,6 +185,11 @@ class StageCache {
 
     internal fun fretInner(lane: Int, pressed: Boolean): Brush = if (pressed) fretLit[lane] else fretIdle
 
+    internal val pickPath = UnitShapes.pick()
+    internal val starPath = UnitShapes.star()
+    internal val boltPath = UnitShapes.bolt()
+    internal val flamePath = UnitShapes.flame()
+
     /** Uma forma por camada da chama, refeita no lugar (`rewind`) a cada desenho. */
     internal val flamePaths = Array(FLAME_LAYERS) { Path() }
 

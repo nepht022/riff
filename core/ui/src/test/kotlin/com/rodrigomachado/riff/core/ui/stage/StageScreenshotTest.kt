@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.rodrigomachado.riff.core.model.FretStyle
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.LaneColors
@@ -158,6 +160,37 @@ class StageScreenshotTest {
                                 cache.scrollDistance = 0.7f
                                 cache.update(size, density)
                                 drawHighway(cache)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Uma linha por design: trilha 1 é HOPO, a 3 está perdida e o botão 2 está pressionado. */
+    @Test
+    fun everyNoteAndButtonStyle() {
+        captureRoboImage("src/test/screenshots/Stage_pieces.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val rows = NoteStyle.entries.size + FretStyle.entries.size
+                        val rowHeight = size.height / rows
+                        val r = size.width / 14f
+                        NoteStyle.entries.forEachIndexed { row, style ->
+                            val cache = StageCache().apply { look = TrackLook.DEFAULT.copy(notes = style) }
+                            for (lane in 0 until 5) {
+                                val center = Offset(size.width * (lane + 1) / 6f, rowHeight * (row + 0.7f))
+                                drawGem(cache, center, r, lane, missed = lane == 3, hopo = lane == 1)
+                            }
+                        }
+                        FretStyle.entries.forEachIndexed { i, style ->
+                            val cache = StageCache().apply { look = TrackLook.DEFAULT.copy(frets = style) }
+                            val row = NoteStyle.entries.size + i
+                            for (lane in 0 until 5) {
+                                val center = Offset(size.width * (lane + 1) / 6f, rowHeight * (row + 0.5f))
+                                drawFretButton(cache, center, r, lane, pressed = lane == 2)
                             }
                         }
                     }
