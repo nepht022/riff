@@ -207,7 +207,7 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Neon").performScrollTo().performClick()
 
         assertEquals(listOf(TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)), looks)
-        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE), sounds)
         composeRule.onNodeWithText("Neon").assertDoesNotExist() // a lista fecha
     }
 

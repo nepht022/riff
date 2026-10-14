@@ -144,7 +144,7 @@ private fun <T> ChoiceList(
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         for (option in options) {
             Row(
-                Modifier.fillMaxWidth().clickable(onClick = withMenuSound(MenuSound.CONFIRM) { onChoose(option) }),
+                Modifier.fillMaxWidth().clickable(onClick = withMenuSound(MenuSound.NAVIGATE) { onChoose(option) }),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {

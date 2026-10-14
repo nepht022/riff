@@ -21,5 +21,11 @@ internal fun DrawScope.drawStageSurface(cache: StageCache) {
 
 internal fun DrawScope.drawTexture(cache: StageCache, shader: Shader) {
     cache.texturePaint.shader = shader
-    drawIntoCanvas { it.nativeCanvas.drawPath(cache.androidOutline, cache.texturePaint) }
+    drawIntoCanvas {
+        val canvas = it.nativeCanvas
+        canvas.save()
+        canvas.concat(cache.textureMatrix)
+        canvas.drawRect(0f, cache.textureTop, HighwayTexture.WIDTH.toFloat(), cache.textureBottom, cache.texturePaint)
+        canvas.restore()
+    }
 }

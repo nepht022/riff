@@ -10,7 +10,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import com.rodrigomachado.riff.core.model.HighwayBackground
@@ -83,12 +82,17 @@ class StageCache {
     internal var edges = edgeColors(HighwayBackground.STAGE)
         private set
     internal val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-    internal val androidOutline get() = outline.asAndroidPath()
 
     /** Escurece a textura para o fundo, como o degradê da pista de sempre. */
     internal var fade: Brush = Brush.verticalGradient(listOf(Color.Black, Color.Transparent))
         private set
-    private val textureMatrix = Matrix()
+    internal val textureMatrix = Matrix()
+
+    /** Faixa do ladrilho (em px da textura) que cobre a pista: desenhada pela [textureMatrix], vira o trapézio. */
+    internal var textureTop = 0f
+        private set
+    internal var textureBottom = 0f
+        private set
     private val polySrc = FloatArray(8)
     private val polyDst = FloatArray(8)
 
@@ -104,7 +108,8 @@ class StageCache {
 
     /**
      * Põe o ladrilho na pista em perspectiva, já rolado: a faixa do ladrilho que cobre da borda de baixo da pista
-     * ao fundo vai para o trapézio. `setPolyToPoly` com 4 pontos é exata para um plano visto em perspectiva.
+     * ao fundo vai para o trapézio. `setPolyToPoly` com 4 pontos é exata para um plano visto em perspectiva. A
+     * matriz vai no canvas, não no shader: trocar a matriz do shader recria o shader nativo a cada quadro.
      */
     internal fun updateTextureMatrix() {
         if (backgroundShader == null && artShader == null) return
@@ -134,8 +139,8 @@ class StageCache {
         polyDst[6] = g.leftAt(far)
         polyDst[7] = g.yAt(far)
         textureMatrix.setPolyToPoly(polySrc, 0, polyDst, 0, 4)
-        backgroundShader?.setLocalMatrix(textureMatrix)
-        artShader?.setLocalMatrix(textureMatrix)
+        textureTop = vFar
+        textureBottom = vNear
     }
 
     fun update(size: Size, density: Float): HighwayGeometry {

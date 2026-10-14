@@ -113,6 +113,8 @@ class GameplayViewModel @Inject constructor(
     private suspend fun load(): GameplayUiState = try {
         val playable = loader.read(chartId, difficulty)
         val settings = settingsRepository.settings.first()
+        // Antes de a música tocar: ler a imagem leva tempo e a partida só aparece depois.
+        val art = if (settings.showChartImage) artImages.loadOrNull(chartId) else null
         val (songPlayer, withoutSeparateGuitar) = prepareSong(playable.audio)
         songPlayer.setVolume(settings.masterVolume)
         val effects = sfxPlayers.create().also {
@@ -145,7 +147,7 @@ class GameplayViewModel @Inject constructor(
             pauseRequested,
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
-            art = if (settings.showChartImage) artImages.load(chartId) else null,
+            art = art,
         )
     } catch (e: CancellationException) {
         throw e

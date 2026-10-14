@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.rodrigomachado.riff.core.data.game.ChartArtLoader
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -11,6 +12,16 @@ import javax.inject.Inject
 /** A imagem do mapa pronta para desenhar atrás da pista, ou nada (sem imagem, ou imagem que não abre). */
 fun interface ChartArtImages {
     suspend fun load(chartId: String): ImageBitmap?
+}
+
+/** A imagem é enfeite: qualquer falha ao lê-la só deixa a pista sem ela. */
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+suspend fun ChartArtImages.loadOrNull(chartId: String): ImageBitmap? = try {
+    load(chartId)
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    null
 }
 
 class DecodedChartArtImages @Inject constructor(private val loader: ChartArtLoader) : ChartArtImages {

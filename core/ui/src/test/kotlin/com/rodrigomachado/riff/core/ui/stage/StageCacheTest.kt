@@ -78,4 +78,23 @@ class StageCacheTest {
         assertNotNull(first)
         assertSame(first, cache.backgroundShader)
     }
+
+    /** `setLocalMatrix` com outra matriz descarta o shader nativo e aloca um novo: rolar não pode mexer nele. */
+    @Test
+    fun scrollingDoesNotTouchTheShaderMatrix() {
+        val cache = StageCache()
+        cache.look = TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)
+        cache.update(Size(400f, 800f), 1f)
+        val image = androidx.compose.ui.graphics.ImageBitmap(400, 800)
+        val scope = androidx.compose.ui.graphics.drawscope.CanvasDrawScope()
+        cache.scrollDistance = 1.3f
+        scope.draw(
+            androidx.compose.ui.unit.Density(1f),
+            androidx.compose.ui.unit.LayoutDirection.Ltr,
+            androidx.compose.ui.graphics.Canvas(image),
+            Size(400f, 800f),
+        ) { drawHighway(cache) }
+
+        assertEquals(false, cache.backgroundShader!!.getLocalMatrix(android.graphics.Matrix()))
+    }
 }
