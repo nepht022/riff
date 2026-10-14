@@ -12,8 +12,10 @@ import com.rodrigomachado.riff.core.data.folder.SafFolderAccess
 import com.rodrigomachado.riff.core.data.folder.SafFolderSource
 import com.rodrigomachado.riff.core.data.folder.SafFolderWriter
 import com.rodrigomachado.riff.core.data.folder.SngFolderSource
+import com.rodrigomachado.riff.core.data.game.ChartArtLoader
 import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
+import com.rodrigomachado.riff.core.data.game.FolderChartArtLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
@@ -90,6 +92,9 @@ abstract class FolderBindsModule {
 
     @Binds
     abstract fun chartDeleter(impl: FolderChartDeleter): ChartDeleter
+
+    @Binds
+    abstract fun chartArtLoader(impl: FolderChartArtLoader): ChartArtLoader
 }
 
 @Module
