@@ -36,6 +36,7 @@ internal fun DrawScope.drawStage(
     val t = session.songTimeMs
     val visibleMs = (geometry.visibleDistance * msPerUnit).toLong()
     fillFretDistances(cache, t, visibleMs, msPerUnit)
+    cache.scrollDistance = t / msPerUnit
     drawHighway(cache)
     val radius = geometry.laneWidthAtStrike * GEM_RADIUS_FRACTION
     val notes = session.engine.notes

@@ -8,11 +8,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.rodrigomachado.riff.core.model.HighwayArt
+import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.LaneColors
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -121,6 +125,41 @@ class StageScreenshotTest {
                             }
                         }
                         Box(Modifier.padding(Spacing.md))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w840dp-h400dp-xhdpi")
+    fun everyBackground() = lookSheet(
+        "Stage_backgrounds",
+        HighwayBackground.entries.map { TrackLook.DEFAULT.copy(background = it) },
+    )
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w840dp-h400dp-xhdpi")
+    fun everyArt() = lookSheet(
+        "Stage_art",
+        HighwayArt.entries.map { TrackLook.DEFAULT.copy(background = HighwayBackground.AMPLIFIER, art = it) },
+    )
+
+    /** Uma pista por visual, lado a lado, já rolada um pouco (a textura não começa alinhada à linha de acerto). */
+    private fun lookSheet(name: String, looks: List<TrackLook>) {
+        captureRoboImage("src/test/screenshots/$name.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    Row(Modifier.fillMaxSize()) {
+                        looks.forEach { look ->
+                            Canvas(Modifier.width(120.dp).fillMaxSize()) {
+                                val cache = StageCache()
+                                cache.look = look
+                                cache.scrollDistance = 0.7f
+                                cache.update(size, density)
+                                drawHighway(cache)
+                            }
+                        }
                     }
                 }
             }

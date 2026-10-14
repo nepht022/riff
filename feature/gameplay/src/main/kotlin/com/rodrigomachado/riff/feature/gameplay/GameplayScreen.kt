@@ -122,7 +122,8 @@ internal fun GameStage(
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
-    val stageCache = remember { StageCache() }
+    val look = state.settings.trackLook
+    val stageCache = remember(look) { StageCache().also { it.look = look } }
     // Primeiro quadro (e screenshots, com animate = false); depois o loop atualiza a cada quadro.
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
     val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)

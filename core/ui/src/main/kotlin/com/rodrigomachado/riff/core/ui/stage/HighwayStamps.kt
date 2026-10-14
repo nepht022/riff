@@ -9,9 +9,19 @@ import com.rodrigomachado.riff.core.model.HighwayArt
 
 /** Estampas claras da pista (design da pista), desenhadas num ladrilho transparente de [HighwayTexture]. */
 internal object HighwayStamps {
+    private const val STRETCH = 1.6f
+
     fun draw(kind: HighwayArt, canvas: Canvas, ink: Paint, holes: Paint) {
         val cx = HighwayTexture.WIDTH / 2f
         val depth = HighwayTexture.DEPTH.toFloat()
+        // Esticadas na profundidade: a perspectiva da pista as achata, e assim elas ficam legíveis.
+        canvas.save()
+        canvas.scale(1f, STRETCH, 0f, 0f)
+        draw(kind, canvas, ink, holes, cx, depth / STRETCH)
+        canvas.restore()
+    }
+
+    private fun draw(kind: HighwayArt, canvas: Canvas, ink: Paint, holes: Paint, cx: Float, depth: Float) {
         when (kind) {
             HighwayArt.WINGED_SKULL -> {
                 wings(canvas, ink, cx, depth / 2f, 34f)
@@ -49,7 +59,7 @@ internal object HighwayStamps {
         Triple(75f, 0.62f, 24f),
         Triple(-40f, 0.82f, 20f),
     )
-    private val PICKS = listOf(-60f to 0.22f, 60f to 0.55f, -10f to 0.86f)
+    private val PICKS = listOf(-60f to 0.22f, 60f to 0.55f, -10f to 0.84f)
 
     private fun shape(canvas: Canvas, paint: Paint, cx: Float, cy: Float, s: Float, build: (Path) -> Unit) {
         val path = Path().also(build)

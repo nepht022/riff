@@ -1,14 +1,20 @@
 package com.rodrigomachado.riff.core.ui.stage
 
 import androidx.compose.ui.geometry.Size
+import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.TrackLook
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class StageCacheTest {
     @Test
     fun theSameSizeKeepsTheSameObjects() {
@@ -55,5 +61,21 @@ class StageCacheTest {
             assertNotSame(cache.fretInner(lane, pressed = true), cache.fretInner(lane, pressed = false))
             assertSame(cache.gemCap(lane, missed = false), cache.gemCap(lane, missed = false))
         }
+    }
+
+    @Test
+    fun changingTheLookRebuildsTheTexturesOnlyThen() {
+        val cache = StageCache()
+        cache.update(Size(400f, 800f), 1f)
+        assertNull(cache.backgroundShader)
+
+        cache.look = TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)
+        cache.update(Size(400f, 800f), 1f)
+        val first = cache.backgroundShader
+        cache.look = TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)
+        cache.update(Size(400f, 800f), 1f)
+
+        assertNotNull(first)
+        assertSame(first, cache.backgroundShader)
     }
 }
