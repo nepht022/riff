@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -499,5 +500,15 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Permitir").performClick()
 
         assertEquals(listOf("pick"), events)
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w411dp-h900dp")
+    fun selectLinesUpWithSearchOnTheRight() {
+        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
+
+        val search = composeRule.onNodeWithText("Pesquisar", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val select = composeRule.onNodeWithText("Selecionar", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertEquals(search.right.value, select.right.value, 1.5f) // arredondamento da medida do texto
     }
 }
