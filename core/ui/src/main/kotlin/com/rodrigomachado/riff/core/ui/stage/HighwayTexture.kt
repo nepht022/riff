@@ -42,11 +42,40 @@ object HighwayTexture {
     /** Opacidade das estampas: claras, para não brigar com as notas. */
     private const val STAMP_ALPHA = 0x3C000000
 
-    fun background(kind: HighwayBackground): Bitmap? {
-        if (kind == HighwayBackground.STAGE) return null
+    // Uma de cada, guardada: as miniaturas das Configurações e a partida reaproveitam (no máximo ~6 MB).
+    private val made = HashMap<Enum<*>, Bitmap>()
+
+    fun background(kind: HighwayBackground): Bitmap? =
+        if (kind == HighwayBackground.STAGE) null else remembered(kind) { makeBackground(kind) }
+
+    fun art(kind: HighwayArt): Bitmap? = if (kind == HighwayArt.NONE) null else remembered(kind) { makeArt(kind) }
+
+    private fun remembered(kind: Enum<*>, make: () -> Bitmap): Bitmap = synchronized(made) { made.getOrPut(kind, make) }
+
+    private fun makeArt(kind: HighwayArt): Bitmap {
         val bitmap = Bitmap.createBitmap(WIDTH, DEPTH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val random = Random(SEED)
+        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = STAMP_INK }
+        val holes = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
+        HighwayStamps.draw(kind, canvas, ink, holes)
+        // Desenhadas opacas e clareadas de uma vez: partes sobrepostas não ficam mais fortes.
+        canvas.drawColor(STAMP_ALPHA, PorterDuff.Mode.DST_IN)
+        return bitmap
+    }
+
+    private fun makeBackground(kind: HighwayBackground): Bitmap {
+        val bitmap = Bitmap.createBitmap(WIDTH, DEPTH, Bitmap.Config.ARGB_8888)
+        HighwayBackgrounds.draw(kind, Canvas(bitmap), Random(SEED))
+        return bitmap
+    }
+}
+
+/** Os fundos de rock: cada um preenche o ladrilho todo e repete na profundidade sem emenda. */
+internal object HighwayBackgrounds {
+    private const val WIDTH = HighwayTexture.WIDTH
+    private const val DEPTH = HighwayTexture.DEPTH
+
+    fun draw(kind: HighwayBackground, canvas: Canvas, random: Random) {
         when (kind) {
             HighwayBackground.AMPLIFIER -> amplifier(canvas, random)
             HighwayBackground.LEATHER -> leather(canvas, random)
@@ -56,19 +85,6 @@ object HighwayTexture {
             HighwayBackground.DIAMOND_PLATE -> diamondPlate(canvas, random)
             HighwayBackground.STAGE -> Unit
         }
-        return bitmap
-    }
-
-    fun art(kind: HighwayArt): Bitmap? {
-        if (kind == HighwayArt.NONE) return null
-        val bitmap = Bitmap.createBitmap(WIDTH, DEPTH, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = STAMP_INK }
-        val holes = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
-        HighwayStamps.draw(kind, canvas, ink, holes)
-        // Desenhadas opacas e clareadas de uma vez: partes sobrepostas não ficam mais fortes.
-        canvas.drawColor(STAMP_ALPHA, PorterDuff.Mode.DST_IN)
-        return bitmap
     }
 
     private fun speckle(canvas: Canvas, random: Random, base: Int, spread: Int, size: Float) {
@@ -93,8 +109,12 @@ object HighwayTexture {
             color = 0xFF5A4B2D.toInt()
             strokeWidth = 1f
         }
-        for (y in 8 until DEPTH step 16) canvas.drawLine(0f, y.toFloat(), WIDTH.toFloat(), y.toFloat(), gold)
-        for (x in 8 until WIDTH step 16) canvas.drawLine(x.toFloat(), 0f, x.toFloat(), DEPTH.toFloat(), dim)
+        for (y in 8 until DEPTH step 16) {
+            canvas.drawLine(0f, y.toFloat(), WIDTH.toFloat(), y.toFloat(), gold)
+        }
+        for (x in 8 until WIDTH step 16) {
+            canvas.drawLine(x.toFloat(), 0f, x.toFloat(), DEPTH.toFloat(), dim)
+        }
     }
 
     private fun leather(canvas: Canvas, random: Random) {
@@ -105,7 +125,13 @@ object HighwayTexture {
             val x = random.nextFloat() * WIDTH
             val y = random.nextFloat() * DEPTH
             val r = 30f + random.nextFloat() * 30f
-            for (dy in intArrayOf(-DEPTH, 0, DEPTH)) canvas.drawCircle(x, y + dy, r, blotch)
+            for (dy in intArrayOf(
+                -DEPTH,
+                0,
+                DEPTH,
+            )) {
+                canvas.drawCircle(x, y + dy, r, blotch)
+            }
         }
         val rivet = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFBEBEC3.toInt() }
         val shine = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFAFAFA.toInt() }

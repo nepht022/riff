@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
@@ -45,6 +46,7 @@ object SettingsTestTags {
     const val LEFT_HANDED = "settings_left_handed"
     const val MENU_SOUNDS = "settings_menu_sounds"
     const val ASK_ALWAYS = "settings_ask_separation_always"
+    const val CHART_IMAGE = "settings_chart_image"
 }
 
 @Composable
@@ -77,6 +79,8 @@ fun SettingsScreen(
         separationUsage = usage,
         onDeleteSeparations = viewModel::deleteSeparations,
         onAskAlways = viewModel::setAskSeparationAlways,
+        onTrackLook = viewModel::setTrackLook,
+        onShowChartImage = viewModel::setShowChartImage,
     )
 }
 
@@ -97,6 +101,8 @@ fun SettingsContent(
     separationUsage: SeparationUsage = SeparationUsage(0, 0),
     onDeleteSeparations: () -> Unit = {},
     onAskAlways: (Boolean) -> Unit = {},
+    onTrackLook: (TrackLook) -> Unit = {},
+    onShowChartImage: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
@@ -136,25 +142,45 @@ fun SettingsContent(
             },
         )
         MenuSoundsRow(settings.menuSounds, onMenuSounds)
-        Section(stringResource(R.string.settings_game))
-        SettingSlider(
-            label = stringResource(R.string.settings_note_speed),
-            value = settings.noteSpeed,
-            text = ::speed,
-            onCommit = onNoteSpeed,
-            range = Settings.MIN_NOTE_SPEED..Settings.MAX_NOTE_SPEED,
-            steps = SPEED_STEPS,
-        )
-        SwitchRow(
-            title = stringResource(R.string.settings_left_handed),
-            hint = stringResource(R.string.settings_left_handed_hint),
-            checked = settings.leftHanded,
-            onChange = onLeftHanded,
-            tag = SettingsTestTags.LEFT_HANDED,
-        )
-        CalibrationRow(settings.audioOffsetMs, onCalibrate)
+        GameSection(settings, onNoteSpeed, onLeftHanded, onCalibrate, onTrackLook, onShowChartImage)
         AiSeparationSection(separationUsage, onDeleteSeparations, settings.askSeparationAlways, onAskAlways)
     }
+}
+
+@Composable
+private fun GameSection(
+    settings: Settings,
+    onNoteSpeed: (Float) -> Unit,
+    onLeftHanded: (Boolean) -> Unit,
+    onCalibrate: () -> Unit,
+    onTrackLook: (TrackLook) -> Unit,
+    onShowChartImage: (Boolean) -> Unit,
+) {
+    Section(stringResource(R.string.settings_game))
+    SettingSlider(
+        label = stringResource(R.string.settings_note_speed),
+        value = settings.noteSpeed,
+        text = ::speed,
+        onCommit = onNoteSpeed,
+        range = Settings.MIN_NOTE_SPEED..Settings.MAX_NOTE_SPEED,
+        steps = SPEED_STEPS,
+    )
+    SwitchRow(
+        title = stringResource(R.string.settings_left_handed),
+        hint = stringResource(R.string.settings_left_handed_hint),
+        checked = settings.leftHanded,
+        onChange = onLeftHanded,
+        tag = SettingsTestTags.LEFT_HANDED,
+    )
+    TrackLookSection(settings.trackLook, onTrackLook)
+    SwitchRow(
+        title = stringResource(R.string.settings_chart_image),
+        hint = stringResource(R.string.settings_chart_image_hint),
+        checked = settings.showChartImage,
+        onChange = onShowChartImage,
+        tag = SettingsTestTags.CHART_IMAGE,
+    )
+    CalibrationRow(settings.audioOffsetMs, onCalibrate)
 }
 
 @Composable
