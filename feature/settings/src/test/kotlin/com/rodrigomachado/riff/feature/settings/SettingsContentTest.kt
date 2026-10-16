@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.settings
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -10,9 +11,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.rodrigomachado.riff.core.model.FretStyle
+import com.rodrigomachado.riff.core.model.HighwayBackground
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
@@ -21,8 +26,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "pt-rBR")
 class SettingsContentTest {
     private val sounds = mutableListOf<MenuSound>()
@@ -35,6 +42,8 @@ class SettingsContentTest {
     private var back = false
 
     private val events = mutableListOf<String>()
+
+    private val looks = mutableListOf<TrackLook>()
 
     private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
         composeRule.setContent {
@@ -55,6 +64,8 @@ class SettingsContentTest {
                         separationUsage = separationUsage,
                         onDeleteSeparations = { events += "delete" },
                         onAskAlways = { events += "askAlways:$it" },
+                        onTrackLook = { looks += it },
+                        onShowChartImage = { events += "image:$it" },
                     )
                 }
             }
@@ -156,7 +167,7 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Apagar").performClick() // confirmação
         composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).performScrollTo().performClick()
 
-        assertEquals(listOf("delete", "askAlways:true"), events)
+        assertEquals(listOf("delete", "askAlways:false"), events)
     }
 
     @Test
@@ -179,12 +190,55 @@ class SettingsContentTest {
 
         val calibrate = composeRule.onNodeWithText("Calibrar atraso do áudio", useUnmergedTree = true)
             .getUnclippedBoundsInRoot()
-        for (action in listOf("Apagar separações", "Perguntar de novo")) {
+        for (action in listOf("Apagar separações", "Perguntar sempre se separa")) {
             val bounds = composeRule.onNodeWithText(action, useUnmergedTree = true).performScrollTo()
                 .getUnclippedBoundsInRoot()
             assertEquals(action, calibrate.left.value, bounds.left.value, 0.5f)
         }
         composeRule.onNodeWithText("Sem separar", substring = true).performScrollTo().assertExists()
-        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).assertIsOff()
+        composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).assertIsOn()
+    }
+
+    @Test
+    fun choosingABackgroundOpensTheListAndSavesIt() {
+        show()
+
+        composeRule.onNodeWithText("Fundo da pista").performScrollTo().performClick()
+        composeRule.onNodeWithText("Neon").performScrollTo().performClick()
+
+        assertEquals(listOf(TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)), looks)
+        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE), sounds)
+        composeRule.onNodeWithText("Neon").assertDoesNotExist() // a lista fecha
+    }
+
+    @Test
+    fun everyChoiceListsAllItsOptions() {
+        show()
+
+        composeRule.onNodeWithText("Design dos botões").performScrollTo().performClick()
+
+        for (name in listOf("Pedais de efeito", "Knobs de amplificador", "Alto-falantes", "Palhetas")) {
+            composeRule.onNodeWithText(name).assertExists()
+        }
+    }
+
+    @Test
+    fun theFourChoicesShowTheCurrentNames() {
+        show(Settings.DEFAULT.copy(noteStyle = NoteStyle.SKULLS, fretStyle = FretStyle.KNOBS))
+
+        composeRule.onNodeWithText("Palco").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Sem desenho").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Caveiras").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Knobs de amplificador").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theMapImageSwitchStartsOnAndTurnsOff() {
+        show()
+
+        composeRule.onNodeWithText("Imagem do mapa").performScrollTo().assertExists()
+        composeRule.onNodeWithTag(SettingsTestTags.CHART_IMAGE).performScrollTo().assertIsOn().performClick()
+
+        assertEquals(listOf("image:false"), events)
     }
 }

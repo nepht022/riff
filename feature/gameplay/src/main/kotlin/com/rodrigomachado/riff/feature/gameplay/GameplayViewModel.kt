@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.gameplay
 
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,6 +60,8 @@ sealed interface GameplayUiState {
         val isPaused: Boolean = false,
         val withoutSeparateGuitar: Boolean = false,
         val songOffsetMs: Int = 0,
+        /** Imagem do mapa atrás da pista (com a opção ligada e se o mapa tiver uma). */
+        val art: ImageBitmap? = null,
     ) : GameplayUiState
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
@@ -81,6 +84,7 @@ class GameplayViewModel @Inject constructor(
     private val sfxPlayers: SfxPlayerFactory,
     private val timeSource: TimeSource,
     private val interruptionsFactory: PlaybackInterruptionsFactory,
+    private val artImages: ChartArtImages,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
@@ -109,6 +113,8 @@ class GameplayViewModel @Inject constructor(
     private suspend fun load(): GameplayUiState = try {
         val playable = loader.read(chartId, difficulty)
         val settings = settingsRepository.settings.first()
+        // Antes de a música tocar: ler a imagem leva tempo e a partida só aparece depois.
+        val art = if (settings.showChartImage) artImages.loadOrNull(chartId) else null
         val (songPlayer, withoutSeparateGuitar) = prepareSong(playable.audio)
         songPlayer.setVolume(settings.masterVolume)
         val effects = sfxPlayers.create().also {
@@ -141,6 +147,7 @@ class GameplayViewModel @Inject constructor(
             pauseRequested,
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
+            art = art,
         )
     } catch (e: CancellationException) {
         throw e

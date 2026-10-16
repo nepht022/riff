@@ -15,7 +15,13 @@ data class Settings(
     val missVolume: Float,
     val menuSounds: Boolean = true,
     /** Perguntar se quer separar a guitarra com IA mesmo nas músicas em que já escolheu "Sem separar". */
-    val askSeparationAlways: Boolean = false,
+    val askSeparationAlways: Boolean = true,
+    val highwayBackground: HighwayBackground = HighwayBackground.STAGE,
+    val highwayArt: HighwayArt = HighwayArt.NONE,
+    val noteStyle: NoteStyle = NoteStyle.DISCS,
+    val fretStyle: FretStyle = FretStyle.DISCS,
+    /** Mostrar a capa ou a imagem de fundo do mapa atrás da pista. */
+    val showChartImage: Boolean = true,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }
@@ -27,6 +33,8 @@ data class Settings(
     val effectiveHitVolume: Float get() = masterVolume * hitVolume
 
     val effectiveMissVolume: Float get() = masterVolume * missVolume
+
+    val trackLook: TrackLook get() = TrackLook(highwayBackground, highwayArt, noteStyle, fretStyle)
 
     companion object {
         const val MIN_NOTE_SPEED = 0.5f

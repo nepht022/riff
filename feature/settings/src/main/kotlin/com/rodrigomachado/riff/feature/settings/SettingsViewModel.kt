@@ -8,6 +8,7 @@ import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.model.TrackLook
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-@Suppress("TooManyFunctions") // uma função por preferência da tela, mais as prévias dos sons
+@Suppress("TooManyFunctions") // uma função por preferência da tela (o visual da pista é uma só), mais as prévias
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val separations: AiSeparationRepository,
@@ -56,6 +57,17 @@ class SettingsViewModel @Inject constructor(
     fun setLeftHanded(leftHanded: Boolean) = save { it.copy(leftHanded = leftHanded) }
 
     fun setMenuSounds(enabled: Boolean) = save { it.copy(menuSounds = enabled) }
+
+    fun setTrackLook(look: TrackLook) = save {
+        it.copy(
+            highwayBackground = look.background,
+            highwayArt = look.art,
+            noteStyle = look.notes,
+            fretStyle = look.frets,
+        )
+    }
+
+    fun setShowChartImage(show: Boolean) = save { it.copy(showChartImage = show) }
 
     fun previewHit() = preview { it.hit(PREVIEW_LANE) }
 

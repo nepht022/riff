@@ -1,5 +1,10 @@
 package com.rodrigomachado.riff.core.ui.stage
 
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Shader
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -7,6 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.theme.LaneColors
 
 /** Trastes que cabem no array: com a velocidade mínima (0,5×) aparecem uns 11. */
@@ -16,6 +23,9 @@ private const val INNER_STROKE_DP = 3f
 private const val FRET_LINE_DP = 2f
 
 private const val LANES = 5
+
+/** Quanto a textura escurece no fundo da pista. */
+private const val FAR_FADE = 0.85f
 
 /** Tampa da gema em tamanho 1: o mesmo degradê de antes, com o centro do brilho no canto de cima. */
 private fun unitGemCap(color: Color) = Brush.radialGradient(
@@ -58,7 +68,83 @@ class StageCache {
     internal val chrome: Brush =
         Brush.horizontalGradient(listOf(ChromeLight, ChromeMid, ChromeLight), startX = -1f, endX = 1f)
 
+    /** O visual escolhido; trocar refaz as texturas na próxima [update]. */
+    var look: TrackLook = TrackLook.DEFAULT
+
+    /** Quanto a música andou, em unidades de distância: a textura rola junto com os trastes. */
+    var scrollDistance = 0f
+
+    private var texturesFor: TrackLook? = null
+    internal var backgroundShader: BitmapShader? = null
+        private set
+    internal var artShader: BitmapShader? = null
+        private set
+    internal var edges = edgeColors(HighwayBackground.STAGE)
+        private set
+    internal val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    /** Escurece a textura para o fundo, como o degradê da pista de sempre. */
+    internal var fade: Brush = Brush.verticalGradient(listOf(Color.Black, Color.Transparent))
+        private set
+    internal val textureMatrix = Matrix()
+
+    /** Faixa do ladrilho (em px da textura) que cobre a pista: desenhada pela [textureMatrix], vira o trapézio. */
+    internal var textureTop = 0f
+        private set
+    internal var textureBottom = 0f
+        private set
+    private val polySrc = FloatArray(8)
+    private val polyDst = FloatArray(8)
+
+    private fun rebuildTexturesIfNeeded() {
+        if (texturesFor == look) return
+        texturesFor = look
+        backgroundShader = HighwayTexture.background(look.background)?.let(::tiled)
+        artShader = HighwayTexture.art(look.art)?.let(::tiled)
+        edges = edgeColors(look.background)
+    }
+
+    private fun tiled(bitmap: Bitmap) = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.REPEAT)
+
+    /**
+     * Põe o ladrilho na pista em perspectiva, já rolado: a faixa do ladrilho que cobre da borda de baixo da pista
+     * ao fundo vai para o trapézio. `setPolyToPoly` com 4 pontos é exata para um plano visto em perspectiva. A
+     * matriz vai no canvas, não no shader: trocar a matriz do shader recria o shader nativo a cada quadro.
+     */
+    internal fun updateTextureMatrix() {
+        if (backgroundShader == null && artShader == null) return
+        val g = geometry
+        val near = g.nearDistance
+        val far = g.visibleDistance
+        val perUnit = HighwayTexture.DEPTH / HighwayTexture.TILE_DISTANCE
+        // Só a fase importa (o ladrilho se repete): mantém os números pequenos numa música longa.
+        val scroll = scrollDistance.mod(HighwayTexture.TILE_DISTANCE)
+        val vNear = -(near + scroll) * perUnit
+        val vFar = -(far + scroll) * perUnit
+        val w = HighwayTexture.WIDTH.toFloat()
+        polySrc[0] = 0f
+        polySrc[1] = vNear
+        polySrc[2] = w
+        polySrc[3] = vNear
+        polySrc[4] = w
+        polySrc[5] = vFar
+        polySrc[6] = 0f
+        polySrc[7] = vFar
+        polyDst[0] = g.leftAt(near)
+        polyDst[1] = g.yAt(near)
+        polyDst[2] = g.leftAt(near) + g.widthAt(near)
+        polyDst[3] = g.yAt(near)
+        polyDst[4] = g.leftAt(far) + g.widthAt(far)
+        polyDst[5] = g.yAt(far)
+        polyDst[6] = g.leftAt(far)
+        polyDst[7] = g.yAt(far)
+        textureMatrix.setPolyToPoly(polySrc, 0, polyDst, 0, 4)
+        textureTop = vFar
+        textureBottom = vNear
+    }
+
     fun update(size: Size, density: Float): HighwayGeometry {
+        rebuildTexturesIfNeeded()
         if (size == builtFor && density == builtDensity) return geometry
         builtFor = size
         builtDensity = density
@@ -73,6 +159,12 @@ class StageCache {
         outline.lineTo(g.leftAt(near), g.yAt(near))
         outline.close()
         highwayBrush = Brush.verticalGradient(listOf(HighwayFar, HighwayNear), g.yAt(far), g.yAt(near))
+        fade = Brush.verticalGradient(
+            0f to Color.Black.copy(alpha = FAR_FADE),
+            1f to Color.Transparent,
+            startY = g.yAt(far),
+            endY = g.yAt(near),
+        )
         outerStroke = Stroke(width = OUTER_STROKE_DP * density)
         innerStroke = Stroke(width = INNER_STROKE_DP * density)
         laneLineWidth = density
@@ -97,6 +189,11 @@ class StageCache {
     internal fun gemCap(lane: Int, missed: Boolean): Brush = gemCaps[lane * 2 + if (missed) 1 else 0]
 
     internal fun fretInner(lane: Int, pressed: Boolean): Brush = if (pressed) fretLit[lane] else fretIdle
+
+    internal val pickPath = UnitShapes.pick()
+    internal val starPath = UnitShapes.star()
+    internal val boltPath = UnitShapes.bolt()
+    internal val flamePath = UnitShapes.flame()
 
     /** Uma forma por camada da chama, refeita no lugar (`rewind`) a cada desenho. */
     internal val flamePaths = Array(FLAME_LAYERS) { Path() }

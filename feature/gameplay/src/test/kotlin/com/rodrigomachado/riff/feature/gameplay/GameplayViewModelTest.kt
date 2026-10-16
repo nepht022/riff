@@ -56,6 +56,10 @@ class GameplayViewModelTest {
     private var interruptionsCreated = 0
     private var musicStartMs: Long? = null
     private val analyzed = mutableListOf<List<String>>()
+    private val art = FakeImage()
+    private val artRequests = mutableListOf<String>()
+    private var artFailure: Exception? = null
+    private var playingWhenArtAsked: Boolean? = null
 
     private fun viewModel(spotifyTrackUri: String? = null, trackOffsetMs: Int = 0) = GameplayViewModel(
         SavedStateHandle(
@@ -92,6 +96,12 @@ class GameplayViewModelTest {
         {
             interruptionsCreated++
             interruptions
+        },
+        { chartId ->
+            artRequests += chartId
+            playingWhenArtAsked = player.isPlaying
+            artFailure?.let { throw it }
+            art
         },
     )
 
@@ -533,5 +543,44 @@ class GameplayViewModelTest {
         chartOffsets.failure = IllegalStateException("banco indisponível")
 
         assertEquals(GameplayUiState.Unavailable(UnavailableReason.UNEXPECTED), viewModel().uiState.value)
+    }
+
+    @Test
+    fun withTheOptionOnTheMapImageComesWithTheMatch() = runTest {
+        loader.result = { playable() }
+        val vm = viewModel()
+
+        val ready = vm.uiState.value as GameplayUiState.Ready
+        assertEquals(art, ready.art)
+        assertEquals(listOf("a"), artRequests)
+    }
+
+    @Test
+    fun withTheOptionOffThereIsNoImage() = runTest {
+        loader.result = { playable() }
+        settings.settings.value = settings.settings.value.copy(showChartImage = false)
+        val vm = viewModel()
+
+        assertNull((vm.uiState.value as GameplayUiState.Ready).art)
+        assertTrue(artRequests.isEmpty())
+    }
+
+    @Test
+    fun theMapImageIsReadBeforeTheSongStarts() = runTest {
+        loader.result = { playable() }
+        viewModel()
+
+        assertEquals(false, playingWhenArtAsked)
+        assertTrue(player.isPlaying)
+    }
+
+    @Test
+    fun aMapImageThatFailsDoesNotStopTheMatch() = runTest {
+        loader.result = { playable() }
+        artFailure = SecurityException("permissão perdida")
+        val vm = viewModel()
+
+        val ready = vm.uiState.value as GameplayUiState.Ready
+        assertNull(ready.art)
     }
 }

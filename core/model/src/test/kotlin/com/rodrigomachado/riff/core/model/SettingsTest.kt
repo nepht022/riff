@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -37,5 +38,18 @@ class SettingsTest {
 
         assertEquals(0.3f, settings.effectiveHitVolume, 1e-6f)
         assertEquals(0.5f, settings.effectiveMissVolume, 1e-6f)
+    }
+
+    @Test
+    fun theLookOfTodayAndTheMapImageAreTheDefaults() {
+        val settings = Settings.DEFAULT
+
+        assertEquals(TrackLook.DEFAULT, settings.trackLook)
+        assertEquals(
+            TrackLook(HighwayBackground.STAGE, HighwayArt.NONE, NoteStyle.DISCS, FretStyle.DISCS),
+            TrackLook.DEFAULT,
+        )
+        assertTrue(settings.showChartImage)
+        assertTrue(settings.askSeparationAlways)
     }
 }

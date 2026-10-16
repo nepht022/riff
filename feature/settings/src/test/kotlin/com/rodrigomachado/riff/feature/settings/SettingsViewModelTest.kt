@@ -1,7 +1,12 @@
 package com.rodrigomachado.riff.feature.settings
 
+import com.rodrigomachado.riff.core.model.FretStyle
+import com.rodrigomachado.riff.core.model.HighwayArt
+import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.model.TrackLook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -112,5 +117,18 @@ class SettingsViewModelTest {
 
         assertEquals(listOf("deleteAll"), separations.calls)
         assertEquals(true, repository.settings.value.askSeparationAlways)
+    }
+
+    @Test
+    fun theLookChoicesAndTheMapImageAreSaved() = runTest {
+        val vm = viewModel()
+        val look = TrackLook(HighwayBackground.FLAMES, HighwayArt.STARS, NoteStyle.PICKS, FretStyle.PEDALS)
+
+        vm.setTrackLook(look)
+        vm.setShowChartImage(false)
+        advanceUntilIdle()
+
+        assertEquals(look, repository.settings.value.trackLook)
+        assertEquals(false, repository.settings.value.showChartImage)
     }
 }

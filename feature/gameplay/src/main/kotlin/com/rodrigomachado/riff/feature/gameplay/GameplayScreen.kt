@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.provider.Settings.Global
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,10 +27,12 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -62,6 +65,9 @@ object GameplayTestTags {
 
 private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
+
+/** Véu sobre a imagem do mapa: ela fica de fundo, sem disputar com a pista. */
+private const val ART_VEIL = 0.65f
 private const val SYNC_STEP_MS = 10
 private const val SYNC_BIG_STEP_MS = 1_000
 
@@ -122,7 +128,8 @@ internal fun GameStage(
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
-    val stageCache = remember { StageCache() }
+    val look = state.settings.trackLook
+    val stageCache = remember(look) { StageCache().also { it.look = look } }
     // Primeiro quadro (e screenshots, com animate = false); depois o loop atualiza a cada quadro.
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
     val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
@@ -148,6 +155,10 @@ internal fun GameStage(
         }
     }
     Box(modifier.fillMaxSize()) {
+        state.art?.let { image ->
+            Image(image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = ART_VEIL)))
+        }
         Canvas(
             Modifier
                 .fillMaxSize()

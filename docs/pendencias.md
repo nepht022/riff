@@ -54,3 +54,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Guitarra por IA: uma música que decodifica vazia mostra o erro genérico.
 - Biblioteca: um toque para jogar pode se perder se a navegação estiver bloqueada naquele instante (o pedido é descartado junto).
 - O resto das revisões anteriores (biblioteca e importação, acessibilidade e robustez interna) está no histórico de cada plano; retomar pelo que incomodar no uso.
+
+## Pontos menores do visual da pista (revisão de 2026-10-14)
+
+- **Texturas geradas na thread da tela:** no primeiro quadro da partida e ao abrir a lista de fundos ou de designs da pista (gera até 6 de uma vez). Pode dar um engasgo curto. Corrigir gerando antes, fora da thread da tela (o cache de `HighwayTexture` já é seguro para isso).
+- **Neon pode ter emenda:** o desenho só copia os traços uma altura para cima (`-DEPTH, 0`); um traço que nasça perto do topo perde o brilho que passa da borda. Usar `-DEPTH, 0, DEPTH`, como nos outros fundos.
+- **Cintilação ao longe:** a textura encolhe ~4× perto do horizonte e não tem mipmap; padrões finos (linhas do Amplificador) podem cintilar. `bitmap.setHasMipMap(true)` ao gerar.
+- **Sem capa como reserva:** `background.*` grande demais (mais de 8 MB) ou corrompido não tenta `album.*`.
+- **Imagem do mapa grande na memória:** o lado maior fica entre 1280 e 2559 px (até ~26 MB). Decodificar pelo tamanho da tela ou em `RGB_565` (fica sob o véu).
+- **Imagem e véu redesenhados a cada quadro:** dividem a camada com a pista. `graphicsLayer` no Canvas da pista e `ColorFilter` na imagem no lugar da caixa do véu.
+- **Escolhas muito rápidas:** `setTrackLook` grava os quatro campos a partir do visual da tela; trocar duas opções antes de a preferência gravada voltar pode desfazer a primeira. Aplicar só o campo escolhido sobre o valor atual.
+- **Sombra das notas estilizadas:** não esmaece na nota perdida (como a dos discos).
+- **Cache de texturas:** guarda até ~6 MB durante o processo; rever se a memória apertar.
