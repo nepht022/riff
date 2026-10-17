@@ -378,8 +378,6 @@ class QueuePrefetcherTest {
         assertEquals(listOf("sobra"), deleter.deleted)
     }
 
-    /** ⏭ na pausa: a partida seguinte começa com um download no meio; ele para e volta depois da partida. */
-
     /** A partida não segura mais a fila: as próximas ficam prontas enquanto se joga (spec Spotify contínuo §2.1). */
     @Test
     fun aDownloadHappensDuringAMatch() = runTest {
