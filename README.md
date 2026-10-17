@@ -57,6 +57,13 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - Pronta, a música ganha a marca **GUITARRA SEPARADA IA** e passa a jogar como as que já vêm com a guitarra à parte: a guitarra some quando você erra.
 - Cada música separada ocupa ~7 MB (guitarra e resto em `.m4a`, no espaço do app). Nas **Configurações**, a aba **Guitarra IA** mostra o espaço em **Apagar separações** e tem o interruptor **Perguntar sempre se separa** (ligado de fábrica): ligado, toda música sem guitarra separada pergunta ao jogar, mesmo as em que você escolheu "Sem separar".
 
+## Reportar problemas
+
+- Na tela inicial, **Reportar** (ao lado de Configurações) abre um formulário: tipo (Problema, Sugestão ou Outro), o que aconteceu, email para resposta (opcional) e **Incluir informações do aparelho** (versão do Riff, Android, modelo e idioma, mostrados na tela; ligado de fábrica). Depois de um envio, o próximo espera 5 minutos.
+- O relato vai para um Google Apps Script na conta do desenvolvedor, que manda um email "[Riff] Problema: ..." para essa mesma conta (responder vai direto para quem relatou, se deixou o email). Nenhuma senha fica no app; o Google limita a ~100 emails por dia.
+- **Configurar (uma vez):** publique `scripts/relatos_apps_script.gs` como app da Web (instruções no começo do arquivo) e coloque o endereço no `local.properties`: `report.url=https://script.google.com/macros/s/.../exec`. Sem ele, a tela avisa que o envio não está configurado.
+- Antes de distribuir o app (Play Store), declarar na ficha de segurança dos dados que ele envia o texto do relato, o email opcional e as informações do aparelho.
+
 ## Jogar
 
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.

@@ -23,6 +23,8 @@ import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.library.TrackToMatch
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
+import com.rodrigomachado.riff.feature.report.ReportRoute
+import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
@@ -75,6 +77,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
                 },
                 onOpenLibrary = dropUnlessResumed { navController.navigate(LibraryRoute()) },
                 onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
+                onOpenReport = dropUnlessResumed { navController.navigate(ReportRoute) },
                 onSearch = dropUnlessResumed { track ->
                     navController.navigate(
                         SearchRoute(
@@ -167,6 +170,9 @@ private fun NavGraphBuilder.settingsDestinations(navController: NavHostControlle
             onBack = dropUnlessResumed { navController.popBackStack() },
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
         )
+    }
+    composable<ReportRoute> {
+        ReportScreen(onBack = dropUnlessResumed { navController.popBackStack() })
     }
     composable<CalibrationRoute> {
         CalibrationScreen(
