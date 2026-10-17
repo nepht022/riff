@@ -200,9 +200,10 @@ private fun SpotifyError.message(): Int = when (this) {
     else -> R.string.nowplaying_error_unknown
 }
 
+/** Na linha do botão principal, ocupa o espaço livre à direita e fica no meio dele. */
 @Composable
-private fun ChooseOther(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+private fun RowScope.ChooseOther(onClick: () -> Unit) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.weight(1f)) {
         Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
@@ -217,7 +218,7 @@ private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
             sound = MenuSound.NAVIGATE,
             minWidth = MAIN_BUTTON_WIDTH,
         )
-        SearchEncore(onSearch)
+        SearchEncore(onSearch, Modifier.weight(1f))
     }
 }
 
@@ -233,8 +234,8 @@ private fun ActionRow(content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-private fun SearchEncore(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.width(LINK_WIDTH)) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = modifier) {
         Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
@@ -295,7 +296,7 @@ private fun Playing(
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
-                SearchEncore { onSearch(track) }
+                SearchEncore({ onSearch(track) })
             }
 
             MatchStatus.NoMatch -> NoMatchActions({ onChooseChart(track.trackUri, track.title) }, { onSearch(track) })

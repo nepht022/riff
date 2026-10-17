@@ -36,12 +36,12 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 /**
- * Largura de Jogar / Escolher mapa / Confirmar: se revezam no mesmo lugar sem os botões pularem. Com o link ao lado
- * ([LINK_WIDTH]) e o espaço entre eles, cabe num celular de 360 dp.
+ * Largura de Jogar / Escolher mapa / Confirmar: se revezam no mesmo lugar sem os botões pularem. O link ao lado fica no
+ * meio do espaço que sobra à direita.
  */
 internal val MAIN_BUTTON_WIDTH = 172.dp
 
-/** Largura de Escolher outro / Pesquisar no Encore. */
+/** Largura do Pesquisar no Encore quando fica sozinho na linha de baixo. */
 internal val LINK_WIDTH = 140.dp
 
 private const val TICK_MS = 500L

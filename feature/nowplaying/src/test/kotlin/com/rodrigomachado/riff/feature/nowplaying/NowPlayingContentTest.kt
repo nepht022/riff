@@ -14,8 +14,10 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.DpRect
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -24,6 +26,7 @@ import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.core.ui.theme.Spacing
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -325,24 +328,26 @@ class NowPlayingContentTest {
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
     fun theMainButtonHasTheSameWidthWithOrWithoutAMap() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
-
         val play = composeRule.onNodeWithText("Jogar").performScrollTo().getUnclippedBoundsInRoot()
-        val other = composeRule.onNode(hasText("Escolher outro") and hasClickAction()).getUnclippedBoundsInRoot()
-
         assertEquals(MAIN_BUTTON_WIDTH.value, (play.right - play.left).value, 1f)
-        assertEquals(LINK_WIDTH.value, (other.right - other.left).value, 1f)
+        assertCenteredBeside(play, "Escolher outro")
     }
 
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
     fun theChooseButtonHasTheSameWidthAsPlay() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
-
         val choose = composeRule.onNodeWithText("Escolher mapa").performScrollTo().getUnclippedBoundsInRoot()
-        val search = composeRule.onNode(hasText("Pesquisar no Encore") and hasClickAction()).getUnclippedBoundsInRoot()
-
         assertEquals(MAIN_BUTTON_WIDTH.value, (choose.right - choose.left).value, 1f)
-        assertEquals(LINK_WIDTH.value, (search.right - search.left).value, 1f)
+        assertCenteredBeside(choose, "Pesquisar no Encore")
+    }
+
+    /** O link ocupa todo o espaço livre à direita do botão principal (e o texto fica no meio dele). */
+    private fun assertCenteredBeside(button: DpRect, link: String) {
+        val other = composeRule.onNode(hasText(link) and hasClickAction()).getUnclippedBoundsInRoot()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertEquals((root.right - Spacing.md).value, other.right.value, 1f)
+        assertTrue("$button, $other", other.left >= button.right + Spacing.sm && other.left - button.right < Spacing.md)
     }
 
     @Test
