@@ -15,7 +15,6 @@
     <string name="settings_not_calibrated">Não calibrado</string>
     <string name="settings_menu_sounds">Sons do menu</string>
     <string name="settings_menu_sounds_hint">Guitarra ao tocar nos botões</string>
-    <string name="settings_ai_section">Guitarra separada por IA</string>
     <string name="settings_ai_usage_none">Nenhuma música separada</string>
     <plurals name="settings_ai_usage">
         <item quantity="one">%1$d música · %2$s</item>
@@ -57,4 +56,8 @@
     <string name="settings_fret_speakers">Alto-falantes</string>
     <string name="settings_chart_image">Imagem do mapa</string>
     <string name="settings_chart_image_hint">Mostra a capa ou a imagem de fundo do mapa atrás da pista.</string>
+    <string name="settings_tab_general">Geral</string>
+    <string name="settings_tab_track_look">Visual da pista</string>
+    <string name="settings_tab_ai">Guitarra IA</string>
+    <string name="settings_language">Idioma</string>
 </resources>

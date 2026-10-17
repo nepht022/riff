@@ -9,6 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.rodrigomachado.riff.core.model.AppLanguage
+import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.StageBackground
@@ -25,9 +27,28 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h640dp-xhdpi")
 class SettingsScreenshotTest {
 
+    /** Uma imagem por aba; a tela abre em Geral. */
     @Test
-    fun settings() {
-        captureRoboImage("src/test/screenshots/Settings.png") {
+    fun settings() = tab("Settings", SettingsTab.GENERAL)
+
+    @Test
+    fun soundsTab() = tab("Settings_sounds", SettingsTab.SOUNDS)
+
+    @Test
+    fun gameTab() = tab("Settings_game", SettingsTab.GAME)
+
+    @Test
+    fun trackLookTab() = tab("Settings_track_look_tab", SettingsTab.TRACK_LOOK)
+
+    @Test
+    fun aiTab() = tab("Settings_ai", SettingsTab.AI)
+
+    @Test
+    @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
+    fun settingsInEnglish() = tab("Settings_en", SettingsTab.GENERAL, AppLanguage.ENGLISH)
+
+    private fun tab(name: String, tab: SettingsTab, language: AppLanguage = AppLanguage.PORTUGUESE) {
+        captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
                     SettingsContent(
@@ -42,6 +63,9 @@ class SettingsScreenshotTest {
                         onPreviewMiss = {},
                         onCalibrate = {},
                         onBack = {},
+                        separationUsage = SeparationUsage(3, 21_000_000),
+                        language = language,
+                        initialTab = tab,
                     )
                 }
             }

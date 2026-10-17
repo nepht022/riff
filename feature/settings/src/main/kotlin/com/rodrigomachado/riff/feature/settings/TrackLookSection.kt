@@ -115,7 +115,7 @@ private fun currentName(choice: LookChoice, look: TrackLook): String = when (cho
 }
 
 @Composable
-private fun ChoiceRow(title: String, value: String, onClick: () -> Unit) {
+internal fun ChoiceRow(title: String, value: String, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(
             onClick = withMenuSound(MenuSound.NAVIGATE, onClick),

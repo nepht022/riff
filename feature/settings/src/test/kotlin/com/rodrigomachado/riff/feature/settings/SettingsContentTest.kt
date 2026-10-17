@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.FretStyle
 import com.rodrigomachado.riff.core.model.HighwayBackground
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -44,51 +46,66 @@ class SettingsContentTest {
     private val events = mutableListOf<String>()
 
     private val looks = mutableListOf<TrackLook>()
+    private val languages = mutableListOf<AppLanguage>()
 
-    private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
-        composeRule.setContent {
-            CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
-                RiffTheme {
-                    SettingsContent(
-                        settings = settings,
-                        onMasterVolume = {},
-                        onHitVolume = {},
-                        onMissVolume = {},
-                        onNoteSpeed = {},
-                        onLeftHanded = { leftHanded = it },
-                        onMenuSounds = { menuSounds = it },
-                        onPreviewHit = {},
-                        onPreviewMiss = {},
-                        onCalibrate = {},
-                        onBack = { back = true },
-                        separationUsage = separationUsage,
-                        onDeleteSeparations = { events += "delete" },
-                        onAskAlways = { events += "askAlways:$it" },
-                        onTrackLook = { looks += it },
-                        onShowChartImage = { events += "image:$it" },
-                    )
-                }
+    /** Abre a aba e esquece o som do toque nela (cada teste confere só os sons do que testa). */
+    private fun tab(name: String) {
+        composeRule.onNodeWithText(name).performClick()
+        sounds.clear()
+    }
+
+    private fun show(
+        settings: Settings = Settings.DEFAULT,
+        separationUsage: SeparationUsage = SeparationUsage(0, 0),
+        language: AppLanguage = AppLanguage.PORTUGUESE,
+    ) = composeRule.setContent {
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                SettingsContent(
+                    settings = settings,
+                    onMasterVolume = {},
+                    onHitVolume = {},
+                    onMissVolume = {},
+                    onNoteSpeed = {},
+                    onLeftHanded = { leftHanded = it },
+                    onMenuSounds = { menuSounds = it },
+                    onPreviewHit = {},
+                    onPreviewMiss = {},
+                    onCalibrate = {},
+                    onBack = { back = true },
+                    separationUsage = separationUsage,
+                    onDeleteSeparations = { events += "delete" },
+                    onAskAlways = { events += "askAlways:$it" },
+                    onTrackLook = { looks += it },
+                    onShowChartImage = { events += "image:$it" },
+                    language = language,
+                    onLanguage = { languages += it },
+                )
             }
         }
+    }
 
     @Test
     fun showsEverySettingWithItsCurrentValue() {
         show(Settings.DEFAULT.copy(masterVolume = 0.8f, noteSpeed = 1.25f))
 
         composeRule.onNodeWithText("Configurações").assertExists()
+        tab("Sons")
         composeRule.onNodeWithText("Volume geral").assertExists()
         composeRule.onNodeWithText("80%").assertExists()
         composeRule.onNodeWithText("Som de acerto").assertExists()
         composeRule.onNodeWithText("Som de erro").assertExists()
-        composeRule.onNodeWithText("Velocidade das notas").performScrollTo()
-        composeRule.onNodeWithText("1,25×").assertExists()
         composeRule.onNodeWithTag(SettingsTestTags.MASTER_VOLUME)
             .assertRangeInfoEquals(ProgressBarRangeInfo(0.8f, 0f..1f, steps = 19))
+        tab("Jogo")
+        composeRule.onNodeWithText("Velocidade das notas").performScrollTo()
+        composeRule.onNodeWithText("1,25×").assertExists()
     }
 
     @Test
     fun theSpotifyVolumeLimitIsExplained() {
         show()
+        tab("Sons")
 
         composeRule.onNodeWithText("Não muda o volume do Spotify; use o volume do celular.").assertExists()
     }
@@ -96,6 +113,7 @@ class SettingsContentTest {
     @Test
     fun leftHandedModeCanBeTurnedOn() {
         show()
+        tab("Jogo")
 
         composeRule.onNodeWithTag(SettingsTestTags.LEFT_HANDED).performScrollTo().assertIsOff().performClick()
 
@@ -132,6 +150,7 @@ class SettingsContentTest {
             }
         }
 
+        composeRule.onNodeWithText("Jogo").performClick()
         composeRule.onNodeWithText("Calibrar atraso do áudio").performScrollTo().performClick()
 
         composeRule.onNodeWithText("42 ms").assertExists()
@@ -141,6 +160,7 @@ class SettingsContentTest {
     @Test
     fun withoutCalibrationItSaysSo() {
         show()
+        tab("Jogo")
 
         composeRule.onNodeWithText("Não calibrado").performScrollTo().assertExists()
     }
@@ -150,18 +170,20 @@ class SettingsContentTest {
         show()
 
         composeRule.onNodeWithTag(SettingsTestTags.MENU_SOUNDS).performScrollTo().performClick()
+        // O interruptor dos sons não soa por conta própria (ao desligar, ainda estaria ligado): o app soa ao ligar.
+        assertEquals(emptyList<MenuSound>(), sounds)
+        tab("Jogo")
         composeRule.onNodeWithTag(SettingsTestTags.LEFT_HANDED).performScrollTo().performClick()
 
         assertEquals(false, menuSounds)
-        // O interruptor dos sons não soa por conta própria (ao desligar, ainda estaria ligado): o app soa ao ligar.
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 
     @Test
     fun theAiSectionDeletesAfterConfirmingAndAsksAgain() {
         show(Settings.DEFAULT, separationUsage = SeparationUsage(12, 96_000_000))
+        tab("Guitarra IA")
 
-        composeRule.onNodeWithText("GUITARRA SEPARADA POR IA").performScrollTo().assertExists()
         composeRule.onNodeWithText("12 músicas · 96 MB").assertExists()
         composeRule.onNodeWithText("Apagar separações").performScrollTo().performClick()
         composeRule.onNodeWithText("Apagar").performClick() // confirmação
@@ -173,6 +195,7 @@ class SettingsContentTest {
     @Test
     fun oneSeparatedSongIsSingular() {
         show(Settings.DEFAULT, separationUsage = SeparationUsage(1, 8_600_000))
+        tab("Guitarra IA")
 
         composeRule.onNodeWithText("1 música · 8,6 MB").performScrollTo().assertExists()
     }
@@ -180,6 +203,7 @@ class SettingsContentTest {
     @Test
     fun withNothingSeparatedItSaysSo() {
         show(Settings.DEFAULT, separationUsage = SeparationUsage(0, 0))
+        tab("Guitarra IA")
 
         composeRule.onNodeWithText("Nenhuma música separada").performScrollTo().assertExists()
     }
@@ -187,9 +211,11 @@ class SettingsContentTest {
     @Test
     fun theAiActionsLineUpWithTheOtherSettingsAndExplainAskingAgain() {
         show(Settings.DEFAULT, separationUsage = SeparationUsage(1, 8_600_000))
-
+        tab("Jogo")
         val calibrate = composeRule.onNodeWithText("Calibrar atraso do áudio", useUnmergedTree = true)
             .getUnclippedBoundsInRoot()
+        tab("Guitarra IA")
+
         for (action in listOf("Apagar separações", "Perguntar sempre se separa")) {
             val bounds = composeRule.onNodeWithText(action, useUnmergedTree = true).performScrollTo()
                 .getUnclippedBoundsInRoot()
@@ -202,6 +228,7 @@ class SettingsContentTest {
     @Test
     fun choosingABackgroundOpensTheListAndSavesIt() {
         show()
+        tab("Visual da pista")
 
         composeRule.onNodeWithText("Fundo da pista").performScrollTo().performClick()
         composeRule.onNodeWithText("Neon").performScrollTo().performClick()
@@ -214,6 +241,7 @@ class SettingsContentTest {
     @Test
     fun everyChoiceListsAllItsOptions() {
         show()
+        tab("Visual da pista")
 
         composeRule.onNodeWithText("Design dos botões").performScrollTo().performClick()
 
@@ -225,6 +253,7 @@ class SettingsContentTest {
     @Test
     fun theFourChoicesShowTheCurrentNames() {
         show(Settings.DEFAULT.copy(noteStyle = NoteStyle.SKULLS, fretStyle = FretStyle.KNOBS))
+        tab("Visual da pista")
 
         composeRule.onNodeWithText("Palco").performScrollTo().assertExists()
         composeRule.onNodeWithText("Sem desenho").performScrollTo().assertExists()
@@ -235,10 +264,58 @@ class SettingsContentTest {
     @Test
     fun theMapImageSwitchStartsOnAndTurnsOff() {
         show()
+        tab("Visual da pista")
 
         composeRule.onNodeWithText("Imagem do mapa").performScrollTo().assertExists()
         composeRule.onNodeWithTag(SettingsTestTags.CHART_IMAGE).performScrollTo().assertIsOn().performClick()
 
         assertEquals(listOf("image:false"), events)
+    }
+
+    @Test
+    fun opensOnTheGeneralTabWithTheLanguage() {
+        show()
+
+        composeRule.onNodeWithText("Geral").assertIsSelected()
+        composeRule.onNodeWithText("Idioma").assertExists()
+        composeRule.onNodeWithText("Português").assertExists()
+        composeRule.onNodeWithText("Sons do menu").assertExists()
+        composeRule.onNodeWithText("Volume geral").assertDoesNotExist()
+    }
+
+    @Test
+    fun eachTabShowsItsOwnSettings() {
+        show()
+
+        val firstOfEach = listOf(
+            "Sons" to "Volume geral",
+            "Jogo" to "Velocidade das notas",
+            "Visual da pista" to "Fundo da pista",
+            "Guitarra IA" to "Apagar separações",
+            "Geral" to "Idioma",
+        )
+        for ((tab, setting) in firstOfEach) {
+            composeRule.onNodeWithText(tab).performClick().assertIsSelected()
+            composeRule.onNodeWithText(setting).assertExists()
+        }
+        assertEquals(List(firstOfEach.size) { MenuSound.NAVIGATE }, sounds)
+    }
+
+    @Test
+    fun choosingEnglishChangesTheLanguage() {
+        show()
+
+        composeRule.onNodeWithText("Idioma").performClick()
+        composeRule.onNodeWithText("English").performClick()
+
+        assertEquals(listOf(AppLanguage.ENGLISH), languages)
+        composeRule.onNodeWithText("English").assertDoesNotExist() // a lista fecha
+    }
+
+    @Test
+    fun theLanguageRowShowsTheCurrentOne() {
+        show(language = AppLanguage.ENGLISH)
+
+        composeRule.onNodeWithText("English").assertExists()
     }
 }

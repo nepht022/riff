@@ -35,7 +35,6 @@ internal fun AiSeparationSection(
     onAskAlways: (Boolean) -> Unit,
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
-    Section(stringResource(R.string.settings_ai_section))
     ActionRow(
         title = stringResource(R.string.settings_ai_delete),
         value = usageText(usage),

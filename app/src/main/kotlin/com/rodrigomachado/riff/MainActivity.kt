@@ -1,7 +1,9 @@
 package com.rodrigomachado.riff
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
+import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -42,6 +45,12 @@ class MainActivity : ComponentActivity() {
 
     // A notificação da separação abre a Biblioteca (com o app fechado ou já aberto).
     private val openLibrary = mutableStateOf(false)
+
+    // Antes do Android 13 o sistema não tem idioma por app: a tela já nasce no idioma escolhido.
+    override fun attachBaseContext(newBase: Context) {
+        val legacy = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+        super.attachBaseContext(if (legacy) LegacyAppLanguage(newBase).wrap(newBase) else newBase)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
