@@ -7,6 +7,7 @@ import com.rodrigomachado.riff.core.data.NowPlayingRepository
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.data.queue.QueueMisses
+import com.rodrigomachado.riff.core.data.queue.QueuePreparing
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.NowPlaying
@@ -32,8 +33,15 @@ sealed interface NowPlayingUiState {
 
     data object NothingPlaying : NowPlayingUiState
 
-    /** [queueMiss]: a fila procurou um mapa para esta música e não conseguiu (só sem mapa). */
-    data class Playing(val nowPlaying: NowPlaying, val queueMiss: QueueMiss? = null) : NowPlayingUiState
+    /**
+     * [queueMiss]: a fila procurou um mapa para esta música e não conseguiu; [preparingMap]: a fila ainda está
+     * preparando o mapa dela. Os dois só sem mapa.
+     */
+    data class Playing(
+        val nowPlaying: NowPlaying,
+        val queueMiss: QueueMiss? = null,
+        val preparingMap: Boolean = false,
+    ) : NowPlayingUiState
 }
 
 @HiltViewModel
@@ -41,9 +49,15 @@ class NowPlayingViewModel @Inject constructor(
     private val repository: NowPlayingRepository,
     private val matches: TrackMatchRepository,
     misses: QueueMisses,
+    private val preparing: QueuePreparing,
 ) : ViewModel() {
     val uiState: StateFlow<NowPlayingUiState> =
-        combine(repository.connection, repository.nowPlaying, misses.misses) { connection, nowPlaying, missed ->
+        combine(
+            repository.connection,
+            repository.nowPlaying,
+            misses.misses,
+            preparing.tracks,
+        ) { connection, nowPlaying, missed, preparingNow ->
             when (connection) {
                 SpotifyConnection.Idle, SpotifyConnection.Connecting -> NowPlayingUiState.Connecting
 
@@ -51,8 +65,13 @@ class NowPlayingViewModel @Inject constructor(
 
                 SpotifyConnection.Connected ->
                     nowPlaying?.let {
-                        val miss = missed[it.playback.trackUri].takeIf { _ -> it.match == MatchStatus.NoMatch }
-                        NowPlayingUiState.Playing(it, miss)
+                        val noMap = it.match == MatchStatus.NoMatch
+                        val uri = it.playback.trackUri
+                        NowPlayingUiState.Playing(
+                            it,
+                            missed[uri].takeIf { noMap },
+                            preparingMap = noMap && uri in preparingNow,
+                        )
                     } ?: NowPlayingUiState.NothingPlaying
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), NowPlayingUiState.Connecting)
@@ -86,18 +105,31 @@ class NowPlayingViewModel @Inject constructor(
         viewModelScope.launch {
             saved.getStateFlow<String?>(NowPlayingAutoPlay.KEY_DIFFICULTY, null).filterNotNull().collect { name ->
                 val from = saved.get<String>(NowPlayingAutoPlay.KEY_FROM)
+                val waitMs = saved.get<Long>(NowPlayingAutoPlay.KEY_WAIT) ?: NowPlayingAutoPlay.WAIT_MS
                 // Usado uma vez só: a próxima troca de música, feita nesta tela, não começa partida nenhuma.
                 saved[NowPlayingAutoPlay.KEY_DIFFICULTY] = null
                 saved.remove<String>(NowPlayingAutoPlay.KEY_FROM)
+                saved.remove<Long>(NowPlayingAutoPlay.KEY_WAIT)
                 waiting?.cancel()
                 waiting = launch {
-                    val next = withTimeoutOrNull(NowPlayingAutoPlay.WAIT_MS) {
+                    val next = withTimeoutOrNull(waitMs) {
                         repository.nowPlaying.first { it != null && it.playback.trackUri != from }
-                    }
-                    pendingAutoPlay.value = next?.let { NowPlayingAutoPlay.decide(it, Difficulty.valueOf(name)) }
+                    } ?: return@launch
+                    pendingAutoPlay.value = NowPlayingAutoPlay.decide(afterPreparing(next), Difficulty.valueOf(name))
                 }
             }
         }
+    }
+
+    /**
+     * A fila ainda prepara o mapa desta música: espera ela terminar (sair da tela cancela) e lê o casamento do banco,
+     * que pode estar à frente do que esta tela já recebeu.
+     */
+    private suspend fun afterPreparing(next: NowPlaying): NowPlaying {
+        val uri = next.playback.trackUri
+        if (uri !in preparing.tracks.value) return next
+        preparing.tracks.first { uri !in it }
+        return NowPlaying(next.playback, matches.matchFor(next.playback))
     }
 
     fun autoPlayHandled() {

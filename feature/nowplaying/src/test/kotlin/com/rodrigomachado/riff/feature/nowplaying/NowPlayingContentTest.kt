@@ -330,6 +330,13 @@ class NowPlayingContentTest {
     }
 
     @Test
+    fun preparingSaysTheMapIsDownloading() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), preparingMap = true))
+
+        composeRule.onNodeWithText("Baixando o mapa desta música…").assertExists()
+    }
+
+    @Test
     fun withoutAQueueSearchNothingExtraIsSaid() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
 

@@ -39,6 +39,11 @@ class NowPlayingScreenshotTest {
         content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), QueueMiss.NOTHING_FOUND))
     }
 
+    @Test
+    fun preparing() = snapshot("NowPlaying_preparing") {
+        content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), preparingMap = true))
+    }
+
     @Composable
     private fun content(state: NowPlayingUiState) = NowPlayingContent(
         state = state,

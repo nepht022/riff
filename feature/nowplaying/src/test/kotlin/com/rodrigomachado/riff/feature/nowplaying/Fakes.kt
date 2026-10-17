@@ -57,7 +57,10 @@ class FakeTrackMatchRepository : TrackMatchRepository {
     val saved = mutableListOf<Triple<String, String, Boolean>>()
     override val changes = MutableStateFlow(0)
 
-    override suspend fun matchFor(track: PlaybackState): MatchStatus = MatchStatus.NoMatch
+    /** O casamento que o banco tem agora (pode estar à frente do que a tela já recebeu). */
+    val statuses = mutableMapOf<String, MatchStatus>()
+
+    override suspend fun matchFor(track: PlaybackState): MatchStatus = statuses[track.trackUri] ?: MatchStatus.NoMatch
 
     override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
 

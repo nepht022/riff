@@ -57,8 +57,14 @@ object NowPlayingTestTags {
     const val QUEUE_MISS = "nowplaying_queue_miss"
 }
 
-/** O que "Jogar" leva para a partida. */
-data class PlayRequest(val chartId: String, val difficulty: Difficulty, val trackUri: String, val trackOffsetMs: Int)
+/** O que "Jogar" leva para a partida; [confirmFirst]: o mapa é só sugestão e a partida abre pedindo confirmação. */
+data class PlayRequest(
+    val chartId: String,
+    val difficulty: Difficulty,
+    val trackUri: String,
+    val trackOffsetMs: Int,
+    val confirmFirst: Boolean = false,
+)
 
 @Composable
 fun NowPlayingScreen(
@@ -80,11 +86,15 @@ fun NowPlayingScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.cancelAutoPlay() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(autoPlay) {
-        val start = autoPlay as? NowPlayingAutoPlay.Action.Start ?: return@LaunchedEffect
+        val request = when (val action = autoPlay) {
+            is NowPlayingAutoPlay.Action.Start -> action.request
+            is NowPlayingAutoPlay.Action.Confirm -> action.request
+            else -> return@LaunchedEffect
+        }
         // A tela acabou de voltar da partida: a navegação só aceita a próxima quando ela estiver de volta à frente.
         lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
         viewModel.autoPlayHandled()
-        onPlay(start.request)
+        onPlay(request)
     }
     // Voltou ao Riff (por exemplo, depois de instalar ou entrar no Spotify): tenta de novo sozinho.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
@@ -160,6 +170,7 @@ fun NowPlayingContent(
             is NowPlayingUiState.Playing -> Playing(
                 state.nowPlaying,
                 state.queueMiss,
+                state.preparingMap,
                 onPlay,
                 onConfirm,
                 onChooseChart,
@@ -204,11 +215,12 @@ private fun RowScope.ChooseOther(onClick: () -> Unit) {
 }
 
 @Composable
-private fun NoMatchActions(queueMiss: QueueMiss?, onChoose: () -> Unit, onSearch: () -> Unit) {
+private fun NoMatchActions(queueMiss: QueueMiss?, preparingMap: Boolean, onChoose: () -> Unit, onSearch: () -> Unit) {
     ChartText(stringResource(R.string.nowplaying_no_match))
-    queueMiss?.let {
+    val note = if (preparingMap) R.string.nowplaying_queue_preparing else queueMiss?.message()
+    note?.let {
         Text(
-            stringResource(it.message()),
+            stringResource(it),
             Modifier.fillMaxWidth().testTag(NowPlayingTestTags.QUEUE_MISS),
             style = MaterialTheme.typography.bodyMedium,
             color = RiffColors.PaperDim,
@@ -254,6 +266,7 @@ private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.widt
 private fun Playing(
     nowPlaying: NowPlaying,
     queueMiss: QueueMiss?,
+    preparingMap: Boolean,
     onPlay: (PlayRequest) -> Unit,
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
@@ -306,6 +319,7 @@ private fun Playing(
 
             MatchStatus.NoMatch -> NoMatchActions(
                 queueMiss,
+                preparingMap,
                 { onChooseChart(track.trackUri, track.title) },
                 { onSearch(track) },
             )
