@@ -130,4 +130,28 @@ class MigrationTest {
             close()
         }
     }
+
+    @Test
+    fun version6BecomesVersion7AddingTheQueueDownloads() {
+        helper.createDatabase(6).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId, separateGuitar) " +
+                    "VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1, 0)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(7).apply {
+            execSQL(
+                "INSERT INTO queue_downloads (chartId, trackUri, downloadedAtEpochMs, played) " +
+                    "VALUES ('a', 'spotify:track:x', 1, 0)",
+            )
+            prepare("SELECT COUNT(*) FROM queue_downloads").use {
+                it.step()
+                assertEquals(1L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

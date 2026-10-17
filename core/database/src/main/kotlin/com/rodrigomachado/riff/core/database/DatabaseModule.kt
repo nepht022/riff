@@ -34,4 +34,7 @@ object DatabaseModule {
 
     @Provides
     fun aiSeparationDao(database: RiffDatabase): AiSeparationDao = database.aiSeparationDao()
+
+    @Provides
+    fun queueDownloadDao(database: RiffDatabase): QueueDownloadDao = database.queueDownloadDao()
 }

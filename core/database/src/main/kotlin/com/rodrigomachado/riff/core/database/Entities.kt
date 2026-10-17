@@ -95,3 +95,15 @@ data class AiSeparationEntity(
     val bytes: Long,
     val createdAtEpochMs: Long,
 )
+
+/** Mapa baixado sozinho pela fila do Spotify; sai quando a música passa sem ser jogada (se a opção estiver ligada). */
+@Entity(
+    tableName = "queue_downloads",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+)
+data class QueueDownloadEntity(
+    @PrimaryKey val chartId: String,
+    val trackUri: String,
+    val downloadedAtEpochMs: Long,
+    val played: Boolean,
+)
