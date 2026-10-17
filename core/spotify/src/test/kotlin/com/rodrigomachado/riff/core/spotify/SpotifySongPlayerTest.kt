@@ -78,6 +78,78 @@ class SpotifySongPlayerTest {
         assertEquals(150L, player.positionMs)
     }
 
+    /**
+     * Registro no S25: o Spotify avisa "tocando em 0" antes de o áudio andar; aceitar fazia a pista correr ~100 ms
+     * na frente e voltar. A partida só começa quando a posição avança.
+     */
+    @Test
+    fun theStartWaitsUntilSpotifyActuallyMoves() = runTest {
+        val player = prepared()
+        player.play()
+
+        now += 30
+        emit(state(position = 0))
+        now += 100
+        emit(state(position = 0)) // ainda parado
+        assertTrue(player.isStarting)
+        assertEquals(0L, player.positionMs)
+
+        now += 7
+        emit(state(position = 4))
+        assertFalse(player.isStarting)
+        now += 40
+        assertEquals(44L, player.positionMs)
+    }
+
+    /** Registro no S25, retomada em 5.631: "tocando em 5.631" e, 73 ms depois, só 5.646. */
+    @Test
+    fun resumingWaitsUntilSpotifyActuallyMoves() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 5_584))
+        now += 47
+        player.pause() // o jogo para em 5.631
+        now += 286
+        emit(state(position = 5_640, isPaused = true))
+
+        now += 970
+        player.play()
+        now += 34
+        emit(state(position = 5_631, isPaused = true))
+        now += 29
+        emit(state(position = 5_631)) // "tocando", mas ainda parado
+        now += 73
+        assertTrue(player.isStarting)
+        assertEquals(5_631L, player.positionMs)
+
+        emit(state(position = 5_646))
+        assertFalse(player.isStarting)
+        assertEquals(5_646L, player.positionMs)
+    }
+
+    /** Logo depois de o jogo pausar, um "tocando" atrasado não é retomada de fora (o menu de pausa piscava). */
+    @Test
+    fun aLatePlayingStateRightAfterPausingIsIgnored() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 30_000))
+        now += 500
+        player.pause() // o jogo para em 30.500
+
+        now += 100
+        emit(state(position = 30_600)) // o Spotify ainda não obedeceu
+        assertFalse(player.isPlaying)
+        assertEquals(30_500L, player.positionMs)
+
+        now += 200
+        emit(state(position = 30_700, isPaused = true)) // obedeceu
+        now += 3_000
+        emit(state(position = 30_700)) // agora sim: alguém retomou pela notificação
+        assertTrue(player.isPlaying)
+    }
+
     @Test
     fun afterPlayThePositionWaitsUntilSpotifyConfirms() = runTest {
         val player = prepared()
