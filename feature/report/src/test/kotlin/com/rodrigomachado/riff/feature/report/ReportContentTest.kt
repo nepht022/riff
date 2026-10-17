@@ -9,6 +9,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -69,7 +71,7 @@ class ReportContentTest {
         composeRule.onNodeWithText("Outro").assertExists()
         composeRule.onNodeWithText("O que aconteceu?").assertExists()
         composeRule.onNodeWithText("Seu email (opcional)").performScrollTo().assertExists()
-        composeRule.onNodeWithTag(ReportTestTags.INCLUDE_DEVICE).performScrollTo().assertIsOn()
+        composeRule.onNode(hasText("Incluir informações do aparelho") and isToggleable()).performScrollTo().assertIsOn()
         composeRule.onNodeWithText("Riff 1.4 · Android 16 · samsung SM-S931B · pt-BR").performScrollTo().assertExists()
     }
 
@@ -80,7 +82,7 @@ class ReportContentTest {
         composeRule.onNodeWithText("Sugestão").performClick()
         composeRule.onNodeWithTag(ReportTestTags.TEXT).performTextInput("Trava")
         composeRule.onNodeWithTag(ReportTestTags.CONTACT).performScrollTo().performTextInput("eu@x.com")
-        composeRule.onNodeWithTag(ReportTestTags.INCLUDE_DEVICE).performScrollTo().performClick()
+        composeRule.onNodeWithText("Incluir informações do aparelho").performScrollTo().performClick()
 
         assertEquals(listOf("kind:SUGGESTION", "text:Trava", "contact:eu@x.com", "device:false"), events)
     }
@@ -148,7 +150,9 @@ class ReportContentTest {
     fun withTheDeviceInfoOffTheSwitchShowsIt() {
         show(ReportUiState(device = device, includeDevice = false))
 
-        composeRule.onNodeWithTag(ReportTestTags.INCLUDE_DEVICE).performScrollTo().assertIsOff()
+        composeRule.onNode(
+            hasText("Incluir informações do aparelho") and isToggleable(),
+        ).performScrollTo().assertIsOff()
     }
 
     @Test
@@ -158,5 +162,16 @@ class ReportContentTest {
         composeRule.onNodeWithText("Voltar").performClick()
 
         assertEquals(listOf("back"), events)
+    }
+
+    /** O TalkBack lê o nome do interruptor, e tocar na linha inteira liga e desliga. */
+    @Test
+    fun theWholeDeviceRowTogglesAndIsNamed() {
+        show(ReportUiState(device = device))
+
+        composeRule.onNodeWithText("Incluir informações do aparelho").performScrollTo().performClick()
+
+        assertEquals(listOf("device:false"), events)
+        composeRule.onNode(hasText("Incluir informações do aparelho") and isToggleable()).assertIsOn()
     }
 }

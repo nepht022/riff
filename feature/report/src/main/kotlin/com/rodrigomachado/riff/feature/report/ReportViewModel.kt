@@ -1,9 +1,11 @@
 package com.rodrigomachado.riff.feature.report
 
 import android.os.SystemClock
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,27 +59,49 @@ class ReportCooldown(private val now: () -> Long) {
 
 @HiltViewModel
 class ReportViewModel @Inject constructor(
+    private val saved: SavedStateHandle,
     private val sender: ReportSender,
     private val cooldown: ReportCooldown,
     deviceInfo: DeviceInfoSource,
 ) : ViewModel() {
+    // O que foi escrito fica no estado salvo: volta mesmo se o Android fechar o Riff em segundo plano.
     private val state = MutableStateFlow(
         ReportUiState(
+            kind = saved.get<String>(KIND)?.let { name -> ReportKind.entries.firstOrNull { it.name == name } }
+                ?: ReportKind.PROBLEM,
+            text = saved[TEXT] ?: "",
+            contact = saved[CONTACT] ?: "",
+            includeDevice = saved[INCLUDE_DEVICE] ?: true,
             device = deviceInfo.read(),
             status = if (sender.isConfigured) ReportStatus.EDITING else ReportStatus.NOT_CONFIGURED,
         ),
     )
     val uiState: StateFlow<ReportUiState> = state.asStateFlow()
 
-    fun setKind(kind: ReportKind) = state.update { it.copy(kind = kind) }
+    fun setKind(kind: ReportKind) {
+        saved[KIND] = kind.name
+        state.update { it.copy(kind = kind) }
+    }
 
-    fun setText(text: String) = state.update { it.copy(text = text.take(MAX_TEXT)) }
+    fun setText(text: String) {
+        val cut = text.take(MAX_TEXT)
+        saved[TEXT] = cut
+        state.update { it.copy(text = cut) }
+    }
 
-    fun setContact(contact: String) = state.update { it.copy(contact = contact.take(MAX_CONTACT)) }
+    fun setContact(contact: String) {
+        val cut = contact.take(MAX_CONTACT)
+        saved[CONTACT] = cut
+        state.update { it.copy(contact = cut) }
+    }
 
-    fun setIncludeDevice(include: Boolean) = state.update { it.copy(includeDevice = include) }
+    fun setIncludeDevice(include: Boolean) {
+        saved[INCLUDE_DEVICE] = include
+        state.update { it.copy(includeDevice = include) }
+    }
 
-    @Suppress("SwallowedException") // a falha vira a mensagem na tela; o texto fica para tentar de novo
+    // Qualquer falha (sem internet, rede bloqueada pelo aparelho) vira a mensagem na tela; o texto fica.
+    @Suppress("SwallowedException", "TooGenericExceptionCaught")
     fun send() {
         val current = state.value
         if (!current.canSend) return
@@ -96,7 +120,9 @@ class ReportViewModel @Inject constructor(
             val sent = try {
                 sender.send(report)
                 true
-            } catch (e: ReportFailedException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 false
             }
             if (sent) cooldown.sent()
@@ -107,5 +133,9 @@ class ReportViewModel @Inject constructor(
     companion object {
         const val MAX_TEXT = 4_000
         const val MAX_CONTACT = 200
+        private const val KIND = "kind"
+        private const val TEXT = "text"
+        private const val CONTACT = "contact"
+        private const val INCLUDE_DEVICE = "includeDevice"
     }
 }

@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.report
 
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,7 +29,8 @@ class ReportViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = ReportViewModel(sender, cooldown) { device }
+    private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) =
+        ReportViewModel(saved, sender, cooldown) { device }
 
     @Test
     fun aFilledReportIsSentWithTheDeviceInfoAndThanks() = runTest {
@@ -133,6 +135,36 @@ class ReportViewModelTest {
         sender.isConfigured = false
 
         assertEquals(ReportStatus.NOT_CONFIGURED, viewModel().uiState.value.status)
+    }
+
+    /** O Android pode fechar o Riff em segundo plano enquanto a pessoa escreve: o texto volta com a tela. */
+    @Test
+    fun whatWasWrittenSurvivesTheAppBeingClosedInTheBackground() = runTest {
+        val saved = SavedStateHandle()
+        viewModel(saved).apply {
+            setKind(ReportKind.OTHER)
+            setText("Relato comprido")
+            setContact("eu@exemplo.com")
+            setIncludeDevice(false)
+        }
+
+        val restored = viewModel(saved).uiState.value
+
+        assertEquals(ReportKind.OTHER, restored.kind)
+        assertEquals("Relato comprido", restored.text)
+        assertEquals("eu@exemplo.com", restored.contact)
+        assertFalse(restored.includeDevice)
+    }
+
+    @Test
+    fun anUnexpectedErrorWhileSendingDoesNotCloseTheApp() = runTest {
+        sender.failure = SecurityException("rede bloqueada pelo aparelho")
+        val vm = viewModel()
+        vm.setText("Trava")
+
+        vm.send()
+
+        assertEquals(ReportStatus.FAILED, vm.uiState.value.status)
     }
 }
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -155,7 +157,15 @@ private fun ReportForm(
 /** O interruptor e, embaixo, exatamente o que vai junto. */
 @Composable
 private fun DeviceRow(device: DeviceInfo, include: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // A linha toda liga e desliga, e o leitor de tela lê o nome junto com o estado.
+    Row(
+        Modifier.fillMaxWidth().toggleable(
+            value = include,
+            role = Role.Switch,
+            onValueChange = withMenuSound(MenuSound.NAVIGATE, onChange),
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.report_device_title),
@@ -170,7 +180,7 @@ private fun DeviceRow(device: DeviceInfo, include: Boolean, onChange: (Boolean) 
         }
         Switch(
             checked = include,
-            onCheckedChange = withMenuSound(MenuSound.NAVIGATE, onChange),
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,

@@ -60,8 +60,10 @@ class ReportSenderTest {
     }
 
     @Test
-    fun withoutAnAddressSendingIsNotConfigured() {
-        assertFalse(AppsScriptReportSender("") { _, _ -> 200 to "" }.isConfigured)
+    fun withoutAnHttpsAddressSendingIsNotConfigured() {
+        for (url in listOf("", "  ", "http://script.example/exec", "script.example/exec")) {
+            assertFalse(url, AppsScriptReportSender(url) { _, _ -> 200 to "" }.isConfigured)
+        }
     }
 
     private fun report() = BugReport(ReportKind.OTHER, "Oi", null, null)

@@ -31,7 +31,7 @@ fun interface JsonPost {
 class AppsScriptReportSender(private val url: String, private val transport: JsonPost) : ReportSender {
     @Inject constructor() : this(BuildConfig.REPORT_URL, UrlConnectionJsonPost)
 
-    override val isConfigured: Boolean get() = url.isNotBlank()
+    override val isConfigured: Boolean get() = url.startsWith("https://")
 
     override suspend fun send(report: BugReport) {
         if (!isConfigured) throw ReportFailedException("envio de relatos não configurado")
@@ -54,7 +54,8 @@ class AppsScriptReportSender(private val url: String, private val transport: Jso
 
 /** HTTP do próprio Android. O Apps Script responde com um redirecionamento, que o Android segue sozinho. */
 object UrlConnectionJsonPost : JsonPost {
-    private const val TIMEOUT_MS = 15_000
+    // O Apps Script parado demora a acordar: prazo curto daria "falhou" com o email já a caminho.
+    private const val TIMEOUT_MS = 30_000
 
     override suspend fun post(url: String, json: String): Pair<Int, String> = withContext(Dispatchers.IO) {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
