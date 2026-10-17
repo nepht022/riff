@@ -22,13 +22,14 @@ class ReportSenderTest {
 
     @Test
     fun theReportGoesToTheScriptWithEveryField() = runTest {
-        sender.send(BugReport(ReportKind.PROBLEM, "A nota some", "eu@exemplo.com", device))
+        sender.send(BugReport(ReportKind.PROBLEM, "A nota some", "eu@exemplo.com", device, ReportCategory.SYNC))
 
         val (url, json) = sent.single()
         val body = JSONObject(json)
         assertEquals("https://script.example/exec", url)
         assertEquals("problema", body.getString("tipo"))
         assertEquals("A nota some", body.getString("texto"))
+        assertEquals("Som ou notas fora de sincronia", body.getString("categoria"))
         assertEquals("eu@exemplo.com", body.getString("contato"))
         assertEquals("1.4", body.getJSONObject("aparelho").getString("versaoDoApp"))
         assertEquals("samsung SM-S931B", body.getJSONObject("aparelho").getString("modelo"))
@@ -41,6 +42,7 @@ class ReportSenderTest {
         val body = JSONObject(sent.single().second)
         assertEquals("sugestao", body.getString("tipo"))
         assertFalse(body.has("contato"))
+        assertFalse(body.has("categoria"))
         assertFalse(body.has("aparelho"))
     }
 

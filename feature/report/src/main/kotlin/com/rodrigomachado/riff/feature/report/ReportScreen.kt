@@ -49,6 +49,7 @@ fun ReportScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: R
     ReportContent(
         state = state,
         onKind = viewModel::setKind,
+        onCategory = viewModel::setCategory,
         onText = viewModel::setText,
         onContact = viewModel::setContact,
         onIncludeDevice = viewModel::setIncludeDevice,
@@ -69,6 +70,7 @@ fun ReportContent(
     onSend: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onCategory: (ReportCategory) -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
@@ -91,7 +93,7 @@ fun ReportContent(
                 modifier = Modifier.testTag(ReportTestTags.DONE),
             )
         } else {
-            ReportForm(state, onKind, onText, onContact, onIncludeDevice)
+            ReportForm(state, onKind, onCategory, onText, onContact, onIncludeDevice)
             StatusMessage(state.status)
             PosterButton(
                 stringResource(
@@ -110,6 +112,7 @@ fun ReportContent(
 private fun ReportForm(
     state: ReportUiState,
     onKind: (ReportKind) -> Unit,
+    onCategory: (ReportCategory) -> Unit,
     onText: (String) -> Unit,
     onContact: (String) -> Unit,
     onIncludeDevice: (Boolean) -> Unit,
@@ -128,10 +131,12 @@ private fun ReportForm(
             )
         }
     }
+    val categories = ReportCategory.forKind(state.kind)
+    if (categories.isNotEmpty()) CategoryField(categories, state.category, onCategory)
     OutlinedTextField(
         value = state.text,
         onValueChange = onText,
-        label = { Text(stringResource(R.string.report_text_label)) },
+        label = { Text(stringResource(textLabel(state.kind))) },
         minLines = TEXT_LINES,
         modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.TEXT),
     )
@@ -202,6 +207,12 @@ private fun StatusMessage(status: ReportStatus) {
         ReportStatus.EDITING, ReportStatus.SENDING, ReportStatus.SENT -> null
     } ?: return
     Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, color = RiffColors.Paper)
+}
+
+private fun textLabel(kind: ReportKind) = when (kind) {
+    ReportKind.PROBLEM -> R.string.report_text_label
+    ReportKind.SUGGESTION -> R.string.report_text_label_suggestion
+    ReportKind.OTHER -> R.string.report_text_label_other
 }
 
 @Composable

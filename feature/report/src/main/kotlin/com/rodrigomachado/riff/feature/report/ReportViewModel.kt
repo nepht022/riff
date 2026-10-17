@@ -18,6 +18,7 @@ enum class ReportStatus { EDITING, SENDING, SENT, FAILED, WAIT, NOT_CONFIGURED }
 
 data class ReportUiState(
     val kind: ReportKind = ReportKind.PROBLEM,
+    val category: ReportCategory? = null,
     val text: String = "",
     val contact: String = "",
     val includeDevice: Boolean = true,
@@ -27,8 +28,11 @@ data class ReportUiState(
     /** Email opcional: vazio vale; preenchido, precisa parecer um email. */
     val contactInvalid: Boolean get() = contact.isNotBlank() && !EMAIL.matches(contact.trim())
 
+    /** Problema e Sugestão pedem uma categoria; Outro não tem. */
+    val needsCategory: Boolean get() = category == null && ReportCategory.forKind(kind).isNotEmpty()
+
     val canSend: Boolean
-        get() = text.isNotBlank() && !contactInvalid &&
+        get() = text.isNotBlank() && !contactInvalid && !needsCategory &&
             status != ReportStatus.SENDING && status != ReportStatus.NOT_CONFIGURED
 
     private companion object {
@@ -69,6 +73,9 @@ class ReportViewModel @Inject constructor(
         ReportUiState(
             kind = saved.get<String>(KIND)?.let { name -> ReportKind.entries.firstOrNull { it.name == name } }
                 ?: ReportKind.PROBLEM,
+            category = saved.get<String>(
+                CATEGORY,
+            )?.let { name -> ReportCategory.entries.firstOrNull { it.name == name } },
             text = saved[TEXT] ?: "",
             contact = saved[CONTACT] ?: "",
             includeDevice = saved[INCLUDE_DEVICE] ?: true,
@@ -80,7 +87,14 @@ class ReportViewModel @Inject constructor(
 
     fun setKind(kind: ReportKind) {
         saved[KIND] = kind.name
-        state.update { it.copy(kind = kind) }
+        // A categoria de um tipo não serve para outro.
+        if (state.value.category?.kind != kind) saved[CATEGORY] = null
+        state.update { it.copy(kind = kind, category = it.category?.takeIf { category -> category.kind == kind }) }
+    }
+
+    fun setCategory(category: ReportCategory) {
+        saved[CATEGORY] = category.name
+        state.update { it.copy(category = category, kind = category.kind) }
     }
 
     fun setText(text: String) {
@@ -115,6 +129,7 @@ class ReportViewModel @Inject constructor(
             text = current.text.trim(),
             contact = current.contact.trim().ifBlank { null },
             device = current.device.takeIf { current.includeDevice },
+            category = current.category,
         )
         viewModelScope.launch {
             val sent = try {
@@ -134,6 +149,7 @@ class ReportViewModel @Inject constructor(
         const val MAX_TEXT = 4_000
         const val MAX_CONTACT = 200
         private const val KIND = "kind"
+        private const val CATEGORY = "category"
         private const val TEXT = "text"
         private const val CONTACT = "contact"
         private const val INCLUDE_DEVICE = "includeDevice"

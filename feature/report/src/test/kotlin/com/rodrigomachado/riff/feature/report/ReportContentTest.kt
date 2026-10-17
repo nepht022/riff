@@ -45,6 +45,7 @@ class ReportContentTest {
                 ReportContent(
                     state = state,
                     onKind = { events += "kind:$it" },
+                    onCategory = { events += "category:$it" },
                     onText = {
                         events += "text:$it"
                         state = state.copy(text = it)
@@ -96,7 +97,7 @@ class ReportContentTest {
 
     @Test
     fun sendingSoundsLikeConfirming() {
-        show(ReportUiState(text = "Trava", device = device))
+        show(ReportUiState(text = "Trava", category = ReportCategory.CRASH, device = device))
 
         composeRule.onNodeWithText("Enviar").performScrollTo().assertIsEnabled().performClick()
 
@@ -173,5 +174,37 @@ class ReportContentTest {
 
         assertEquals(listOf("device:false"), events)
         composeRule.onNode(hasText("Incluir informações do aparelho") and isToggleable()).assertIsOn()
+    }
+
+    @Test
+    fun theTextAsksForWhatFitsTheKind() {
+        show(ReportUiState(kind = ReportKind.SUGGESTION, device = device))
+        composeRule.onNodeWithText("Dê uma sugestão de melhoria!").assertExists()
+    }
+
+    @Test
+    fun otherHasNoCategoryAndAsksForAMessage() {
+        show(ReportUiState(kind = ReportKind.OTHER, device = device))
+
+        composeRule.onNodeWithText("Escreva sua mensagem").assertExists()
+        composeRule.onNodeWithText("Escolha uma categoria").assertDoesNotExist()
+    }
+
+    @Test
+    fun aCategoryIsChosenFromTheList() {
+        show(ReportUiState(device = device))
+
+        composeRule.onNodeWithText("Escolha uma categoria").performClick()
+        composeRule.onNodeWithText("Spotify").performScrollTo().performClick()
+
+        assertEquals(listOf("category:SPOTIFY"), events)
+        composeRule.onNodeWithText("Guitarra separada por IA").assertDoesNotExist() // a lista fecha
+    }
+
+    @Test
+    fun theChosenCategoryIsShown() {
+        show(ReportUiState(category = ReportCategory.LOOK, kind = ReportKind.SUGGESTION, device = device))
+
+        composeRule.onNodeWithText("Visual da pista").assertExists()
     }
 }

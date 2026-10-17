@@ -30,18 +30,22 @@ class ReportViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) =
-        ReportViewModel(saved, sender, cooldown) { device }
+        ReportViewModel(saved, sender, cooldown) { device }.also { it.setCategory(ReportCategory.CRASH) }
 
     @Test
     fun aFilledReportIsSentWithTheDeviceInfoAndThanks() = runTest {
         val vm = viewModel()
         vm.setKind(ReportKind.SUGGESTION)
+        vm.setCategory(ReportCategory.SONGS)
         vm.setText("  Mais músicas  ")
         vm.setContact(" eu@exemplo.com ")
 
         vm.send()
 
-        assertEquals(BugReport(ReportKind.SUGGESTION, "Mais músicas", "eu@exemplo.com", device), sender.sent.single())
+        assertEquals(
+            BugReport(ReportKind.SUGGESTION, "Mais músicas", "eu@exemplo.com", device, ReportCategory.SONGS),
+            sender.sent.single(),
+        )
         assertEquals(ReportStatus.SENT, vm.uiState.value.status)
     }
 
@@ -148,7 +152,7 @@ class ReportViewModelTest {
             setIncludeDevice(false)
         }
 
-        val restored = viewModel(saved).uiState.value
+        val restored = ReportViewModel(saved, sender, cooldown) { device }.uiState.value
 
         assertEquals(ReportKind.OTHER, restored.kind)
         assertEquals("Relato comprido", restored.text)
@@ -165,6 +169,40 @@ class ReportViewModelTest {
         vm.send()
 
         assertEquals(ReportStatus.FAILED, vm.uiState.value.status)
+    }
+
+    @Test
+    fun problemsAndSuggestionsNeedACategoryButOtherDoesNot() = runTest {
+        val vm = ReportViewModel(SavedStateHandle(), sender, cooldown) { device }
+        vm.setText("Trava")
+        assertFalse(vm.uiState.value.canSend) // Problema sem categoria
+
+        vm.setCategory(ReportCategory.SPOTIFY)
+        assertTrue(vm.uiState.value.canSend)
+
+        vm.setKind(ReportKind.SUGGESTION) // a categoria do problema não serve para sugestão
+        assertNull(vm.uiState.value.category)
+        assertFalse(vm.uiState.value.canSend)
+
+        vm.setKind(ReportKind.OTHER)
+        assertTrue(vm.uiState.value.canSend)
+        vm.send()
+        assertNull(sender.sent.single().category)
+    }
+
+    @Test
+    fun theCategorySurvivesTheAppBeingClosed() = runTest {
+        val saved = SavedStateHandle()
+        viewModel(saved).setCategory(ReportCategory.ENCORE)
+
+        assertEquals(ReportCategory.ENCORE, ReportViewModel(saved, sender, cooldown) { device }.uiState.value.category)
+    }
+
+    @Test
+    fun eachKindHasItsOwnCategories() {
+        assertEquals(9, ReportCategory.forKind(ReportKind.PROBLEM).size)
+        assertEquals(6, ReportCategory.forKind(ReportKind.SUGGESTION).size)
+        assertTrue(ReportCategory.forKind(ReportKind.OTHER).isEmpty())
     }
 }
 

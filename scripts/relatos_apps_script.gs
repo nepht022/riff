@@ -23,14 +23,17 @@ var TYPES = { problema: 'Problema', sugestao: 'Sugestão', outro: 'Outro' };
 
 function doPost(e) {
   try {
-    if (!e || !e.postData || e.postData.contents.length > MAX_BODY) return answer(false);
-    if (!withinHourlyLimit()) return answer(false);
+    if (!e || !e.postData) return refuse('sem corpo');
+    if (e.postData.contents.length > MAX_BODY) return refuse('grande demais');
+    if (!withinHourlyLimit()) return refuse('limite por hora');
     var data = JSON.parse(e.postData.contents);
     var text = String(data.texto || '').slice(0, MAX_TEXT).trim();
-    if (!text) return answer(false);
+    if (!text) return refuse('texto vazio');
     var type = TYPES.hasOwnProperty(data.tipo) ? TYPES[data.tipo] : 'Outro';
     var contact = clean(data.contato);
-    var lines = ['Tipo: ' + type, '', text, ''];
+    var category = clean(data.categoria);
+    var heading = category ? type + ' · ' + category : type;
+    var lines = ['Tipo: ' + heading, '', text, ''];
     if (contact) lines.push('Contato: ' + contact);
     if (data.aparelho) {
       var d = data.aparelho;
@@ -39,7 +42,7 @@ function doPost(e) {
     }
     var message = {
       to: Session.getEffectiveUser().getEmail(),
-      subject: '[Riff] ' + type + ': ' + clean(text.split('\n')[0]).slice(0, 60),
+      subject: '[Riff] ' + heading + ': ' + clean(text.split('\n')[0]).slice(0, 60),
       body: lines.join('\n'), // só texto: nada do relato vira HTML
       name: 'Riff',
     };
@@ -53,11 +56,27 @@ function doPost(e) {
       delete message.replyTo;
       MailApp.sendEmail(message);
     }
+    console.log('relato enviado: ' + message.subject);
     return answer(true);
   } catch (err) {
     console.error(err); // aparece em Execuções, no editor do script
-    return answer(false);
+    return answer(false, String(err));
   }
+}
+
+/** Recusa registrando o motivo (aparece em Execuções e na resposta). */
+function refuse(reason) {
+  console.warn('recusado: ' + reason);
+  return answer(false, reason);
+}
+
+/**
+ * Para testar no editor: escolha "testarEnvio" e clique em Executar. Na primeira vez o Google pede autorização
+ * para enviar email; depois chega um email "[Riff] Outro: Teste..." na sua caixa.
+ */
+function testarEnvio() {
+  var resposta = doPost({ postData: { contents: JSON.stringify({ tipo: 'outro', texto: 'Teste pelo editor do script' }) } });
+  console.log(resposta.getContent());
 }
 
 /** Uma linha só, sem caracteres de controle, com tamanho máximo. */
@@ -81,6 +100,8 @@ function withinHourlyLimit() {
   }
 }
 
-function answer(ok) {
-  return ContentService.createTextOutput(JSON.stringify({ ok: ok })).setMimeType(ContentService.MimeType.JSON);
+function answer(ok, reason) {
+  var result = { ok: ok };
+  if (reason) result.motivo = reason;
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 }

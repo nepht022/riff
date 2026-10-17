@@ -16,4 +16,24 @@
     <string name="report_failed">Não deu para enviar. Confira a internet e tente de novo.</string>
     <string name="report_wait">Você acabou de enviar um relato. Espere alguns minutos para enviar outro.</string>
     <string name="report_not_configured">O envio de relatos não está configurado nesta versão do Riff.</string>
+    <string name="report_text_label_suggestion">Dê uma sugestão de melhoria!</string>
+    <string name="report_text_label_other">Escreva sua mensagem</string>
+    <string name="report_category_hint">Escolha uma categoria</string>
+    <string name="report_category_title">Categoria</string>
+    <string name="report_category_close">Fechar</string>
+    <string name="report_category_crash">App travou ou fechou sozinho</string>
+    <string name="report_category_slow">Jogo lento ou engasgando</string>
+    <string name="report_category_sync">Som ou notas fora de sincronia</string>
+    <string name="report_category_chart">Mapa ou notas erradas</string>
+    <string name="report_category_spotify">Spotify</string>
+    <string name="report_category_library">Biblioteca e importar mapas</string>
+    <string name="report_category_encore">Pesquisa e download do Encore</string>
+    <string name="report_category_ai">Guitarra separada por IA</string>
+    <string name="report_category_other_problem">Outro problema</string>
+    <string name="report_category_songs">Músicas e mapas</string>
+    <string name="report_category_gameplay">Jogabilidade</string>
+    <string name="report_category_look">Visual da pista</string>
+    <string name="report_category_sounds">Sons</string>
+    <string name="report_category_screens">Telas e menus</string>
+    <string name="report_category_other_suggestion">Outra sugestão</string>
 </resources>

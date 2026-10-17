@@ -20,7 +20,12 @@ class ReportScreenshotTest {
     @Test
     fun form() = capture(
         "Report",
-        ReportUiState(text = "A música trava no refrão de Teen Spirit.", contact = "eu@exemplo.com", device = device),
+        ReportUiState(
+            text = "A música trava no refrão de Teen Spirit.",
+            contact = "eu@exemplo.com",
+            category = ReportCategory.SYNC,
+            device = device,
+        ),
     )
 
     @Test
