@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -259,15 +258,25 @@ class NowPlayingContentTest {
         assertTrue("$first: $a, $second: $b", b.left >= a.right && b.top < a.bottom && a.top < b.bottom)
     }
 
+    /** O botão principal começa na mesma reta do texto do mapa, à esquerda. */
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
-    fun playAndChooseOtherAreCentered() {
+    fun playLinesUpWithTheChartText() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+        assertLinedUp("Mapa: Bohemian Rhapsody — Queen", "Jogar")
+    }
 
-        val play = composeRule.onAllNodesWithText("Jogar").onLast().getUnclippedBoundsInRoot()
-        val other = composeRule.onAllNodesWithText("Escolher outro").onLast().getUnclippedBoundsInRoot()
-        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
-        assertEquals((root.left + root.right).value / 2, (play.left + other.right).value / 2, 1f)
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun chooseLinesUpWithTheNoMatchText() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+        assertLinedUp("Nenhum mapa da biblioteca casa com esta música.", "Escolher mapa")
+    }
+
+    private fun assertLinedUp(text: String, button: String) {
+        val above = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
+        val below = composeRule.onAllNodesWithText(button).onLast().getUnclippedBoundsInRoot()
+        assertEquals(above.left.value, below.left.value, 1f)
     }
 
     @Test

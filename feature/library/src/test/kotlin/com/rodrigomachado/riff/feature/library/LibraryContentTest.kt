@@ -416,6 +416,7 @@ class LibraryContentTest {
                         onStartSelecting = { events += "select" },
                         onToggle = { events += "toggle:$it" },
                         onCancelSelecting = { events += "cancelSelect" },
+                        onToggleAll = { events += "toggleAll" },
                         onDeleteSelected = { events += "deleteSelected" },
                         onConfirm = { events += "confirm" },
                         onDismiss = { events += "dismiss" },
@@ -455,6 +456,41 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Cancelar").performClick()
 
         assertEquals(listOf("toggle:b", "deleteSelected", "cancelSelect"), events)
+    }
+
+    @Test
+    fun selectAllSitsOnTheLineOfDeleteAndCancel() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        val delete = composeRule.onNodeWithText("Excluir (1)").getUnclippedBoundsInRoot()
+        val all = composeRule.onNodeWithContentDescription("Selecionar todos").getUnclippedBoundsInRoot()
+        val middle = (delete.top.value + delete.bottom.value) / 2
+        assertEquals(middle, (all.top.value + all.bottom.value) / 2, 4f)
+        composeRule.onNodeWithContentDescription("Selecionar todos").performClick()
+
+        assertEquals(listOf("toggleAll"), events)
+    }
+
+    @Test
+    fun withEverythingChosenTheIconOffersToClear() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                protectedIds = setOf("b"),
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        composeRule.onNodeWithContentDescription("Desmarcar todos").assertExists()
     }
 
     @Test

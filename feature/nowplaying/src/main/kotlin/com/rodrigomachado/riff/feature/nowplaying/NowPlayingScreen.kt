@@ -221,12 +221,12 @@ private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     }
 }
 
-/** O botão principal e a alternativa lado a lado, centralizados. */
+/** O botão principal e a alternativa lado a lado, na mesma reta do texto acima. */
 @Composable
 private fun ActionRow(content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )

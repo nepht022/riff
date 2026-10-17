@@ -421,6 +421,21 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun selectAllMarksEveryDeletableChartAndTheSecondTapClearsThem() = runTest {
+        libraryWith(at("solto", "raiz"), at("a", "raiz/A"), at("b", "raiz/B"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("a")
+
+        vm.onToggleAll()
+        assertEquals(setOf("a", "b"), vm.uiState.value.deletion.selected)
+
+        vm.onToggleAll()
+        assertEquals(emptySet<String>(), vm.uiState.value.deletion.selected)
+        assertEquals(true, vm.uiState.value.deletion.selecting)
+    }
+
+    @Test
     fun aChartLooseInTheRootCannotBeDeleted() = runTest {
         libraryWith(at("solto", "raiz"), at("a", "raiz/A"))
 

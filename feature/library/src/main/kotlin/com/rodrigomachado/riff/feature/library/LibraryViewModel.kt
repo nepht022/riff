@@ -196,6 +196,12 @@ class LibraryViewModel @Inject constructor(
         it.copy(selected = if (chartId in it.selected) it.selected - chartId else it.selected + chartId)
     }
 
+    /** Marca todos os mapas que dá para excluir; com todos já marcados, desmarca. */
+    fun onToggleAll() = deletionState.update { deletion ->
+        val deletable = uiState.value.let { state -> state.charts.map { it.id }.filter { it !in state.protectedIds } }
+        deletion.copy(selected = if (deletion.selected.containsAll(deletable)) emptySet() else deletable.toSet())
+    }
+
     fun onCancelSelecting() {
         deletionState.value = DeletionState()
     }

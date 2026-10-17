@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -18,8 +20,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -39,16 +45,21 @@ class DeletionCallbacks(
     val onStartSelecting: () -> Unit = {},
     val onToggle: (String) -> Unit = {},
     val onCancelSelecting: () -> Unit = {},
+    val onToggleAll: () -> Unit = {},
     val onDeleteSelected: () -> Unit = {},
     val onConfirm: () -> Unit = {},
     val onDismiss: () -> Unit = {},
     val onFailureShown: () -> Unit = {},
 )
 
-/** Na linha do Reimportar, durante a seleção: Excluir (n) e Cancelar. */
+/** Na linha do Reimportar, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos. */
 @Composable
-internal fun SelectionActions(selected: Int, callbacks: DeletionCallbacks) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+internal fun SelectionActions(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         PosterButton(
             stringResource(R.string.library_delete_selected, selected),
             onClick = callbacks.onDeleteSelected,
@@ -57,6 +68,46 @@ internal fun SelectionActions(selected: Int, callbacks: DeletionCallbacks) {
         )
         TextButton(onClick = withMenuSound(MenuSound.BACK, callbacks.onCancelSelecting)) {
             Text(stringResource(R.string.library_delete_cancel), color = RiffColors.Paper)
+        }
+        Spacer(Modifier.weight(1f))
+        SelectAll(allSelected, callbacks.onToggleAll)
+    }
+}
+
+/** Duas caixas empilhadas com o visto; cheia de vermelho quando todos já estão marcados. */
+@Composable
+private fun SelectAll(allSelected: Boolean, onClick: () -> Unit) {
+    val description = stringResource(if (allSelected) R.string.library_select_none else R.string.library_select_all)
+    Box(
+        Modifier
+            .size(48.dp)
+            .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
+            .semantics {
+                contentDescription = description
+                role = Role.Button
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(26.dp)) {
+            val stroke = 2.dp.toPx()
+            val box = size.width * 0.74f
+            val gap = size.width - box
+            val corner = CornerRadius(3.dp.toPx())
+            // A caixa de trás, só o canto à mostra.
+            drawRoundRect(RiffColors.Paper, Offset(gap, 0f), Size(box, box), corner, style = Stroke(stroke))
+            val front = Offset(0f, gap)
+            drawRoundRect(RiffColors.StageBlack, front, Size(box, box), corner)
+            if (allSelected) {
+                drawRoundRect(RiffColors.TourRed, front, Size(box, box), corner)
+            } else {
+                drawRoundRect(RiffColors.Paper, front, Size(box, box), corner, style = Stroke(stroke))
+            }
+            val check = Path().apply {
+                moveTo(box * 0.22f, gap + box * 0.52f)
+                lineTo(box * 0.42f, gap + box * 0.72f)
+                lineTo(box * 0.78f, gap + box * 0.30f)
+            }
+            drawPath(check, RiffColors.Paper, style = Stroke(stroke, cap = StrokeCap.Round))
         }
     }
 }

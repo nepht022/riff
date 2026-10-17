@@ -46,6 +46,8 @@
     <string name="library_ai_separated">Guitarra separada IA</string>
     <string name="library_select">Selecionar</string>
     <string name="library_delete_selected">Excluir (%1$d)</string>
+    <string name="library_select_all">Selecionar todos</string>
+    <string name="library_select_none">Desmarcar todos</string>
     <string name="library_delete_cancel">Cancelar</string>
     <string name="library_delete_one">Excluir %1$s</string>
     <string name="library_delete">Excluir</string>
