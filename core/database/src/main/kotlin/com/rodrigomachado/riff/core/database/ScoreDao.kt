@@ -12,6 +12,12 @@ interface ScoreDao {
     @Query("SELECT * FROM scores WHERE id = :id")
     suspend fun get(id: Long): ScoreEntity?
 
+    @Query("SELECT * FROM scores WHERE chartId = :chartId AND difficulty = :difficulty")
+    suspend fun of(chartId: String, difficulty: String): List<ScoreEntity>
+
+    @Query("SELECT * FROM scores")
+    suspend fun all(): List<ScoreEntity>
+
     // Empate: vale o recorde mais antigo (igualar não é "NEW BEST").
     @Query(
         "SELECT * FROM scores WHERE chartId = :chartId AND difficulty = :difficulty " +

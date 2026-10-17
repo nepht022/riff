@@ -9,6 +9,7 @@ import androidx.work.Configuration
 import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SystemAppLanguageStore
 import com.rodrigomachado.riff.core.data.queue.QueuePrefetcher
+import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.spotify.ForegroundActivity
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -28,6 +29,9 @@ class RiffApplication :
 
     // Só criada fora da thread da tela: monta a autorização do Spotify, que lê o Keystore.
     @Inject lateinit var queuePrefetcher: dagger.Lazy<QueuePrefetcher>
+
+    // O que ficou para o ranking sem internet vai na abertura (o repositório só nasce fora da thread da tela).
+    @Inject lateinit var ranking: dagger.Lazy<RankingRepository>
 
     // Vive enquanto o processo vive: a fila do Spotify segue em qualquer tela do Riff. Um erro inesperado fica no
     // log em vez de derrubar o app.
@@ -56,5 +60,6 @@ class RiffApplication :
         language.applyDefault()
         // Espera a opção e a conexão com o Spotify; nunca conecta sozinho.
         appScope.launch { queuePrefetcher.get().start(appScope) }
+        appScope.launch { ranking.get().flush() }
     }
 }

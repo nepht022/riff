@@ -200,4 +200,21 @@ class MigrationTest {
             close()
         }
     }
+
+    @Test
+    fun version9BecomesVersion10WithTheRankingQueue() {
+        helper.createDatabase(9).close()
+
+        helper.runMigrationsAndValidate(10).apply {
+            execSQL(
+                "INSERT INTO ranking_pending (scoreId, chartId, difficulty, title, artist, points, accuracy, combo, " +
+                    "perfect, cleanMs, createdAtEpochMs) VALUES (1, 'a', 'HARD', 'T', 'A', 100, 0.9, 5, 4, NULL, 1)",
+            )
+            prepare("SELECT COUNT(*) FROM ranking_pending").use {
+                it.step()
+                assertEquals(1L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

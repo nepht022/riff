@@ -17,8 +17,9 @@ import androidx.sqlite.execSQL
         EncoreChartEntity::class,
         AiSeparationEntity::class,
         QueueDownloadEntity::class,
+        RankingPendingEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -29,6 +30,7 @@ import androidx.sqlite.execSQL
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
+        AutoMigration(from = 9, to = 10),
     ],
 )
 abstract class RiffDatabase : RoomDatabase() {
@@ -45,6 +47,8 @@ abstract class RiffDatabase : RoomDatabase() {
     abstract fun queueDownloadDao(): QueueDownloadDao
 
     abstract fun aiSeparationDao(): AiSeparationDao
+
+    abstract fun rankingPendingDao(): RankingPendingDao
 }
 
 /** Na versão 2, um ajuste diferente de 0 só existia se alguém o escolheu: continua valendo. */

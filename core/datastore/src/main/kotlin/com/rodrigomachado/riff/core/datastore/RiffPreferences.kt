@@ -53,6 +53,16 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /** Nome de jogador do ranking e a chave deste celular (os dois juntos: um nome sem chave não vale nada). */
+    val player: Flow<Pair<String?, String?>> = safeData.map { it[PLAYER_NAME] to it[PLAYER_KEY] }
+
+    suspend fun setPlayer(name: String, key: String) {
+        dataStore.edit {
+            it[PLAYER_NAME] = name
+            it[PLAYER_KEY] = key
+        }
+    }
+
     suspend fun setLibraryRootUri(uri: String) {
         dataStore.edit { it[LIBRARY_ROOT_URI] = uri }
     }
@@ -113,6 +123,8 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val QUEUE_USE_MOBILE_DATA = booleanPreferencesKey("queue_use_mobile_data")
         val QUEUE_REPLACE_SUGGESTED = booleanPreferencesKey("queue_replace_suggested")
         val QUEUE_CLOSEST_DURATION = booleanPreferencesKey("queue_closest_duration")
+        val PLAYER_NAME = stringPreferencesKey("player_name")
+        val PLAYER_KEY = stringPreferencesKey("player_key")
         val SPOTIFY_NEXT_SONG_DIRECT = booleanPreferencesKey("spotify_next_song_direct")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")

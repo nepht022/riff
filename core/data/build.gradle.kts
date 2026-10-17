@@ -1,11 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.riff.android.library)
     alias(libs.plugins.riff.android.hilt)
     alias(libs.plugins.kover)
 }
 
+// Endereço do script do ranking (Google Apps Script) no local.properties, fora do git. Sem ele o ranking fica
+// desligado.
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "com.rodrigomachado.riff.core.data"
+    buildFeatures { buildConfig = true }
+    defaultConfig {
+        buildConfigField("String", "RANKING_URL", "\"${localProperties.getProperty("ranking.url", "")}\"")
+    }
 }
 
 dependencies {

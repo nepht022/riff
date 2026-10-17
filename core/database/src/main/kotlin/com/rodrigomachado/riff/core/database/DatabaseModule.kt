@@ -37,4 +37,7 @@ object DatabaseModule {
 
     @Provides
     fun queueDownloadDao(database: RiffDatabase): QueueDownloadDao = database.queueDownloadDao()
+
+    @Provides
+    fun rankingPendingDao(database: RiffDatabase): RankingPendingDao = database.rankingPendingDao()
 }
