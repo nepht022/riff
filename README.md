@@ -37,7 +37,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
    - o áudio: `song.ogg`, `.opus`, `.mp3` ou `.wav`.
 3. **Guitarra separada:** se a subpasta tiver `guitar.*` e pelo menos uma faixa de acompanhamento (`song`, `rhythm`, `bass`, `drums`, `drums_1` a `drums_4`, `vocals`, `vocals_1`, `vocals_2`, `keys`, `crowd`), o Riff toca todas juntas e corta só a guitarra no erro.
 4. Mapas `.sng` (o pacote do Encore e do YARG, um arquivo por música) são lidos direto: é só colocar o arquivo na pasta.
-5. **Excluir:** o **X** vermelho de cada mapa apaga a pasta dele (ou o `.sng`) do celular, junto com a guitarra separada pela IA e o recorde; **Selecionar** marca vários para excluir de uma vez. Sempre pede confirmação e não dá para desfazer. Mapas soltos direto na pasta da biblioteca não têm o X (apagar a pasta deles apagaria a biblioteca inteira).
+5. **Excluir:** o **X** vermelho de cada mapa apaga a pasta dele (ou o `.sng`) do celular, junto com a guitarra separada pela IA e o recorde; **Selecionar** marca vários para excluir de uma vez, e o ícone de caixas na mesma linha marca (ou desmarca) todos. Sempre pede confirmação e não dá para desfazer. Mapas soltos direto na pasta da biblioteca não têm o X (apagar a pasta deles apagaria a biblioteca inteira).
 6. Não use mapas da Harmonix/Neversoft (rips de Rock Band ou Guitar Hero): são conteúdo protegido. Prefira mapas feitos pela comunidade.
 
 ## Pesquisar e baixar mapas
