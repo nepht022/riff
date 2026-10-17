@@ -22,6 +22,11 @@
     <string name="nowplaying_confirm">Confirm chart</string>
     <string name="nowplaying_choose_other">Choose another</string>
     <string name="nowplaying_no_match">No chart in the library matches this song.</string>
+    <string name="nowplaying_queue_preparing">Downloading the map for this song…</string>
+    <string name="nowplaying_queue_not_found">Riff searched Encore and found no map for this song.</string>
+    <string name="nowplaying_queue_other_duration">Encore only has maps of this song with a different length. To download the closest one: Settings → Spotify.</string>
+    <string name="nowplaying_queue_search_failed">Couldn\'t search Encore right now. Riff will try again within 1 minute.</string>
+    <string name="nowplaying_queue_download_failed">Riff found a map on Encore, but the download failed.</string>
     <string name="nowplaying_choose">Choose chart</string>
     <string name="nowplaying_badge_matched">Chart found</string>
     <string name="nowplaying_badge_suggested">Confirm chart</string>

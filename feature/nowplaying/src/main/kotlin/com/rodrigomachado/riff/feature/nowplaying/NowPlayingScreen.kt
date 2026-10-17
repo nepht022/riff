@@ -29,6 +29,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -53,10 +54,17 @@ import kotlinx.coroutines.flow.first
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object NowPlayingTestTags {
     const val OPEN_LIBRARY = "nowplaying_open_library"
+    const val QUEUE_MISS = "nowplaying_queue_miss"
 }
 
-/** O que "Jogar" leva para a partida. */
-data class PlayRequest(val chartId: String, val difficulty: Difficulty, val trackUri: String, val trackOffsetMs: Int)
+/** O que "Jogar" leva para a partida; [confirmFirst]: o mapa é só sugestão e a partida abre pedindo confirmação. */
+data class PlayRequest(
+    val chartId: String,
+    val difficulty: Difficulty,
+    val trackUri: String,
+    val trackOffsetMs: Int,
+    val confirmFirst: Boolean = false,
+)
 
 @Composable
 fun NowPlayingScreen(
@@ -78,11 +86,15 @@ fun NowPlayingScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.cancelAutoPlay() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(autoPlay) {
-        val start = autoPlay as? NowPlayingAutoPlay.Action.Start ?: return@LaunchedEffect
+        val request = when (val action = autoPlay) {
+            is NowPlayingAutoPlay.Action.Start -> action.request
+            is NowPlayingAutoPlay.Action.Confirm -> action.request
+            else -> return@LaunchedEffect
+        }
         // A tela acabou de voltar da partida: a navegação só aceita a próxima quando ela estiver de volta à frente.
         lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
         viewModel.autoPlayHandled()
-        onPlay(start.request)
+        onPlay(request)
     }
     // Voltou ao Riff (por exemplo, depois de instalar ou entrar no Spotify): tenta de novo sozinho.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
@@ -157,6 +169,8 @@ fun NowPlayingContent(
 
             is NowPlayingUiState.Playing -> Playing(
                 state.nowPlaying,
+                state.queueMiss,
+                state.preparingMap,
                 onPlay,
                 onConfirm,
                 onChooseChart,
@@ -192,24 +206,27 @@ private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary:
     }
 }
 
-private fun SpotifyError.message(): Int = when (this) {
-    SpotifyError.NOT_LOGGED_IN -> R.string.nowplaying_error_not_logged_in
-    SpotifyError.NOT_AUTHORIZED -> R.string.nowplaying_error_not_authorized
-    SpotifyError.OFFLINE -> R.string.nowplaying_error_offline
-    SpotifyError.DISCONNECTED -> R.string.nowplaying_error_disconnected
-    else -> R.string.nowplaying_error_unknown
-}
-
+/** Na linha do botão principal, ocupa o espaço livre à direita e fica no meio dele. */
 @Composable
-private fun ChooseOther(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+private fun RowScope.ChooseOther(onClick: () -> Unit) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.weight(1f)) {
         Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
-    Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
+private fun NoMatchActions(queueMiss: QueueMiss?, preparingMap: Boolean, onChoose: () -> Unit, onSearch: () -> Unit) {
+    ChartText(stringResource(R.string.nowplaying_no_match))
+    val note = if (preparingMap) R.string.nowplaying_queue_preparing else queueMiss?.message()
+    note?.let {
+        Text(
+            stringResource(it),
+            Modifier.fillMaxWidth().testTag(NowPlayingTestTags.QUEUE_MISS),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RiffColors.PaperDim,
+            textAlign = TextAlign.Center,
+        )
+    }
     ActionRow {
         PosterButton(
             stringResource(R.string.nowplaying_choose),
@@ -217,24 +234,30 @@ private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
             sound = MenuSound.NAVIGATE,
             minWidth = MAIN_BUTTON_WIDTH,
         )
-        SearchEncore(onSearch)
+        SearchEncore(onSearch, Modifier.weight(1f))
     }
 }
 
-/** O botão principal e a alternativa lado a lado, centralizados. */
+/** O texto do mapa acima dos botões, no meio da tela. */
+@Composable
+private fun ChartText(text: String) {
+    Text(text, Modifier.fillMaxWidth(), color = RiffColors.Paper, textAlign = TextAlign.Center)
+}
+
+/** O botão principal à esquerda e a alternativa no meio do espaço que sobra. */
 @Composable
 private fun ActionRow(content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
 }
 
 @Composable
-private fun SearchEncore(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.width(LINK_WIDTH)) {
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = modifier) {
         Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
@@ -242,6 +265,8 @@ private fun SearchEncore(onClick: () -> Unit) {
 @Composable
 private fun Playing(
     nowPlaying: NowPlaying,
+    queueMiss: QueueMiss?,
+    preparingMap: Boolean,
     onPlay: (PlayRequest) -> Unit,
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
@@ -266,10 +291,7 @@ private fun Playing(
     BottomAnchored(top = { TrackHeader(nowPlaying, controls) }) {
         when (val match = nowPlaying.match) {
             is MatchStatus.Matched -> {
-                Text(
-                    stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist),
-                    color = RiffColors.Paper,
-                )
+                ChartText(stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist))
                 ActionRow {
                     PosterButton(
                         stringResource(R.string.nowplaying_play),
@@ -282,10 +304,7 @@ private fun Playing(
             }
 
             is MatchStatus.Suggested -> {
-                Text(
-                    stringResource(R.string.nowplaying_suggestion, match.chart.title, match.chart.artist),
-                    color = RiffColors.Paper,
-                )
+                ChartText(stringResource(R.string.nowplaying_suggestion, match.chart.title, match.chart.artist))
                 ActionRow {
                     PosterButton(
                         stringResource(R.string.nowplaying_confirm),
@@ -295,10 +314,15 @@ private fun Playing(
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
-                SearchEncore { onSearch(track) }
+                SearchEncore({ onSearch(track) })
             }
 
-            MatchStatus.NoMatch -> NoMatchActions({ onChooseChart(track.trackUri, track.title) }, { onSearch(track) })
+            MatchStatus.NoMatch -> NoMatchActions(
+                queueMiss,
+                preparingMap,
+                { onChooseChart(track.trackUri, track.title) },
+                { onSearch(track) },
+            )
         }
     }
     choosing?.let { match ->

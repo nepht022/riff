@@ -41,6 +41,12 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[NOTE_STYLE] = updated.noteStyle.name
             prefs[FRET_STYLE] = updated.fretStyle.name
             prefs[SHOW_CHART_IMAGE] = updated.showChartImage
+            prefs[QUEUE_PREFETCH] = updated.queuePrefetch
+            prefs[QUEUE_DELETE_UNPLAYED] = updated.queueDeleteUnplayed
+            prefs[QUEUE_USE_MOBILE_DATA] = updated.queueUseMobileData
+            prefs[QUEUE_REPLACE_SUGGESTED] = updated.queueReplaceSuggested
+            prefs[QUEUE_CLOSEST_DURATION] = updated.queueClosestDuration
+            prefs[SPOTIFY_NEXT_SONG_DIRECT] = updated.spotifyNextSongDirect
             prefs.remove(LEGACY_ASK_SEPARATION_ALWAYS)
             prefs.remove(LEGACY_SFX_VOLUME)
             prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
@@ -60,19 +66,27 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             noteSpeed = this[NOTE_SPEED]?.takeIf { it.isFinite() && it > 0f }
                 ?.coerceIn(Settings.MIN_NOTE_SPEED, Settings.MAX_NOTE_SPEED)
                 ?: default.noteSpeed,
-            leftHanded = this[LEFT_HANDED] ?: default.leftHanded,
+            leftHanded = flag(LEFT_HANDED, default.leftHanded),
             masterVolume = volume(MASTER_VOLUME) ?: default.masterVolume,
             hitVolume = volume(HIT_VOLUME) ?: legacyEffects ?: default.hitVolume,
             missVolume = volume(MISS_VOLUME) ?: legacyEffects ?: default.missVolume,
-            menuSounds = this[MENU_SOUNDS] ?: default.menuSounds,
-            askSeparationAlways = this[ASK_SEPARATION_ALWAYS] ?: default.askSeparationAlways,
+            menuSounds = flag(MENU_SOUNDS, default.menuSounds),
+            askSeparationAlways = flag(ASK_SEPARATION_ALWAYS, default.askSeparationAlways),
             highwayBackground = enumOr(this[HIGHWAY_BACKGROUND], default.highwayBackground),
             highwayArt = enumOr(this[HIGHWAY_ART], default.highwayArt),
             noteStyle = enumOr(this[NOTE_STYLE], default.noteStyle),
             fretStyle = enumOr(this[FRET_STYLE], default.fretStyle),
-            showChartImage = this[SHOW_CHART_IMAGE] ?: default.showChartImage,
+            showChartImage = flag(SHOW_CHART_IMAGE, default.showChartImage),
+            queuePrefetch = flag(QUEUE_PREFETCH, default.queuePrefetch),
+            queueDeleteUnplayed = flag(QUEUE_DELETE_UNPLAYED, default.queueDeleteUnplayed),
+            queueUseMobileData = flag(QUEUE_USE_MOBILE_DATA, default.queueUseMobileData),
+            queueReplaceSuggested = flag(QUEUE_REPLACE_SUGGESTED, default.queueReplaceSuggested),
+            queueClosestDuration = flag(QUEUE_CLOSEST_DURATION, default.queueClosestDuration),
+            spotifyNextSongDirect = flag(SPOTIFY_NEXT_SONG_DIRECT, default.spotifyNextSongDirect),
         )
     }
+
+    private fun Preferences.flag(key: Preferences.Key<Boolean>, default: Boolean): Boolean = this[key] ?: default
 
     private fun Preferences.volume(key: Preferences.Key<Float>): Float? =
         this[key]?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f)
@@ -94,6 +108,12 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val NOTE_STYLE = stringPreferencesKey("note_style")
         val FRET_STYLE = stringPreferencesKey("fret_style")
         val SHOW_CHART_IMAGE = booleanPreferencesKey("show_chart_image")
+        val QUEUE_PREFETCH = booleanPreferencesKey("queue_prefetch")
+        val QUEUE_DELETE_UNPLAYED = booleanPreferencesKey("queue_delete_unplayed")
+        val QUEUE_USE_MOBILE_DATA = booleanPreferencesKey("queue_use_mobile_data")
+        val QUEUE_REPLACE_SUGGESTED = booleanPreferencesKey("queue_replace_suggested")
+        val QUEUE_CLOSEST_DURATION = booleanPreferencesKey("queue_closest_duration")
+        val SPOTIFY_NEXT_SONG_DIRECT = booleanPreferencesKey("spotify_next_song_direct")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")

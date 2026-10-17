@@ -5,6 +5,11 @@
     <string name="gameplay_pause">Pause</string>
     <string name="gameplay_paused">Paused</string>
     <string name="gameplay_resume">Resume</string>
+    <string name="gameplay_confirm_title">Suggested map</string>
+    <string name="gameplay_confirm_message">This map seems to be for this song: %1$s — %2$s</string>
+    <string name="gameplay_confirm_play">Confirm map and play</string>
+    <string name="gameplay_confirm_other">Choose another</string>
+    <string name="gameplay_confirm_back">Back to menu</string>
     <string name="gameplay_exit">Quit</string>
     <string name="gameplay_back">Back</string>
     <string name="gameplay_unavailable_title">Can\'t play</string>

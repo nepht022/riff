@@ -22,6 +22,11 @@
     <string name="nowplaying_confirm">Confirmar mapa</string>
     <string name="nowplaying_choose_other">Escolher outro</string>
     <string name="nowplaying_no_match">Nenhum mapa da biblioteca casa com esta música.</string>
+    <string name="nowplaying_queue_preparing">Baixando o mapa desta música…</string>
+    <string name="nowplaying_queue_not_found">O Riff procurou no Encore e não achou um mapa desta música.</string>
+    <string name="nowplaying_queue_other_duration">No Encore só há mapas desta música com outra duração. Para baixar o mais próximo: Configurações → Spotify.</string>
+    <string name="nowplaying_queue_search_failed">Não deu para pesquisar no Encore agora. O Riff tenta de novo em até 1 minuto.</string>
+    <string name="nowplaying_queue_download_failed">O Riff achou um mapa no Encore, mas o download falhou.</string>
     <string name="nowplaying_choose">Escolher mapa</string>
     <string name="nowplaying_badge_matched">Mapa encontrado</string>
     <string name="nowplaying_badge_suggested">Confirmar mapa</string>

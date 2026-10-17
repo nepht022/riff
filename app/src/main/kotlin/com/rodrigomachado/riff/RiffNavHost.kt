@@ -71,6 +71,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
                             request.difficulty.name,
                             request.trackUri,
                             request.trackOffsetMs,
+                            request.confirmFirst,
                         ),
                     )
                 },
@@ -111,12 +112,18 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController) 
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
-            // Trocou de música na pausa: volta ao Tocando agora, que começa a próxima se ela tiver mapa.
-            onSongChanged = dropUnlessResumed { difficulty, fromTrackUri ->
+            // Segue para a próxima música: volta ao Tocando agora, que começa a próxima se ela tiver mapa.
+            onNextSong = dropUnlessResumed { difficulty, fromTrackUri, waitMs ->
                 navController.previousBackStackEntry?.savedStateHandle?.let {
-                    NowPlayingAutoPlay.request(it, difficulty, fromTrackUri)
+                    NowPlayingAutoPlay.request(it, difficulty, fromTrackUri, waitMs)
                 }
                 navController.popBackStack()
+            },
+            // Painel de confirmação: a escolha de mapa da biblioteca para esta faixa, no lugar da partida.
+            onChooseOther = dropUnlessResumed { trackUri, title ->
+                navController.navigate(LibraryRoute(matchTrackUri = trackUri, matchTrackTitle = title)) {
+                    popUpTo<GameplayRoute> { inclusive = true }
+                }
             },
         )
     }

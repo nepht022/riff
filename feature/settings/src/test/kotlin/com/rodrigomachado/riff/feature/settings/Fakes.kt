@@ -67,3 +67,35 @@ class FakeAppLanguage : com.rodrigomachado.riff.core.data.AppLanguageStore {
         current = language
     }
 }
+
+class FakeWebAuth : com.rodrigomachado.riff.core.spotify.web.SpotifyWebAuth {
+    override val state = kotlinx.coroutines.flow.MutableStateFlow(
+        com.rodrigomachado.riff.core.spotify.web.WebAuthState.NOT_AUTHORIZED,
+    )
+    var accept = true
+    var asked = 0
+
+    override suspend fun authorize(): Boolean {
+        asked++
+        if (accept) state.value = com.rodrigomachado.riff.core.spotify.web.WebAuthState.AUTHORIZED
+        return accept
+    }
+
+    override suspend fun accessToken(): String? = null
+
+    override suspend fun onUnauthorized(): String? = null
+}
+
+class FakeLibraryFolder(var writable: Boolean = true) :
+    com.rodrigomachado.riff.core.data.LibraryFolderStore,
+    com.rodrigomachado.riff.core.data.folder.FolderAccess {
+    override val rootUri = kotlinx.coroutines.flow.MutableStateFlow<String?>("content://pasta")
+
+    override suspend fun setRootUri(uri: String) {
+        rootUri.value = uri
+    }
+
+    override fun persistAccess(folderUri: String) = Unit
+
+    override fun canWrite(folderUri: String): Boolean = writable
+}

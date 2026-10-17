@@ -39,7 +39,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Sons do menu: o primeiro toque logo ao abrir o app pode sair mudo (os sons e as preferências ainda carregando, dezenas de ms).
 - Sons do menu: o som de voltar tem volume médio uns 6 dB abaixo dos outros (picos iguais); com o volume geral baixo, quase some.
 - Sons do menu: a lista de telas do detector de volta guarda ids de telas trocadas por "Jogar de novo" (custo desprezível).
-- Pesquisa no Encore: a API não é documentada (vista no código do Bridge); se mudar, a pesquisa avisa "o Riff precisa ser atualizado". O filtro de rips oficiais é uma lista de estúdios e ícones de setlist: um rip com outro ícone pode passar.
+- Pesquisa no Encore: a API não é documentada (vista no código do Bridge); se mudar, a pesquisa avisa "o Riff precisa ser atualizado".
 - Pesquisa: dois downloads ao mesmo tempo com o mesmo "Artista - Nome" podem gerar um nome sem ".sng" (o mapa some no Reimportar); Reimportar enquanto um download termina pode apagar o mapa recém-baixado; sair da tela entre a importação e o registro deixa um mapa sem o arquivo.
 - Pesquisa: escolher outra pasta em "Permitir" troca a raiz e libera a antiga sem reimportar (os mapas listados param de abrir até o Reimportar).
 - Pesquisa: a consulta do começo do arquivo confia que o servidor respeita o Range.
@@ -110,3 +110,26 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
   - Botões do pé da tela com largura fixa (172 + 140 dp): em fonte grande do Android ou tela de 320 dp, o texto aperta ("Confirmar mapa" já sai mais largo).
   - Faltam testes da espera pela tela voltar à frente e da navegação que deixa o pedido no Tocando agora.
   - O começo automático e o ⏮ da partida foram conferidos no celular pelo usuário (2026-10-17).
+
+## Pontos menores dos mapas da fila do Spotify (revisão de 2026-10-17)
+
+- **Falha de rede conta como "tentada":** uma falha momentânea do Encore ou do Wi-Fi deixa a música sem mapa até reabrir o Riff (só resultado vazio ou arquivo quebrado deveriam contar).
+- **Mapa apagado não volta:** a música continua "tentada"; com ⏮ ou uma playlist que repete, não baixa de novo nesta abertura.
+- **Retry-After:** `0` vira espera de zero; trocar de música lê a fila na hora, ignorando o Retry-After pendente.
+- **Mesmo mapa já na biblioteca com outros dados:** a fila poderia baixar de novo e marcar como apagável o mapa que já era seu (improvável; conferir `EncoreDownloads.chartIdOf(md5)` antes).
+- **Rede conferida só antes de baixar:** trocar de Wi-Fi para dados móveis durante o download não é percebido.
+- **App fechado logo depois de importar:** o registro da fila vem depois da importação; nesse intervalo o mapa vira normal para sempre.
+- **Autorização tocada duas vezes:** com a tela de autorização aberta, um segundo toque deixa o primeiro esperando para sempre; desabilitar o interruptor durante a autorização.
+- **Aviso de autorização perdida:** não sobrevive a reabrir o app.
+- **Logs:** o título da música vai para o logcat ("pronto" já não leva título; conferir os outros).
+- **Estilo/testes:** `queue!!` na leitura da fila; interruptor desabilitado fica esmaecido duas vezes; faltam testes do caminho do Keystore no aparelho.
+
+## Spotify contínuo (revisão final, 2026-10-17)
+
+- Confirmar do painel não reconfere a faixa tocando no instante do toque (depende do vigia, que normalmente já reagiu).
+- Confirmar do painel grava `confidence = 1`, `isManual = true`; o do Tocando agora grava a confiança da sugestão e `isManual = false` (o `matchFor` não lê `isManual`).
+- `QueuePreparing` é um conjunto, não um contador: a mesma faixa enfileirada de novo durante a pesquisa pode sair do preparo cedo.
+- Corrida estreita: o preparo termina entre a emissão "sem mapa" e a checagem do preparo, e a decisão usa o casamento antigo.
+- Prazo do fim da música superestimado (não soma o tempo desde o último estado do Spotify); só deixa a espera mais longa.
+- Abrir a partida de uma sugestão já marca o mapa da fila como jogado: Voltar/Escolher outro deixam esse mapa fora da limpeza automática.
+- Comentários antigos dizem que a fila não baixa durante a partida (`MatchActivity`, `GameplayViewModel`).

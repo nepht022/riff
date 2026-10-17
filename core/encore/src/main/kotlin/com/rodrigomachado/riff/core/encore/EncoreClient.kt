@@ -101,8 +101,8 @@ class EncoreClient(private val transport: HttpTransport, private val io: Corouti
     private fun parse(text: String, page: Int): EncorePage = try {
         val root = JSONObject(text)
         val data = root.getJSONArray("data")
+        // Inclusive os oficiais (Rock Band, Guitar Hero): liberados pelo usuário em 2026-10-17.
         val charts = (0 until data.length()).map { data.getJSONObject(it) }
-            .filterNot { OfficialCharts.isOfficial(it.optStringOrNull("charter"), it.optStringOrNull("icon")) }
             .filter { !it.isNull("diff_guitar") }
             .map(::chartOf)
             .distinctBy { it.md5 }

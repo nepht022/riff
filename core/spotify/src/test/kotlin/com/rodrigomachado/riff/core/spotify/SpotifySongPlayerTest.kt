@@ -58,6 +58,98 @@ class SpotifySongPlayerTest {
         assertEquals(listOf("play:$ours", "pause", "seek:0", "resume"), remote.commands)
     }
 
+    /**
+     * A música já tocava (1:30) quando a partida começou: o Spotify ainda manda a posição antiga depois do comando
+     * de tocar do começo. Aceitar faria o relógio pular para 1:30 e voltar, com as notas até ali já perdidas.
+     */
+    @Test
+    fun theOldPositionOfASongAlreadyPlayingIsIgnoredAtTheStart() = runTest {
+        val player = prepared()
+
+        player.play()
+        now += 200
+        emit(state(position = 90_000)) // atrasado: ainda é a música antes de recomeçar
+        assertTrue(player.isStarting)
+        assertEquals(0L, player.positionMs)
+
+        now += 300
+        emit(state(position = 150)) // recomeçou
+        assertFalse(player.isStarting)
+        assertEquals(150L, player.positionMs)
+    }
+
+    /**
+     * Registro no S25: o Spotify avisa "tocando em 0" antes de o áudio andar; aceitar fazia a pista correr ~100 ms
+     * na frente e voltar. A partida só começa quando a posição avança.
+     */
+    @Test
+    fun theStartWaitsUntilSpotifyActuallyMoves() = runTest {
+        val player = prepared()
+        player.play()
+
+        now += 30
+        emit(state(position = 0))
+        now += 100
+        emit(state(position = 0)) // ainda parado
+        assertTrue(player.isStarting)
+        assertEquals(0L, player.positionMs)
+
+        now += 7
+        emit(state(position = 4))
+        assertFalse(player.isStarting)
+        now += 40
+        assertEquals(44L, player.positionMs)
+    }
+
+    /** Registro no S25, retomada em 5.631: "tocando em 5.631" e, 73 ms depois, só 5.646. */
+    @Test
+    fun resumingWaitsUntilSpotifyActuallyMoves() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 5_584))
+        now += 47
+        player.pause() // o jogo para em 5.631
+        now += 286
+        emit(state(position = 5_640, isPaused = true))
+
+        now += 970
+        player.play()
+        now += 34
+        emit(state(position = 5_631, isPaused = true))
+        now += 29
+        emit(state(position = 5_631)) // "tocando", mas ainda parado
+        now += 73
+        assertTrue(player.isStarting)
+        assertEquals(5_631L, player.positionMs)
+
+        emit(state(position = 5_646))
+        assertFalse(player.isStarting)
+        assertEquals(5_646L, player.positionMs)
+    }
+
+    /** Logo depois de o jogo pausar, um "tocando" atrasado não é retomada de fora (o menu de pausa piscava). */
+    @Test
+    fun aLatePlayingStateRightAfterPausingIsIgnored() = runTest {
+        val player = prepared()
+        player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 30_000))
+        now += 500
+        player.pause() // o jogo para em 30.500
+
+        now += 100
+        emit(state(position = 30_600)) // o Spotify ainda não obedeceu
+        assertFalse(player.isPlaying)
+        assertEquals(30_500L, player.positionMs)
+
+        now += 200
+        emit(state(position = 30_700, isPaused = true)) // obedeceu
+        now += 3_000
+        emit(state(position = 30_700)) // agora sim: alguém retomou pela notificação
+        assertTrue(player.isPlaying)
+    }
+
     @Test
     fun afterPlayThePositionWaitsUntilSpotifyConfirms() = runTest {
         val player = prepared()
@@ -83,6 +175,7 @@ class SpotifySongPlayerTest {
     fun whilePausedTheLateStateFromSpotifyDoesNotMoveTheHighway() = runTest {
         val player = prepared()
         player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 500
         player.pause() // o jogo para em 30.500
@@ -98,6 +191,7 @@ class SpotifySongPlayerTest {
     fun resumingPutsSpotifyBackWhereTheGameStoppedAndWaitsForIt() = runTest {
         val player = prepared()
         player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 500
         player.pause()
@@ -121,6 +215,7 @@ class SpotifySongPlayerTest {
     fun resumingSeeksBackEvenIfSpotifyNeverReportedThePause() = runTest {
         val player = prepared()
         player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 500
         player.pause()
@@ -136,6 +231,7 @@ class SpotifySongPlayerTest {
     fun spotifyThatNeverResumesPausesTheGame() = runTest {
         val player = prepared()
         player.play()
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         player.pause()
         player.play()
@@ -155,6 +251,7 @@ class SpotifySongPlayerTest {
         player.play()
 
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 10_000))
         now += 500
         assertEquals(10_500L, player.positionMs)
@@ -188,6 +285,7 @@ class SpotifySongPlayerTest {
         emit(state(position = 1_000, uri = "spotify:track:outra")) // ainda não trocou para a nossa
         assertFalse(player.isCompleted)
 
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 2_000))
         emit(state(position = 0, uri = "spotify:track:proxima"))
 
@@ -200,6 +298,7 @@ class SpotifySongPlayerTest {
         player.play()
         now += 100
 
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 199_000, isPaused = true, duration = 200_000))
 
         assertTrue(player.isCompleted)
@@ -210,6 +309,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 400
 
@@ -229,6 +329,21 @@ class SpotifySongPlayerTest {
         assertEquals(2, remote.refreshes)
     }
 
+    /** Fim das notas no outro, "Ir direto para a próxima": a música segue para o Spotify passar para a próxima. */
+    @Test
+    fun releasingKeepingTheMusicDoesNotPauseSpotify() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 180_000))
+        remote.commands.clear()
+
+        player.releaseKeepingMusic()
+
+        assertEquals(emptyList<String>(), remote.commands)
+    }
+
     @Test
     fun leavingMidSongPausesSpotifyButFinishingDoesNot() = runTest {
         val leaving = prepared()
@@ -240,6 +355,7 @@ class SpotifySongPlayerTest {
         val finished = prepared()
         finished.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 2_000))
         emit(state(position = 0, uri = "spotify:track:proxima"))
         finished.release()
@@ -251,6 +367,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         remote.connection.value = SpotifyConnection.Failed(SpotifyError.DISCONNECTED)
         emit(null)
@@ -276,6 +393,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 400
         loseConnection()
@@ -291,6 +409,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         loseConnection()
 
@@ -304,6 +423,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 400
         loseConnection()
@@ -322,6 +442,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
         now += 400
         loseConnection()
@@ -373,6 +494,7 @@ class SpotifySongPlayerTest {
         val player = prepared()
         player.play()
         now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 198_500, duration = 200_000))
 
         now += 2_000

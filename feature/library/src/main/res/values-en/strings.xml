@@ -46,6 +46,8 @@
     <string name="library_ai_separated">AI separated guitar</string>
     <string name="library_select">Select</string>
     <string name="library_delete_selected">Delete (%1$d)</string>
+    <string name="library_select_all">Select all</string>
+    <string name="library_select_none">Clear all</string>
     <string name="library_delete_cancel">Cancel</string>
     <string name="library_delete_one">Delete %1$s</string>
     <string name="library_delete">Delete</string>

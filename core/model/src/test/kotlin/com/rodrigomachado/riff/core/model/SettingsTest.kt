@@ -52,4 +52,16 @@ class SettingsTest {
         assertTrue(settings.showChartImage)
         assertTrue(settings.askSeparationAlways)
     }
+
+    @Test
+    fun queueOptionsStartWithPrefetchOffAndDeletingOn() {
+        val settings = Settings.DEFAULT
+
+        assertEquals(false, settings.queuePrefetch)
+        assertEquals(true, settings.queueDeleteUnplayed)
+        assertEquals(false, settings.queueUseMobileData)
+        assertEquals(true, settings.queueReplaceSuggested)
+        assertEquals(true, settings.queueClosestDuration)
+        assertEquals(true, settings.spotifyNextSongDirect)
+    }
 }

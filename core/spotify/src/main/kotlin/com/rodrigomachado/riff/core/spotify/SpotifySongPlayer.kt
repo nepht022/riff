@@ -32,6 +32,12 @@ class SpotifySongPlayer(
     private var startedAtMs = 0L
     private var starting = false
 
+    // De onde o Spotify (re)começa: um "tocando" ainda nessa posição é antes de o áudio andar.
+    private var startFromMs = 0L
+
+    // O jogo pausou e o Spotify ainda não confirmou: um "tocando" agora é atraso dele, não retomada de fora.
+    private var pauseUnconfirmed = false
+
     // Conexão caiu: a posição fica congelada e o que o Spotify mostrar na volta só vale no próximo play.
     private var disconnected = false
     private var afterReconnect: PlaybackState? = null
@@ -54,8 +60,16 @@ class SpotifySongPlayer(
             while (isActive) {
                 delay(REFRESH_INTERVAL_MS)
                 remote.refresh()
-                pauseIfOurTrackNeverStarted()
-                pauseIfSpotifyNeverResumed()
+                // O Spotify recusou ou não achou a faixa: pausa em vez de jogar em silêncio; o próximo play tenta
+                // de novo.
+                val waitingForOurTrack = started && !sawOurTrack && isPlaying
+                if (waitingForOurTrack && nowMs() - startedAtMs > START_TIMEOUT_MS) {
+                    started = false
+                    starting = false
+                    last = last?.frozenAt(0)
+                }
+                // Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre.
+                if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
             }
         }
     }
@@ -75,6 +89,12 @@ class SpotifySongPlayer(
 
             state.trackUri != trackUri -> if (sawOurTrack) completed = true
 
+            // A faixa já tocava quando a partida começou: logo depois do comando de tocar do começo, o Spotify
+            // ainda manda a posição antiga. Recomeçada, ela não pode estar além do tempo desde o comando; aceitar
+            // faria o relógio pular para lá e voltar, com as notas do meio já perdidas (esbranquiçadas).
+            !sawOurTrack && state.positionMs > state.capturedAtElapsedMs - startedAtMs + START_POSITION_SLACK_MS ->
+                Unit
+
             else -> onOurTrack(state)
         }
     }
@@ -82,6 +102,7 @@ class SpotifySongPlayer(
     private fun onOurTrack(state: PlaybackState) {
         val wasNearTheEnd = sawOurTrack && isPlaying && positionMs >= state.durationMs - NEAR_END_MS
         sawOurTrack = true
+        if (isEarly(state)) return
         val pausedByTheGame = last?.isPaused == true
         // Pausado pelo jogo (ou esperando o Spotify voltar), a pista fica onde parou: o Spotify obedece depois.
         if (!state.isPaused || !pausedByTheGame) {
@@ -95,19 +116,19 @@ class SpotifySongPlayer(
         if (pausedAtTheEnd || stoppedBackAtTheStart) completed = true
     }
 
-    /** O Spotify recusou ou não achou a faixa: pausa em vez de jogar em silêncio; o próximo play tenta de novo. */
-    private fun pauseIfOurTrackNeverStarted() {
-        val waitingForOurTrack = started && !sawOurTrack && isPlaying
-        if (waitingForOurTrack && nowMs() - startedAtMs > START_TIMEOUT_MS) {
-            started = false
-            starting = false
-            last = last?.frozenAt(0)
+    /**
+     * Um "tocando" que chegou cedo demais. Registro no S25: depois de tocar/continuar, o Spotify avisa "tocando" na
+     * posição de partida antes de o áudio andar (aceitar fazia a pista correr ~100 ms na frente e voltar); e, logo
+     * depois de o jogo pausar, ainda avisa "tocando" antes de obedecer (o menu de pausa piscava).
+     */
+    private fun isEarly(state: PlaybackState): Boolean {
+        if (state.isPaused) {
+            pauseUnconfirmed = false
+            return false
         }
-    }
-
-    /** Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre. */
-    private fun pauseIfSpotifyNeverResumed() {
-        if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
+        val notMovingYet = starting && state.positionMs <= startFromMs
+        val lateAfterPause = pauseUnconfirmed && nowMs() - lastCommandAtMs < PAUSE_CONFIRM_MS
+        return notMovingYet || lateAfterPause
     }
 
     override fun play() {
@@ -132,6 +153,8 @@ class SpotifySongPlayer(
                 started = true
                 startedAtMs = now
                 starting = true
+                startFromMs = 0
+                pauseUnconfirmed = false
                 remote.play(uri)
                 last = PlaybackState(uri, "", "", 0, 0, isPaused = true, capturedAtElapsedMs = now)
             }
@@ -144,6 +167,8 @@ class SpotifySongPlayer(
 
     /** O Spotify para um pouco depois do jogo: volta para onde a pista parou antes de continuar. */
     private fun resumeWhereTheGameStopped() {
+        startFromMs = positionMs
+        pauseUnconfirmed = false
         remote.seekTo(positionMs)
         remote.resume()
         starting = true
@@ -152,6 +177,8 @@ class SpotifySongPlayer(
     /** Volta a nossa faixa para onde o jogo parou; se o Spotify já estiver lá, só retoma. */
     private fun resumeAfterReconnecting(uri: String, now: Long) {
         val position = positionMs
+        startFromMs = position
+        pauseUnconfirmed = false
         val back = afterReconnect
         disconnected = false
         afterReconnect = null
@@ -171,6 +198,7 @@ class SpotifySongPlayer(
         if (!started) return
         val position = positionMs
         starting = false
+        pauseUnconfirmed = true
         lastCommandAtMs = nowMs()
         remote.pause()
         last = last?.frozenAt(position)
@@ -181,6 +209,12 @@ class SpotifySongPlayer(
         listening?.cancel()
         listening = null
         if (started && !completed && isPlaying) remote.pause()
+    }
+
+    override fun releaseKeepingMusic() {
+        released = true
+        listening?.cancel()
+        listening = null
     }
 
     override val positionMs: Long
@@ -203,6 +237,12 @@ class SpotifySongPlayer(
         const val CONNECT_TIMEOUT_MS = 15_000L
         const val END_TOLERANCE_MS = 1_500L
         const val START_TIMEOUT_MS = 5_000L
+
+        /** Quanto o Spotify pode demorar para obedecer a pausa (no S25, ~280 ms). */
+        const val PAUSE_CONFIRM_MS = 1_500L
+
+        /** Folga para a posição do recomeço (o Spotify arredonda e mede de outro relógio). */
+        const val START_POSITION_SLACK_MS = 1_500L
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }

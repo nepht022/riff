@@ -4,6 +4,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -17,6 +19,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpRect
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -25,6 +31,7 @@ import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.core.ui.theme.Spacing
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -259,15 +266,81 @@ class NowPlayingContentTest {
         assertTrue("$first: $a, $second: $b", b.left >= a.right && b.top < a.bottom && a.top < b.bottom)
     }
 
+    /** O texto do mapa fica no meio da tela, com as linhas centralizadas. */
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
-    fun playAndChooseOtherAreCentered() {
+    fun theChartTextIsCentered() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+        assertCentered("Mapa: Bohemian Rhapsody — Queen")
+    }
 
-        val play = composeRule.onAllNodesWithText("Jogar").onLast().getUnclippedBoundsInRoot()
-        val other = composeRule.onAllNodesWithText("Escolher outro").onLast().getUnclippedBoundsInRoot()
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theNoMatchTextIsCentered() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+        assertCentered("Nenhum mapa da biblioteca casa com esta música.")
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theSuggestionTextIsCentered() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Suggested(chart(), 0.9f))))
+        assertCentered("Este mapa parece ser desta música: Bohemian Rhapsody — Queen")
+    }
+
+    private fun assertCentered(text: String) {
+        val node = composeRule.onNodeWithText(text).fetchSemanticsNode()
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
-        assertEquals((root.left + root.right).value / 2, (play.left + other.right).value / 2, 1f)
+        val layouts = mutableListOf<TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals(TextAlign.Center, layouts.single().layoutInput.style.textAlign)
+        val bounds = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
+        assertEquals((root.left + root.right).value / 2, (bounds.left + bounds.right).value / 2, 1f)
+    }
+
+    @Test
+    fun whenTheQueueFoundNothingTheScreenSaysSo() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), QueueMiss.NOTHING_FOUND))
+
+        composeRule.onNodeWithText("O Riff procurou no Encore e não achou um mapa desta música.").assertExists()
+    }
+
+    @Test
+    fun eachReasonHasItsOwnText() {
+        var miss by mutableStateOf(QueueMiss.ONLY_OTHER_DURATION)
+        composeRule.setContent {
+            RiffTheme {
+                NowPlayingContent(
+                    state = NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), miss),
+                    onRetry = {},
+                    onPlay = {},
+                    onConfirm = { _, _, _ -> },
+                    onChooseChart = { _, _ -> },
+                    onOpenLibrary = {},
+                )
+            }
+        }
+        val texts = QueueMiss.entries.map { reason ->
+            miss = reason
+            composeRule.waitForIdle()
+            composeRule.onNodeWithTag(NowPlayingTestTags.QUEUE_MISS).fetchSemanticsNode()
+                .config[SemanticsProperties.Text].joinToString()
+        }
+        assertEquals(QueueMiss.entries.size, texts.toSet().size)
+    }
+
+    @Test
+    fun preparingSaysTheMapIsDownloading() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), preparingMap = true))
+
+        composeRule.onNodeWithText("Baixando o mapa desta música…").assertExists()
+    }
+
+    @Test
+    fun withoutAQueueSearchNothingExtraIsSaid() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+
+        composeRule.onNodeWithTag(NowPlayingTestTags.QUEUE_MISS).assertDoesNotExist()
     }
 
     @Test
@@ -316,24 +389,26 @@ class NowPlayingContentTest {
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
     fun theMainButtonHasTheSameWidthWithOrWithoutAMap() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
-
         val play = composeRule.onNodeWithText("Jogar").performScrollTo().getUnclippedBoundsInRoot()
-        val other = composeRule.onNode(hasText("Escolher outro") and hasClickAction()).getUnclippedBoundsInRoot()
-
         assertEquals(MAIN_BUTTON_WIDTH.value, (play.right - play.left).value, 1f)
-        assertEquals(LINK_WIDTH.value, (other.right - other.left).value, 1f)
+        assertCenteredBeside(play, "Escolher outro")
     }
 
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
     fun theChooseButtonHasTheSameWidthAsPlay() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
-
         val choose = composeRule.onNodeWithText("Escolher mapa").performScrollTo().getUnclippedBoundsInRoot()
-        val search = composeRule.onNode(hasText("Pesquisar no Encore") and hasClickAction()).getUnclippedBoundsInRoot()
-
         assertEquals(MAIN_BUTTON_WIDTH.value, (choose.right - choose.left).value, 1f)
-        assertEquals(LINK_WIDTH.value, (search.right - search.left).value, 1f)
+        assertCenteredBeside(choose, "Pesquisar no Encore")
+    }
+
+    /** O link ocupa todo o espaço livre à direita do botão principal (e o texto fica no meio dele). */
+    private fun assertCenteredBeside(button: DpRect, link: String) {
+        val other = composeRule.onNode(hasText(link) and hasClickAction()).getUnclippedBoundsInRoot()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertEquals((root.right - Spacing.md).value, other.right.value, 1f)
+        assertTrue("$button, $other", other.left >= button.right + Spacing.sm && other.left - button.right < Spacing.md)
     }
 
     @Test

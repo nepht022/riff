@@ -80,6 +80,21 @@ class RoomTrackMatchRepositoryTest {
         assertEquals(MatchStatus.Matched(other, 25), matches.matchFor(track("Bohemian Rhapsody", "Queen")))
     }
 
+    /** Um mapa da fila baixado com outra duração: fica como sugestão até o jogador confirmar. */
+    @Test
+    fun aSavedSuggestionStaysASuggestionUntilConfirmed() = runTest {
+        val slayer = chart("a", "Raining Blood", "Slayer", durationMs = 264_000)
+        charts.saveScanned(slayer, 1)
+        val before = matches.changes.value
+
+        matches.saveSuggestion("spotify:track:x", "a", confidence = 0.95f)
+
+        assertEquals(before + 1, matches.changes.value)
+        assertEquals(MatchStatus.Suggested(slayer, 0.95f), matches.matchFor(track("Raining Blood", "Slayer", 255_000)))
+        matches.save("spotify:track:x", "a", confidence = 0.95f, isManual = true)
+        assertEquals(MatchStatus.Matched(slayer, 0), matches.matchFor(track("Raining Blood", "Slayer", 255_000)))
+    }
+
     @Test
     fun savingAChoiceIsAnnouncedAndKeepsTheOffsetOfTheSameChart() = runTest {
         charts.saveScanned(chart("a", "Música", "Banda"), 1)

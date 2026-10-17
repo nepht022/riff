@@ -193,7 +193,7 @@ class SearchViewModelTest {
 
         assertEquals("Nirvana Smells Like Teen Spirit", vm.uiState.value.query)
         assertEquals("Smells Like Teen Spirit", vm.uiState.value.results.first().chart.name)
-        assertEquals(2, vm.uiState.value.results.size)
+        assertEquals(4, vm.uiState.value.results.size) // com os oficiais
     }
 
     @Test
@@ -258,7 +258,7 @@ class SearchViewModelTest {
         advanceUntilIdle()
 
         assertEquals(false, vm.uiState.value.canWrite)
-        assertEquals(2, vm.uiState.value.results.size)
+        assertEquals(4, vm.uiState.value.results.size) // com os oficiais
         vm.download(vm.uiState.value.results.first().chart)
         assertEquals(0, downloader.calls)
 
@@ -306,7 +306,7 @@ class SearchViewModelTest {
         val sent = JSONObject(checkNotNull(transport.lastJson))
         assertEquals("teen spirit" to 2, sent.getString("search") to sent.getInt("page"))
         // A página seguinte repetiu os mesmos mapas: a lista não pode ter a mesma chave duas vezes.
-        assertEquals(2, vm.uiState.value.results.size)
+        assertEquals(4, vm.uiState.value.results.size) // com os oficiais
     }
 
     @Test

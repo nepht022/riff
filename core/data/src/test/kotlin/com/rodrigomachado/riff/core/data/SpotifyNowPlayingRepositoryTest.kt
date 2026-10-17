@@ -128,6 +128,8 @@ class SpotifyNowPlayingRepositoryTest {
             return result
         }
 
+        override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
+
         override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
 
         override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null

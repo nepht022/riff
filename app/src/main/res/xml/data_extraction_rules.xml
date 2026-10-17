@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. O token do Spotify fica de fora: a chave dele não vai no backup nem para outro celular. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="riff_spotify_web.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="riff_spotify_web.xml" />
+    </device-transfer>
+</data-extraction-rules>

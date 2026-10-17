@@ -107,6 +107,7 @@ fun LibraryScreen(
             onStartSelecting = viewModel::onStartSelecting,
             onToggle = viewModel::onToggleSelected,
             onCancelSelecting = viewModel::onCancelSelecting,
+            onToggleAll = viewModel::onToggleAll,
             onDeleteSelected = viewModel::onDeleteSelected,
             onConfirm = viewModel::onDeleteConfirmed,
             onDismiss = viewModel::onDeleteDismissed,
@@ -236,7 +237,9 @@ private fun ChartList(
     ) {
         item {
             if (state.deletion.selecting) {
-                SelectionActions(state.deletion.selected.size, deletion)
+                val deletable = state.charts.filter { it.id !in state.protectedIds }
+                val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
+                SelectionActions(state.deletion.selected.size, allSelected, deletion)
             } else {
                 ListActions(onRescan, onPickFolder, deletion.onStartSelecting)
             }

@@ -56,6 +56,14 @@ class FakeSongPlayer : SongPlayer {
     override fun release() {
         released = true
     }
+
+    /** A música continua (Spotify, seguindo para a próxima). */
+    var keptMusic = false
+
+    override fun releaseKeepingMusic() {
+        keptMusic = true
+        release()
+    }
 }
 
 class FakeSfxPlayer : SfxPlayer {
@@ -152,7 +160,13 @@ class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRep
     override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
         com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
 
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
+    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
+
+    val saved = mutableListOf<String>()
+
+    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
+        saved += "$spotifyTrackUri $chartId $confidence manual=$isManual"
+    }
 
     override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = offsets[spotifyTrackUri to chartId]
 

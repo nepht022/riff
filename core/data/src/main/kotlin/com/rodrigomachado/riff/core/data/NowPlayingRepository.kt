@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.data
 
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.NowPlaying
+import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.spotify.SpotifyRemote
 import dagger.Binds
@@ -20,6 +21,9 @@ import javax.inject.Singleton
 
 /** Controles do Spotify vistos pelo Riff: o efeito aparece no próprio Spotify e volta pela faixa tocando. */
 interface SpotifyControls {
+    /** A faixa no Spotify agora, sem o mapa; `null` sem conexão ou sem faixa. */
+    val playback: StateFlow<PlaybackState?>
+
     /** Como o botão do Spotify: passados os primeiros segundos, volta ao começo da atual. */
     fun previous()
 
@@ -81,6 +85,8 @@ class SpotifyNowPlayingRepository @Inject constructor(
         remote.seekTo(0)
         remote.skipPrevious()
     }
+
+    override val playback: StateFlow<PlaybackState?> get() = remote.playback
 
     override fun next() = remote.skipNext()
 

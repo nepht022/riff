@@ -8,6 +8,7 @@ import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
+import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -29,6 +30,8 @@ class SettingsViewModelTest {
     private val sfx = FakeSfxPlayer()
     private val separations = FakeAiSeparations()
     private val language = FakeAppLanguage()
+    private val webAuth = FakeWebAuth()
+    private val folder = FakeLibraryFolder()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -37,7 +40,7 @@ class SettingsViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository, separations, language) { sfx }
+        val viewModel = SettingsViewModel(repository, separations, language, webAuth, folder, folder) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -141,5 +144,80 @@ class SettingsViewModelTest {
         vm.setLanguage(AppLanguage.ENGLISH)
 
         assertEquals(AppLanguage.ENGLISH, language.current)
+    }
+
+    @Test
+    fun turningPrefetchOnAsksForAuthorization() = runTest {
+        val vm = viewModel()
+
+        vm.setQueuePrefetch(true)
+        advanceUntilIdle()
+
+        assertEquals(1, webAuth.asked)
+        assertEquals(true, repository.settings.value.queuePrefetch)
+        assertEquals(null, vm.queueMessage.value)
+    }
+
+    @Test
+    fun aRefusedAuthorizationKeepsItOffAndSaysWhy() = runTest {
+        webAuth.accept = false
+        val vm = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.queueMessage.collect {} }
+
+        vm.setQueuePrefetch(true)
+        advanceUntilIdle()
+
+        assertEquals(false, repository.settings.value.queuePrefetch)
+        assertEquals(QueueMessage.REFUSED, vm.queueMessage.value)
+    }
+
+    @Test
+    fun alreadyAuthorizedTurnsOnWithoutAsking() = runTest {
+        webAuth.state.value = WebAuthState.AUTHORIZED
+        val vm = viewModel()
+
+        vm.setQueuePrefetch(true)
+        advanceUntilIdle()
+
+        assertEquals(0, webAuth.asked)
+        assertEquals(true, repository.settings.value.queuePrefetch)
+    }
+
+    @Test
+    fun aLostAuthorizationIsExplained() = runTest {
+        webAuth.state.value = WebAuthState.LOST
+        val vm = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.queueMessage.collect {} }
+
+        assertEquals(QueueMessage.LOST, vm.queueMessage.value)
+    }
+
+    @Test
+    fun theOtherQueueOptionsAreSaved() = runTest {
+        val vm = viewModel()
+
+        vm.setQueueDeleteUnplayed(false)
+        vm.setQueueUseMobileData(true)
+        vm.setQueueReplaceSuggested(false)
+        vm.onQueue(QueueAction.ClosestDuration(false))
+        vm.onQueue(QueueAction.NextSongDirect(false))
+        advanceUntilIdle()
+
+        val saved = repository.settings.value
+        assertEquals(false, saved.queueDeleteUnplayed)
+        assertEquals(true, saved.queueUseMobileData)
+        assertEquals(false, saved.queueReplaceSuggested)
+        assertEquals(false, saved.queueClosestDuration)
+        assertEquals(false, saved.spotifyNextSongDirect)
+    }
+
+    @Test
+    fun theFolderPermissionIsReported() = runTest {
+        folder.writable = false
+        val vm = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.canWriteToLibrary.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(false, vm.canWriteToLibrary.value)
     }
 }

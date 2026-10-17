@@ -1,6 +1,9 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.lifecycle.SavedStateHandle
+import com.rodrigomachado.riff.core.data.queue.MemoryQueueMisses
+import com.rodrigomachado.riff.core.data.queue.MemoryQueuePreparing
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.SpotifyConnection
@@ -24,6 +27,8 @@ import org.junit.Test
 class NowPlayingViewModelTest {
     private val repository = FakeNowPlayingRepository()
     private val matches = FakeTrackMatchRepository()
+    private val misses = MemoryQueueMisses()
+    private val preparing = MemoryQueuePreparing()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -34,7 +39,7 @@ class NowPlayingViewModelTest {
     private val saved = SavedStateHandle()
 
     private fun TestScope.viewModel(): NowPlayingViewModel {
-        val viewModel = NowPlayingViewModel(repository, matches).also { it.watchAutoPlay(saved) }
+        val viewModel = NowPlayingViewModel(repository, matches, misses, preparing).also { it.watchAutoPlay(saved) }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -55,6 +60,22 @@ class NowPlayingViewModelTest {
         assertEquals(NowPlayingUiState.Unavailable(SpotifyError.NOT_INSTALLED), viewModel.uiState.value)
         viewModel.retry()
         assertEquals(2, repository.connects)
+    }
+
+    /** A fila procurou no Encore e não achou: a tela conta, mas só enquanto a música estiver sem mapa. */
+    @Test
+    fun whatTheQueueFoundIsShownOnlyWithoutAMap() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Connected
+        misses.record("spotify:track:x", QueueMiss.NOTHING_FOUND)
+
+        val none = playing(MatchStatus.NoMatch)
+        repository.nowPlaying.value = none
+        assertEquals(NowPlayingUiState.Playing(none, QueueMiss.NOTHING_FOUND), viewModel.uiState.value)
+
+        val found = playing(MatchStatus.Matched(chart(), 0))
+        repository.nowPlaying.value = found
+        assertEquals(NowPlayingUiState.Playing(found), viewModel.uiState.value)
     }
 
     @Test
@@ -150,11 +171,11 @@ class NowPlayingViewModelTest {
     }
 
     @Test
-    fun aSuggestionOrNoMapStaysOnThisScreen() = runTest {
+    fun noMapStaysOnThisScreen() = runTest {
         val viewModel = viewModel()
         songChangedDuringAMatch()
 
-        repository.nowPlaying.value = nextSong(MatchStatus.Suggested(chart("b"), 0.8f))
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch)
 
         assertNull(viewModel.autoPlay.value)
         // O pedido foi usado: a próxima troca de música, feita aqui, não começa partida nenhuma.
@@ -187,6 +208,110 @@ class NowPlayingViewModelTest {
         }
 
         assertNull(viewModel.autoPlay.value)
+    }
+
+    /** Só sugestão: a partida abre pausada pedindo para confirmar (spec Spotify contínuo §2.3). */
+    @Test
+    fun aSuggestionWithTheDifficultyAsksToConfirmInTheMatch() = runTest {
+        val viewModel = viewModel()
+        songChangedDuringAMatch(Difficulty.EXPERT)
+
+        repository.nowPlaying.value = nextSong(MatchStatus.Suggested(chart("b"), 0.8f))
+
+        assertEquals(
+            NowPlayingAutoPlay.Action.Confirm(
+                PlayRequest("b", Difficulty.EXPERT, "spotify:track:y", 0, confirmFirst = true),
+            ),
+            viewModel.autoPlay.value,
+        )
+    }
+
+    @Test
+    fun aSuggestionWithoutTheDifficultyStaysHere() = runTest {
+        val viewModel = viewModel()
+        songChangedDuringAMatch(Difficulty.EASY) // o mapa de teste só tem Médio e Expert
+
+        repository.nowPlaying.value = nextSong(MatchStatus.Suggested(chart("b"), 0.8f))
+
+        assertNull(viewModel.autoPlay.value)
+    }
+
+    /** Do fim da partida: o Spotify pode estar no fim da música (outro), então o prazo vem no pedido. */
+    @Test
+    fun theWaitComesFromTheRequest() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Connected
+        repository.nowPlaying.value = playing(MatchStatus.Matched(chart(), 0))
+        NowPlayingAutoPlay.request(saved, Difficulty.EXPERT, fromTrackUri = "spotify:track:x", waitMs = 20_000)
+
+        advanceTimeBy(15_000)
+        repository.nowPlaying.value = nextSong(MatchStatus.Matched(chart("b"), 0))
+
+        assertEquals(
+            NowPlayingAutoPlay.Action.Start(PlayRequest("b", Difficulty.EXPERT, "spotify:track:y", 0)),
+            viewModel.autoPlay.value,
+        )
+    }
+
+    /** A fila ainda baixa o mapa da música nova: espera, e decide com o casamento do banco (não o da tela). */
+    @Test
+    fun afterTheDownloadTheDecisionSeesTheNewMap() = runTest {
+        val viewModel = viewModel()
+        preparing.start("spotify:track:y")
+        songChangedDuringAMatch()
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch)
+        assertNull(viewModel.autoPlay.value)
+
+        matches.statuses["spotify:track:y"] = MatchStatus.Matched(chart("b"), 0)
+        preparing.done("spotify:track:y")
+
+        assertEquals(
+            NowPlayingAutoPlay.Action.Start(PlayRequest("b", Difficulty.EXPERT, "spotify:track:y", 0)),
+            viewModel.autoPlay.value,
+        )
+    }
+
+    /** O Spotify passou de música durante a espera: decidir pela anterior puxaria o Spotify de volta para ela. */
+    @Test
+    fun aSongThatPassedDuringTheDownloadStartsNothing() = runTest {
+        val viewModel = viewModel()
+        preparing.start("spotify:track:y")
+        songChangedDuringAMatch()
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch)
+
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch).let {
+            it.copy(playback = it.playback.copy(trackUri = "spotify:track:z"))
+        }
+        matches.statuses["spotify:track:y"] = MatchStatus.Matched(chart("b"), 0)
+        preparing.done("spotify:track:y")
+
+        assertNull(viewModel.autoPlay.value)
+    }
+
+    @Test
+    fun leavingWhileWaitingForTheDownloadStartsNothing() = runTest {
+        val viewModel = viewModel()
+        preparing.start("spotify:track:y")
+        songChangedDuringAMatch()
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch)
+
+        viewModel.cancelAutoPlay()
+        matches.statuses["spotify:track:y"] = MatchStatus.Matched(chart("b"), 0)
+        preparing.done("spotify:track:y")
+
+        assertNull(viewModel.autoPlay.value)
+    }
+
+    @Test
+    fun whatIsPreparingIsShown() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Connected
+        preparing.start("spotify:track:x")
+
+        val now = playing(MatchStatus.NoMatch)
+        repository.nowPlaying.value = now
+
+        assertEquals(NowPlayingUiState.Playing(now, null, preparingMap = true), viewModel.uiState.value)
     }
 
     /** Saiu do Tocando agora durante a espera: nada começa sozinho depois. */
