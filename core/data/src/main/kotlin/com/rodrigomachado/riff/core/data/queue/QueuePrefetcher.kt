@@ -17,10 +17,14 @@ import com.rodrigomachado.riff.core.spotify.web.QueuedTrack
 import com.rodrigomachado.riff.core.spotify.web.SpotifyQueue
 import com.rodrigomachado.riff.core.spotify.web.SpotifyWebAuth
 import com.rodrigomachado.riff.core.spotify.web.WebAuthState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -28,6 +32,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,8 +73,9 @@ class QueuePrefetcher(
         System::currentTimeMillis,
     )
 
-    private val handled = mutableSetOf<String>()
-    private val waiting = mutableSetOf<String>()
+    // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
+    private val handled: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val waiting: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val pending = Channel<QueuedTrack>(Channel.UNLIMITED)
     private var started = false
 
@@ -80,7 +86,11 @@ class QueuePrefetcher(
         started = true
         scope.launch { cleaner.atStartup() }
         // Os downloads seguem mesmo se a música trocar no meio: a fila serial não é cancelada com a leitura.
-        scope.launch { for (track in pending) prepare(track) }
+        scope.launch {
+            for (track in pending) {
+                guarded("download da fila") { prepare(track) }
+            }
+        }
         scope.launch {
             combine(
                 settings.settings.map { it.queuePrefetch }.distinctUntilChanged(),
@@ -94,7 +104,7 @@ class QueuePrefetcher(
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun follow() {
         remote.playback.map { it?.trackUri }.filterNotNull().distinctUntilChanged().collectLatest { current ->
-            while (true) delay(read(current))
+            while (true) delay(guarded("leitura da fila") { read(current) } ?: READ_INTERVAL_MS)
         }
     }
 
@@ -110,28 +120,51 @@ class QueuePrefetcher(
         is QueueRead.RetryAfter -> read.seconds * MS_PER_SECOND
 
         QueueRead.Unavailable -> {
-            if (auth.state.value == WebAuthState.LOST) settings.update { it.copy(queuePrefetch = false) }
+            // Sem autorização (perdida, ou token ilegível): desliga, e as Configurações explicam.
+            if (auth.state.value != WebAuthState.AUTHORIZED) settings.update { it.copy(queuePrefetch = false) }
             READ_INTERVAL_MS
         }
     }
 
     private suspend fun prepare(track: QueuedTrack) {
         waiting -= track.uri
-        val options = settings.settings.first()
-        if (!worthTrying(track, options)) return
-        matchActivity.inMatch.first { !it }
-        if (!conditions.canDownload(options.queueUseMobileData)) return
-        handled += track.uri
-        val chart = picker.pick(TrackQuery(track.title, track.artist, track.durationMs)) ?: return
-        matchActivity.inMatch.first { !it }
-        download(track, chart)
+        if (track.uri in handled) return
+        var chart: EncoreChart? = null
+        while (true) {
+            // Partida aberta: espera, e depois confere tudo de novo (a rede ou a opção podem ter mudado).
+            matchActivity.inMatch.first { !it }
+            val options = settings.settings.first()
+            if (!wanted(track, options) || !conditions.canDownload(options.queueUseMobileData)) return
+            val picked = chart ?: picker.pick(TrackQuery(track.title, track.artist, track.durationMs))
+                .also { handled += track.uri } ?: return
+            chart = picked
+            if (downloadUnlessAMatchOpens(track, picked)) return
+        }
     }
 
-    /** Ainda sem mapa, com a opção ligada e sem passar do limite de mapas apagáveis. */
-    private suspend fun worthTrying(track: QueuedTrack, options: Settings): Boolean = track.uri !in handled &&
-        options.queuePrefetch &&
+    /** Opção ligada, ainda sem mapa e sem passar do limite de mapas apagáveis. */
+    private suspend fun wanted(track: QueuedTrack, options: Settings): Boolean = options.queuePrefetch &&
         needsMap(track, options.queueReplaceSuggested) &&
         !(options.queueDeleteUnplayed && downloads.unplayed().size >= MAX_QUEUE_MAPS)
+
+    /** Falso se uma partida abriu no meio: o download para (a pista vem antes) e é refeito depois. */
+    @Suppress("SwallowedException") // o cancelamento do download pela partida é o caminho esperado
+    private suspend fun downloadUnlessAMatchOpens(track: QueuedTrack, chart: EncoreChart): Boolean = coroutineScope {
+        val download = async { download(track, chart) }
+        val watcher = launch {
+            matchActivity.inMatch.first { it }
+            download.cancel()
+        }
+        val finished = try {
+            download.await()
+            true
+        } catch (e: CancellationException) {
+            ensureActive() // cancelado de fora: propaga
+            false
+        }
+        watcher.cancel()
+        finished
+    }
 
     private suspend fun download(track: QueuedTrack, chart: EncoreChart) {
         val saved = try {
@@ -140,8 +173,19 @@ class QueuePrefetcher(
             Log.w(TAG, "mapa da fila não baixado: ${e.reason}")
             return
         }
-        Log.i(TAG, "mapa da fila pronto: ${track.title}")
+        Log.i(TAG, "mapa da fila pronto")
         if (settings.settings.first().queueDeleteUnplayed) downloads.add(saved.id, track.uri, clock())
+    }
+
+    /** Um erro inesperado (Keystore, banco) não pode derrubar o app nem parar a fila. */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun <T> guarded(what: String, block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "$what falhou: ${e.javaClass.simpleName}")
+        null
     }
 
     private suspend fun needsMap(track: QueuedTrack, replaceSuggested: Boolean): Boolean =

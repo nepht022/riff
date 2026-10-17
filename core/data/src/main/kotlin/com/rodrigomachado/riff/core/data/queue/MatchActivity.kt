@@ -6,27 +6,40 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Partida em andamento: a fila não baixa nada (rede, disco e CPU ficam para a pista); o mapa jogado fica. */
+/**
+ * Partidas abertas, da criação da tela até ela sair de vez (inclusive depois de trocar de música na pausa): a fila
+ * do Spotify não baixa nem apaga nada enquanto houver uma, e o mapa aberto vira "jogado" (nunca é apagado).
+ */
 interface MatchActivity {
     val inMatch: StateFlow<Boolean>
 
-    /** A partida começou com [chartId]: se veio da fila, passa a ser um mapa normal. */
-    suspend fun started(chartId: String)
+    suspend fun enter(chartId: String)
 
-    fun ended()
+    fun leave(chartId: String)
+
+    fun isOpen(chartId: String): Boolean
 }
 
 @Singleton
 class DefaultMatchActivity @Inject constructor(private val downloads: QueueDownloads) : MatchActivity {
+    // Contagem por mapa: a próxima partida pode abrir antes de a anterior terminar de sair.
+    private val open = mutableMapOf<String, Int>()
     private val active = MutableStateFlow(false)
     override val inMatch: StateFlow<Boolean> = active.asStateFlow()
 
-    override suspend fun started(chartId: String) {
-        active.value = true
+    override suspend fun enter(chartId: String) {
+        synchronized(open) {
+            open[chartId] = (open[chartId] ?: 0) + 1
+            active.value = true
+        }
         downloads.markPlayed(chartId)
     }
 
-    override fun ended() {
-        active.value = false
+    override fun leave(chartId: String) = synchronized(open) {
+        val left = (open[chartId] ?: 0) - 1
+        if (left > 0) open[chartId] = left else open.remove(chartId)
+        active.value = open.isNotEmpty()
     }
+
+    override fun isOpen(chartId: String): Boolean = synchronized(open) { chartId in open }
 }

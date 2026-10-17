@@ -15,6 +15,9 @@ interface TokenStore {
     fun read(): String?
 
     fun write(refreshToken: String?)
+
+    /** Havia um token guardado que não abre mais (chave trocada, backup restaurado em outro celular). */
+    val unreadable: Boolean get() = false
 }
 
 fun interface SecretKeyProvider {
@@ -23,7 +26,10 @@ fun interface SecretKeyProvider {
 
 /** AES/GCM com a chave dada; nas preferências fica só o texto cifrado (com o IV na frente). */
 class EncryptedTokenStore(private val prefs: SharedPreferences, private val keys: SecretKeyProvider) : TokenStore {
-    @Suppress("TooGenericExceptionCaught", "SwallowedException") // ilegível (chave trocada): como se não houvesse
+    override var unreadable = false
+        private set
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException") // ilegível: esquece e avisa que precisa autorizar
     override fun read(): String? {
         val stored = prefs.getString(KEY, null) ?: return null
         return try {
@@ -32,6 +38,8 @@ class EncryptedTokenStore(private val prefs: SharedPreferences, private val keys
             cipher.init(Cipher.DECRYPT_MODE, keys.key(), GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES))
             String(cipher.doFinal(bytes, IV_BYTES, bytes.size - IV_BYTES), Charsets.UTF_8)
         } catch (e: Exception) {
+            unreadable = true
+            prefs.edit().remove(KEY).apply()
             null
         }
     }

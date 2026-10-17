@@ -143,14 +143,35 @@ class SpotifyWebAuthTest {
 
         assertTrue(ShadowLog.getLogs().none { it.msg.contains("refresh-secreto") })
     }
+
+    /** Falha do Keystore ao guardar o token não derruba o app: só não renova agora. */
+    @Test
+    fun aKeystoreFailureWhileSavingDoesNotCrash() = runTest {
+        store.write("refresh-1")
+        store.failWrites = true
+        answers += token("acesso-2", "refresh-2")
+
+        assertNull(auth().accessToken())
+    }
+
+    /** Token guardado que não abre mais (backup restaurado em outro celular): autorização perdida, com aviso. */
+    @Test
+    fun anUnreadableStoredTokenIsLost() = runTest {
+        store.unreadable = true
+
+        assertEquals(WebAuthState.LOST, auth().state.value)
+    }
 }
 
 class MemoryTokenStore : TokenStore {
     private var token: String? = null
+    var failWrites = false
+    override var unreadable = false
 
     override fun read(): String? = token
 
     override fun write(refreshToken: String?) {
+        if (failWrites) throw java.security.ProviderException("Keystore")
         token = refreshToken
     }
 }

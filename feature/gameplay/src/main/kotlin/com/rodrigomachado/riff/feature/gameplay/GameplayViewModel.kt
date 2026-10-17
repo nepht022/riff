@@ -114,11 +114,11 @@ class GameplayViewModel @Inject constructor(
     private var pauseRequested = false
 
     init {
+        // Da abertura até a tela sair de vez, a fila do Spotify não baixa nem apaga (e este mapa vira "jogado").
+        addCloseable { matchActivity.leave(chartId) }
         viewModelScope.launch {
-            val loaded = load()
-            state.value = loaded
-            // A fila do Spotify espera a partida acabar; o mapa jogado deixa de ser apagável.
-            if (loaded is GameplayUiState.Ready) matchActivity.started(chartId)
+            matchActivity.enter(chartId)
+            state.value = load()
         }
     }
 
@@ -280,7 +280,6 @@ class GameplayViewModel @Inject constructor(
 
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
-        matchActivity.ended()
         interruptions?.stop()
         interruptions = null
         player?.release()

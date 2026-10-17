@@ -15,6 +15,7 @@ class QueueCleaner @Inject constructor(
     private val downloads: QueueDownloads,
     private val deleter: ChartDeleter,
     private val settings: SettingsRepository,
+    private val matches: MatchActivity,
 ) {
     /** Depois de cada leitura da fila. */
     suspend fun keepOnly(currentTrackUri: String?, window: List<String>) {
@@ -28,8 +29,9 @@ class QueueCleaner @Inject constructor(
     }
 
     private suspend fun delete(which: (QueueDownload) -> Boolean) {
-        if (!settings.settings.first().queueDeleteUnplayed) return
-        val ids = downloads.unplayed().filter(which).map { it.chartId }
+        // Com partida aberta, nada sai (nem o mapa sendo carregado, nem disco ocupado durante a pista).
+        if (!settings.settings.first().queueDeleteUnplayed || matches.inMatch.value) return
+        val ids = downloads.unplayed().filter { which(it) && !matches.isOpen(it.chartId) }.map { it.chartId }
         if (ids.isEmpty()) return
         val result = deleter.delete(ids)
         // Só sai do registro o que foi apagado de fato (no banco, a linha some junto com o mapa).

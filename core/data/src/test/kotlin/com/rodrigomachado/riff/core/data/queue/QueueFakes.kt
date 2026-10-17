@@ -47,9 +47,14 @@ class FakeRemote : SpotifyRemote {
 class FakeQueue : SpotifyQueue {
     var next: QueueRead = QueueRead.Tracks(emptyList())
     var reads = 0
+    var failOnce: RuntimeException? = null
 
     override suspend fun next(count: Int): QueueRead {
         reads++
+        failOnce?.let {
+            failOnce = null
+            throw it
+        }
         return next
     }
 }
@@ -89,8 +94,18 @@ class FakeDownloader : ChartDownloader {
     val downloaded = mutableListOf<Pair<String, String?>>()
     var failure: ChartDownloadException? = null
 
+    /** Segura o download no meio (para a partida começar durante ele). */
+    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+    var cancelled = 0
+
     override suspend fun download(chart: EncoreChart, matchTrackUri: String?, onProgress: (Float) -> Unit): Chart {
         failure?.let { throw it }
+        try {
+            gate?.await()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            cancelled++
+            throw e
+        }
         downloaded += chart.md5 to matchTrackUri
         val id = "chart-${chart.md5}"
         return Chart(id, chart.name, chart.artist, null, null, null, "f", ChartFormat.CHART, chart.guitarDifficulties)

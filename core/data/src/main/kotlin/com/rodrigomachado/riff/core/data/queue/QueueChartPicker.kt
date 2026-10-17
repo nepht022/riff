@@ -9,6 +9,7 @@ import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
+import kotlin.math.abs
 
 /** O que a fila usa do Encore: a pesquisa e a olhada no começo do pacote. */
 interface EncoreSearch {
@@ -38,9 +39,17 @@ class QueueChartPicker @Inject constructor(private val encore: EncoreSearch) {
         } catch (e: Exception) {
             return null
         }
+        // A faixa do Spotify já é uma versão (ao vivo, remix...): então a versão vem primeiro.
+        val trackIsVersion = VersionTitles.isVersion(track.title)
         val ranked = found
-            .filter { it.guitarDifficulties.isNotEmpty() }
-            .map { Candidate(it, TrackMatcher.score(track, it.asChart()), !VersionTitles.isVersion(it.name)) }
+            .filter { it.guitarDifficulties.isNotEmpty() && durationAgrees(track, it) }
+            .map {
+                Candidate(
+                    it,
+                    TrackMatcher.score(track, it.asChart()),
+                    VersionTitles.isVersion(it.name) == trackIsVersion,
+                )
+            }
             .filter { it.score >= TrackMatcher.AUTOMATIC_THRESHOLD }
             .sortedWith(compareByDescending<Candidate> { it.original }.thenByDescending { it.score })
         val best = ranked.firstOrNull() ?: return null
@@ -56,10 +65,18 @@ class QueueChartPicker @Inject constructor(private val encore: EncoreSearch) {
             .first().first.chart
     }
 
+    /** Sozinho, só baixa com a duração conferida: sem ela, título e artista parecidos não bastam. */
+    private fun durationAgrees(track: TrackQuery, chart: EncoreChart): Boolean {
+        val wanted = track.durationMs ?: return true
+        val found = chart.durationMs ?: return false
+        return abs(wanted - found) <= DURATION_TOLERANCE_MS
+    }
+
     private class Candidate(val chart: EncoreChart, val score: Float, val original: Boolean)
 
     private companion object {
         const val MAX_PEEKS = 3
+        const val DURATION_TOLERANCE_MS = 5_000L
     }
 }
 

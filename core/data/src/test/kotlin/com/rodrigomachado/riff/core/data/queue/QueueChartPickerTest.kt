@@ -101,6 +101,23 @@ class QueueChartPickerTest {
 
         assertNull(picker.pick(spirit))
     }
+
+    /** Sem duração no Encore, título e artista quase iguais não bastam para baixar sozinho. */
+    @Test
+    fun aChartWithoutDurationIsNotTaken() = runTest {
+        encore.results = listOf(chart("sem-duracao", durationMs = null))
+
+        assertNull(picker.pick(spirit))
+    }
+
+    /** A faixa do Spotify é ao vivo: o mapa ao vivo vem antes do de estúdio. */
+    @Test
+    fun aLiveTrackKeepsTheLiveChartFirst() = runTest {
+        val live = TrackQuery("Smells Like Teen Spirit (Live)", "Nirvana", 301_000)
+        encore.results = listOf(chart("studio"), chart("live", name = "Smells Like Teen Spirit (Live)"))
+
+        assertEquals("live", picker.pick(live)?.md5)
+    }
 }
 
 class FakeEncoreSearch : EncoreSearch {

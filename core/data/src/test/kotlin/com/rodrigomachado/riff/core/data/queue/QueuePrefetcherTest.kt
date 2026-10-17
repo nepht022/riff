@@ -59,7 +59,7 @@ class QueuePrefetcherTest {
     private fun TestScope.start() {
         QueuePrefetcher(
             remote, queue, auth, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
-            matchActivity, QueueCleaner(rows, deleter, settings), clock = { testScheduler.currentTime },
+            matchActivity, QueueCleaner(rows, deleter, settings, matchActivity), clock = { testScheduler.currentTime },
         ).start(backgroundScope)
         runCurrent()
     }
@@ -155,13 +155,13 @@ class QueuePrefetcherTest {
     fun nothingStartsDuringAMatchAndPendingOnesWaitForTheEnd() = runTest {
         queue.next = queued("a")
         encoreHas("a")
-        matchActivity.started("partida")
+        matchActivity.enter("partida")
         start()
         nowPlaying("now")
         assertTrue(downloader.downloaded.isEmpty())
         assertTrue(encore.queries.isEmpty())
 
-        matchActivity.ended()
+        matchActivity.leave("partida")
         runCurrent()
 
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
@@ -283,5 +283,66 @@ class QueuePrefetcherTest {
         start()
 
         assertEquals(listOf("sobra"), deleter.deleted)
+    }
+
+    /** ⏭ na pausa: a partida seguinte começa com um download no meio; ele para e volta depois da partida. */
+    @Test
+    fun aDownloadInProgressStopsWhenAMatchStartsAndResumesAfter() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        downloader.gate = kotlinx.coroutines.CompletableDeferred()
+        start()
+        nowPlaying("now")
+
+        matchActivity.enter("partida")
+        runCurrent()
+        assertEquals(1, downloader.cancelled)
+
+        downloader.gate = null
+        matchActivity.leave("partida")
+        runCurrent()
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    /** Depois de esperar a partida, tudo é conferido de novo (a rede pode ter virado dados móveis). */
+    @Test
+    fun afterAMatchTheConditionsAreCheckedAgain() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        downloader.gate = kotlinx.coroutines.CompletableDeferred()
+        start()
+        nowPlaying("now")
+        matchActivity.enter("partida")
+        runCurrent()
+
+        conditions.unmetered = false
+        downloader.gate = null
+        matchActivity.leave("partida")
+        runCurrent()
+
+        assertTrue(downloader.downloaded.isEmpty())
+    }
+
+    @Test
+    fun anErrorInOneReadDoesNotStopTheQueue() = runTest {
+        queue.failOnce = IllegalStateException("Keystore indisponível")
+        queue.next = queued("a")
+        encoreHas("a")
+        start()
+        nowPlaying("now")
+        advanceTimeBy(60_001)
+
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    /** Opção ligada mas sem autorização (token ilegível depois de um backup restaurado): desliga e não fica muda. */
+    @Test
+    fun withoutAuthorizationTheOptionIsTurnedOff() = runTest {
+        queue.next = QueueRead.Unavailable
+        auth.state.value = WebAuthState.NOT_AUTHORIZED
+        start()
+        nowPlaying("now")
+
+        assertFalse(settings.settings.value.queuePrefetch)
     }
 }

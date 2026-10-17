@@ -44,8 +44,13 @@ class PkceSpotifyWebAuth(
     private val launcher: CodeLauncher,
     private val clock: () -> Long,
 ) : SpotifyWebAuth {
-    private val authState =
-        MutableStateFlow(if (store.read() != null) WebAuthState.AUTHORIZED else WebAuthState.NOT_AUTHORIZED)
+    private val authState = MutableStateFlow(
+        when {
+            store.read() != null -> WebAuthState.AUTHORIZED
+            store.unreadable -> WebAuthState.LOST
+            else -> WebAuthState.NOT_AUTHORIZED
+        },
+    )
     override val state: StateFlow<WebAuthState> = authState.asStateFlow()
 
     private val lock = Mutex()
@@ -87,7 +92,7 @@ class PkceSpotifyWebAuth(
 
             Outcome.REFUSED -> {
                 // O Spotify não aceita mais: esquece e espera o usuário autorizar de novo nas Configurações.
-                store.write(null)
+                save(null)
                 access = null
                 authState.value = WebAuthState.LOST
                 null
@@ -120,12 +125,23 @@ class PkceSpotifyWebAuth(
             val json = JSONObject(body)
             access = json.getString("access_token")
             expiresAt = clock() + json.getLong("expires_in") * MS_PER_SECOND
-            json.optString("refresh_token").takeIf { it.isNotEmpty() }?.let(store::write)
-            Outcome.OK
+            val refresh = json.optString("refresh_token").takeIf { it.isNotEmpty() }
+            if (refresh != null && !save(refresh)) Outcome.FAILED else Outcome.OK
         } catch (e: JSONException) {
             Log.w(TAG, "token do Spotify: resposta inesperada")
             Outcome.FAILED
         }
+    }
+
+    /** O Keystore pode falhar (chave invalidada, aparelho ocupado): não derruba o app. */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun save(refreshToken: String?): Boolean = try {
+        store.write(refreshToken)
+        true
+    } catch (e: Exception) {
+        Log.w(TAG, "token do Spotify não guardado: ${e.javaClass.simpleName}")
+        access = null
+        false
     }
 
     private enum class Outcome { OK, REFUSED, FAILED }

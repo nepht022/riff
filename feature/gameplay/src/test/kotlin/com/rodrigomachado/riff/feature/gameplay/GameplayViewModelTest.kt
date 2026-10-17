@@ -62,16 +62,18 @@ class GameplayViewModelTest {
     private val artRequests = mutableListOf<String>()
     private val matchActivity = object : MatchActivity {
         override val inMatch = kotlinx.coroutines.flow.MutableStateFlow(false)
-        val startedWith = mutableListOf<String>()
+        val opened = mutableListOf<String>()
 
-        override suspend fun started(chartId: String) {
+        override suspend fun enter(chartId: String) {
             inMatch.value = true
-            startedWith += chartId
+            opened += chartId
         }
 
-        override fun ended() {
+        override fun leave(chartId: String) {
             inMatch.value = false
         }
+
+        override fun isOpen(chartId: String) = chartId in opened && inMatch.value
     }
     private val controls = object : SpotifyControls {
         val commands = mutableListOf<String>()
@@ -670,16 +672,21 @@ class GameplayViewModelTest {
         assertEquals(listOf("previousTrack released=true"), controls.commands)
     }
 
-    /** A fila do Spotify não baixa durante a partida, e o mapa jogado deixa de ser apagável. */
+    /** A fila do Spotify não baixa nem apaga o mapa desde a abertura da partida até a tela sair de vez. */
     @Test
-    fun aStartedMatchMarksItsMapAsPlayedAndTheEndIsAnnounced() = runTest {
-        loader.result = { playable() }
-        val viewModel = viewModel()
+    fun theMatchIsHeldFromOpeningUntilTheScreenCloses() = runTest {
+        loader.result = { playable(audio = null) }
+        val gate = CompletableDeferred<Unit>()
+        loader.gate = gate
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        assertEquals(listOf("a"), matchActivity.opened) // ainda carregando
+        gate.complete(Unit)
 
-        assertEquals(listOf("a"), matchActivity.startedWith)
-        assertTrue(matchActivity.inMatch.value)
+        viewModel.pause()
+        viewModel.changeSong(forward = true)
+        assertTrue(matchActivity.inMatch.value) // a tela ainda está saindo
 
-        viewModel.release()
+        androidx.lifecycle.ViewModelStore().apply { put("partida", viewModel) }.clear()
         assertEquals(false, matchActivity.inMatch.value)
     }
 }

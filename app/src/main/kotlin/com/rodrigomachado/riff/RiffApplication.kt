@@ -3,6 +3,7 @@ package com.rodrigomachado.riff
 import android.app.Application
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.rodrigomachado.riff.core.data.LegacyAppLanguage
@@ -10,9 +11,11 @@ import com.rodrigomachado.riff.core.data.SystemAppLanguageStore
 import com.rodrigomachado.riff.core.data.queue.QueuePrefetcher
 import com.rodrigomachado.riff.core.spotify.ForegroundActivity
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -23,10 +26,16 @@ class RiffApplication :
 
     @Inject lateinit var language: SystemAppLanguageStore
 
-    @Inject lateinit var queuePrefetcher: QueuePrefetcher
+    // Só criada fora da thread da tela: monta a autorização do Spotify, que lê o Keystore.
+    @Inject lateinit var queuePrefetcher: dagger.Lazy<QueuePrefetcher>
 
-    // Vive enquanto o processo vive: a fila do Spotify segue em qualquer tela do Riff.
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Vive enquanto o processo vive: a fila do Spotify segue em qualquer tela do Riff. Um erro inesperado fica no
+    // log em vez de derrubar o app.
+    private val appScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, error ->
+            Log.w("RiffQueue", "erro na fila do Spotify: ${error.javaClass.simpleName}")
+        },
+    )
 
     // O WorkManager cria os Workers pelo Hilt (o SeparationWorker recebe o runner injetado).
     override val workManagerConfiguration: Configuration
@@ -46,6 +55,6 @@ class RiffApplication :
         // "Padrão do sistema" nas configurações do celular também volta a Português na próxima abertura.
         language.applyDefault()
         // Espera a opção e a conexão com o Spotify; nunca conecta sozinho.
-        queuePrefetcher.start(appScope)
+        appScope.launch { queuePrefetcher.get().start(appScope) }
     }
 }

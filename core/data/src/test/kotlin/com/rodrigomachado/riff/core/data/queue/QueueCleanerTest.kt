@@ -15,7 +15,8 @@ class QueueCleanerTest {
     private val rows = MemoryQueueDownloads()
     private val deleter = FakeChartDeleter(rows)
     private val settings = FakeSettings(Settings.DEFAULT.copy(queuePrefetch = true))
-    private val cleaner = QueueCleaner(rows, deleter, settings)
+    private val matchActivity = DefaultMatchActivity(rows)
+    private val cleaner = QueueCleaner(rows, deleter, settings, matchActivity)
 
     private suspend fun downloadedFor(vararg tracks: String) =
         tracks.forEachIndexed { i, track -> rows.add("chart-$track", track, at = i.toLong()) }
@@ -96,6 +97,27 @@ class QueueCleanerTest {
         cleaner.atStartup()
 
         assertEquals(listOf("chart-a"), deleter.deleted)
+    }
+
+    /** Tocou em Jogar e o Spotify trocou de música durante o carregamento: o mapa aberto não some. */
+    @Test
+    fun aMapBeingOpenedIsNotDeleted() = runTest {
+        downloadedFor("a")
+        matchActivity.enter("chart-a")
+
+        cleaner.keepOnly(currentTrackUri = "b", window = emptyList())
+
+        assertTrue(deleter.deleted.isEmpty())
+    }
+
+    @Test
+    fun nothingIsDeletedDuringAMatch() = runTest {
+        downloadedFor("a")
+        matchActivity.enter("outro")
+
+        cleaner.keepOnly(currentTrackUri = "b", window = emptyList())
+
+        assertTrue(deleter.deleted.isEmpty())
     }
 }
 
