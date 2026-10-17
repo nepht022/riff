@@ -140,3 +140,12 @@ Desligar "Baixar mapas da fila" para de ler a fila e de baixar. Os mapas da fila
 - Onde ficam as peças (provavelmente `:core:spotify` para a API Web e a autorização, `:core:data` para a fila e as regras, Configurações na aba nova), nomes e organização em arquivos.
 - Como a tela de partida informa "começou partida com o mapa X" para a marca de jogado.
 - O texto exato das mensagens que não estão citadas aqui, seguindo o tom das telas atuais.
+
+## Adendo (2026-10-17): sem mapa com a mesma duração
+
+Pedido do usuário depois do teste no celular (Raining Blood – Slayer: 4:15 no Spotify, mapas do Encore com 3:32–4:24; nenhum passava na tolerância de 5 s).
+
+- Nova opção **Sem mapa com a mesma duração**: **Baixar o de duração mais próxima** (padrão, `queue_closest_duration` = verdadeiro) ou **Não baixar nenhum**.
+- O mais próximo exige a mesma semelhança de título e artista (0,92, sem contar a duração), com originais primeiro, depois a menor diferença de duração; no máximo 60 s (*decisão minha*: mais que isso já é outra versão).
+- Ele é baixado **sem casar** com a faixa e gravado como **sugestão** (`track_matches.suggested`, banco v8): o Tocando agora mostra "CONFIRMAR MAPA". Confirmar o torna casamento. Uma música que já tem sugestão na biblioteca não troca uma sugestão por outra.
+- Cada música que fica sem mapa deixa o motivo no registro (`RiffQueue`). Uma falha da pesquisa no Encore é tentada de novo na próxima leitura da fila (antes, contava como tentada).

@@ -345,6 +345,10 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Músicas com mapas já baixados").performScrollTo().assertExists()
         composeRule.onNode(hasText("Baixar nova sugestão") and isSelectable()).performScrollTo().assertIsSelected()
         composeRule.onNode(hasText("Manter o que já tenho") and isSelectable()).assertIsNotSelected()
+        composeRule.onNodeWithText("Sem mapa com a mesma duração").performScrollTo().assertExists()
+        composeRule.onNode(hasText("Baixar o de duração mais próxima") and isSelectable()).performScrollTo()
+            .assertIsSelected()
+        composeRule.onNode(hasText("Não baixar nenhum") and isSelectable()).assertIsNotSelected()
     }
 
     @Test
@@ -371,11 +375,22 @@ class SettingsContentTest {
     }
 
     @Test
+    fun withoutTheSameDurationTheChoiceIsBetweenTheClosestAndNone() {
+        show(Settings.DEFAULT.copy(queuePrefetch = true))
+        tab("Spotify")
+
+        composeRule.onNode(hasText("Não baixar nenhum") and isSelectable()).performScrollTo().performClick()
+
+        assertEquals(listOf(QueueAction.ClosestDuration(false).toString()), events)
+    }
+
+    @Test
     fun theChoicesAreOffWithPrefetchOff() {
         show()
         tab("Spotify")
 
         composeRule.onNode(hasText("Manter o que já tenho") and isSelectable()).performScrollTo().assertIsNotEnabled()
+        composeRule.onNode(hasText("Não baixar nenhum") and isSelectable()).performScrollTo().assertIsNotEnabled()
     }
 
     @Test

@@ -50,6 +50,8 @@ data class TrackMatchEntity(
     val trackOffsetMs: Int,
     /** O jogador (ou a detecção automática) já escolheu o ajuste; 0 escolhido vale, 0 não escolhido não. */
     @ColumnInfo(defaultValue = "0") val offsetChosen: Boolean = false,
+    /** Mapa baixado pela fila com outra duração: aparece como sugestão até o jogador confirmar. */
+    @ColumnInfo(defaultValue = "0") val suggested: Boolean = false,
 )
 
 @Entity(

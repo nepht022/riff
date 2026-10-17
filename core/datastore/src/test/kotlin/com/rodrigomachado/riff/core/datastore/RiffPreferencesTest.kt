@@ -180,6 +180,7 @@ class RiffPreferencesTest {
                 queueDeleteUnplayed = false,
                 queueUseMobileData = true,
                 queueReplaceSuggested = false,
+                queueClosestDuration = false,
             )
         }
 
@@ -188,5 +189,6 @@ class RiffPreferencesTest {
         assertEquals(false, settings.queueDeleteUnplayed)
         assertEquals(true, settings.queueUseMobileData)
         assertEquals(false, settings.queueReplaceSuggested)
+        assertEquals(false, settings.queueClosestDuration)
     }
 }

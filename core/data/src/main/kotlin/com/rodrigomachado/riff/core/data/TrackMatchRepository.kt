@@ -25,6 +25,9 @@ interface TrackMatchRepository {
     /** Grava a confirmação ou a escolha manual; mantém o ajuste fino se o mapa for o mesmo. */
     suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean)
 
+    /** Grava um mapa só como sugestão (a fila, com outra duração): confirmar depois o torna casamento. */
+    suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float)
+
     /** Ajuste salvo desta faixa com este mapa; `null` se não houver casamento salvo com ele. */
     suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int?
 
@@ -43,7 +46,13 @@ class RoomTrackMatchRepository @Inject constructor(
     override suspend fun matchFor(track: PlaybackState): MatchStatus {
         val saved = dao.get(track.trackUri)
         val savedChart = saved?.let { charts.getChart(it.chartId) }
-        if (saved != null && savedChart != null) return MatchStatus.Matched(savedChart, saved.trackOffsetMs)
+        if (saved != null && savedChart != null) {
+            return if (saved.suggested) {
+                MatchStatus.Suggested(savedChart, saved.confidence)
+            } else {
+                MatchStatus.Matched(savedChart, saved.trackOffsetMs)
+            }
+        }
         val query = TrackQuery(track.title, track.artist, track.durationMs)
         val candidate = TrackMatcher.bestMatch(query, charts.observeCharts().first()) ?: return MatchStatus.NoMatch
         return when (candidate.kind) {
@@ -64,6 +73,11 @@ class RoomTrackMatchRepository @Inject constructor(
                 offsetChosen = same?.offsetChosen ?: false,
             ),
         )
+        version.update { it + 1 }
+    }
+
+    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) {
+        dao.upsert(TrackMatchEntity(spotifyTrackUri, chartId, confidence, isManual = false, 0, suggested = true))
         version.update { it + 1 }
     }
 

@@ -61,5 +61,6 @@ class SettingsTest {
         assertEquals(true, settings.queueDeleteUnplayed)
         assertEquals(false, settings.queueUseMobileData)
         assertEquals(true, settings.queueReplaceSuggested)
+        assertEquals(true, settings.queueClosestDuration)
     }
 }

@@ -72,6 +72,7 @@ class SettingsViewModel @Inject constructor(
         is QueueAction.DeleteUnplayed -> setQueueDeleteUnplayed(action.on)
         is QueueAction.UseMobileData -> setQueueUseMobileData(action.on)
         is QueueAction.ReplaceSuggested -> setQueueReplaceSuggested(action.replace)
+        is QueueAction.ClosestDuration -> save { it.copy(queueClosestDuration = action.download) }
     }
 
     /** Ligar pede a autorização do Spotify na primeira vez (ou depois de perdida); recusada, continua desligada. */

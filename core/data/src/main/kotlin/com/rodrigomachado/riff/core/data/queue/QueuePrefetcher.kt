@@ -39,7 +39,8 @@ import javax.inject.Singleton
 /**
  * Mapas da fila do Spotify (spec §5–§6): a cada troca de música e a cada minuto lê as duas próximas da fila e
  * garante o mapa delas, um download por vez, nunca durante uma partida, só com rede e espaço. O que já foi
- * tentado não é pesquisado de novo enquanto o Riff estiver aberto.
+ * tentado não é pesquisado de novo enquanto o Riff estiver aberto (a não ser que a pesquisa tenha falhado).
+ * Cada música que fica sem mapa deixa o motivo no registro (RiffQueue).
  */
 @Singleton
 class QueuePrefetcher(
@@ -129,28 +130,43 @@ class QueuePrefetcher(
     private suspend fun prepare(track: QueuedTrack) {
         waiting -= track.uri
         if (track.uri in handled) return
-        var chart: EncoreChart? = null
+        var pick: QueuePick? = null
         while (true) {
             // Partida aberta: espera, e depois confere tudo de novo (a rede ou a opção podem ter mudado).
             matchActivity.inMatch.first { !it }
             val options = settings.settings.first()
-            if (!wanted(track, options) || !conditions.canDownload(options.queueUseMobileData)) return
-            val picked = chart ?: picker.pick(TrackQuery(track.title, track.artist, track.durationMs))
-                .also { handled += track.uri } ?: return
-            chart = picked
-            if (downloadUnlessAMatchOpens(track, picked)) return
+            val status = statusOf(track)
+            if (!wanted(track, status, options) || !canDownload(track, options)) return
+            val chosen = pick ?: picker.choose(TrackQuery(track.title, track.artist, track.durationMs))
+            pick = chosen
+            // Só a falha da pesquisa é tentada de novo, na próxima leitura.
+            if (chosen != QueuePick.SearchFailed) handled += track.uri
+            val target = chosen.target(status, options)
+            if (target == null) {
+                Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
+                return
+            }
+            if (downloadUnlessAMatchOpens(track, target)) return
         }
     }
 
     /** Opção ligada, ainda sem mapa e sem passar do limite de mapas apagáveis. */
-    private suspend fun wanted(track: QueuedTrack, options: Settings): Boolean = options.queuePrefetch &&
-        needsMap(track, options.queueReplaceSuggested) &&
-        !(options.queueDeleteUnplayed && downloads.unplayed().size >= MAX_QUEUE_MAPS)
+    private suspend fun wanted(track: QueuedTrack, status: MatchStatus, options: Settings): Boolean {
+        if (!options.queuePrefetch || !needsMap(track, status, options.queueReplaceSuggested)) return false
+        val full = options.queueDeleteUnplayed && downloads.unplayed().size >= MAX_QUEUE_MAPS
+        if (full) Log.i(TAG, "${track.label()} espera: já há $MAX_QUEUE_MAPS mapas da fila não jogados")
+        return !full
+    }
+
+    private suspend fun canDownload(track: QueuedTrack, options: Settings): Boolean =
+        conditions.canDownload(options.queueUseMobileData).also {
+            if (!it) Log.i(TAG, "${track.label()} espera: sem Wi-Fi (ou dados móveis), espaço ou pasta gravável")
+        }
 
     /** Falso se uma partida abriu no meio: o download para (a pista vem antes) e é refeito depois. */
     @Suppress("SwallowedException") // o cancelamento do download pela partida é o caminho esperado
-    private suspend fun downloadUnlessAMatchOpens(track: QueuedTrack, chart: EncoreChart): Boolean = coroutineScope {
-        val download = async { download(track, chart) }
+    private suspend fun downloadUnlessAMatchOpens(track: QueuedTrack, target: QueueTarget): Boolean = coroutineScope {
+        val download = async { download(track, target) }
         val watcher = launch {
             matchActivity.inMatch.first { it }
             download.cancel()
@@ -166,14 +182,20 @@ class QueuePrefetcher(
         finished
     }
 
-    private suspend fun download(track: QueuedTrack, chart: EncoreChart) {
+    private suspend fun download(track: QueuedTrack, target: QueueTarget) {
+        val suggestion = target.suggestion
         val saved = try {
-            downloader.download(chart, track.uri) {}
+            // Com outra duração, o mapa não casa com a faixa: fica como sugestão, para confirmar no Tocando agora.
+            downloader.download(target.chart, track.uri.takeIf { suggestion == null }) {}
         } catch (e: ChartDownloadException) {
-            Log.w(TAG, "mapa da fila não baixado: ${e.reason}")
+            Log.w(TAG, "${track.label()}: mapa da fila não baixado: ${e.reason}")
             return
         }
-        Log.i(TAG, "mapa da fila pronto")
+        suggestion?.let { matches.saveSuggestion(track.uri, saved.id, it) }
+        Log.i(
+            TAG,
+            "${track.label()}: mapa da fila pronto" + if (suggestion != null) " (sugestão, outra duração)" else "",
+        )
         if (settings.settings.first().queueDeleteUnplayed) downloads.add(saved.id, track.uri, clock())
     }
 
@@ -188,17 +210,19 @@ class QueuePrefetcher(
         null
     }
 
-    private suspend fun needsMap(track: QueuedTrack, replaceSuggested: Boolean): Boolean =
-        when (matches.matchFor(PlaybackState(track.uri, track.title, track.artist, track.durationMs, 0, true, 0))) {
-            is MatchStatus.Matched -> {
-                handled += track.uri
-                false
-            }
+    private suspend fun statusOf(track: QueuedTrack): MatchStatus =
+        matches.matchFor(PlaybackState(track.uri, track.title, track.artist, track.durationMs, 0, true, 0))
 
-            is MatchStatus.Suggested -> replaceSuggested
-
-            MatchStatus.NoMatch -> true
+    private fun needsMap(track: QueuedTrack, status: MatchStatus, replaceSuggested: Boolean): Boolean = when (status) {
+        is MatchStatus.Matched -> {
+            handled += track.uri
+            false
         }
+
+        is MatchStatus.Suggested -> replaceSuggested
+
+        MatchStatus.NoMatch -> true
+    }
 
     private companion object {
         const val TAG = "RiffQueue"
@@ -208,3 +232,27 @@ class QueuePrefetcher(
         const val MS_PER_SECOND = 1_000L
     }
 }
+
+/** O mapa escolhido e, se veio com outra duração, a semelhança com que fica sugerido. */
+internal class QueueTarget(val chart: EncoreChart, val suggestion: Float?)
+
+/** O que baixar; nada se não há mapa confiável, ou se só há outra duração e as opções dizem para não baixar. */
+internal fun QueuePick.target(status: MatchStatus, options: Settings): QueueTarget? = when (this) {
+    is QueuePick.Exact -> QueueTarget(chart, suggestion = null)
+
+    is QueuePick.Closest -> QueueTarget(chart, confidence).takeIf {
+        // Trocar uma sugestão por outra sugestão não ajuda.
+        options.queueClosestDuration && status !is MatchStatus.Suggested
+    }
+
+    QueuePick.NothingReliable, QueuePick.SearchFailed -> null
+}
+
+internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
+    pick == QueuePick.SearchFailed -> "a pesquisa no Encore falhou (tenta de novo na próxima leitura)"
+    pick == QueuePick.NothingReliable -> "nenhum mapa do Encore com título, artista e duração parecidos"
+    status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão"
+    else -> "só com outra duração (opção: não baixar nenhum)"
+}
+
+private fun QueuedTrack.label() = "$artist – $title"

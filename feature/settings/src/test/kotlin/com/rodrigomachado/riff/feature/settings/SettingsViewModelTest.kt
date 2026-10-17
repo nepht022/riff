@@ -199,12 +199,14 @@ class SettingsViewModelTest {
         vm.setQueueDeleteUnplayed(false)
         vm.setQueueUseMobileData(true)
         vm.setQueueReplaceSuggested(false)
+        vm.onQueue(QueueAction.ClosestDuration(false))
         advanceUntilIdle()
 
         val saved = repository.settings.value
         assertEquals(false, saved.queueDeleteUnplayed)
         assertEquals(true, saved.queueUseMobileData)
         assertEquals(false, saved.queueReplaceSuggested)
+        assertEquals(false, saved.queueClosestDuration)
     }
 
     @Test

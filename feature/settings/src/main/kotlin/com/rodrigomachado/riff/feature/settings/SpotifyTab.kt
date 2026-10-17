@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,9 +38,11 @@ sealed interface QueueAction {
     data class UseMobileData(val on: Boolean) : QueueAction
 
     data class ReplaceSuggested(val replace: Boolean) : QueueAction
+
+    data class ClosestDuration(val download: Boolean) : QueueAction
 }
 
-/** Mapas da fila do Spotify: a opção principal, as três que dependem dela e os avisos. */
+/** Mapas da fila do Spotify: a opção principal, as que dependem dela e os avisos. */
 @Composable
 internal fun SpotifyTab(settings: Settings, queue: QueueUiState, onQueue: (QueueAction) -> Unit) {
     val on = settings.queuePrefetch
@@ -74,7 +77,20 @@ internal fun SpotifyTab(settings: Settings, queue: QueueUiState, onQueue: (Queue
         tag = SettingsTestTags.QUEUE_MOBILE_DATA,
         enabled = on,
     )
-    SuggestedChoice(settings.queueReplaceSuggested, enabled = on) { onQueue(QueueAction.ReplaceSuggested(it)) }
+    QueueChoice(
+        title = R.string.settings_queue_suggested,
+        yes = R.string.settings_queue_suggested_replace,
+        no = R.string.settings_queue_suggested_keep,
+        chosen = settings.queueReplaceSuggested,
+        enabled = on,
+    ) { onQueue(QueueAction.ReplaceSuggested(it)) }
+    QueueChoice(
+        title = R.string.settings_queue_closest,
+        yes = R.string.settings_queue_closest_download,
+        no = R.string.settings_queue_closest_none,
+        chosen = settings.queueClosestDuration,
+        enabled = on,
+    ) { onQueue(QueueAction.ClosestDuration(it)) }
 }
 
 @Composable
@@ -82,32 +98,35 @@ private fun Notice(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = RiffColors.Paper)
 }
 
-/** "Músicas com mapas já baixados": as duas escolhas à mostra, só uma marcada. */
+/** Duas escolhas à mostra, só uma marcada: [yes] é verdadeiro, [no] é falso. */
 @Composable
-private fun SuggestedChoice(replace: Boolean, enabled: Boolean, onChoose: (Boolean) -> Unit) {
+private fun QueueChoice(
+    @StringRes title: Int,
+    @StringRes yes: Int,
+    @StringRes no: Int,
+    chosen: Boolean,
+    enabled: Boolean,
+    onChoose: (Boolean) -> Unit,
+) {
     Column(
         Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).padding(vertical = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text(
-            stringResource(R.string.settings_queue_suggested),
-            style = MaterialTheme.typography.titleMedium,
-            color = RiffColors.Paper,
-        )
+        Text(stringResource(title), style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
         Column(Modifier.selectableGroup()) {
             for (option in listOf(true, false)) {
                 Row(
                     Modifier.fillMaxWidth().selectable(
-                        selected = option == replace,
+                        selected = option == chosen,
                         enabled = enabled,
                         role = Role.RadioButton,
-                        onClick = withMenuSound(MenuSound.NAVIGATE) { if (option != replace) onChoose(option) },
+                        onClick = withMenuSound(MenuSound.NAVIGATE) { if (option != chosen) onChoose(option) },
                     ).padding(vertical = Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     RadioButton(
-                        selected = option == replace,
+                        selected = option == chosen,
                         onClick = null,
                         enabled = enabled,
                         colors = RadioButtonDefaults.colors(
@@ -116,7 +135,7 @@ private fun SuggestedChoice(replace: Boolean, enabled: Boolean, onChoose: (Boole
                         ),
                     )
                     Text(
-                        stringResource(suggestedName(option)),
+                        stringResource(if (option) yes else no),
                         style = MaterialTheme.typography.bodyLarge,
                         color = RiffColors.Paper,
                     )
@@ -125,6 +144,3 @@ private fun SuggestedChoice(replace: Boolean, enabled: Boolean, onChoose: (Boole
         }
     }
 }
-
-private fun suggestedName(replace: Boolean) =
-    if (replace) R.string.settings_queue_suggested_replace else R.string.settings_queue_suggested_keep

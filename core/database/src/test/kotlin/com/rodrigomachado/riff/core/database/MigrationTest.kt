@@ -154,4 +154,25 @@ class MigrationTest {
             close()
         }
     }
+
+    @Test
+    fun version7BecomesVersion8WithSavedMatchesNotSuggested() {
+        helper.createDatabase(7).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId, separateGuitar) " +
+                    "VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1, 0)",
+            )
+            execSQL("INSERT INTO track_matches VALUES ('spotify:track:x', 'a', 1.0, 1, 0, 0)")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(8).apply {
+            prepare("SELECT suggested FROM track_matches").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

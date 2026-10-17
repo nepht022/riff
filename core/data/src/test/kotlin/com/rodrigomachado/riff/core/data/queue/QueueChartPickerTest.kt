@@ -110,6 +110,53 @@ class QueueChartPickerTest {
         assertNull(picker.pick(spirit))
     }
 
+    private val rainingBlood = TrackQuery("Raining Blood", "Slayer", 255_000)
+
+    private fun slayer(md5: String, durationMs: Long?, artist: String = "Slayer") =
+        chart(md5, name = "Raining Blood", artist = artist, durationMs = durationMs)
+
+    /** O caso do Raining Blood: nenhum com a duração do Spotify; o mais próximo vem como sugestão. */
+    @Test
+    fun withoutTheSameDurationTheClosestComesAsASuggestion() = runTest {
+        encore.results = listOf(slayer("212", 212_264), slayer("264", 264_000), slayer("221", 221_085))
+
+        val pick = picker.choose(rainingBlood)
+
+        assertTrue("$pick", pick is QueuePick.Closest)
+        pick as QueuePick.Closest
+        assertEquals("264", pick.chart.md5)
+        assertTrue(pick.confidence >= TrackMatcher.AUTOMATIC_THRESHOLD)
+    }
+
+    @Test
+    fun theSameDurationIsStillTheFirstChoice() = runTest {
+        encore.results = listOf(slayer("264", 264_000), slayer("igual", 256_000))
+
+        assertEquals(QueuePick.Exact(slayer("igual", 256_000)), picker.choose(rainingBlood))
+    }
+
+    @Test
+    fun moreThanAMinuteAwayIsNotTaken() = runTest {
+        encore.results = listOf(slayer("longa", 316_000), slayer("sem-duracao", null))
+
+        assertEquals(QueuePick.NothingReliable, picker.choose(rainingBlood))
+    }
+
+    /** O mais próximo ainda precisa de título e artista: um cover de outra banda não serve. */
+    @Test
+    fun theClosestStillNeedsTheSameArtist() = runTest {
+        encore.results = listOf(slayer("cover", 254_000, artist = "Todd Barriage"), slayer("longe", 212_000, "Havok"))
+
+        assertEquals(QueuePick.NothingReliable, picker.choose(rainingBlood))
+    }
+
+    @Test
+    fun aFailedSearchIsToldApartFromNothingFound() = runTest {
+        encore.failure = java.io.IOException("Encore fora do ar")
+
+        assertEquals(QueuePick.SearchFailed, picker.choose(spirit))
+    }
+
     /** A faixa do Spotify é ao vivo: o mapa ao vivo vem antes do de estúdio. */
     @Test
     fun aLiveTrackKeepsTheLiveChartFirst() = runTest {

@@ -28,8 +28,10 @@ data class Settings(
     val queueDeleteUnplayed: Boolean = true,
     /** Baixar pela fila também em rede com cobrança (dados móveis); desligado, só no Wi-Fi. */
     val queueUseMobileData: Boolean = false,
-    /** Música da fila com mapa só sugerido: baixar um mais parecido (verdadeiro) ou manter o sugerido. */
+    /** Música da fila com mapa só sugerido: baixar uma nova sugestão (verdadeiro) ou manter o sugerido. */
     val queueReplaceSuggested: Boolean = true,
+    /** Nenhum mapa do Encore com a duração da faixa: baixar o de duração mais próxima, como sugestão (verdadeiro). */
+    val queueClosestDuration: Boolean = true,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }

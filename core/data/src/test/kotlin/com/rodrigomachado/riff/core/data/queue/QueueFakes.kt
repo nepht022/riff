@@ -83,7 +83,13 @@ class FakeMatches : TrackMatchRepository {
 
     override suspend fun matchFor(track: PlaybackState): MatchStatus = statuses[track.trackUri] ?: MatchStatus.NoMatch
 
+    val suggestions = mutableListOf<Pair<String, String>>()
+
     override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
+
+    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) {
+        suggestions += spotifyTrackUri to chartId
+    }
 
     override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null
 

@@ -46,12 +46,17 @@ class QueuePrefetcherTest {
         encore.byQuery = uris.associate { "Banda Música $it" to listOf(chartFor(it)) }
     }
 
-    private fun chartFor(uri: String) = EncoreChart(
+    /** No Encore só com outra duração (a faixa tem 200 s). */
+    private fun encoreHasOnlyAnotherDuration(uri: String, durationMs: Long = 230_000) {
+        encore.byQuery = mapOf("Banda Música $uri" to listOf(chartFor(uri, durationMs)))
+    }
+
+    private fun chartFor(uri: String, durationMs: Long = 200_000) = EncoreChart(
         "md5-$uri",
         "Música $uri",
         "Banda",
         null,
-        200_000,
+        durationMs,
         setOf(Difficulty.EXPERT),
         hasVideoBackground = false,
     )
@@ -113,6 +118,62 @@ class QueuePrefetcherTest {
 
         settings.settings.value = settings.settings.value.copy(queueReplaceSuggested = true)
         nowPlaying("now2")
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    @Test
+    fun withoutTheSameDurationTheClosestArrivesAsASuggestion() = runTest {
+        queue.next = queued("a")
+        encoreHasOnlyAnotherDuration("a")
+        start()
+
+        nowPlaying("now")
+
+        // Baixado sem casar com a faixa: o casamento fica como sugestão, para confirmar no Tocando agora.
+        assertEquals(listOf("md5-a" to null), downloader.downloaded)
+        assertEquals(listOf("a" to "chart-md5-a"), matches.suggestions)
+        assertEquals("a", rows.rows["chart-md5-a"]?.trackUri) // e sai sozinho se a música passar sem jogar
+    }
+
+    @Test
+    fun withTheClosestOptionOffNothingIsDownloaded() = runTest {
+        settings.settings.value = settings.settings.value.copy(queueClosestDuration = false)
+        queue.next = queued("a")
+        encoreHasOnlyAnotherDuration("a")
+        start()
+
+        nowPlaying("now")
+
+        assertTrue(downloader.downloaded.isEmpty())
+        assertTrue(matches.suggestions.isEmpty())
+    }
+
+    /** Trocar uma sugestão por outra sugestão não ajuda: fica a que já está na biblioteca. */
+    @Test
+    fun aSuggestionIsNotSwappedForAnotherSuggestion() = runTest {
+        queue.next = queued("a")
+        encoreHasOnlyAnotherDuration("a")
+        matches.statuses["a"] = MatchStatus.Suggested(libraryChart("x"), 0.8f)
+        start()
+
+        nowPlaying("now")
+
+        assertTrue(downloader.downloaded.isEmpty())
+    }
+
+    @Test
+    fun aFailedSearchIsTriedAgainAtTheNextRead() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        encore.failure = java.io.IOException("sem rede")
+        start()
+        nowPlaying("now")
+        assertTrue(downloader.downloaded.isEmpty())
+
+        encore.failure = null
+        advanceTimeBy(60_001)
+        runCurrent()
+
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 
