@@ -62,7 +62,7 @@ class QueuePrefetcher(
         settings: SettingsRepository,
         matches: TrackMatchRepository,
         picker: QueueChartPicker,
-        downloader: ChartDownloader,
+        @QueueDownloader downloader: ChartDownloader,
         downloads: QueueDownloads,
         conditions: DownloadConditions,
         cleaner: QueueCleaner,
