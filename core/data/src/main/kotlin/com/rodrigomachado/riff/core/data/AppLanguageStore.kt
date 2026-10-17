@@ -12,6 +12,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.util.Locale
 import javax.inject.Inject
 
 /** O idioma escolhido nas Configurações. Trocar muda o app inteiro na hora (a tela aberta é refeita). */
@@ -65,10 +66,15 @@ class LegacyAppLanguage(context: Context) {
         prefs.edit().putString(KEY, language.tag).apply()
     }
 
-    /** O contexto da tela no idioma escolhido (para o `attachBaseContext` da Activity). */
+    /**
+     * O contexto no idioma escolhido, para o `attachBaseContext` do app (notificações, separação) e da tela. Também
+     * vira o idioma padrão do processo: números formatados ("1,25×") seguem o jogo, não o celular.
+     */
     fun wrap(base: Context): Context {
+        val locales = LocaleList.forLanguageTags(current.tag)
+        Locale.setDefault(locales[0])
         val configuration = Configuration(base.resources.configuration)
-        configuration.setLocales(LocaleList.forLanguageTags(current.tag))
+        configuration.setLocales(locales)
         return base.createConfigurationContext(configuration)
     }
 

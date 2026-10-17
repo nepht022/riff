@@ -66,3 +66,11 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Escolhas muito rápidas:** `setTrackLook` grava os quatro campos a partir do visual da tela; trocar duas opções antes de a preferência gravada voltar pode desfazer a primeira. Aplicar só o campo escolhido sobre o valor atual.
 - **Sombra das notas estilizadas:** não esmaece na nota perdida (como a dos discos).
 - **Cache de texturas:** guarda até ~6 MB durante o processo; rever se a memória apertar.
+
+## Pontos menores das Configurações em abas e do idioma (revisão de 2026-10-16)
+
+- **Acessibilidade das abas e da lista de idiomas:** a barra não tem `selectableGroup()` (o TalkBack não diz "aba 2 de 5") e as opções de idioma usam `clickable` em vez de `selectable(role = RadioButton)`; a área de toque das abas fica perto de 47 dp.
+- **Aba fora da tela:** se a tela for refeita numa aba que não aparece na barra (num celular estreito), a barra não rola até ela.
+- **Testes:** o desvio para Android antigo do `SystemAppLanguageStore` não roda com `sdk` abaixo de 33; não há teste da aba sobrevivendo à tela refeita.
+- **"Padrão do sistema":** escolhido nas configurações do celular, volta a Português na próxima abertura (o app não distingue de "nunca escolheu"). Na primeira abertura num celular em outro idioma, a primeira tela pode piscar.
+- **Estilo:** nomes completos em `Fakes.kt` de settings; `StageBlack.copy(alpha = 0f)` em vez de `Color.Transparent`; `tools:targetApi` na tag `<application>` inteira.

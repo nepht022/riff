@@ -12,7 +12,6 @@ import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -42,15 +41,8 @@ class SettingsViewModel @Inject constructor(
     val separationUsage: StateFlow<SeparationUsage> = separations.usage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeparationUsage(0, 0))
 
-    private val chosenLanguage = MutableStateFlow(languages.current)
-
-    /** O idioma do jogo (o Android refaz a tela ao trocar; este ViewModel continua). */
-    val language: StateFlow<AppLanguage> = chosenLanguage
-
-    fun setLanguage(language: AppLanguage) {
-        languages.set(language)
-        chosenLanguage.value = language
-    }
+    /** Troca o idioma do jogo; o Android refaz a tela já no idioma novo. */
+    fun setLanguage(language: AppLanguage) = languages.set(language)
 
     fun deleteSeparations() {
         viewModelScope.launch { separations.deleteAll() }

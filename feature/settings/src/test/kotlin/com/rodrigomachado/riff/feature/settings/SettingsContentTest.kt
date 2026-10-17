@@ -54,36 +54,32 @@ class SettingsContentTest {
         sounds.clear()
     }
 
-    private fun show(
-        settings: Settings = Settings.DEFAULT,
-        separationUsage: SeparationUsage = SeparationUsage(0, 0),
-        language: AppLanguage = AppLanguage.PORTUGUESE,
-    ) = composeRule.setContent {
-        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
-            RiffTheme {
-                SettingsContent(
-                    settings = settings,
-                    onMasterVolume = {},
-                    onHitVolume = {},
-                    onMissVolume = {},
-                    onNoteSpeed = {},
-                    onLeftHanded = { leftHanded = it },
-                    onMenuSounds = { menuSounds = it },
-                    onPreviewHit = {},
-                    onPreviewMiss = {},
-                    onCalibrate = {},
-                    onBack = { back = true },
-                    separationUsage = separationUsage,
-                    onDeleteSeparations = { events += "delete" },
-                    onAskAlways = { events += "askAlways:$it" },
-                    onTrackLook = { looks += it },
-                    onShowChartImage = { events += "image:$it" },
-                    language = language,
-                    onLanguage = { languages += it },
-                )
+    private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
+        composeRule.setContent {
+            CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+                RiffTheme {
+                    SettingsContent(
+                        settings = settings,
+                        onMasterVolume = {},
+                        onHitVolume = {},
+                        onMissVolume = {},
+                        onNoteSpeed = {},
+                        onLeftHanded = { leftHanded = it },
+                        onMenuSounds = { menuSounds = it },
+                        onPreviewHit = {},
+                        onPreviewMiss = {},
+                        onCalibrate = {},
+                        onBack = { back = true },
+                        separationUsage = separationUsage,
+                        onDeleteSeparations = { events += "delete" },
+                        onAskAlways = { events += "askAlways:$it" },
+                        onTrackLook = { looks += it },
+                        onShowChartImage = { events += "image:$it" },
+                        onLanguage = { languages += it },
+                    )
+                }
             }
         }
-    }
 
     @Test
     fun showsEverySettingWithItsCurrentValue() {
@@ -312,10 +308,16 @@ class SettingsContentTest {
         composeRule.onNodeWithText("English").assertDoesNotExist() // a lista fecha
     }
 
+    /** O idioma vem da própria tela: trocado pelas configurações do celular, a linha acompanha e dá para voltar. */
     @Test
-    fun theLanguageRowShowsTheCurrentOne() {
-        show(language = AppLanguage.ENGLISH)
+    @Config(qualifiers = "en")
+    fun theLanguageRowShowsTheLanguageTheScreenIsIn() {
+        show()
 
         composeRule.onNodeWithText("English").assertExists()
+        composeRule.onNodeWithText("Language").performClick()
+        composeRule.onNodeWithText("Português").performClick()
+
+        assertEquals(listOf(AppLanguage.PORTUGUESE), languages)
     }
 }

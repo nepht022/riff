@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -63,7 +64,6 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
-    val language by viewModel.language.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     val current = settings
     if (current == null) {
@@ -88,7 +88,6 @@ fun SettingsScreen(
         onAskAlways = viewModel::setAskSeparationAlways,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
-        language = language,
         onLanguage = {
             viewModel.setLanguage(it)
             // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
@@ -116,12 +115,13 @@ fun SettingsContent(
     onAskAlways: (Boolean) -> Unit = {},
     onTrackLook: (TrackLook) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
-    language: AppLanguage = AppLanguage.PORTUGUESE,
     onLanguage: (AppLanguage) -> Unit = {},
     initialTab: SettingsTab = SettingsTab.GENERAL,
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
     var tab by rememberSaveable { mutableStateOf(initialTab) }
+    // O idioma em que a tela está: acompanha também uma troca feita nas configurações do celular.
+    val language = AppLanguage.fromTag(LocalConfiguration.current.locales[0].toLanguageTag())
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.settings_back), color = RiffColors.Paper) }

@@ -135,14 +135,11 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun theLanguageIsReadAndChanged() = runTest {
-        language.current = AppLanguage.ENGLISH
+    fun choosingALanguageChangesIt() = runTest {
         val vm = viewModel()
-        assertEquals(AppLanguage.ENGLISH, vm.language.value)
 
-        vm.setLanguage(AppLanguage.PORTUGUESE)
+        vm.setLanguage(AppLanguage.ENGLISH)
 
-        assertEquals(AppLanguage.PORTUGUESE, language.current)
-        assertEquals(AppLanguage.PORTUGUESE, vm.language.value)
+        assertEquals(AppLanguage.ENGLISH, language.current)
     }
 }

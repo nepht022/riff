@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
@@ -45,9 +44,9 @@ class SettingsScreenshotTest {
 
     @Test
     @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
-    fun settingsInEnglish() = tab("Settings_en", SettingsTab.GENERAL, AppLanguage.ENGLISH)
+    fun settingsInEnglish() = tab("Settings_en", SettingsTab.GENERAL)
 
-    private fun tab(name: String, tab: SettingsTab, language: AppLanguage = AppLanguage.PORTUGUESE) {
+    private fun tab(name: String, tab: SettingsTab) {
         captureRoboImage("src/test/screenshots/$name.png") {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
@@ -64,7 +63,6 @@ class SettingsScreenshotTest {
                         onCalibrate = {},
                         onBack = {},
                         separationUsage = SeparationUsage(3, 21_000_000),
-                        language = language,
                         initialTab = tab,
                     )
                 }
