@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -17,6 +18,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpRect
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -261,25 +264,36 @@ class NowPlayingContentTest {
         assertTrue("$first: $a, $second: $b", b.left >= a.right && b.top < a.bottom && a.top < b.bottom)
     }
 
-    /** O botão principal começa na mesma reta do texto do mapa, à esquerda. */
+    /** O texto do mapa fica no meio da tela, com as linhas centralizadas. */
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
-    fun playLinesUpWithTheChartText() {
+    fun theChartTextIsCentered() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
-        assertLinedUp("Mapa: Bohemian Rhapsody — Queen", "Jogar")
+        assertCentered("Mapa: Bohemian Rhapsody — Queen")
     }
 
     @Test
     @Config(qualifiers = "pt-rBR-w360dp-h640dp")
-    fun chooseLinesUpWithTheNoMatchText() {
+    fun theNoMatchTextIsCentered() {
         show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
-        assertLinedUp("Nenhum mapa da biblioteca casa com esta música.", "Escolher mapa")
+        assertCentered("Nenhum mapa da biblioteca casa com esta música.")
     }
 
-    private fun assertLinedUp(text: String, button: String) {
-        val above = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
-        val below = composeRule.onAllNodesWithText(button).onLast().getUnclippedBoundsInRoot()
-        assertEquals(above.left.value, below.left.value, 1f)
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theSuggestionTextIsCentered() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Suggested(chart(), 0.9f))))
+        assertCentered("Este mapa parece ser desta música: Bohemian Rhapsody — Queen")
+    }
+
+    private fun assertCentered(text: String) {
+        val node = composeRule.onNodeWithText(text).fetchSemanticsNode()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val layouts = mutableListOf<TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals(TextAlign.Center, layouts.single().layoutInput.style.textAlign)
+        val bounds = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
+        assertEquals((root.left + root.right).value / 2, (bounds.left + bounds.right).value / 2, 1f)
     }
 
     @Test

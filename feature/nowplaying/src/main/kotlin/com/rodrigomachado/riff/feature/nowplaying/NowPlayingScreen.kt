@@ -210,7 +210,7 @@ private fun RowScope.ChooseOther(onClick: () -> Unit) {
 
 @Composable
 private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
-    Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
+    ChartText(stringResource(R.string.nowplaying_no_match))
     ActionRow {
         PosterButton(
             stringResource(R.string.nowplaying_choose),
@@ -222,7 +222,13 @@ private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     }
 }
 
-/** O botão principal e a alternativa lado a lado, na mesma reta do texto acima. */
+/** O texto do mapa acima dos botões, no meio da tela. */
+@Composable
+private fun ChartText(text: String) {
+    Text(text, Modifier.fillMaxWidth(), color = RiffColors.Paper, textAlign = TextAlign.Center)
+}
+
+/** O botão principal à esquerda e a alternativa no meio do espaço que sobra. */
 @Composable
 private fun ActionRow(content: @Composable RowScope.() -> Unit) {
     Row(
@@ -267,10 +273,7 @@ private fun Playing(
     BottomAnchored(top = { TrackHeader(nowPlaying, controls) }) {
         when (val match = nowPlaying.match) {
             is MatchStatus.Matched -> {
-                Text(
-                    stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist),
-                    color = RiffColors.Paper,
-                )
+                ChartText(stringResource(R.string.nowplaying_chart, match.chart.title, match.chart.artist))
                 ActionRow {
                     PosterButton(
                         stringResource(R.string.nowplaying_play),
@@ -283,10 +286,7 @@ private fun Playing(
             }
 
             is MatchStatus.Suggested -> {
-                Text(
-                    stringResource(R.string.nowplaying_suggestion, match.chart.title, match.chart.artist),
-                    color = RiffColors.Paper,
-                )
+                ChartText(stringResource(R.string.nowplaying_suggestion, match.chart.title, match.chart.artist))
                 ActionRow {
                     PosterButton(
                         stringResource(R.string.nowplaying_confirm),
