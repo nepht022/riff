@@ -48,6 +48,7 @@ class QueuePrefetcher(
     private val downloads: QueueDownloads,
     private val conditions: DownloadConditions,
     private val matchActivity: MatchActivity,
+    private val cleaner: QueueCleaner,
     private val clock: () -> Long,
 ) {
     @Inject constructor(
@@ -61,8 +62,9 @@ class QueuePrefetcher(
         downloads: QueueDownloads,
         conditions: DownloadConditions,
         matchActivity: MatchActivity,
+        cleaner: QueueCleaner,
     ) : this(
-        remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, matchActivity,
+        remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, matchActivity, cleaner,
         System::currentTimeMillis,
     )
 
@@ -76,6 +78,7 @@ class QueuePrefetcher(
     fun start(scope: CoroutineScope) {
         if (started) return
         started = true
+        scope.launch { cleaner.atStartup() }
         // Os downloads seguem mesmo se a música trocar no meio: a fila serial não é cancelada com a leitura.
         scope.launch { for (track in pending) prepare(track) }
         scope.launch {
@@ -90,14 +93,16 @@ class QueuePrefetcher(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun follow() {
-        remote.playback.map { it?.trackUri }.filterNotNull().distinctUntilChanged().collectLatest {
-            while (true) delay(read())
+        remote.playback.map { it?.trackUri }.filterNotNull().distinctUntilChanged().collectLatest { current ->
+            while (true) delay(read(current))
         }
     }
 
     /** Lê a fila e devolve quanto esperar até a próxima leitura. */
-    private suspend fun read(): Long = when (val read = queue.next(WINDOW)) {
+    private suspend fun read(current: String): Long = when (val read = queue.next(WINDOW)) {
         is QueueRead.Tracks -> {
+            // Só com a fila lida dá para saber o que passou ou saiu dela.
+            cleaner.keepOnly(current, read.tracks.map { it.uri })
             read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach { pending.send(it) }
             READ_INTERVAL_MS
         }

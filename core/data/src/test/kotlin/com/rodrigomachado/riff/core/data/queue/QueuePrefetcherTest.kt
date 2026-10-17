@@ -35,6 +35,7 @@ class QueuePrefetcherTest {
     private val rows = MemoryQueueDownloads()
     private val conditions = FakeConditions()
     private val matchActivity = DefaultMatchActivity(rows)
+    private val deleter = FakeChartDeleter(rows)
 
     private fun queued(vararg uris: String) = QueueRead.Tracks(
         uris.map { QueuedTrack(it, "Música $it", "Banda", 200_000) },
@@ -58,7 +59,7 @@ class QueuePrefetcherTest {
     private fun TestScope.start() {
         QueuePrefetcher(
             remote, queue, auth, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
-            matchActivity, clock = { testScheduler.currentTime },
+            matchActivity, QueueCleaner(rows, deleter, settings), clock = { testScheduler.currentTime },
         ).start(backgroundScope)
         runCurrent()
     }
@@ -182,9 +183,11 @@ class QueuePrefetcherTest {
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 
+    /** Se apagar falhar (pasta sem permissão, por exemplo), os mapas da fila não se acumulam: no máximo 3. */
     @Test
     fun atMostThreeDeletableQueueMapsExist() = runTest {
         repeat(3) { rows.add("old$it", "spotify:old$it", at = it.toLong()) }
+        deleter.failing = true
         queue.next = queued("a")
         encoreHas("a")
         start()
@@ -255,4 +258,30 @@ class QueuePrefetcherTest {
 
     private fun libraryChart(id: String) =
         Chart(id, "M", "B", null, null, null, "f", ChartFormat.CHART, setOf(Difficulty.EXPERT))
+
+    @Test
+    fun aSongThatPassedWithoutPlayingLosesItsMapAtTheNextRead() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        start()
+        nowPlaying("now")
+        assertEquals(setOf("chart-md5-a"), rows.rows.keys)
+
+        // "a" tocou e passou sem partida: agora toca "b" e a fila não tem mais "a".
+        queue.next = queued("c")
+        nowPlaying("a")
+        nowPlaying("b")
+
+        assertEquals(listOf("chart-md5-a"), deleter.deleted)
+    }
+
+    @Test
+    fun leftoversGoAtStartupWhenTheQueueIsOff() = runTest {
+        rows.add("sobra", "spotify:velha", at = 1)
+        settings.settings.value = Settings.DEFAULT
+
+        start()
+
+        assertEquals(listOf("sobra"), deleter.deleted)
+    }
 }
