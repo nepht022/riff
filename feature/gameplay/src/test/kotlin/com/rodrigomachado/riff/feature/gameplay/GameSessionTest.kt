@@ -14,6 +14,28 @@ class GameSessionTest {
     private fun session(vararg notes: com.rodrigomachado.riff.core.model.Note) =
         GameSession(notes.toList(), player, sfx, time, audioOffsetMs = 0).also { it.start() }
 
+    /** A barra enche até o fim da partida: a última nota (com a duração dela) mais a folga do fim. */
+    @Test
+    fun progressGoesFromTheStartToTheEndOfTheMatch() {
+        val session = session(note(1_000), note(6_000, sustainMs = 1_000)) // fim = 7 s + 3 s de folga
+        assertEquals(0f, session.progress, 0.001f)
+
+        player.positionMs = 5_000
+        time.now = SYNC
+        session.tick()
+        assertEquals(0.5f, session.progress, 0.01f)
+
+        player.positionMs = 12_000
+        time.now = SYNC * 2
+        session.tick()
+        assertEquals(1f, session.progress, 0.001f)
+    }
+
+    @Test
+    fun aMatchWithoutNotesHasNoProgressToShow() {
+        assertEquals(0f, session().progress, 0.001f)
+    }
+
     @Test
     fun hitPlaysTheHitSoundLightsTheFlameAndShowsTheJudgment() {
         player.positionMs = 1_000

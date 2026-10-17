@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -61,10 +64,12 @@ object GameplayTestTags {
     const val STAGE = "gameplay_stage"
     const val PAUSE = "gameplay_pause"
     const val EXIT = "gameplay_exit"
+    const val PROGRESS = "gameplay_progress"
 }
 
 private const val COMBO_MIN_TO_SHOW = 10
 private const val SCRIM_ALPHA = 0.8f
+private val PROGRESS_HEIGHT = 4.dp
 
 /** Véu sobre a imagem do mapa: ela fica de fundo, sem disputar com a pista. */
 private const val ART_VEIL = 0.65f
@@ -168,6 +173,12 @@ internal fun GameStage(
             frame // lê o contador para redesenhar a cada frame
             drawStage(stageCache, session, msPerUnit, leftHanded, reducedMotion)
         }
+        SongProgressBar(
+            session,
+            { frame },
+            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)
+                .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
+        )
         Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
         if (state.isPaused) PauseOverlay(state.songOffsetMs, onAdjustOffset, onResume, onExit)
     }
