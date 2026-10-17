@@ -63,9 +63,11 @@ sealed interface GameplayUiState {
         val songOffsetMs: Int = 0,
         /** Imagem do mapa atrás da pista (com a opção ligada e se o mapa tiver uma). */
         val art: ImageBitmap? = null,
-        /** Modo Spotify: a pausa mostra anterior, tocar e próxima. */
-        val spotifyControls: Boolean = false,
-    ) : GameplayUiState
+        /** Modo Spotify: a faixa tocando; a pausa mostra anterior, tocar e próxima. */
+        val spotifyTrackUri: String? = null,
+    ) : GameplayUiState {
+        val spotifyControls: Boolean get() = spotifyTrackUri != null
+    }
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
 
@@ -152,7 +154,7 @@ class GameplayViewModel @Inject constructor(
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
             art = art,
-            spotifyControls = spotifyTrackUri != null,
+            spotifyTrackUri = spotifyTrackUri,
         )
     } catch (e: CancellationException) {
         throw e

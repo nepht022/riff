@@ -37,7 +37,7 @@ class GamePauseSongControlsTest {
             session,
             Settings.DEFAULT,
             isPaused = true,
-            spotifyControls = spotify,
+            spotifyTrackUri = if (spotify) "spotify:track:x" else null,
         )
         composeRule.setContent {
             RiffTheme {
@@ -63,8 +63,8 @@ class GamePauseSongControlsTest {
         composeRule.onNodeWithContentDescription("Próxima música").performClick()
         composeRule.onNodeWithContentDescription("Música anterior").performClick()
 
-        // Trocar de música encerra a partida: sai logo depois de pedir ao Spotify.
-        assertEquals(listOf("resume", "next", "exit", "previous", "exit"), events)
+        // Trocar de música encerra a partida: quem chama (a tela) sai e tenta começar a próxima.
+        assertEquals(listOf("resume", "next", "previous"), events)
     }
 
     @Test

@@ -173,7 +173,7 @@ class GameplayScreenshotTest {
             session,
             Settings.DEFAULT,
             isPaused = true,
-            spotifyControls = true,
+            spotifyTrackUri = "spotify:track:x",
         )
         captureRoboImage("src/test/screenshots/Gameplay_paused_spotify.png") {
             RiffTheme {

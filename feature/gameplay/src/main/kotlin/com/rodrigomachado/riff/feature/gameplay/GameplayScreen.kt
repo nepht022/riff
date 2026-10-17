@@ -44,6 +44,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
@@ -82,6 +83,8 @@ fun GameplayScreen(
     onFinished: (scoreId: Long) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Trocou de música na pausa (modo Spotify): a partida acabou; quem chama volta e tenta começar a próxima. */
+    onSongChanged: (difficulty: Difficulty, fromTrackUri: String) -> Unit = { _, _ -> onExit() },
     viewModel: GameplayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,7 +110,10 @@ fun GameplayScreen(
             onSessionFinished = viewModel::onSessionFinished,
             onPlaybackChanged = viewModel::onPlaybackChanged,
             onAdjustOffset = viewModel::adjustSongOffset,
-            onChangeSong = viewModel::changeSong,
+            onChangeSong = { forward ->
+                viewModel.changeSong(forward)
+                current.spotifyTrackUri?.let { onSongChanged(current.difficulty, it) }
+            },
             modifier = modifier,
         )
 
@@ -183,14 +189,7 @@ internal fun GameStage(
                 .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
         )
         Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
-        if (state.isPaused) {
-            // Trocar de música no Spotify encerra a partida: pede a troca e sai.
-            val changeSong = { forward: Boolean ->
-                onChangeSong(forward)
-                onExit()
-            }
-            PauseOverlay(state, onAdjustOffset, onResume, onExit, changeSong)
-        }
+        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit, onChangeSong)
     }
 }
 

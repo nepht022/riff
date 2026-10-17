@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,7 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -45,6 +48,7 @@ import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import kotlinx.coroutines.flow.first
 
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object NowPlayingTestTags {
@@ -64,9 +68,21 @@ fun NowPlayingScreen(
     /** Pesquisar no Encore um mapa para a faixa (sem mapa ou só com sugestão). */
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    /** O estado salvo desta tela na navegação, onde a partida deixa o pedido de começar a próxima música. */
+    autoPlayRequests: SavedStateHandle? = null,
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val autoPlay by viewModel.autoPlay.collectAsStateWithLifecycle()
+    LaunchedEffect(autoPlayRequests) { autoPlayRequests?.let(viewModel::watchAutoPlay) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(autoPlay) {
+        val start = autoPlay as? NowPlayingAutoPlay.Action.Start ?: return@LaunchedEffect
+        // A tela acabou de voltar da partida: a navegação só aceita a próxima quando ela estiver de volta à frente.
+        lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+        viewModel.autoPlayHandled()
+        onPlay(start.request)
+    }
     // Voltou ao Riff (por exemplo, depois de instalar ou entrar no Spotify): tenta de novo sozinho.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
     NowPlayingContent(
@@ -83,6 +99,8 @@ fun NowPlayingScreen(
         onPrevious = viewModel::previous,
         onPlayPause = viewModel::playPause,
         onNext = viewModel::next,
+        askDifficultyFor = (autoPlay as? NowPlayingAutoPlay.Action.ChooseDifficulty)?.trackUri,
+        onDifficultyAsked = viewModel::autoPlayHandled,
     )
 }
 
@@ -101,6 +119,8 @@ fun NowPlayingContent(
     onPrevious: () -> Unit = {},
     onPlayPause: (isPaused: Boolean) -> Unit = {},
     onNext: () -> Unit = {},
+    askDifficultyFor: String? = null,
+    onDifficultyAsked: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -141,6 +161,8 @@ fun NowPlayingContent(
                 onChooseChart,
                 onSearch,
                 SongControlActions(onPrevious, onPlayPause, onNext),
+                askDifficultyFor,
+                onDifficultyAsked,
             )
         }
     }
@@ -224,12 +246,21 @@ private fun Playing(
     onChooseChart: (trackUri: String, title: String) -> Unit,
     onSearch: (PlaybackState) -> Unit,
     controls: SongControlActions,
+    askDifficultyFor: String?,
+    onDifficultyAsked: () -> Unit,
 ) {
     val track = nowPlaying.playback
     // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
     // Sobrevive à rotação da tela; o mapa vem do casamento atual da faixa.
     var choosingFor by rememberSaveable(track.trackUri) { mutableStateOf(false) }
     val choosing = (nowPlaying.match as? MatchStatus.Matched)?.takeIf { choosingFor }
+    // Voltou de uma partida para uma música cujo mapa não tem a dificuldade de antes: abre a escolha.
+    LaunchedEffect(askDifficultyFor, track.trackUri) {
+        if (askDifficultyFor == track.trackUri) {
+            choosingFor = true
+            onDifficultyAsked()
+        }
+    }
     // A faixa e os controles no alto; o mapa e o botão principal no pé da tela, onde o polegar alcança.
     BottomAnchored(top = { TrackHeader(nowPlaying, controls) }) {
         when (val match = nowPlaying.match) {

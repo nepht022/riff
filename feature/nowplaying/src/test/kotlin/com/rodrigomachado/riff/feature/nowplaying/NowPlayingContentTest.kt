@@ -335,4 +335,26 @@ class NowPlayingContentTest {
         assertEquals(MAIN_BUTTON_WIDTH.value, (choose.right - choose.left).value, 1f)
         assertEquals(LINK_WIDTH.value, (search.right - search.left).value, 1f)
     }
+
+    @Test
+    fun aRequestedDifficultyChoiceOpensTheList() {
+        var asked = 0
+        composeRule.setContent {
+            RiffTheme {
+                NowPlayingContent(
+                    state = NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))),
+                    onRetry = {},
+                    onPlay = { played = it },
+                    onConfirm = { _, _, _ -> },
+                    onChooseChart = { _, _ -> },
+                    onOpenLibrary = {},
+                    askDifficultyFor = "spotify:track:x",
+                    onDifficultyAsked = { asked++ },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+        assertEquals(1, asked)
+    }
 }

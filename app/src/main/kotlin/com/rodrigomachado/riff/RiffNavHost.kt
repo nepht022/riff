@@ -21,6 +21,7 @@ import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.library.TrackToMatch
+import com.rodrigomachado.riff.feature.nowplaying.NowPlayingAutoPlay
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
 import com.rodrigomachado.riff.feature.report.ReportRoute
@@ -60,8 +61,9 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         predictivePopEnterTransition = { RiffNavTransitions.backEnter },
         predictivePopExitTransition = { RiffNavTransitions.backExit },
     ) {
-        composable<NowPlayingRoute> {
+        composable<NowPlayingRoute> { entry ->
             NowPlayingScreen(
+                autoPlayRequests = entry.savedStateHandle,
                 onPlay = dropUnlessResumed { request ->
                     navController.navigate(
                         GameplayRoute(
@@ -109,6 +111,13 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController) 
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
+            // Trocou de música na pausa: volta ao Tocando agora, que começa a próxima se ela tiver mapa.
+            onSongChanged = dropUnlessResumed { difficulty, fromTrackUri ->
+                navController.previousBackStackEntry?.savedStateHandle?.let {
+                    NowPlayingAutoPlay.request(it, difficulty, fromTrackUri)
+                }
+                navController.popBackStack()
+            },
         )
     }
     composable<ResultsRoute> { entry ->
