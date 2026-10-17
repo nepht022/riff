@@ -7,8 +7,12 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SystemAppLanguageStore
+import com.rodrigomachado.riff.core.data.queue.QueuePrefetcher
 import com.rodrigomachado.riff.core.spotify.ForegroundActivity
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -18,6 +22,11 @@ class RiffApplication :
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     @Inject lateinit var language: SystemAppLanguageStore
+
+    @Inject lateinit var queuePrefetcher: QueuePrefetcher
+
+    // Vive enquanto o processo vive: a fila do Spotify segue em qualquer tela do Riff.
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // O WorkManager cria os Workers pelo Hilt (o SeparationWorker recebe o runner injetado).
     override val workManagerConfiguration: Configuration
@@ -36,5 +45,7 @@ class RiffApplication :
         // Sem escolha guardada, Português (decisão do usuário, mesmo num celular em outro idioma). Escolher
         // "Padrão do sistema" nas configurações do celular também volta a Português na próxima abertura.
         language.applyDefault()
+        // Espera a opção e a conexão com o Spotify; nunca conecta sozinho.
+        queuePrefetcher.start(appScope)
     }
 }

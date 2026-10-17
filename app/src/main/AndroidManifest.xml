@@ -4,8 +4,6 @@
 
     <!-- Pesquisa e download de mapas no Encore (enchor.us). -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Mapas da fila do Spotify: só baixar no Wi-Fi (rede sem cobrança) sem a opção de dados móveis. -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".RiffApplication"
