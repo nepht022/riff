@@ -95,3 +95,12 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Ordem de declaração:** `endMs` em `GameSession` vem depois das propriedades que o usam (seguro hoje; mover para junto de `lastNoteEndMs`).
 - **Testes:** faltam o recuo da barra no retrocesso, o fim antecipado pelo áudio e o uso da etiqueta `PROGRESS`; o teste "sem notas" só confere o começo.
 - **Idiomas da direita para a esquerda:** a barra sempre enche da esquerda (irrelevante em pt/en).
+
+## Pontos menores dos controles do Spotify (revisão de 2026-10-17)
+
+- **Sem conexão com o Spotify:** na pausa, ⏮/⏭ encerram a partida mesmo sem conseguir trocar a música (o comando se perde); esconder ou desligar os botões sem conexão. Uma recusa do Spotify (por exemplo, ⏮ em conta Free) também não é registrada.
+- **Continuar e trocar no mesmo instante:** ⏯ seguido de ⏭ antes de o menu sumir pode deixar a música nova pausada (janela de um quadro).
+- **Sons:** ⏮/⏭ na pausa tocam "navegar" e, ao voltar, a tela toca "voltar" (dois sons seguidos); ⏯ na pausa toca "navegar" enquanto Continuar toca "confirmar".
+- **Leitor de tela e visual:** na pausa, "Próxima música" não avisa que encerra a partida; o efeito de toque do botão vermelho redondo sai quadrado.
+- **Sem confirmação:** um toque sem querer em ⏭ na pausa perde a partida (combinado assim; avaliar se incomodar).
+- **Testes:** falta o caso sem conexão.

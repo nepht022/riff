@@ -625,4 +625,18 @@ class GameplayViewModelTest {
         assertTrue(controls.commands.isEmpty())
         assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
     }
+
+    /** A tela ainda está saindo quando chega o segundo toque: o Spotify só pula uma vez. */
+    @Test
+    fun aDoubleTapChangesTheSongOnlyOnce() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        viewModel.pause()
+
+        viewModel.changeSong(forward = true)
+        viewModel.changeSong(forward = true)
+        viewModel.changeSong(forward = false)
+
+        assertEquals(listOf("next released=true"), controls.commands)
+    }
 }

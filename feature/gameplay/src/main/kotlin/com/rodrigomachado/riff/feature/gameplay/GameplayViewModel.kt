@@ -262,7 +262,8 @@ class GameplayViewModel @Inject constructor(
      * seguida). Larga antes de pedir a troca: assim a partida não reage à faixa nova.
      */
     fun changeSong(forward: Boolean) {
-        if (spotifyTrackUri == null) return
+        // Só uma vez: a partida já largada (segundo toque durante a saída da tela) não pede outra troca.
+        if (spotifyTrackUri == null || player == null || finishing) return
         release()
         if (forward) spotify.next() else spotify.previous()
     }
