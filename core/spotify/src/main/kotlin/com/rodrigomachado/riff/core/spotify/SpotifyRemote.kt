@@ -25,4 +25,10 @@ interface SpotifyRemote {
     fun resume()
 
     fun seekTo(positionMs: Long)
+
+    /** Próxima faixa da fila do Spotify. */
+    fun skipNext()
+
+    /** Faixa anterior; como no Spotify, passados os primeiros segundos volta ao começo da atual. */
+    fun skipPrevious()
 }

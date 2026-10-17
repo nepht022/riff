@@ -161,4 +161,34 @@ class GameplayScreenshotTest {
             }
         }
     }
+
+    /** Pausa no modo Spotify: anterior, tocar e próxima entre Continuar e a sincronia. */
+    @Test
+    fun pausedInSpotifyMode() {
+        val session = GameSession(listOf(Note(60_000, 2, 0, false)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), 0)
+        val state = GameplayUiState.Ready(
+            "Música",
+            "Banda",
+            Difficulty.EXPERT,
+            session,
+            Settings.DEFAULT,
+            isPaused = true,
+            spotifyControls = true,
+        )
+        captureRoboImage("src/test/screenshots/Gameplay_paused_spotify.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    GameStage(
+                        state,
+                        reducedMotion = true,
+                        onPause = {},
+                        onResume = {},
+                        onExit = {},
+                        onSessionFinished = {},
+                        animate = false,
+                    )
+                }
+            }
+        }
+    }
 }

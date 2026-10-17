@@ -9,10 +9,12 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -44,6 +46,7 @@ class NowPlayingContentTest {
     private var libraryOpened = false
     private var settingsOpened = false
     private var reportOpened = false
+    private val controls = mutableListOf<String>()
     private var searchedFor: PlaybackState? = null
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
@@ -59,6 +62,9 @@ class NowPlayingContentTest {
                     onOpenSettings = { settingsOpened = true },
                     onOpenReport = { reportOpened = true },
                     onSearch = { searchedFor = it },
+                    onPrevious = { controls += "previous" },
+                    onPlayPause = { controls += "playPause:$it" },
+                    onNext = { controls += "next" },
                 )
             }
         }
@@ -260,5 +266,37 @@ class NowPlayingContentTest {
         val other = composeRule.onAllNodesWithText("Escolher outro").onLast().getUnclippedBoundsInRoot()
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertEquals((root.left + root.right).value / 2, (play.left + other.right).value / 2, 1f)
+    }
+
+    @Test
+    fun theSongCanBeChangedOrPausedBeforeChoosingAMap() = useControls(MatchStatus.NoMatch)
+
+    @Test
+    fun theSongCanBeChangedOrPausedAfterChoosingAMap() = useControls(MatchStatus.Matched(chart(), 0))
+
+    private fun useControls(match: MatchStatus) {
+        show(NowPlayingUiState.Playing(playing(match)))
+
+        composeRule.onNodeWithContentDescription("Música anterior").performScrollTo().performClick()
+        composeRule.onNodeWithContentDescription("Pausar música").performClick()
+        composeRule.onNodeWithContentDescription("Próxima música").performClick()
+
+        assertEquals(listOf("previous", "playPause:false", "next"), controls)
+    }
+
+    @Test
+    fun pausedTheMiddleButtonPlays() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch, isPaused = true)))
+
+        composeRule.onNodeWithContentDescription("Tocar música").performClick()
+
+        assertEquals(listOf("playPause:true"), controls)
+    }
+
+    @Test
+    fun withoutASongThereAreNoControls() {
+        show(NowPlayingUiState.NothingPlaying)
+
+        composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
     }
 }

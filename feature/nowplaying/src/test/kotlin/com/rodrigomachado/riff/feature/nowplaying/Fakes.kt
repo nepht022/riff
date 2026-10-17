@@ -26,8 +26,26 @@ class FakeNowPlayingRepository : NowPlayingRepository {
     override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
     override val nowPlaying = MutableStateFlow<NowPlaying?>(null)
 
+    val commands = mutableListOf<String>()
+
     override fun connect() {
         connects++
+    }
+
+    override fun previous() {
+        commands += "previous"
+    }
+
+    override fun next() {
+        commands += "next"
+    }
+
+    override fun pause() {
+        commands += "pause"
+    }
+
+    override fun resume() {
+        commands += "resume"
     }
 }
 

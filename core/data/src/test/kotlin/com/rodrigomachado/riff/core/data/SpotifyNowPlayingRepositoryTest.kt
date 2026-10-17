@@ -65,8 +65,19 @@ class SpotifyNowPlayingRepositoryTest {
         assertEquals(SpotifyConnection.Idle, repository.connection.value)
     }
 
+    @Test
+    fun theControlsGoToSpotify() {
+        repository.previous()
+        repository.pause()
+        repository.resume()
+        repository.next()
+
+        assertEquals(listOf("previous", "pause", "resume", "next"), remote.commands)
+    }
+
     private class FakeRemote : SpotifyRemote {
         var connects = 0
+        val commands = mutableListOf<String>()
         override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
         override val playback = MutableStateFlow<PlaybackState?>(null)
 
@@ -78,11 +89,23 @@ class SpotifyNowPlayingRepositoryTest {
 
         override fun play(trackUri: String) = Unit
 
-        override fun pause() = Unit
+        override fun pause() {
+            commands += "pause"
+        }
 
-        override fun resume() = Unit
+        override fun resume() {
+            commands += "resume"
+        }
 
         override fun seekTo(positionMs: Long) = Unit
+
+        override fun skipNext() {
+            commands += "next"
+        }
+
+        override fun skipPrevious() {
+            commands += "previous"
+        }
     }
 
     private class FakeMatches : TrackMatchRepository {

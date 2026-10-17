@@ -95,4 +95,16 @@ class NowPlayingViewModelTest {
 
         assertEquals(1, repository.connects)
     }
+
+    @Test
+    fun theControlsCommandSpotify() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.previous()
+        viewModel.playPause(isPaused = false)
+        viewModel.playPause(isPaused = true)
+        viewModel.next()
+
+        assertEquals(listOf("previous", "pause", "resume", "next"), repository.commands)
+    }
 }

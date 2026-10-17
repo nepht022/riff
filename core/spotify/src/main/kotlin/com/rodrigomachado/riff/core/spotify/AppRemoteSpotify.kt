@@ -36,6 +36,7 @@ import javax.inject.Singleton
  * do Riff e, na volta, a conexão é refeita.
  */
 @Singleton
+@Suppress("TooManyFunctions") // um comando do Spotify por função, mais a conexão
 class AppRemoteSpotify @Inject constructor(
     @ApplicationContext private val context: Context,
     private val config: SpotifyConfig,
@@ -178,6 +179,14 @@ class AppRemoteSpotify @Inject constructor(
 
     override fun seekTo(positionMs: Long) {
         remote?.playerApi?.seekTo(positionMs)
+    }
+
+    override fun skipNext() {
+        remote?.playerApi?.skipNext()
+    }
+
+    override fun skipPrevious() {
+        remote?.playerApi?.skipPrevious()
     }
 
     private companion object {

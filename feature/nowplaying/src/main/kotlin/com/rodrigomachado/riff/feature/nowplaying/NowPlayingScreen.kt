@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +38,7 @@ import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
+import com.rodrigomachado.riff.core.ui.component.PlaybackControls
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
@@ -81,6 +83,9 @@ fun NowPlayingScreen(
         modifier = modifier,
         onSearch = onSearch,
         onOpenReport = onOpenReport,
+        onPrevious = viewModel::previous,
+        onPlayPause = viewModel::playPause,
+        onNext = viewModel::next,
     )
 }
 
@@ -96,6 +101,9 @@ fun NowPlayingContent(
     onOpenSettings: () -> Unit = {},
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    onPrevious: () -> Unit = {},
+    onPlayPause: (isPaused: Boolean) -> Unit = {},
+    onNext: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -129,10 +137,41 @@ fun NowPlayingContent(
                 message = stringResource(R.string.nowplaying_nothing_message),
             )
 
-            is NowPlayingUiState.Playing -> Playing(state.nowPlaying, onPlay, onConfirm, onChooseChart, onSearch)
+            is NowPlayingUiState.Playing -> Playing(
+                state.nowPlaying,
+                onPlay,
+                onConfirm,
+                onChooseChart,
+                onSearch,
+                SongControlActions(onPrevious, onPlayPause, onNext),
+            )
         }
     }
 }
+
+/** A faixa do Spotify, se está pausada e os controles dela. */
+@Composable
+private fun ColumnScope.TrackHeader(nowPlaying: NowPlaying, controls: SongControlActions) {
+    val track = nowPlaying.playback
+    TrackCard(title = track.title, artist = track.artist, tilted = true, badge = { MatchBadge(nowPlaying.match) })
+    if (track.isPaused) {
+        Text(stringResource(R.string.nowplaying_paused), color = RiffColors.PaperDim)
+    }
+    PlaybackControls(
+        isPaused = track.isPaused,
+        onPrevious = controls.onPrevious,
+        onPlayPause = { controls.onPlayPause(track.isPaused) },
+        onNext = controls.onNext,
+        modifier = Modifier.align(Alignment.CenterHorizontally),
+    )
+}
+
+/** Anterior, tocar/pausar e próxima no Spotify. */
+private class SongControlActions(
+    val onPrevious: () -> Unit,
+    val onPlayPause: (isPaused: Boolean) -> Unit,
+    val onNext: () -> Unit,
+)
 
 @Composable
 private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary: () -> Unit) {
@@ -206,6 +245,7 @@ private fun Playing(
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
     onSearch: (PlaybackState) -> Unit,
+    controls: SongControlActions,
 ) {
     val track = nowPlaying.playback
     // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
@@ -216,10 +256,7 @@ private fun Playing(
         Modifier.verticalScroll(rememberScrollState()).padding(vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        TrackCard(title = track.title, artist = track.artist, tilted = true, badge = { MatchBadge(nowPlaying.match) })
-        if (track.isPaused) {
-            Text(stringResource(R.string.nowplaying_paused), color = RiffColors.PaperDim)
-        }
+        TrackHeader(nowPlaying, controls)
         when (val match = nowPlaying.match) {
             is MatchStatus.Matched -> {
                 Text(

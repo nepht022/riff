@@ -46,6 +46,13 @@ class NowPlayingViewModel @Inject constructor(
         repository.connect()
     }
 
+    fun previous() = repository.previous()
+
+    fun next() = repository.next()
+
+    /** Pausado, volta a tocar; tocando, pausa. */
+    fun playPause(isPaused: Boolean) = if (isPaused) repository.resume() else repository.pause()
+
     fun retry() = repository.connect()
 
     /**
