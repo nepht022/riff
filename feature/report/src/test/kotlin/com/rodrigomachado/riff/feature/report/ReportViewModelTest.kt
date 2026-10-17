@@ -204,6 +204,37 @@ class ReportViewModelTest {
         assertEquals(6, ReportCategory.forKind(ReportKind.SUGGESTION).size)
         assertTrue(ReportCategory.forKind(ReportKind.OTHER).isEmpty())
     }
+
+    @Test
+    fun otherCanHaveAFreeCategory() = runTest {
+        val vm = viewModel()
+        vm.setKind(ReportKind.OTHER)
+        vm.setCustomCategory("  Elogio  ")
+        vm.setText("Gostei muito")
+
+        vm.send()
+
+        assertEquals("Elogio", sender.sent.single().customCategory)
+        assertNull(sender.sent.single().category)
+    }
+
+    @Test
+    fun theFreeCategoryIsOptionalAndOnlyForOther() = runTest {
+        val vm = viewModel()
+        vm.setCustomCategory("Elogio")
+        vm.setText("Trava")
+        vm.send() // ainda em Problema: a categoria livre não vai
+
+        assertNull(sender.sent.single().customCategory)
+    }
+
+    @Test
+    fun theFreeCategorySurvivesTheAppBeingClosed() = runTest {
+        val saved = SavedStateHandle()
+        viewModel(saved).setCustomCategory("Elogio")
+
+        assertEquals("Elogio", ReportViewModel(saved, sender, cooldown) { device }.uiState.value.customCategory)
+    }
 }
 
 class FakeReportSender : ReportSender {

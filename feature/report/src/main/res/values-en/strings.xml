@@ -36,4 +36,5 @@
     <string name="report_category_sounds">Sounds</string>
     <string name="report_category_screens">Screens and menus</string>
     <string name="report_category_other_suggestion">Other suggestion</string>
+    <string name="report_custom_category">Category (optional)</string>
 </resources>

@@ -37,6 +37,7 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 object ReportTestTags {
     const val TEXT = "report_text"
+    const val CUSTOM_CATEGORY = "report_custom_category"
     const val CONTACT = "report_contact"
     const val INCLUDE_DEVICE = "report_include_device"
     const val SEND = "report_send"
@@ -50,6 +51,7 @@ fun ReportScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: R
         state = state,
         onKind = viewModel::setKind,
         onCategory = viewModel::setCategory,
+        onCustomCategory = viewModel::setCustomCategory,
         onText = viewModel::setText,
         onContact = viewModel::setContact,
         onIncludeDevice = viewModel::setIncludeDevice,
@@ -71,6 +73,7 @@ fun ReportContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onCategory: (ReportCategory) -> Unit = {},
+    onCustomCategory: (String) -> Unit = {},
 ) {
     Column(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
@@ -93,7 +96,7 @@ fun ReportContent(
                 modifier = Modifier.testTag(ReportTestTags.DONE),
             )
         } else {
-            ReportForm(state, onKind, onCategory, onText, onContact, onIncludeDevice)
+            ReportForm(state, ReportInputs(onKind, onCategory, onCustomCategory, onText, onContact, onIncludeDevice))
             StatusMessage(state.status)
             PosterButton(
                 stringResource(
@@ -108,20 +111,23 @@ fun ReportContent(
     }
 }
 
+/** O que a pessoa pode mudar no formulário. */
+private class ReportInputs(
+    val onKind: (ReportKind) -> Unit,
+    val onCategory: (ReportCategory) -> Unit,
+    val onCustomCategory: (String) -> Unit,
+    val onText: (String) -> Unit,
+    val onContact: (String) -> Unit,
+    val onIncludeDevice: (Boolean) -> Unit,
+)
+
 @Composable
-private fun ReportForm(
-    state: ReportUiState,
-    onKind: (ReportKind) -> Unit,
-    onCategory: (ReportCategory) -> Unit,
-    onText: (String) -> Unit,
-    onContact: (String) -> Unit,
-    onIncludeDevice: (Boolean) -> Unit,
-) {
+private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         for (kind in ReportKind.entries) {
             FilterChip(
                 selected = kind == state.kind,
-                onClick = withMenuSound(MenuSound.NAVIGATE) { onKind(kind) },
+                onClick = withMenuSound(MenuSound.NAVIGATE) { inputs.onKind(kind) },
                 label = { Text(kindName(kind)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = RiffColors.TourRed,
@@ -132,17 +138,26 @@ private fun ReportForm(
         }
     }
     val categories = ReportCategory.forKind(state.kind)
-    if (categories.isNotEmpty()) CategoryField(categories, state.category, onCategory)
+    if (categories.isNotEmpty()) CategoryField(categories, state.category, inputs.onCategory)
     OutlinedTextField(
         value = state.text,
-        onValueChange = onText,
+        onValueChange = inputs.onText,
         label = { Text(stringResource(textLabel(state.kind))) },
         minLines = TEXT_LINES,
         modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.TEXT),
     )
+    if (state.kind == ReportKind.OTHER) {
+        OutlinedTextField(
+            value = state.customCategory,
+            onValueChange = inputs.onCustomCategory,
+            label = { Text(stringResource(R.string.report_custom_category)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.CUSTOM_CATEGORY),
+        )
+    }
     OutlinedTextField(
         value = state.contact,
-        onValueChange = onContact,
+        onValueChange = inputs.onContact,
         label = { Text(stringResource(R.string.report_contact_label)) },
         supportingText = {
             Text(
@@ -156,7 +171,7 @@ private fun ReportForm(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.CONTACT),
     )
-    DeviceRow(state.device, state.includeDevice, onIncludeDevice)
+    DeviceRow(state.device, state.includeDevice, inputs.onIncludeDevice)
 }
 
 /** O interruptor e, embaixo, exatamente o que vai junto. */

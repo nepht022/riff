@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.report
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -36,18 +37,30 @@ class AppsScriptReportSender(private val url: String, private val transport: Jso
     override suspend fun send(report: BugReport) {
         if (!isConfigured) throw ReportFailedException("envio de relatos não configurado")
         val (code, body) = post(report)
+        check(code, body)
+    }
+
+    /** O motivo da recusa vai para o logcat (resposta do script, nunca o texto do relato). */
+    private fun check(code: Int, body: String) {
         val answered = code in HTTP_OK && OK_ANSWER.containsMatchIn(body)
-        if (!answered) throw ReportFailedException("resposta inesperada: HTTP $code")
+        if (!answered) {
+            val reason = "resposta inesperada: HTTP $code: ${body.take(ANSWER_SAMPLE).replace('\n', ' ')}"
+            Log.w(TAG, "relato não enviado: $reason")
+            throw ReportFailedException(reason)
+        }
     }
 
     private suspend fun post(report: BugReport): Pair<Int, String> = try {
         transport.post(url, report.toJson())
     } catch (e: IOException) {
+        Log.w(TAG, "relato não enviado: sem conexão (${e.javaClass.simpleName})")
         throw ReportFailedException("sem conexão", e)
     }
 
     private companion object {
         val HTTP_OK = 200..299
+        const val ANSWER_SAMPLE = 160
+        const val TAG = "RiffReport"
         val OK_ANSWER = Regex(""""ok"\s*:\s*true""")
     }
 }

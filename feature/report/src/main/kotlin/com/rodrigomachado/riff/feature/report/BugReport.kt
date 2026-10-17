@@ -47,10 +47,12 @@ data class BugReport(
     val contact: String?,
     val device: DeviceInfo?,
     val category: ReportCategory? = null,
+    /** Categoria escrita pela pessoa, em "Outro". */
+    val customCategory: String? = null,
 ) {
     fun toJson(): String = JSONObject().apply {
         put("tipo", kind.code)
-        category?.let { put("categoria", it.label) }
+        (category?.label ?: customCategory?.takeIf { it.isNotBlank() })?.let { put("categoria", it) }
         put("texto", text)
         contact?.takeIf { it.isNotBlank() }?.let { put("contato", it) }
         device?.let {

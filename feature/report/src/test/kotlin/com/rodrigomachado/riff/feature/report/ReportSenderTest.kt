@@ -69,4 +69,11 @@ class ReportSenderTest {
     }
 
     private fun report() = BugReport(ReportKind.OTHER, "Oi", null, null)
+
+    @Test
+    fun aFreeCategoryGoesAsTheCategory() = runTest {
+        sender.send(BugReport(ReportKind.OTHER, "Gostei", null, null, customCategory = "Elogio"))
+
+        assertEquals("Elogio", JSONObject(sent.single().second).getString("categoria"))
+    }
 }

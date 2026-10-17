@@ -29,6 +29,17 @@ class ReportScreenshotTest {
     )
 
     @Test
+    fun other() = capture(
+        "Report_other",
+        ReportUiState(
+            kind = ReportKind.OTHER,
+            text = "Adorei o visual da pista!",
+            customCategory = "Elogio",
+            device = device,
+        ),
+    )
+
+    @Test
     fun failed() = capture(
         "Report_failed",
         ReportUiState(text = "Trava", device = device, status = ReportStatus.FAILED),

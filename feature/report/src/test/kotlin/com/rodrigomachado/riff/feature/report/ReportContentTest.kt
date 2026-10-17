@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,6 +22,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +48,10 @@ class ReportContentTest {
                     state = state,
                     onKind = { events += "kind:$it" },
                     onCategory = { events += "category:$it" },
+                    onCustomCategory = {
+                        events += "custom:$it"
+                        state = state.copy(customCategory = it)
+                    },
                     onText = {
                         events += "text:$it"
                         state = state.copy(text = it)
@@ -206,5 +212,26 @@ class ReportContentTest {
         show(ReportUiState(category = ReportCategory.LOOK, kind = ReportKind.SUGGESTION, device = device))
 
         composeRule.onNodeWithText("Visual da pista").assertExists()
+    }
+
+    @Test
+    fun otherHasAFreeCategoryBelowTheMessage() {
+        show(ReportUiState(kind = ReportKind.OTHER, device = device))
+
+        val message = composeRule.onNodeWithTag(ReportTestTags.TEXT).getUnclippedBoundsInRoot()
+        val category = composeRule.onNodeWithTag(ReportTestTags.CUSTOM_CATEGORY).performScrollTo()
+            .getUnclippedBoundsInRoot()
+        composeRule.onNodeWithText("Categoria (opcional)").assertExists()
+        assertTrue(category.top > message.bottom)
+
+        composeRule.onNodeWithTag(ReportTestTags.CUSTOM_CATEGORY).performTextInput("Elogio")
+        assertEquals(listOf("custom:Elogio"), events)
+    }
+
+    @Test
+    fun problemHasNoFreeCategory() {
+        show(ReportUiState(device = device))
+
+        composeRule.onNodeWithTag(ReportTestTags.CUSTOM_CATEGORY).assertDoesNotExist()
     }
 }

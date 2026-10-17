@@ -19,6 +19,8 @@ enum class ReportStatus { EDITING, SENDING, SENT, FAILED, WAIT, NOT_CONFIGURED }
 data class ReportUiState(
     val kind: ReportKind = ReportKind.PROBLEM,
     val category: ReportCategory? = null,
+    /** Categoria livre, só em "Outro" (opcional). */
+    val customCategory: String = "",
     val text: String = "",
     val contact: String = "",
     val includeDevice: Boolean = true,
@@ -76,6 +78,7 @@ class ReportViewModel @Inject constructor(
             category = saved.get<String>(
                 CATEGORY,
             )?.let { name -> ReportCategory.entries.firstOrNull { it.name == name } },
+            customCategory = saved[CUSTOM_CATEGORY] ?: "",
             text = saved[TEXT] ?: "",
             contact = saved[CONTACT] ?: "",
             includeDevice = saved[INCLUDE_DEVICE] ?: true,
@@ -95,6 +98,12 @@ class ReportViewModel @Inject constructor(
     fun setCategory(category: ReportCategory) {
         saved[CATEGORY] = category.name
         state.update { it.copy(category = category, kind = category.kind) }
+    }
+
+    fun setCustomCategory(category: String) {
+        val cut = category.take(MAX_CUSTOM_CATEGORY)
+        saved[CUSTOM_CATEGORY] = cut
+        state.update { it.copy(customCategory = cut) }
     }
 
     fun setText(text: String) {
@@ -130,6 +139,9 @@ class ReportViewModel @Inject constructor(
             contact = current.contact.trim().ifBlank { null },
             device = current.device.takeIf { current.includeDevice },
             category = current.category,
+            customCategory = current.customCategory.trim().takeIf {
+                current.kind == ReportKind.OTHER && it.isNotEmpty()
+            },
         )
         viewModelScope.launch {
             val sent = try {
@@ -148,6 +160,8 @@ class ReportViewModel @Inject constructor(
     companion object {
         const val MAX_TEXT = 4_000
         const val MAX_CONTACT = 200
+        const val MAX_CUSTOM_CATEGORY = 60
+        private const val CUSTOM_CATEGORY = "customCategory"
         private const val KIND = "kind"
         private const val CATEGORY = "category"
         private const val TEXT = "text"

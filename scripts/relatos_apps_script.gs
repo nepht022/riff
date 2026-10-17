@@ -2,7 +2,10 @@
  * Riff — recebe os relatos da tela "Reportar problema" e manda para o email do dono deste script.
  *
  * Como publicar (uma vez, na sua conta Google):
- * 1. Abra https://script.google.com → Novo projeto, apague o conteúdo e cole este arquivo.
+ * 1. Abra https://script.google.com → Novo projeto, apague o conteúdo e cole este arquivo. Em Configurações do
+ *    projeto, marque "Mostrar arquivo de manifesto appsscript.json" e troque o conteúdo dele pelo de
+ *    scripts/relatos_appsscript.json (declara a permissão de enviar email; sem ela o Google recusa o envio).
+ *    Rode "testarEnvio" no editor e autorize: deve chegar um email de teste.
  * 2. Implantar → Nova implantação → tipo "App da Web".
  *    - Executar como: Eu
  *    - Quem pode acessar: Qualquer pessoa
