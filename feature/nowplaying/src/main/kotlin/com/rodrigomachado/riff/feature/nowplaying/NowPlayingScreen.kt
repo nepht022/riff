@@ -64,6 +64,7 @@ fun NowPlayingScreen(
     modifier: Modifier = Modifier,
     /** Pesquisar no Encore um mapa para a faixa (sem mapa ou só com sugestão). */
     onSearch: (PlaybackState) -> Unit = {},
+    onOpenReport: () -> Unit = {},
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,6 +80,7 @@ fun NowPlayingScreen(
         onOpenSettings = onOpenSettings,
         modifier = modifier,
         onSearch = onSearch,
+        onOpenReport = onOpenReport,
     )
 }
 
@@ -93,6 +95,7 @@ fun NowPlayingContent(
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
     onSearch: (PlaybackState) -> Unit = {},
+    onOpenReport: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -109,6 +112,9 @@ fun NowPlayingContent(
             }
             TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings)) {
                 Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
+            }
+            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenReport)) {
+                Text(stringResource(R.string.nowplaying_report), color = RiffColors.Paper)
             }
             Spacer(Modifier.weight(1f))
             SeparationIndicator()

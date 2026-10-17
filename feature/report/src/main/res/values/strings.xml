@@ -1,0 +1,19 @@
+<resources>
+    <string name="report_back">Voltar</string>
+    <string name="report_title">Reportar problema</string>
+    <string name="report_kind_problem">Problema</string>
+    <string name="report_kind_suggestion">Sugestão</string>
+    <string name="report_kind_other">Outro</string>
+    <string name="report_text_label">O que aconteceu?</string>
+    <string name="report_contact_label">Seu email (opcional)</string>
+    <string name="report_contact_hint">Só se quiser resposta.</string>
+    <string name="report_contact_invalid">Confira o email.</string>
+    <string name="report_device_title">Incluir informações do aparelho</string>
+    <string name="report_send">Enviar</string>
+    <string name="report_sending">Enviando…</string>
+    <string name="report_sent">Obrigado! Recebemos seu relato.</string>
+    <string name="report_done">Voltar</string>
+    <string name="report_failed">Não deu para enviar. Confira a internet e tente de novo.</string>
+    <string name="report_wait">Você acabou de enviar um relato. Espere alguns minutos para enviar outro.</string>
+    <string name="report_not_configured">O envio de relatos não está configurado nesta versão do Riff.</string>
+</resources>

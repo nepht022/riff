@@ -48,6 +48,7 @@ dependencies {
     implementation(project(":feature:nowplaying"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:calibration"))
+    implementation(project(":feature:report"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

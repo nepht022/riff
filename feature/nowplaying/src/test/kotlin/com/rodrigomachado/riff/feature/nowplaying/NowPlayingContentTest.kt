@@ -43,6 +43,7 @@ class NowPlayingContentTest {
     private var retries = 0
     private var libraryOpened = false
     private var settingsOpened = false
+    private var reportOpened = false
     private var searchedFor: PlaybackState? = null
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
@@ -56,6 +57,7 @@ class NowPlayingContentTest {
                     onChooseChart = { uri, title -> chooseFor = uri to title },
                     onOpenLibrary = { libraryOpened = true },
                     onOpenSettings = { settingsOpened = true },
+                    onOpenReport = { reportOpened = true },
                     onSearch = { searchedFor = it },
                 )
             }
@@ -153,6 +155,16 @@ class NowPlayingContentTest {
         composeRule.onNodeWithText("Configurações").performClick()
 
         assertTrue(settingsOpened)
+    }
+
+    @Test
+    fun aProblemCanBeReportedFromNextToTheSettings() {
+        show(NowPlayingUiState.Connecting)
+
+        composeRule.onNodeWithText("Reportar").performClick()
+
+        assertTrue(reportOpened)
+        assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 
     @Test

@@ -1,0 +1,19 @@
+<resources>
+    <string name="report_back">Back</string>
+    <string name="report_title">Report a problem</string>
+    <string name="report_kind_problem">Problem</string>
+    <string name="report_kind_suggestion">Suggestion</string>
+    <string name="report_kind_other">Other</string>
+    <string name="report_text_label">What happened?</string>
+    <string name="report_contact_label">Your email (optional)</string>
+    <string name="report_contact_hint">Only if you want a reply.</string>
+    <string name="report_contact_invalid">Check the email.</string>
+    <string name="report_device_title">Include device information</string>
+    <string name="report_send">Send</string>
+    <string name="report_sending">Sending…</string>
+    <string name="report_sent">Thank you! We got your report.</string>
+    <string name="report_done">Back</string>
+    <string name="report_failed">Couldn\'t send it. Check your connection and try again.</string>
+    <string name="report_wait">You just sent a report. Wait a few minutes to send another one.</string>
+    <string name="report_not_configured">Sending reports isn\'t set up in this version of Riff.</string>
+</resources>
