@@ -274,7 +274,26 @@ class GameplayViewModel @Inject constructor(
             miss = engine.count(Judgment.MISS),
             playedAtEpochMs = System.currentTimeMillis(),
         )
-        viewModelScope.launch { state.value = GameplayUiState.Finished(scores.save(record)) }
+        val uri = spotifyTrackUri
+        val goOn = uri != null && ready.settings.spotifyNextSongDirect
+        viewModelScope.launch {
+            val scoreId = scores.save(record)
+            // Spotify, "Ir direto para a próxima": o placar fica salvo e o Tocando agora começa a próxima música.
+            state.value = if (goOn && uri != null) {
+                GameplayUiState.NextSong(difficulty, uri, nextSongWaitMs(uri))
+            } else {
+                GameplayUiState.Finished(scoreId)
+            }
+        }
+    }
+
+    /**
+     * As notas acabaram antes da música (outro, aplausos): espera o que falta dela + 10 s. Já em outra faixa (foi a
+     * troca que acabou a partida) ou sem estado do Spotify, o prazo curto da troca já pedida.
+     */
+    private fun nextSongWaitMs(uri: String): Long {
+        val now = spotify.playback.value?.takeIf { it.trackUri == uri } ?: return CHANGE_WAIT_MS
+        return (now.durationMs - now.positionMs).coerceAtLeast(0) + SONG_END_MARGIN_MS
     }
 
     /**
@@ -328,6 +347,9 @@ class GameplayViewModel @Inject constructor(
 
 /** Quanto o Tocando agora espera o Spotify trocar quando a troca já foi pedida (igual ao `NowPlayingAutoPlay`). */
 internal const val CHANGE_WAIT_MS = 6_000L
+
+/** Folga depois do fim da música para o Spotify passar para a próxima (spec Spotify contínuo §3). */
+private const val SONG_END_MARGIN_MS = 10_000L
 
 /** Quanto a biblioteca volta ao continuar depois de uma pausa. */
 private const val LIBRARY_REWIND_MS = 500L

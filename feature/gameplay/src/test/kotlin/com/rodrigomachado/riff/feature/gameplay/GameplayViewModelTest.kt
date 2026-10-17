@@ -741,6 +741,63 @@ class GameplayViewModelTest {
         assertEquals(1, trackMatches.saved.size)
     }
 
+    /** Spotify, "Ir direto para a próxima": o placar fica salvo e o Riff espera o que falta da música + 10 s. */
+    @Test
+    fun withNextSongDirectTheEndSavesAndGoesOn() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        controls.playback.value = playbackOf("spotify:track:x", positionMs = 170_000, durationMs = 200_000)
+
+        viewModel.onSessionFinished()
+
+        assertEquals(1, scores.saved.size)
+        assertEquals(GameplayUiState.NextSong(Difficulty.EXPERT, "spotify:track:x", 40_000), viewModel.uiState.value)
+    }
+
+    @Test
+    fun withShowResultTheEndGoesToTheResult() = runTest {
+        settings.settings.value = settings.settings.value.copy(spotifyNextSongDirect = false)
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+
+        viewModel.onSessionFinished()
+
+        assertTrue(viewModel.uiState.value is GameplayUiState.Finished)
+    }
+
+    /** Sem estado do Spotify (desconectado): o prazo curto, para não esperar para sempre. */
+    @Test
+    fun withoutPlaybackTheNextSongWaitIsTheShortOne() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+
+        viewModel.onSessionFinished()
+
+        assertEquals(GameplayUiState.NextSong(Difficulty.EXPERT, "spotify:track:x", 6_000), viewModel.uiState.value)
+    }
+
+    /** O Spotify já trocou de faixa (foi o que acabou a partida): o prazo curto, não o da música nova. */
+    @Test
+    fun whenSpotifyAlreadyMovedOnTheWaitIsTheShortOne() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        controls.playback.value = playbackOf("spotify:track:y", positionMs = 1_000, durationMs = 300_000)
+
+        viewModel.onSessionFinished()
+
+        assertEquals(GameplayUiState.NextSong(Difficulty.EXPERT, "spotify:track:x", 6_000), viewModel.uiState.value)
+    }
+
+    @Test
+    fun theLibraryAlwaysGoesToTheResult() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        viewModel.onSessionFinished()
+
+        assertTrue(viewModel.uiState.value is GameplayUiState.Finished)
+    }
+
     /** A fila do Spotify não baixa nem apaga o mapa desde a abertura da partida até a tela sair de vez. */
     @Test
     fun theMatchIsHeldFromOpeningUntilTheScreenCloses() = runTest {
