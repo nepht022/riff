@@ -41,7 +41,10 @@ class RoomQueueDownloads @Inject constructor(private val dao: QueueDownloadDao) 
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class QueueDownloadsModule {
+abstract class QueueModule {
     @Binds
     abstract fun queueDownloads(impl: RoomQueueDownloads): QueueDownloads
+
+    @Binds
+    abstract fun encoreSearch(impl: EncoreClientSearch): EncoreSearch
 }
