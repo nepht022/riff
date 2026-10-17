@@ -75,6 +75,12 @@ class SpotifySongPlayer(
 
             state.trackUri != trackUri -> if (sawOurTrack) completed = true
 
+            // A faixa já tocava quando a partida começou: logo depois do comando de tocar do começo, o Spotify
+            // ainda manda a posição antiga. Recomeçada, ela não pode estar além do tempo desde o comando; aceitar
+            // faria o relógio pular para lá e voltar, com as notas do meio já perdidas (esbranquiçadas).
+            !sawOurTrack && state.positionMs > state.capturedAtElapsedMs - startedAtMs + START_POSITION_SLACK_MS ->
+                Unit
+
             else -> onOurTrack(state)
         }
     }
@@ -203,6 +209,9 @@ class SpotifySongPlayer(
         const val CONNECT_TIMEOUT_MS = 15_000L
         const val END_TOLERANCE_MS = 1_500L
         const val START_TIMEOUT_MS = 5_000L
+
+        /** Folga para a posição do recomeço (o Spotify arredonda e mede de outro relógio). */
+        const val START_POSITION_SLACK_MS = 1_500L
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }
