@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -100,7 +102,7 @@ class NowPlayingContentTest {
 
         composeRule.onNodeWithText("SEM MAPA").assertExists()
         composeRule.onNodeWithText("Pausado no Spotify").assertExists()
-        composeRule.onNodeWithText("Escolher mapa").performClick()
+        composeRule.onNodeWithText("Escolher mapa").performScrollTo().performClick()
 
         assertEquals("spotify:track:x" to "Bohemian Rhapsody - Remastered 2011", chooseFor)
     }
@@ -298,5 +300,39 @@ class NowPlayingContentTest {
         show(NowPlayingUiState.NothingPlaying)
 
         composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
+    }
+
+    /** Onde a música está e quanto dura, como num player. */
+    @Test
+    fun theSongTimeIsShown() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch, isPaused = true)))
+
+        composeRule.onNodeWithText("1:01").assertExists()
+        composeRule.onNodeWithText("5:55").assertExists()
+    }
+
+    /** Jogar ocupa o mesmo espaço que Escolher mapa: trocar de música não faz os botões pularem de lugar. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theMainButtonHasTheSameWidthWithOrWithoutAMap() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+
+        val play = composeRule.onNodeWithText("Jogar").performScrollTo().getUnclippedBoundsInRoot()
+        val other = composeRule.onNode(hasText("Escolher outro") and hasClickAction()).getUnclippedBoundsInRoot()
+
+        assertEquals(MAIN_BUTTON_WIDTH.value, (play.right - play.left).value, 1f)
+        assertEquals(LINK_WIDTH.value, (other.right - other.left).value, 1f)
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theChooseButtonHasTheSameWidthAsPlay() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+
+        val choose = composeRule.onNodeWithText("Escolher mapa").performScrollTo().getUnclippedBoundsInRoot()
+        val search = composeRule.onNode(hasText("Pesquisar no Encore") and hasClickAction()).getUnclippedBoundsInRoot()
+
+        assertEquals(MAIN_BUTTON_WIDTH.value, (choose.right - choose.left).value, 1f)
+        assertEquals(LINK_WIDTH.value, (search.right - search.left).value, 1f)
     }
 }

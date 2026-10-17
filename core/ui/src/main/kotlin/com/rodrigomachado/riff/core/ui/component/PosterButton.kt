@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -46,6 +47,8 @@ fun PosterButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     sound: MenuSound? = null,
+    /** Largura mínima: botões que se revezam no mesmo lugar (Jogar / Escolher mapa) ficam do mesmo tamanho. */
+    minWidth: Dp = 48.dp,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -71,7 +74,7 @@ fun PosterButton(
                     role = Role.Button,
                     onClick = withMenuSound(sound, onClick),
                 )
-                .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                .defaultMinSize(minWidth = minWidth, minHeight = 48.dp)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
             contentAlignment = Alignment.Center,
         ) {

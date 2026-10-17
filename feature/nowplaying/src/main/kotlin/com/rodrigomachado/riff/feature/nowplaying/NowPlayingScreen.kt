@@ -2,15 +2,13 @@ package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -38,12 +37,10 @@ import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
-import com.rodrigomachado.riff.core.ui.component.PlaybackControls
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
-import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -149,30 +146,6 @@ fun NowPlayingContent(
     }
 }
 
-/** A faixa do Spotify, se está pausada e os controles dela. */
-@Composable
-private fun ColumnScope.TrackHeader(nowPlaying: NowPlaying, controls: SongControlActions) {
-    val track = nowPlaying.playback
-    TrackCard(title = track.title, artist = track.artist, tilted = true, badge = { MatchBadge(nowPlaying.match) })
-    if (track.isPaused) {
-        Text(stringResource(R.string.nowplaying_paused), color = RiffColors.PaperDim)
-    }
-    PlaybackControls(
-        isPaused = track.isPaused,
-        onPrevious = controls.onPrevious,
-        onPlayPause = { controls.onPlayPause(track.isPaused) },
-        onNext = controls.onNext,
-        modifier = Modifier.align(Alignment.CenterHorizontally),
-    )
-}
-
-/** Anterior, tocar/pausar e próxima no Spotify. */
-private class SongControlActions(
-    val onPrevious: () -> Unit,
-    val onPlayPause: (isPaused: Boolean) -> Unit,
-    val onNext: () -> Unit,
-)
-
 @Composable
 private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary: () -> Unit) {
     when (error) {
@@ -206,8 +179,8 @@ private fun SpotifyError.message(): Int = when (this) {
 
 @Composable
 private fun ChooseOther(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
-        Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+        Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
 
@@ -215,7 +188,12 @@ private fun ChooseOther(onClick: () -> Unit) {
 private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
     ActionRow {
-        PosterButton(stringResource(R.string.nowplaying_choose), onClick = onChoose, sound = MenuSound.NAVIGATE)
+        PosterButton(
+            stringResource(R.string.nowplaying_choose),
+            onClick = onChoose,
+            sound = MenuSound.NAVIGATE,
+            minWidth = MAIN_BUTTON_WIDTH,
+        )
         SearchEncore(onSearch)
     }
 }
@@ -233,8 +211,8 @@ private fun ActionRow(content: @Composable RowScope.() -> Unit) {
 
 @Composable
 private fun SearchEncore(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
-        Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper)
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+        Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
 
@@ -252,11 +230,8 @@ private fun Playing(
     // Sobrevive à rotação da tela; o mapa vem do casamento atual da faixa.
     var choosingFor by rememberSaveable(track.trackUri) { mutableStateOf(false) }
     val choosing = (nowPlaying.match as? MatchStatus.Matched)?.takeIf { choosingFor }
-    Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        TrackHeader(nowPlaying, controls)
+    // A faixa e os controles no alto; o mapa e o botão principal no pé da tela, onde o polegar alcança.
+    BottomAnchored(top = { TrackHeader(nowPlaying, controls) }) {
         when (val match = nowPlaying.match) {
             is MatchStatus.Matched -> {
                 Text(
@@ -268,6 +243,7 @@ private fun Playing(
                         stringResource(R.string.nowplaying_play),
                         onClick = { choosingFor = true },
                         sound = MenuSound.CONFIRM,
+                        minWidth = MAIN_BUTTON_WIDTH,
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
@@ -283,6 +259,7 @@ private fun Playing(
                         stringResource(R.string.nowplaying_confirm),
                         onClick = { onConfirm(track.trackUri, match.chart.id, match.confidence) },
                         sound = MenuSound.CONFIRM,
+                        minWidth = MAIN_BUTTON_WIDTH,
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
@@ -307,7 +284,7 @@ private fun Playing(
 }
 
 @Composable
-private fun MatchBadge(match: MatchStatus) {
+internal fun MatchBadge(match: MatchStatus) {
     when (match) {
         is MatchStatus.Matched -> StatusBadge(stringResource(R.string.nowplaying_badge_matched), BadgeTone.SUCCESS)
         is MatchStatus.Suggested -> StatusBadge(stringResource(R.string.nowplaying_badge_suggested), BadgeTone.WARNING)
