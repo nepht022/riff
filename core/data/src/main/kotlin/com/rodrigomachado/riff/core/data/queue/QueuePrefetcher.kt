@@ -250,13 +250,12 @@ internal fun QueuePick.target(status: MatchStatus, options: Settings): QueueTarg
         options.queueClosestDuration && status !is MatchStatus.Suggested
     }
 
-    QueuePick.NothingReliable, QueuePick.OnlyOfficial, QueuePick.SearchFailed -> null
+    QueuePick.NothingReliable, QueuePick.SearchFailed -> null
 }
 
 /** O que o Tocando agora conta; nada quando a música já tem uma sugestão na biblioteca. */
 internal fun QueuePick.miss(status: MatchStatus): QueueMiss? = when (this) {
     QueuePick.NothingReliable -> QueueMiss.NOTHING_FOUND
-    QueuePick.OnlyOfficial -> QueueMiss.ONLY_OFFICIAL
     QueuePick.SearchFailed -> QueueMiss.SEARCH_FAILED
     is QueuePick.Closest -> QueueMiss.ONLY_OTHER_DURATION.takeIf { status !is MatchStatus.Suggested }
     is QueuePick.Exact -> null
@@ -265,7 +264,6 @@ internal fun QueuePick.miss(status: MatchStatus): QueueMiss? = when (this) {
 internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
     pick == QueuePick.SearchFailed -> "a pesquisa no Encore falhou (tenta de novo na próxima leitura)"
     pick == QueuePick.NothingReliable -> "nenhum mapa do Encore com título, artista e duração parecidos"
-    pick == QueuePick.OnlyOfficial -> "no Encore só há mapas oficiais (Rock Band, Guitar Hero), que o Riff não usa"
     status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão"
     else -> "só com outra duração (opção: não baixar nenhum)"
 }

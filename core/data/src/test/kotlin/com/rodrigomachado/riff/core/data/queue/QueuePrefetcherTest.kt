@@ -197,17 +197,6 @@ class QueuePrefetcherTest {
     }
 
     @Test
-    fun onlyOfficialIsRemembered() = runTest {
-        queue.next = queued("a")
-        encore.official = listOf(chartFor("a"))
-        start()
-
-        nowPlaying("now")
-
-        assertEquals(mapOf("a" to QueueMiss.ONLY_OFFICIAL), misses.misses.value)
-    }
-
-    @Test
     fun aFailedSearchIsRememberedUntilItWorks() = runTest {
         queue.next = queued("a")
         encoreHas("a")

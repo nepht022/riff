@@ -7,7 +7,6 @@ import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -48,7 +47,7 @@ class EncoreClientTest {
         EncoreChart(md5, "Música", "Banda", "Charter", 200_000, setOf(Difficulty.EXPERT), video)
 
     @Test
-    fun searchSendsTheQueryAsAnApiClientAndKeepsOnlyCommunityCharts() = runTest {
+    fun searchSendsTheQueryAsAnApiClientAndKeepsEveryChart() = runTest {
         transport.post = HttpResponse(201, null, fixture.byteInputStream())
 
         val page = client.search("smells like teen spirit", page = 1)
@@ -57,9 +56,14 @@ class EncoreClientTest {
         assertEquals("smells like teen spirit", sent.getString("search"))
         assertEquals("api", sent.getString("source"))
         assertEquals("guitar", sent.getString("instrument"))
-        // Harmonix (rb2dlc) e Neversoft (gh5) saem; os dois da comunidade ficam.
+        // Os oficiais (Harmonix rb2dlc, Neversoft gh5) ficam junto com os da comunidade: o usuário liberou.
         assertEquals(
-            listOf("a07d209baccd2d58042d81b869a0077e", "80dc4fff35cc77abec7edeb59de1580c"),
+            listOf(
+                "a07d209baccd2d58042d81b869a0077e",
+                "80dc4fff35cc77abec7edeb59de1580c",
+                "90c8f352caa02c226eaab5a82a271b95",
+                "2089cb04fbd3f5ada1489e7b80239945",
+            ),
             page.charts.map { it.md5 },
         )
         assertEquals(setOf(Difficulty.EXPERT), page.charts.first().guitarDifficulties)
@@ -69,23 +73,12 @@ class EncoreClientTest {
         )
     }
 
-    /** Os oficiais não aparecem, mas vêm à parte: a fila conta que a música só tem mapa oficial. */
-    @Test
-    fun officialChartsComeApart() = runTest {
-        transport.post = HttpResponse(201, null, fixture.byteInputStream())
-
-        val page = client.search("smells like teen spirit", page = 1)
-
-        assertEquals(2, page.official.size)
-        assertTrue(page.official.none { it.md5 in page.charts.map { c -> c.md5 } })
-    }
-
     @Test
     fun theSameChartListedTwiceAppearsOnce() = runTest {
         val twice = JSONObject(fixture).also { o -> o.getJSONArray("data").put(o.getJSONArray("data").get(0)) }
         transport.post = HttpResponse(201, null, twice.toString().byteInputStream())
 
-        assertEquals(2, client.search("x", 1).charts.size)
+        assertEquals(4, client.search("x", 1).charts.size)
     }
 
     @Test

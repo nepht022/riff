@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Por que a fila deixou uma música sem mapa. */
-enum class QueueMiss { NOTHING_FOUND, ONLY_OFFICIAL, ONLY_OTHER_DURATION, SEARCH_FAILED, DOWNLOAD_FAILED }
+enum class QueueMiss { NOTHING_FOUND, ONLY_OTHER_DURATION, SEARCH_FAILED, DOWNLOAD_FAILED }
 
 /** O que a fila não conseguiu, por faixa do Spotify, para o Tocando agora contar. Só na memória. */
 interface QueueMisses {
