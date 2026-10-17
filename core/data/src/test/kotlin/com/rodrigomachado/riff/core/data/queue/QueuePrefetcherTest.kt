@@ -37,6 +37,7 @@ class QueuePrefetcherTest {
     private val matchActivity = DefaultMatchActivity(rows)
     private val deleter = FakeChartDeleter(rows)
     private val misses = MemoryQueueMisses()
+    private val preparing = MemoryQueuePreparing()
 
     private fun queued(vararg uris: String) = QueueRead.Tracks(
         uris.map { QueuedTrack(it, "Música $it", "Banda", 200_000) },
@@ -65,7 +66,7 @@ class QueuePrefetcherTest {
     private fun TestScope.start() {
         QueuePrefetcher(
             remote, queue, auth, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
-            matchActivity, QueueCleaner(rows, deleter, settings, matchActivity), misses,
+            QueueCleaner(rows, deleter, settings, matchActivity), misses, preparing,
             clock = { testScheduler.currentTime },
         ).start(backgroundScope)
         runCurrent()
@@ -260,22 +261,6 @@ class QueuePrefetcherTest {
     }
 
     @Test
-    fun nothingStartsDuringAMatchAndPendingOnesWaitForTheEnd() = runTest {
-        queue.next = queued("a")
-        encoreHas("a")
-        matchActivity.enter("partida")
-        start()
-        nowPlaying("now")
-        assertTrue(downloader.downloaded.isEmpty())
-        assertTrue(encore.queries.isEmpty())
-
-        matchActivity.leave("partida")
-        runCurrent()
-
-        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
-    }
-
-    @Test
     fun withoutMobileDataNothingIsSearchedOrDownloadedOnMeteredNetwork() = runTest {
         queue.next = queued("a")
         encoreHas("a")
@@ -394,25 +379,67 @@ class QueuePrefetcherTest {
     }
 
     /** ⏭ na pausa: a partida seguinte começa com um download no meio; ele para e volta depois da partida. */
+
+    /** A partida não segura mais a fila: as próximas ficam prontas enquanto se joga (spec Spotify contínuo §2.1). */
     @Test
-    fun aDownloadInProgressStopsWhenAMatchStartsAndResumesAfter() = runTest {
+    fun aDownloadHappensDuringAMatch() = runTest {
         queue.next = queued("a")
         encoreHas("a")
-        downloader.gate = kotlinx.coroutines.CompletableDeferred()
+        matchActivity.enter("partida")
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    @Test
+    fun aDownloadIsNotStoppedWhenAMatchOpens() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        downloader.gate = gate
         start()
         nowPlaying("now")
 
         matchActivity.enter("partida")
         runCurrent()
-        assertEquals(1, downloader.cancelled)
-
-        downloader.gate = null
-        matchActivity.leave("partida")
+        gate.complete(Unit)
         runCurrent()
+
+        assertEquals(0, downloader.cancelled)
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 
-    /** Depois de esperar a partida, tudo é conferido de novo (a rede pode ter virado dados móveis). */
+    /** Na fila de downloads atrás de outra, a música já conta como em preparo (o Tocando agora espera por ela). */
+    @Test
+    fun aQueuedSongIsPreparingUntilItsTurnEnds() = runTest {
+        queue.next = queued("a", "b")
+        encoreHas("a", "b")
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        downloader.gate = gate
+        start()
+        nowPlaying("now")
+        assertEquals(setOf("a", "b"), preparing.tracks.value)
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertEquals(emptySet<String>(), preparing.tracks.value)
+    }
+
+    @Test
+    fun aSongThatCannotDownloadStopsPreparing() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        conditions.unmetered = false
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(emptySet<String>(), preparing.tracks.value)
+    }
+
     @Test
     fun afterAMatchTheConditionsAreCheckedAgain() = runTest {
         queue.next = queued("a")

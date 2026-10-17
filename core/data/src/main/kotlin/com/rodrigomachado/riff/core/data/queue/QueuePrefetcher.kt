@@ -20,11 +20,8 @@ import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -38,7 +35,7 @@ import javax.inject.Singleton
 
 /**
  * Mapas da fila do Spotify (spec §5–§6): a cada troca de música e a cada minuto lê as duas próximas da fila e
- * garante o mapa delas, um download por vez, nunca durante uma partida, só com rede e espaço. O que já foi
+ * garante o mapa delas, um download por vez (também durante a partida), só com rede e espaço. O que já foi
  * tentado não é pesquisado de novo enquanto o Riff estiver aberto (a não ser que a pesquisa tenha falhado).
  * Cada música que fica sem mapa deixa o motivo no registro (RiffQueue).
  */
@@ -53,9 +50,9 @@ class QueuePrefetcher(
     private val downloader: ChartDownloader,
     private val downloads: QueueDownloads,
     private val conditions: DownloadConditions,
-    private val matchActivity: MatchActivity,
     private val cleaner: QueueCleaner,
     private val misses: QueueMisses,
+    private val preparing: QueuePreparing,
     private val clock: () -> Long,
 ) {
     @Inject constructor(
@@ -68,12 +65,12 @@ class QueuePrefetcher(
         downloader: ChartDownloader,
         downloads: QueueDownloads,
         conditions: DownloadConditions,
-        matchActivity: MatchActivity,
         cleaner: QueueCleaner,
         misses: QueueMisses,
+        preparing: QueuePreparing,
     ) : this(
-        remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, matchActivity, cleaner,
-        misses, System::currentTimeMillis,
+        remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, cleaner, misses, preparing,
+        System::currentTimeMillis,
     )
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
@@ -91,7 +88,11 @@ class QueuePrefetcher(
         // Os downloads seguem mesmo se a música trocar no meio: a fila serial não é cancelada com a leitura.
         scope.launch {
             for (track in pending) {
-                guarded("download da fila") { prepare(track) }
+                try {
+                    guarded("download da fila") { prepare(track) }
+                } finally {
+                    preparing.done(track.uri)
+                }
             }
         }
         scope.launch {
@@ -116,7 +117,10 @@ class QueuePrefetcher(
         is QueueRead.Tracks -> {
             // Só com a fila lida dá para saber o que passou ou saiu dela.
             cleaner.keepOnly(current, read.tracks.map { it.uri })
-            read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach { pending.send(it) }
+            read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach {
+                preparing.start(it.uri)
+                pending.send(it)
+            }
             READ_INTERVAL_MS
         }
 
@@ -129,28 +133,23 @@ class QueuePrefetcher(
         }
     }
 
+    /** Também durante uma partida: a próxima música fica pronta enquanto se joga (spec Spotify contínuo §2.1). */
     private suspend fun prepare(track: QueuedTrack) {
         waiting -= track.uri
         if (track.uri in handled) return
-        var pick: QueuePick? = null
-        while (true) {
-            // Partida aberta: espera, e depois confere tudo de novo (a rede ou a opção podem ter mudado).
-            matchActivity.inMatch.first { !it }
-            val options = settings.settings.first()
-            val status = statusOf(track)
-            if (!wanted(track, status, options) || !canDownload(track, options)) return
-            val chosen = pick ?: picker.choose(TrackQuery(track.title, track.artist, track.durationMs))
-            pick = chosen
-            // Só a falha da pesquisa é tentada de novo, na próxima leitura.
-            if (chosen != QueuePick.SearchFailed) handled += track.uri
-            val target = chosen.target(status, options)
-            if (target == null) {
-                Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
-                chosen.miss(status)?.let { misses.record(track.uri, it) }
-                return
-            }
-            if (downloadUnlessAMatchOpens(track, target)) return
+        val options = settings.settings.first()
+        val status = statusOf(track)
+        if (!wanted(track, status, options) || !canDownload(track, options)) return
+        val chosen = picker.choose(TrackQuery(track.title, track.artist, track.durationMs))
+        // Só a falha da pesquisa é tentada de novo, na próxima leitura.
+        if (chosen != QueuePick.SearchFailed) handled += track.uri
+        val target = chosen.target(status, options)
+        if (target == null) {
+            Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
+            chosen.miss(status)?.let { misses.record(track.uri, it) }
+            return
         }
+        download(track, target)
     }
 
     /** Opção ligada, ainda sem mapa e sem passar do limite de mapas apagáveis. */
@@ -165,25 +164,6 @@ class QueuePrefetcher(
         conditions.canDownload(options.queueUseMobileData).also {
             if (!it) Log.i(TAG, "${track.label()} espera: sem Wi-Fi (ou dados móveis), espaço ou pasta gravável")
         }
-
-    /** Falso se uma partida abriu no meio: o download para (a pista vem antes) e é refeito depois. */
-    @Suppress("SwallowedException") // o cancelamento do download pela partida é o caminho esperado
-    private suspend fun downloadUnlessAMatchOpens(track: QueuedTrack, target: QueueTarget): Boolean = coroutineScope {
-        val download = async { download(track, target) }
-        val watcher = launch {
-            matchActivity.inMatch.first { it }
-            download.cancel()
-        }
-        val finished = try {
-            download.await()
-            true
-        } catch (e: CancellationException) {
-            ensureActive() // cancelado de fora: propaga
-            false
-        }
-        watcher.cancel()
-        finished
-    }
 
     private suspend fun download(track: QueuedTrack, target: QueueTarget) {
         val suggestion = target.suggestion

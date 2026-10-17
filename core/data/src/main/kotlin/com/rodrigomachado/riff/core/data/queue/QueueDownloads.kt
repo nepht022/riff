@@ -56,4 +56,7 @@ abstract class QueueModule {
 
     @Binds
     abstract fun queueMisses(impl: MemoryQueueMisses): QueueMisses
+
+    @Binds
+    abstract fun queuePreparing(impl: MemoryQueuePreparing): QueuePreparing
 }
