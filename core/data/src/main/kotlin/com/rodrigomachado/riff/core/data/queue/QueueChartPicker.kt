@@ -11,15 +11,19 @@ import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import kotlin.math.abs
 
+/** A pesquisa: os mapas que o Riff usa e, à parte, os oficiais que ele deixa de fora. */
+data class EncoreFound(val charts: List<EncoreChart>, val official: List<EncoreChart> = emptyList())
+
 /** O que a fila usa do Encore: a pesquisa e a olhada no começo do pacote. */
 interface EncoreSearch {
-    suspend fun search(query: String): List<EncoreChart>
+    suspend fun search(query: String): EncoreFound
 
     suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean?
 }
 
 class EncoreClientSearch @Inject constructor(private val encore: EncoreClient) : EncoreSearch {
-    override suspend fun search(query: String): List<EncoreChart> = encore.search(query, page = 1).charts
+    override suspend fun search(query: String): EncoreFound =
+        encore.search(query, page = 1).let { EncoreFound(it.charts, it.official) }
 
     override suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean? = encore.hasSeparateGuitar(chart)
 }
@@ -33,6 +37,9 @@ sealed interface QueuePick {
     data class Closest(val chart: EncoreChart, val confidence: Float) : QueuePick
 
     data object NothingReliable : QueuePick
+
+    /** Só os oficiais (Rock Band, Guitar Hero) têm esta música, e o Riff não os usa. */
+    data object OnlyOfficial : QueuePick
 
     /** Sem resposta do Encore (rede, fora do ar): vale tentar de novo. */
     data object SearchFailed : QueuePick
@@ -56,9 +63,14 @@ class QueueChartPicker @Inject constructor(private val encore: EncoreSearch) {
         } catch (e: Exception) {
             return QueuePick.SearchFailed
         }
-        val withGuitar = found.filter { it.guitarDifficulties.isNotEmpty() }
+        val withGuitar = found.charts.filter { it.guitarDifficulties.isNotEmpty() }
         exact(track, withGuitar.filter { durationAgrees(track, it) })?.let { return QueuePick.Exact(it) }
-        return closest(track, withGuitar) ?: QueuePick.NothingReliable
+        closest(track, withGuitar)?.let { return it }
+        val official = ranked(
+            track.copy(durationMs = null),
+            found.official.filter { it.guitarDifficulties.isNotEmpty() },
+        )
+        return if (official.isEmpty()) QueuePick.NothingReliable else QueuePick.OnlyOfficial
     }
 
     private suspend fun exact(track: TrackQuery, charts: List<EncoreChart>): EncoreChart? {

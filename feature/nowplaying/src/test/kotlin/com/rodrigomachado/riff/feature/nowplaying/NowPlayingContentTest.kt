@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -21,6 +22,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpRect
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -294,6 +296,44 @@ class NowPlayingContentTest {
         assertEquals(TextAlign.Center, layouts.single().layoutInput.style.textAlign)
         val bounds = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
         assertEquals((root.left + root.right).value / 2, (bounds.left + bounds.right).value / 2, 1f)
+    }
+
+    @Test
+    fun whenTheQueueFoundNothingTheScreenSaysSo() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), QueueMiss.NOTHING_FOUND))
+
+        composeRule.onNodeWithText("O Riff procurou no Encore e não achou um mapa desta música.").assertExists()
+    }
+
+    @Test
+    fun eachReasonHasItsOwnText() {
+        var miss by mutableStateOf(QueueMiss.ONLY_OTHER_DURATION)
+        composeRule.setContent {
+            RiffTheme {
+                NowPlayingContent(
+                    state = NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), miss),
+                    onRetry = {},
+                    onPlay = {},
+                    onConfirm = { _, _, _ -> },
+                    onChooseChart = { _, _ -> },
+                    onOpenLibrary = {},
+                )
+            }
+        }
+        val texts = QueueMiss.entries.map { reason ->
+            miss = reason
+            composeRule.waitForIdle()
+            composeRule.onNodeWithTag(NowPlayingTestTags.QUEUE_MISS).fetchSemanticsNode()
+                .config[SemanticsProperties.Text].joinToString()
+        }
+        assertEquals(QueueMiss.entries.size, texts.toSet().size)
+    }
+
+    @Test
+    fun withoutAQueueSearchNothingExtraIsSaid() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+
+        composeRule.onNodeWithTag(NowPlayingTestTags.QUEUE_MISS).assertDoesNotExist()
     }
 
     @Test

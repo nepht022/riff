@@ -27,7 +27,13 @@ data class EncoreChart(
     val downloadUrl: String get() = "$FILES/$md5${if (hasVideoBackground) "_novideo" else ""}.sng"
 }
 
-data class EncorePage(val charts: List<EncoreChart>, val found: Int, val page: Int) {
+/** [official]: os mapas oficiais (Rock Band, Guitar Hero) da página, que o Riff não usa e não mostra. */
+data class EncorePage(
+    val charts: List<EncoreChart>,
+    val found: Int,
+    val page: Int,
+    val official: List<EncoreChart> = emptyList(),
+) {
     val hasMore: Boolean get() = page * PER_PAGE < found
 }
 
@@ -101,12 +107,15 @@ class EncoreClient(private val transport: HttpTransport, private val io: Corouti
     private fun parse(text: String, page: Int): EncorePage = try {
         val root = JSONObject(text)
         val data = root.getJSONArray("data")
-        val charts = (0 until data.length()).map { data.getJSONObject(it) }
-            .filterNot { OfficialCharts.isOfficial(it.optStringOrNull("charter"), it.optStringOrNull("icon")) }
+        val (official, community) = (0 until data.length()).map { data.getJSONObject(it) }
             .filter { !it.isNull("diff_guitar") }
-            .map(::chartOf)
-            .distinctBy { it.md5 }
-        EncorePage(charts, root.getInt("found"), page)
+            .partition { OfficialCharts.isOfficial(it.optStringOrNull("charter"), it.optStringOrNull("icon")) }
+        EncorePage(
+            community.map(::chartOf).distinctBy { it.md5 },
+            root.getInt("found"),
+            page,
+            official.map(::chartOf).distinctBy { it.md5 },
+        )
     } catch (e: JSONException) {
         throw EncoreFormatException("resposta inesperada do Encore: ${e.message}").apply { initCause(e) }
     }

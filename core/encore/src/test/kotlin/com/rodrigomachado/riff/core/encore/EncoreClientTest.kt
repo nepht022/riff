@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -66,6 +67,17 @@ class EncoreClientTest {
             "https://files.enchor.us/a07d209baccd2d58042d81b869a0077e.sng",
             page.charts.first().downloadUrl,
         )
+    }
+
+    /** Os oficiais não aparecem, mas vêm à parte: a fila conta que a música só tem mapa oficial. */
+    @Test
+    fun officialChartsComeApart() = runTest {
+        transport.post = HttpResponse(201, null, fixture.byteInputStream())
+
+        val page = client.search("smells like teen spirit", page = 1)
+
+        assertEquals(2, page.official.size)
+        assertTrue(page.official.none { it.md5 in page.charts.map { c -> c.md5 } })
     }
 
     @Test

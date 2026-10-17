@@ -55,6 +55,7 @@ class QueuePrefetcher(
     private val conditions: DownloadConditions,
     private val matchActivity: MatchActivity,
     private val cleaner: QueueCleaner,
+    private val misses: QueueMisses,
     private val clock: () -> Long,
 ) {
     @Inject constructor(
@@ -69,9 +70,10 @@ class QueuePrefetcher(
         conditions: DownloadConditions,
         matchActivity: MatchActivity,
         cleaner: QueueCleaner,
+        misses: QueueMisses,
     ) : this(
         remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, matchActivity, cleaner,
-        System::currentTimeMillis,
+        misses, System::currentTimeMillis,
     )
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
@@ -144,6 +146,7 @@ class QueuePrefetcher(
             val target = chosen.target(status, options)
             if (target == null) {
                 Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
+                chosen.miss(status)?.let { misses.record(track.uri, it) }
                 return
             }
             if (downloadUnlessAMatchOpens(track, target)) return
@@ -189,8 +192,10 @@ class QueuePrefetcher(
             downloader.download(target.chart, track.uri.takeIf { suggestion == null }) {}
         } catch (e: ChartDownloadException) {
             Log.w(TAG, "${track.label()}: mapa da fila não baixado: ${e.reason}")
+            misses.record(track.uri, QueueMiss.DOWNLOAD_FAILED)
             return
         }
+        misses.clear(track.uri)
         suggestion?.let { matches.saveSuggestion(track.uri, saved.id, it) }
         Log.i(
             TAG,
@@ -245,12 +250,22 @@ internal fun QueuePick.target(status: MatchStatus, options: Settings): QueueTarg
         options.queueClosestDuration && status !is MatchStatus.Suggested
     }
 
-    QueuePick.NothingReliable, QueuePick.SearchFailed -> null
+    QueuePick.NothingReliable, QueuePick.OnlyOfficial, QueuePick.SearchFailed -> null
+}
+
+/** O que o Tocando agora conta; nada quando a música já tem uma sugestão na biblioteca. */
+internal fun QueuePick.miss(status: MatchStatus): QueueMiss? = when (this) {
+    QueuePick.NothingReliable -> QueueMiss.NOTHING_FOUND
+    QueuePick.OnlyOfficial -> QueueMiss.ONLY_OFFICIAL
+    QueuePick.SearchFailed -> QueueMiss.SEARCH_FAILED
+    is QueuePick.Closest -> QueueMiss.ONLY_OTHER_DURATION.takeIf { status !is MatchStatus.Suggested }
+    is QueuePick.Exact -> null
 }
 
 internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
     pick == QueuePick.SearchFailed -> "a pesquisa no Encore falhou (tenta de novo na próxima leitura)"
     pick == QueuePick.NothingReliable -> "nenhum mapa do Encore com título, artista e duração parecidos"
+    pick == QueuePick.OnlyOfficial -> "no Encore só há mapas oficiais (Rock Band, Guitar Hero), que o Riff não usa"
     status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão"
     else -> "só com outra duração (opção: não baixar nenhum)"
 }

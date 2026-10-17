@@ -150,6 +150,16 @@ class QueueChartPickerTest {
         assertEquals(QueuePick.NothingReliable, picker.choose(rainingBlood))
     }
 
+    /** O caso do Big Empty: no Encore só o mapa da Harmonix, que o Riff não usa. */
+    @Test
+    fun onlyAnOfficialChartIsToldApart() = runTest {
+        encore.official = listOf(slayer("harmonix", 255_000))
+        assertEquals(QueuePick.OnlyOfficial, picker.choose(rainingBlood))
+
+        encore.official = listOf(slayer("outra-banda", 255_000, artist = "Metallica"))
+        assertEquals(QueuePick.NothingReliable, picker.choose(rainingBlood))
+    }
+
     @Test
     fun aFailedSearchIsToldApartFromNothingFound() = runTest {
         encore.failure = java.io.IOException("Encore fora do ar")
@@ -172,15 +182,18 @@ class FakeEncoreSearch : EncoreSearch {
 
     /** Resultados por consulta; sem a consulta aqui, vale [results]. */
     var byQuery: Map<String, List<EncoreChart>> = emptyMap()
+
+    /** Os oficiais (Rock Band, Guitar Hero) que a pesquisa achou e deixou de fora. */
+    var official: List<EncoreChart> = emptyList()
     var separate: Set<String> = emptySet()
     var failure: Exception? = null
     val queries = mutableListOf<String>()
     var peeks = 0
 
-    override suspend fun search(query: String): List<EncoreChart> {
+    override suspend fun search(query: String): EncoreFound {
         queries += query
         failure?.let { throw it }
-        return byQuery[query] ?: results
+        return EncoreFound(byQuery[query] ?: results, official)
     }
 
     override suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean? {

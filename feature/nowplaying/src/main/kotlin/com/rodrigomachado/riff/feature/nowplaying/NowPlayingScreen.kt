@@ -29,6 +29,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.first
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object NowPlayingTestTags {
     const val OPEN_LIBRARY = "nowplaying_open_library"
+    const val QUEUE_MISS = "nowplaying_queue_miss"
 }
 
 /** O que "Jogar" leva para a partida. */
@@ -157,6 +159,7 @@ fun NowPlayingContent(
 
             is NowPlayingUiState.Playing -> Playing(
                 state.nowPlaying,
+                state.queueMiss,
                 onPlay,
                 onConfirm,
                 onChooseChart,
@@ -192,14 +195,6 @@ private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary:
     }
 }
 
-private fun SpotifyError.message(): Int = when (this) {
-    SpotifyError.NOT_LOGGED_IN -> R.string.nowplaying_error_not_logged_in
-    SpotifyError.NOT_AUTHORIZED -> R.string.nowplaying_error_not_authorized
-    SpotifyError.OFFLINE -> R.string.nowplaying_error_offline
-    SpotifyError.DISCONNECTED -> R.string.nowplaying_error_disconnected
-    else -> R.string.nowplaying_error_unknown
-}
-
 /** Na linha do botão principal, ocupa o espaço livre à direita e fica no meio dele. */
 @Composable
 private fun RowScope.ChooseOther(onClick: () -> Unit) {
@@ -209,8 +204,17 @@ private fun RowScope.ChooseOther(onClick: () -> Unit) {
 }
 
 @Composable
-private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
+private fun NoMatchActions(queueMiss: QueueMiss?, onChoose: () -> Unit, onSearch: () -> Unit) {
     ChartText(stringResource(R.string.nowplaying_no_match))
+    queueMiss?.let {
+        Text(
+            stringResource(it.message()),
+            Modifier.fillMaxWidth().testTag(NowPlayingTestTags.QUEUE_MISS),
+            style = MaterialTheme.typography.bodyMedium,
+            color = RiffColors.PaperDim,
+            textAlign = TextAlign.Center,
+        )
+    }
     ActionRow {
         PosterButton(
             stringResource(R.string.nowplaying_choose),
@@ -249,6 +253,7 @@ private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.widt
 @Composable
 private fun Playing(
     nowPlaying: NowPlaying,
+    queueMiss: QueueMiss?,
     onPlay: (PlayRequest) -> Unit,
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
@@ -299,7 +304,11 @@ private fun Playing(
                 SearchEncore({ onSearch(track) })
             }
 
-            MatchStatus.NoMatch -> NoMatchActions({ onChooseChart(track.trackUri, track.title) }, { onSearch(track) })
+            MatchStatus.NoMatch -> NoMatchActions(
+                queueMiss,
+                { onChooseChart(track.trackUri, track.title) },
+                { onSearch(track) },
+            )
         }
     }
     choosing?.let { match ->

@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.lifecycle.SavedStateHandle
+import com.rodrigomachado.riff.core.data.queue.MemoryQueueMisses
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.SpotifyConnection
@@ -24,6 +26,7 @@ import org.junit.Test
 class NowPlayingViewModelTest {
     private val repository = FakeNowPlayingRepository()
     private val matches = FakeTrackMatchRepository()
+    private val misses = MemoryQueueMisses()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -34,7 +37,7 @@ class NowPlayingViewModelTest {
     private val saved = SavedStateHandle()
 
     private fun TestScope.viewModel(): NowPlayingViewModel {
-        val viewModel = NowPlayingViewModel(repository, matches).also { it.watchAutoPlay(saved) }
+        val viewModel = NowPlayingViewModel(repository, matches, misses).also { it.watchAutoPlay(saved) }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -55,6 +58,22 @@ class NowPlayingViewModelTest {
         assertEquals(NowPlayingUiState.Unavailable(SpotifyError.NOT_INSTALLED), viewModel.uiState.value)
         viewModel.retry()
         assertEquals(2, repository.connects)
+    }
+
+    /** A fila procurou no Encore e não achou: a tela conta, mas só enquanto a música estiver sem mapa. */
+    @Test
+    fun whatTheQueueFoundIsShownOnlyWithoutAMap() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Connected
+        misses.record("spotify:track:x", QueueMiss.NOTHING_FOUND)
+
+        val none = playing(MatchStatus.NoMatch)
+        repository.nowPlaying.value = none
+        assertEquals(NowPlayingUiState.Playing(none, QueueMiss.NOTHING_FOUND), viewModel.uiState.value)
+
+        val found = playing(MatchStatus.Matched(chart(), 0))
+        repository.nowPlaying.value = found
+        assertEquals(NowPlayingUiState.Playing(found), viewModel.uiState.value)
     }
 
     @Test

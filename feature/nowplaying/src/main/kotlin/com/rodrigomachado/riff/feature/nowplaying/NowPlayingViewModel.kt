@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.NowPlayingRepository
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
+import com.rodrigomachado.riff.core.data.queue.QueueMisses
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.model.SpotifyError
@@ -29,23 +32,28 @@ sealed interface NowPlayingUiState {
 
     data object NothingPlaying : NowPlayingUiState
 
-    data class Playing(val nowPlaying: NowPlaying) : NowPlayingUiState
+    /** [queueMiss]: a fila procurou um mapa para esta música e não conseguiu (só sem mapa). */
+    data class Playing(val nowPlaying: NowPlaying, val queueMiss: QueueMiss? = null) : NowPlayingUiState
 }
 
 @HiltViewModel
 class NowPlayingViewModel @Inject constructor(
     private val repository: NowPlayingRepository,
     private val matches: TrackMatchRepository,
+    misses: QueueMisses,
 ) : ViewModel() {
     val uiState: StateFlow<NowPlayingUiState> =
-        combine(repository.connection, repository.nowPlaying) { connection, nowPlaying ->
+        combine(repository.connection, repository.nowPlaying, misses.misses) { connection, nowPlaying, missed ->
             when (connection) {
                 SpotifyConnection.Idle, SpotifyConnection.Connecting -> NowPlayingUiState.Connecting
 
                 is SpotifyConnection.Failed -> NowPlayingUiState.Unavailable(connection.error)
 
                 SpotifyConnection.Connected ->
-                    nowPlaying?.let { NowPlayingUiState.Playing(it) } ?: NowPlayingUiState.NothingPlaying
+                    nowPlaying?.let {
+                        val miss = missed[it.playback.trackUri].takeIf { _ -> it.match == MatchStatus.NoMatch }
+                        NowPlayingUiState.Playing(it, miss)
+                    } ?: NowPlayingUiState.NothingPlaying
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), NowPlayingUiState.Connecting)
 

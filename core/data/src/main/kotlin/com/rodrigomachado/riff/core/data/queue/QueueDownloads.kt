@@ -53,4 +53,7 @@ abstract class QueueModule {
 
     @Binds
     abstract fun downloadConditions(impl: AndroidDownloadConditions): DownloadConditions
+
+    @Binds
+    abstract fun queueMisses(impl: MemoryQueueMisses): QueueMisses
 }

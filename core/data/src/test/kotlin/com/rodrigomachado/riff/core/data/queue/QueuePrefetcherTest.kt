@@ -36,6 +36,7 @@ class QueuePrefetcherTest {
     private val conditions = FakeConditions()
     private val matchActivity = DefaultMatchActivity(rows)
     private val deleter = FakeChartDeleter(rows)
+    private val misses = MemoryQueueMisses()
 
     private fun queued(vararg uris: String) = QueueRead.Tracks(
         uris.map { QueuedTrack(it, "Música $it", "Banda", 200_000) },
@@ -64,7 +65,8 @@ class QueuePrefetcherTest {
     private fun TestScope.start() {
         QueuePrefetcher(
             remote, queue, auth, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
-            matchActivity, QueueCleaner(rows, deleter, settings, matchActivity), clock = { testScheduler.currentTime },
+            matchActivity, QueueCleaner(rows, deleter, settings, matchActivity), misses,
+            clock = { testScheduler.currentTime },
         ).start(backgroundScope)
         runCurrent()
     }
@@ -175,6 +177,62 @@ class QueuePrefetcherTest {
         runCurrent()
 
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    /** O que a fila não achou fica guardado, para o Tocando agora contar quando a música chegar. */
+    @Test
+    fun whatWasNotFoundIsRemembered() = runTest {
+        settings.settings.value = settings.settings.value.copy(queueClosestDuration = false)
+        queue.next = queued("nada", "outra")
+        encore.results = emptyList()
+        encoreHasOnlyAnotherDuration("outra")
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(
+            mapOf("nada" to QueueMiss.NOTHING_FOUND, "outra" to QueueMiss.ONLY_OTHER_DURATION),
+            misses.misses.value,
+        )
+    }
+
+    @Test
+    fun onlyOfficialIsRemembered() = runTest {
+        queue.next = queued("a")
+        encore.official = listOf(chartFor("a"))
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(mapOf("a" to QueueMiss.ONLY_OFFICIAL), misses.misses.value)
+    }
+
+    @Test
+    fun aFailedSearchIsRememberedUntilItWorks() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        encore.failure = java.io.IOException("sem rede")
+        start()
+        nowPlaying("now")
+        assertEquals(mapOf("a" to QueueMiss.SEARCH_FAILED), misses.misses.value)
+
+        encore.failure = null
+        advanceTimeBy(60_001)
+        runCurrent()
+
+        assertEquals(emptyMap<String, QueueMiss>(), misses.misses.value)
+    }
+
+    @Test
+    fun aFailedDownloadIsRemembered() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.NETWORK, null)
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(mapOf("a" to QueueMiss.DOWNLOAD_FAILED), misses.misses.value)
     }
 
     @Test

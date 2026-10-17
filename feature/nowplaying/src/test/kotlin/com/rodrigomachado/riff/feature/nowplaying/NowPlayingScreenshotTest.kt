@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.rodrigomachado.riff.core.data.queue.QueueMiss
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -31,6 +32,11 @@ class NowPlayingScreenshotTest {
     @Test
     fun noMatch() = snapshot("NowPlaying_no_match") {
         content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+    }
+
+    @Test
+    fun queueFoundNothing() = snapshot("NowPlaying_queue_not_found") {
+        content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), QueueMiss.NOTHING_FOUND))
     }
 
     @Composable
