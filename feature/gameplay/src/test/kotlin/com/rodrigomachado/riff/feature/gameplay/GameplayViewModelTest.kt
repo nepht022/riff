@@ -752,6 +752,8 @@ class GameplayViewModelTest {
 
         assertEquals(1, scores.saved.size)
         assertEquals(GameplayUiState.NextSong(Difficulty.EXPERT, "spotify:track:x", 40_000), viewModel.uiState.value)
+        // As notas acabaram no outro: o Spotify segue tocando para passar para a próxima sozinho.
+        assertTrue(spotifyPlayer.keptMusic)
     }
 
     @Test

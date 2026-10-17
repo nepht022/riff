@@ -271,6 +271,23 @@ class NowPlayingViewModelTest {
         )
     }
 
+    /** O Spotify passou de música durante a espera: decidir pela anterior puxaria o Spotify de volta para ela. */
+    @Test
+    fun aSongThatPassedDuringTheDownloadStartsNothing() = runTest {
+        val viewModel = viewModel()
+        preparing.start("spotify:track:y")
+        songChangedDuringAMatch()
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch)
+
+        repository.nowPlaying.value = nextSong(MatchStatus.NoMatch).let {
+            it.copy(playback = it.playback.copy(trackUri = "spotify:track:z"))
+        }
+        matches.statuses["spotify:track:y"] = MatchStatus.Matched(chart("b"), 0)
+        preparing.done("spotify:track:y")
+
+        assertNull(viewModel.autoPlay.value)
+    }
+
     @Test
     fun leavingWhileWaitingForTheDownloadStartsNothing() = runTest {
         val viewModel = viewModel()

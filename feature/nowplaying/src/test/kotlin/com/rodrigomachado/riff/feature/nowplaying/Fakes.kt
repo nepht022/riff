@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 private val difficulties = setOf(Difficulty.MEDIUM, Difficulty.EXPERT)
 
@@ -25,7 +26,9 @@ class FakeNowPlayingRepository : NowPlayingRepository {
     var connects = 0
     override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
     override val nowPlaying = MutableStateFlow<NowPlaying?>(null)
-    override val playback = MutableStateFlow<PlaybackState?>(null)
+
+    /** A faixa de [nowPlaying], como no repositório de verdade (os dois vêm do mesmo estado do Spotify). */
+    override val playback: StateFlow<PlaybackState?> get() = MutableStateFlow(nowPlaying.value?.playback)
 
     val commands = mutableListOf<String>()
 

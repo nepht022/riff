@@ -55,7 +55,8 @@ class SpotifySongPlayer(
                 delay(REFRESH_INTERVAL_MS)
                 remote.refresh()
                 pauseIfOurTrackNeverStarted()
-                pauseIfSpotifyNeverResumed()
+                // Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre.
+                if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
             }
         }
     }
@@ -109,11 +110,6 @@ class SpotifySongPlayer(
             starting = false
             last = last?.frozenAt(0)
         }
-    }
-
-    /** Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre. */
-    private fun pauseIfSpotifyNeverResumed() {
-        if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
     }
 
     override fun play() {
@@ -187,6 +183,12 @@ class SpotifySongPlayer(
         listening?.cancel()
         listening = null
         if (started && !completed && isPlaying) remote.pause()
+    }
+
+    override fun releaseKeepingMusic() {
+        released = true
+        listening?.cancel()
+        listening = null
     }
 
     override val positionMs: Long

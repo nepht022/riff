@@ -56,6 +56,14 @@ class FakeSongPlayer : SongPlayer {
     override fun release() {
         released = true
     }
+
+    /** A música continua (Spotify, seguindo para a próxima). */
+    var keptMusic = false
+
+    override fun releaseKeepingMusic() {
+        keptMusic = true
+        release()
+    }
 }
 
 class FakeSfxPlayer : SfxPlayer {

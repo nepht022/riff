@@ -259,7 +259,11 @@ class GameplayViewModel @Inject constructor(
         val ready = state.value as? GameplayUiState.Ready ?: return
         if (finishing) return
         finishing = true
-        release()
+        val uri = spotifyTrackUri
+        val goOn = uri != null && ready.settings.spotifyNextSongDirect
+        // Seguindo para a próxima, a música não para: as notas podem ter acabado no outro, e é o Spotify que troca.
+        val waitMs = if (goOn && uri != null) nextSongWaitMs(uri) else 0L
+        release(keepMusic = goOn)
         val engine = ready.session.engine
         engine.finish()
         val record = ScoreRecord(
@@ -274,13 +278,11 @@ class GameplayViewModel @Inject constructor(
             miss = engine.count(Judgment.MISS),
             playedAtEpochMs = System.currentTimeMillis(),
         )
-        val uri = spotifyTrackUri
-        val goOn = uri != null && ready.settings.spotifyNextSongDirect
         viewModelScope.launch {
             val scoreId = scores.save(record)
             // Spotify, "Ir direto para a próxima": o placar fica salvo e o Tocando agora começa a próxima música.
             state.value = if (goOn && uri != null) {
-                GameplayUiState.NextSong(difficulty, uri, nextSongWaitMs(uri))
+                GameplayUiState.NextSong(difficulty, uri, waitMs)
             } else {
                 GameplayUiState.Finished(scoreId)
             }
@@ -333,10 +335,10 @@ class GameplayViewModel @Inject constructor(
     }
 
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
-    fun release() {
+    fun release(keepMusic: Boolean = false) {
         interruptions?.stop()
         interruptions = null
-        player?.release()
+        player?.let { if (keepMusic) it.releaseKeepingMusic() else it.release() }
         sfx?.release()
         player = null
         sfx = null

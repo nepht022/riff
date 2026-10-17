@@ -127,9 +127,7 @@ fun GameplayScreen(
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
 
-        is GameplayUiState.NextSong -> LaunchedEffect(current) {
-            onNextSong(current.difficulty, current.fromTrackUri, current.waitMs)
-        }
+        is GameplayUiState.NextSong -> NextSongEffect(current, onNextSong)
     }
 }
 

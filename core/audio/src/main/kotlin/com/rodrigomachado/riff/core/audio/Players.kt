@@ -17,6 +17,9 @@ interface SongPlayer {
 
     fun release()
 
+    /** Larga o player sem parar a música (Spotify: ela segue, para o Spotify passar para a próxima). */
+    fun releaseKeepingMusic() = release()
+
     val positionMs: Long
 
     val isPlaying: Boolean

@@ -115,7 +115,10 @@ class NowPlayingViewModel @Inject constructor(
                     val next = withTimeoutOrNull(waitMs) {
                         repository.nowPlaying.first { it != null && it.playback.trackUri != from }
                     } ?: return@launch
-                    pendingAutoPlay.value = NowPlayingAutoPlay.decide(afterPreparing(next), Difficulty.valueOf(name))
+                    val ready = afterPreparing(next)
+                    // O Spotify passou de música durante a espera: decidir pela anterior o puxaria de volta para ela.
+                    if (repository.playback.value?.trackUri != ready.playback.trackUri) return@launch
+                    pendingAutoPlay.value = NowPlayingAutoPlay.decide(ready, Difficulty.valueOf(name))
                 }
             }
         }

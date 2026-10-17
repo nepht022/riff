@@ -257,6 +257,21 @@ class SpotifySongPlayerTest {
         assertEquals(2, remote.refreshes)
     }
 
+    /** Fim das notas no outro, "Ir direto para a próxima": a música segue para o Spotify passar para a próxima. */
+    @Test
+    fun releasingKeepingTheMusicDoesNotPauseSpotify() = runTest {
+        val player = prepared()
+        player.play()
+        now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = 180_000))
+        remote.commands.clear()
+
+        player.releaseKeepingMusic()
+
+        assertEquals(emptyList<String>(), remote.commands)
+    }
+
     @Test
     fun leavingMidSongPausesSpotifyButFinishingDoesNot() = runTest {
         val leaving = prepared()
