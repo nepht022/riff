@@ -6,6 +6,7 @@ import androidx.sqlite.execSQL
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -171,6 +172,30 @@ class MigrationTest {
             prepare("SELECT suggested FROM track_matches").use {
                 it.step()
                 assertEquals(0L, it.getLong(0))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun version8BecomesVersion9WithoutCleanTimeForOldScores() {
+        helper.createDatabase(8).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId, separateGuitar) " +
+                    "VALUES ('a', 'Música', 'Banda', NULL, NULL, NULL, 'content://a', 'CHART', 1, 0)",
+            )
+            execSQL(
+                "INSERT INTO scores (chartId, difficulty, score, accuracy, maxCombo, perfect, good, miss, " +
+                    "playedAtEpochMs) VALUES ('a', 'HARD', 100, 1.0, 1, 1, 0, 0, 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(9).apply {
+            prepare("SELECT cleanStreakMs FROM scores").use {
+                it.step()
+                assertTrue(it.isNull(0))
             }
             close()
         }

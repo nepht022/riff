@@ -109,6 +109,7 @@ private fun ReadyResults(
             )
             Stat(stringResource(R.string.results_max_combo), record.maxCombo.toString())
             Stat(stringResource(R.string.results_perfect), record.perfect.toString())
+            record.cleanStreakMs?.let { Stat(stringResource(R.string.results_clean_time), minutesSeconds(it)) }
             Stat(stringResource(R.string.results_good), record.good.toString())
             Stat(stringResource(R.string.results_miss), record.miss.toString())
         }
@@ -122,6 +123,15 @@ private fun ReadyResults(
         ) { Text(stringResource(R.string.results_back), color = RiffColors.Paper) }
     }
 }
+
+/** m:ss, como numa música. */
+private fun minutesSeconds(ms: Long): String {
+    val seconds = ms / MS_PER_SECOND
+    return "%d:%02d".format(seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE)
+}
+
+private const val MS_PER_SECOND = 1_000L
+private const val SECONDS_PER_MINUTE = 60
 
 @Composable
 private fun Stat(label: String, value: String) {

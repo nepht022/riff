@@ -48,6 +48,38 @@ class ResultsContentTest {
     }
 
     @Test
+    fun theCleanTimeIsShown() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300).copy(cleanStreakMs = 38_000), "Música", "Banda", false),
+                    onPlayAgain = { _, _ -> },
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Tempo sem errar").assertExists()
+        composeRule.onNodeWithText("0:38").assertExists()
+    }
+
+    /** Partida de antes do ranking: sem a medida, a linha não aparece (nada de "0:00" falso). */
+    @Test
+    fun anOldMatchHasNoCleanTime() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", false),
+                    onPlayAgain = { _, _ -> },
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Tempo sem errar").assertDoesNotExist()
+    }
+
+    @Test
     fun backReturnsToWhereTheGameStarted() {
         var done = false
         composeRule.setContent {

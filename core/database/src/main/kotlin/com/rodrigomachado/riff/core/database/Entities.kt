@@ -70,6 +70,8 @@ data class ScoreEntity(
     val good: Int,
     val miss: Int,
     val playedAtEpochMs: Long,
+    /** "Tempo sem errar" em ms; nulo nas partidas de antes da medida. */
+    val cleanStreakMs: Long? = null,
 )
 
 /** Ajuste fino de sincronia de um mapa da biblioteca (ms somados ao relógio). Sai junto com o mapa. */

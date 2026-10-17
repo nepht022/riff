@@ -11,4 +11,6 @@ data class ScoreRecord(
     val good: Int,
     val miss: Int,
     val playedAtEpochMs: Long,
+    /** "Tempo sem errar": o maior trecho sem erro, em ms do mapa; `null` em partidas de antes da medida. */
+    val cleanStreakMs: Long? = null,
 )

@@ -2,6 +2,7 @@
     <string name="results_new_best">NOVO RECORDE</string>
     <string name="results_accuracy">Precisão</string>
     <string name="results_max_combo">Maior combo</string>
+    <string name="results_clean_time">Tempo sem errar</string>
     <string name="results_perfect">Perfeitos</string>
     <string name="results_good">Bons</string>
     <string name="results_miss">Erros</string>

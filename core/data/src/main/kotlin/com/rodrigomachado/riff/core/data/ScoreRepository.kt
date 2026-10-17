@@ -26,10 +26,13 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
     )?.toModel()
 }
 
-private fun ScoreRecord.toEntity() =
-    ScoreEntity(0, chartId, difficulty.name, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs)
+private fun ScoreRecord.toEntity() = ScoreEntity(
+    0, chartId, difficulty.name, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs, cleanStreakMs,
+)
 
 private fun ScoreEntity.toModel(): ScoreRecord? {
     val level = Difficulty.entries.firstOrNull { it.name == difficulty } ?: return null
-    return ScoreRecord(id, chartId, level, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs)
+    return ScoreRecord(
+        id, chartId, level, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs, cleanStreakMs,
+    )
 }

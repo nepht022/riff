@@ -277,6 +277,7 @@ class GameplayViewModel @Inject constructor(
             good = engine.count(Judgment.GOOD),
             miss = engine.count(Judgment.MISS),
             playedAtEpochMs = System.currentTimeMillis(),
+            cleanStreakMs = engine.longestCleanMs,
         )
         viewModelScope.launch {
             val scoreId = scores.save(record)

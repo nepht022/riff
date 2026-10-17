@@ -32,6 +32,11 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
     var combo = 0
         private set
     private var maxCombo = 0
+
+    /** "Tempo sem errar": o maior trecho sem erro, do 1º ao último acerto dele, no tempo do mapa. */
+    var longestCleanMs = 0L
+        private set
+    private var streakStartMs = 0L
     private var songTimeMs = 0L
 
     private class ActiveSustain(val endMs: Long, var scoredUntilMs: Long)
@@ -78,7 +83,7 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         update(timeMs)
         val index = findHittable(lane, timeMs)
         if (index == null) {
-            combo = 0
+            combo = 0 // toque sem nota quebra o combo e o "tempo sem errar"
             return null
         }
         val note = notes[index]
@@ -86,8 +91,10 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         record(index, judgment)
         // Como no Guitar Hero: o acerto vale o multiplicador de antes dele; o x2 começa no 11º acerto seguido.
         hitScore += (if (judgment == Judgment.PERFECT) PERFECT_POINTS else GOOD_POINTS) * multiplier
+        if (combo == 0) streakStartMs = note.timeMs
         combo++
         maxCombo = max(maxCombo, combo)
+        longestCleanMs = max(longestCleanMs, note.timeMs - streakStartMs)
         if (note.sustainMs > 0) {
             sustains[lane] = ActiveSustain(note.timeMs + note.sustainMs, max(timeMs, note.timeMs))
         }

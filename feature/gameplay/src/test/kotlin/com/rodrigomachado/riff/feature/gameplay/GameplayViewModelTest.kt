@@ -219,6 +219,7 @@ class GameplayViewModelTest {
         assertEquals(Difficulty.EXPERT, record.difficulty)
         assertEquals(100L, record.score)
         assertEquals(1, record.perfect)
+        assertEquals(session.engine.longestCleanMs, record.cleanStreakMs) // "Tempo sem errar" vai para o ranking
         assertTrue(player.released)
         assertTrue(sfx.released)
     }

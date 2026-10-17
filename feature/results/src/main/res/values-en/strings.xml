@@ -2,6 +2,7 @@
     <string name="results_new_best">NEW BEST</string>
     <string name="results_accuracy">Accuracy</string>
     <string name="results_max_combo">Best combo</string>
+    <string name="results_clean_time">Time without missing</string>
     <string name="results_perfect">Perfect</string>
     <string name="results_good">Good</string>
     <string name="results_miss">Misses</string>

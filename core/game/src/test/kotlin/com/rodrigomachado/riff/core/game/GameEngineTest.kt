@@ -29,6 +29,38 @@ class GameEngineTest {
         assertEquals(0, engine.state.counts.getValue(Judgment.MISS))
     }
 
+    /** "Tempo sem errar" (spec do ranking §5): do 1º ao último acerto do maior trecho sem erro, no tempo do mapa. */
+    @Test
+    fun cleanTimeRunsFromTheFirstToTheLastHitOfTheLongestStreak() {
+        val engine = GameEngine((1..5).map { note(it * 1_000L) })
+        engine.onPress(0, 1_000)
+        engine.onPress(0, 2_000)
+        engine.update(3_500) // a de 3.000 passou: erro
+        engine.onPress(0, 4_000)
+        engine.onPress(0, 5_000)
+
+        assertEquals(1_000L, engine.longestCleanMs)
+    }
+
+    @Test
+    fun aTapWithoutANoteBreaksTheCleanTime() {
+        val engine = GameEngine(listOf(note(1_000), note(2_000), note(3_000)))
+        engine.onPress(0, 1_000)
+        engine.onPress(2, 1_500) // toque sem nota: quebra como o combo
+        engine.onPress(0, 2_000)
+        engine.onPress(0, 3_000)
+
+        assertEquals(1_000L, engine.longestCleanMs)
+    }
+
+    @Test
+    fun aSingleHitIsZeroCleanTime() {
+        val engine = GameEngine(listOf(note(1_000)))
+        engine.onPress(0, 1_000)
+
+        assertEquals(0L, engine.longestCleanMs)
+    }
+
     @Test
     fun marksMissWhenNotePassesWindow() {
         val engine = GameEngine(listOf(note(1_000), note(2_000)))
