@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.PlayableChart
+import com.rodrigomachado.riff.core.data.queue.MatchActivity
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -59,6 +60,19 @@ class GameplayViewModelTest {
     private val analyzed = mutableListOf<List<String>>()
     private val art = FakeImage()
     private val artRequests = mutableListOf<String>()
+    private val matchActivity = object : MatchActivity {
+        override val inMatch = kotlinx.coroutines.flow.MutableStateFlow(false)
+        val startedWith = mutableListOf<String>()
+
+        override suspend fun started(chartId: String) {
+            inMatch.value = true
+            startedWith += chartId
+        }
+
+        override fun ended() {
+            inMatch.value = false
+        }
+    }
     private val controls = object : SpotifyControls {
         val commands = mutableListOf<String>()
 
@@ -125,6 +139,7 @@ class GameplayViewModelTest {
             art
         },
         controls,
+        matchActivity,
     )
 
     private fun playable(audio: String? = "raiz/a/song.ogg") =
@@ -653,5 +668,18 @@ class GameplayViewModelTest {
         viewModel.changeSong(forward = false)
 
         assertEquals(listOf("previousTrack released=true"), controls.commands)
+    }
+
+    /** A fila do Spotify não baixa durante a partida, e o mapa jogado deixa de ser apagável. */
+    @Test
+    fun aStartedMatchMarksItsMapAsPlayedAndTheEndIsAnnounced() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        assertEquals(listOf("a"), matchActivity.startedWith)
+        assertTrue(matchActivity.inMatch.value)
+
+        viewModel.release()
+        assertEquals(false, matchActivity.inMatch.value)
     }
 }

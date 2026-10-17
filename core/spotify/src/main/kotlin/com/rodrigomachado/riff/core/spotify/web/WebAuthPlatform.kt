@@ -96,4 +96,7 @@ object SpotifyWebModule {
         launcher = ActivityCodeLauncher(config),
         clock = SystemClock::elapsedRealtime,
     )
+
+    @Provides
+    fun queue(api: SpotifyQueueApi): SpotifyQueue = api
 }

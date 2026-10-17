@@ -24,6 +24,7 @@ import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
+import com.rodrigomachado.riff.core.data.queue.MatchActivity
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
@@ -91,6 +92,7 @@ class GameplayViewModel @Inject constructor(
     private val interruptionsFactory: PlaybackInterruptionsFactory,
     private val artImages: ChartArtImages,
     private val spotify: SpotifyControls,
+    private val matchActivity: MatchActivity,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
@@ -112,7 +114,12 @@ class GameplayViewModel @Inject constructor(
     private var pauseRequested = false
 
     init {
-        viewModelScope.launch { state.value = load() }
+        viewModelScope.launch {
+            val loaded = load()
+            state.value = loaded
+            // A fila do Spotify espera a partida acabar; o mapa jogado deixa de ser apagável.
+            if (loaded is GameplayUiState.Ready) matchActivity.started(chartId)
+        }
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // cada falha vira uma explicação na tela
@@ -273,6 +280,7 @@ class GameplayViewModel @Inject constructor(
 
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
+        matchActivity.ended()
         interruptions?.stop()
         interruptions = null
         player?.release()

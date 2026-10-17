@@ -105,6 +105,9 @@ class QueueChartPickerTest {
 
 class FakeEncoreSearch : EncoreSearch {
     var results: List<EncoreChart> = emptyList()
+
+    /** Resultados por consulta; sem a consulta aqui, vale [results]. */
+    var byQuery: Map<String, List<EncoreChart>> = emptyMap()
     var separate: Set<String> = emptySet()
     var failure: Exception? = null
     val queries = mutableListOf<String>()
@@ -113,7 +116,7 @@ class FakeEncoreSearch : EncoreSearch {
     override suspend fun search(query: String): List<EncoreChart> {
         queries += query
         failure?.let { throw it }
-        return results
+        return byQuery[query] ?: results
     }
 
     override suspend fun hasSeparateGuitar(chart: EncoreChart): Boolean? {

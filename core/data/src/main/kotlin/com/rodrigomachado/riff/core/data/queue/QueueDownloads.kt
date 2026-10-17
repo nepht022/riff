@@ -47,4 +47,10 @@ abstract class QueueModule {
 
     @Binds
     abstract fun encoreSearch(impl: EncoreClientSearch): EncoreSearch
+
+    @Binds
+    abstract fun matchActivity(impl: DefaultMatchActivity): MatchActivity
+
+    @Binds
+    abstract fun downloadConditions(impl: AndroidDownloadConditions): DownloadConditions
 }

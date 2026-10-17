@@ -31,12 +31,17 @@ fun interface AuthorizedGet {
     suspend fun get(url: String, token: String): HttpAnswer
 }
 
+/** As próximas músicas da fila do Spotify. */
+interface SpotifyQueue {
+    suspend fun next(count: Int = 2): QueueRead
+}
+
 /** As próximas músicas da fila do Spotify (`GET /v1/me/player/queue`); episódios e faixas locais ficam de fora. */
-class SpotifyQueueApi(private val auth: SpotifyWebAuth, private val http: AuthorizedGet) {
+class SpotifyQueueApi(private val auth: SpotifyWebAuth, private val http: AuthorizedGet) : SpotifyQueue {
     @Inject constructor(auth: SpotifyWebAuth) : this(auth, UrlConnectionGet)
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException") // qualquer falha: tenta na próxima leitura
-    suspend fun next(count: Int = 2): QueueRead {
+    override suspend fun next(count: Int): QueueRead {
         val token = auth.accessToken() ?: return QueueRead.Unavailable
         return try {
             var answer = http.get(QUEUE_URL, token)
