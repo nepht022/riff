@@ -79,7 +79,8 @@ fun ReportContent(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        TextButton(onClick = withMenuSound(MenuSound.BACK, onBack)) {
+        // Sem som aqui: a navegação toca o de voltar ao sair da tela (com ele, soava duas vezes).
+        TextButton(onClick = onBack) {
             Text(stringResource(R.string.report_back), color = RiffColors.Paper)
         }
         PosterTitle(stringResource(R.string.report_title), style = MaterialTheme.typography.displaySmall)
@@ -92,7 +93,6 @@ fun ReportContent(
             PosterButton(
                 stringResource(R.string.report_done),
                 onClick = onBack,
-                sound = MenuSound.BACK,
                 modifier = Modifier.testTag(ReportTestTags.DONE),
             )
         } else {

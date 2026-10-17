@@ -129,6 +129,8 @@ class ReportContentTest {
         composeRule.onNodeWithTag(ReportTestTags.DONE).performClick()
 
         assertEquals(listOf("back"), events)
+        // O som de voltar é da navegação, ao sair da tela; aqui ele tocaria duas vezes.
+        assertEquals(emptyList<MenuSound>(), sounds)
     }
 
     @Test
@@ -172,6 +174,8 @@ class ReportContentTest {
         composeRule.onNodeWithText("Voltar").performClick()
 
         assertEquals(listOf("back"), events)
+        // O som de voltar é da navegação, ao sair da tela; aqui ele tocaria duas vezes.
+        assertEquals(emptyList<MenuSound>(), sounds)
     }
 
     /** O TalkBack lê o nome do interruptor, e tocar na linha inteira liga e desliga. */
