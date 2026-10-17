@@ -70,7 +70,7 @@ object GameplayTestTags {
 }
 
 private const val COMBO_MIN_TO_SHOW = 10
-private const val SCRIM_ALPHA = 0.8f
+internal const val SCRIM_ALPHA = 0.8f
 private val PROGRESS_HEIGHT = 4.dp
 
 /** Véu sobre a imagem do mapa: ela fica de fundo, sem disputar com a pista. */
@@ -83,8 +83,14 @@ fun GameplayScreen(
     onFinished: (scoreId: Long) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Trocou de música na pausa (modo Spotify): a partida acabou; quem chama volta e tenta começar a próxima. */
-    onSongChanged: (difficulty: Difficulty, fromTrackUri: String) -> Unit = { _, _ -> onExit() },
+    /**
+     * Modo Spotify, a partida acabou e o Riff segue para a próxima música (troca na pausa, fim da partida ou o
+     * Spotify passou de música com o painel de confirmação aberto): quem chama volta e tenta começar a próxima,
+     * esperando o Spotify trocar até [waitMs].
+     */
+    onNextSong: (difficulty: Difficulty, fromTrackUri: String, waitMs: Long) -> Unit = { _, _, _ -> onExit() },
+    /** Painel de confirmação: escolher outro mapa da biblioteca para esta faixa. */
+    onChooseOther: (trackUri: String, title: String) -> Unit = { _, _ -> onExit() },
     viewModel: GameplayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -112,12 +118,18 @@ fun GameplayScreen(
             onAdjustOffset = viewModel::adjustSongOffset,
             onChangeSong = { forward ->
                 val uri = current.spotifyTrackUri
-                if (viewModel.changeSong(forward) && uri != null) onSongChanged(current.difficulty, uri)
+                if (viewModel.changeSong(forward) && uri != null) onNextSong(current.difficulty, uri, CHANGE_WAIT_MS)
             },
+            onConfirm = viewModel::confirmAndPlay,
+            onChooseOther = { current.spotifyTrackUri?.let { onChooseOther(it, current.title) } },
             modifier = modifier,
         )
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
+
+        is GameplayUiState.NextSong -> LaunchedEffect(current) {
+            onNextSong(current.difficulty, current.fromTrackUri, current.waitMs)
+        }
     }
 }
 
@@ -136,6 +148,8 @@ internal fun GameStage(
     onPlaybackChanged: (Boolean) -> Unit = {},
     onAdjustOffset: (Int) -> Unit = {},
     onChangeSong: (forward: Boolean) -> Unit = {},
+    onConfirm: () -> Unit = {},
+    onChooseOther: () -> Unit = {},
     animate: Boolean = true,
 ) {
     val session = state.session
@@ -189,7 +203,10 @@ internal fun GameStage(
                 .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
         )
         Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
-        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit, onChangeSong)
+        when {
+            state.awaitingConfirmation -> ConfirmOverlay(state, onConfirm, onChooseOther, onExit)
+            state.isPaused -> PauseOverlay(state, onAdjustOffset, onResume, onExit, onChangeSong)
+        }
     }
 }
 

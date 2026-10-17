@@ -32,6 +32,7 @@ import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.model.Settings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,6 +67,8 @@ sealed interface GameplayUiState {
         val art: ImageBitmap? = null,
         /** Modo Spotify: a faixa tocando; a pausa mostra anterior, tocar e próxima. */
         val spotifyTrackUri: String? = null,
+        /** Mapa só sugerido: no lugar da pausa, o painel de confirmação; a faixa só toca depois de confirmar. */
+        val awaitingConfirmation: Boolean = false,
     ) : GameplayUiState {
         val spotifyControls: Boolean get() = spotifyTrackUri != null
     }
@@ -73,8 +76,13 @@ sealed interface GameplayUiState {
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
 
     data class Finished(val scoreId: Long) : GameplayUiState
+
+    /** Modo Spotify: a partida acabou e o Riff segue para a próxima música (o Tocando agora espera até [waitMs]). */
+    data class NextSong(val difficulty: Difficulty, val fromTrackUri: String, val waitMs: Long) : GameplayUiState
 }
 
+// A partida: carregar, pausa, sincronia, troca de música e confirmação da sugestão; dividir espalharia o estado.
+@Suppress("TooManyFunctions")
 @HiltViewModel
 class GameplayViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -98,6 +106,7 @@ class GameplayViewModel @Inject constructor(
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
     private val spotifyTrackUri: String? = savedStateHandle["spotifyTrackUri"]
     private val trackOffsetMs: Int = savedStateHandle["trackOffsetMs"] ?: 0
+    private val confirmFirst: Boolean = savedStateHandle["confirmFirst"] ?: false
     private val spotifyOffsets = SpotifySongOffset(trackMatches, musicStarts)
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
@@ -119,6 +128,7 @@ class GameplayViewModel @Inject constructor(
         viewModelScope.launch {
             matchActivity.enter(chartId)
             state.value = load()
+            if ((state.value as? GameplayUiState.Ready)?.awaitingConfirmation == true) watchForSongChange()
         }
     }
 
@@ -147,7 +157,7 @@ class GameplayViewModel @Inject constructor(
             // Na biblioteca o jogador veio jogar: volta um pouco para retomar. No Spotify veio ouvir: segue.
             rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )
-        if (!pauseRequested) session.start()
+        if (!pauseRequested && !confirmFirst) session.start()
         if (spotifyTrackUri == null) {
             interruptions = interruptionsFactory.create().also { if (!pauseRequested) it.start { pause() } }
         }
@@ -157,11 +167,12 @@ class GameplayViewModel @Inject constructor(
             difficulty,
             session,
             settings,
-            pauseRequested,
+            pauseRequested || confirmFirst,
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
             art = art,
             spotifyTrackUri = spotifyTrackUri,
+            awaitingConfirmation = confirmFirst,
         )
     } catch (e: CancellationException) {
         throw e
@@ -278,6 +289,30 @@ class GameplayViewModel @Inject constructor(
         return true
     }
 
+    private var songChangeWatch: Job? = null
+
+    /** Com o painel aberto, o Spotify passou de música: a sugestão não vale mais; segue para a música nova. */
+    private fun watchForSongChange() {
+        val uri = spotifyTrackUri ?: return
+        songChangeWatch = viewModelScope.launch {
+            spotify.playback.first { it != null && it.trackUri != uri }
+            if ((state.value as? GameplayUiState.Ready)?.awaitingConfirmation != true) return@launch
+            release()
+            state.value = GameplayUiState.NextSong(difficulty, uri, CHANGE_WAIT_MS)
+        }
+    }
+
+    /** Painel de confirmação: grava o mapa sugerido como o desta faixa e começa (a faixa toca do começo). */
+    fun confirmAndPlay() {
+        val ready = state.value as? GameplayUiState.Ready ?: return
+        val uri = spotifyTrackUri
+        if (!ready.awaitingConfirmation || uri == null || player == null) return
+        songChangeWatch?.cancel()
+        state.value = ready.copy(awaitingConfirmation = false, isPaused = false)
+        viewModelScope.launch { trackMatches.save(uri, chartId, confidence = 1f, isManual = true) }
+        ready.session.start()
+    }
+
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
         interruptions?.stop()
@@ -290,6 +325,9 @@ class GameplayViewModel @Inject constructor(
 
     override fun onCleared() = release()
 }
+
+/** Quanto o Tocando agora espera o Spotify trocar quando a troca já foi pedida (igual ao `NowPlayingAutoPlay`). */
+internal const val CHANGE_WAIT_MS = 6_000L
 
 /** Quanto a biblioteca volta ao continuar depois de uma pausa. */
 private const val LIBRARY_REWIND_MS = 500L

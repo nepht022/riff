@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.data.queue.MatchActivity
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,7 @@ class GameplayViewModelTest {
     }
     private val controls = object : SpotifyControls {
         val commands = mutableListOf<String>()
+        override val playback = kotlinx.coroutines.flow.MutableStateFlow<PlaybackState?>(null)
 
         // Registra se a partida já tinha largado a música quando o Spotify recebeu o comando.
         override fun previous() {
@@ -98,51 +100,53 @@ class GameplayViewModelTest {
     private var artFailure: Exception? = null
     private var playingWhenArtAsked: Boolean? = null
 
-    private fun viewModel(spotifyTrackUri: String? = null, trackOffsetMs: Int = 0) = GameplayViewModel(
-        SavedStateHandle(
-            buildMap {
-                put("chartId", "a")
-                put("difficulty", "EXPERT")
-                spotifyTrackUri?.let { put("spotifyTrackUri", it) }
-                put("trackOffsetMs", trackOffsetMs)
+    private fun viewModel(spotifyTrackUri: String? = null, trackOffsetMs: Int = 0, confirmFirst: Boolean = false) =
+        GameplayViewModel(
+            SavedStateHandle(
+                buildMap {
+                    put("chartId", "a")
+                    put("difficulty", "EXPERT")
+                    spotifyTrackUri?.let { put("spotifyTrackUri", it) }
+                    put("trackOffsetMs", trackOffsetMs)
+                    put("confirmFirst", confirmFirst)
+                },
+            ),
+            loader,
+            settings,
+            scores,
+            chartOffsets,
+            trackMatches,
+            { uris ->
+                analyzed += uris
+                musicStartMs
             },
-        ),
-        loader,
-        settings,
-        scores,
-        chartOffsets,
-        trackMatches,
-        { uris ->
-            analyzed += uris
-            musicStartMs
-        },
-        {
-            playersCreated++
-            player
-        },
-        {
-            spotifyPlayersCreated++
-            spotifyPlayer
-        },
-        { guitar, backing ->
-            stemsCreated = guitar to backing
-            stemPlayer
-        },
-        { sfx },
-        time,
-        {
-            interruptionsCreated++
-            interruptions
-        },
-        { chartId ->
-            artRequests += chartId
-            playingWhenArtAsked = player.isPlaying
-            artFailure?.let { throw it }
-            art
-        },
-        controls,
-        matchActivity,
-    )
+            {
+                playersCreated++
+                player
+            },
+            {
+                spotifyPlayersCreated++
+                spotifyPlayer
+            },
+            { guitar, backing ->
+                stemsCreated = guitar to backing
+                stemPlayer
+            },
+            { sfx },
+            time,
+            {
+                interruptionsCreated++
+                interruptions
+            },
+            { chartId ->
+                artRequests += chartId
+                playingWhenArtAsked = player.isPlaying
+                artFailure?.let { throw it }
+                art
+            },
+            controls,
+            matchActivity,
+        )
 
     private fun playable(audio: String? = "raiz/a/song.ogg") =
         PlayableChart(chart, Difficulty.EXPERT, listOf(note(1_000), note(2_000)), audio?.let { ChartAudio.Single(it) })
@@ -670,6 +674,71 @@ class GameplayViewModelTest {
         viewModel.changeSong(forward = false)
 
         assertEquals(listOf("previousTrack released=true"), controls.commands)
+    }
+
+    private fun playbackOf(uri: String, positionMs: Long = 0, durationMs: Long = 200_000) =
+        PlaybackState(uri, "Música", "Banda", durationMs, positionMs, isPaused = false, capturedAtElapsedMs = 0)
+
+    /** Mapa só sugerido: a partida abre pausada, sem tocar a faixa, esperando a confirmação (spec §2.3). */
+    @Test
+    fun aSuggestionToConfirmOpensPausedWithoutPlaying() = runTest {
+        loader.result = { playable(audio = null) }
+
+        val state = viewModel(spotifyTrackUri = "spotify:track:x", confirmFirst = true).uiState.value
+
+        state as GameplayUiState.Ready
+        assertTrue(state.awaitingConfirmation)
+        assertTrue(state.isPaused)
+        assertEquals(false, spotifyPlayer.isPlaying)
+    }
+
+    @Test
+    fun confirmingSavesTheMatchAndStarts() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", confirmFirst = true)
+
+        viewModel.confirmAndPlay()
+
+        assertEquals(listOf("spotify:track:x a 1.0 manual=true"), trackMatches.saved)
+        val state = viewModel.uiState.value as GameplayUiState.Ready
+        assertEquals(false, state.awaitingConfirmation)
+        assertEquals(false, state.isPaused)
+        assertTrue(spotifyPlayer.isPlaying)
+    }
+
+    /** O Spotify passou de música com o painel aberto: segue a corrente, sem confirmar a faixa errada. */
+    @Test
+    fun confirmAfterTheSongMovedOnDoesNothing() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", confirmFirst = true)
+
+        controls.playback.value = playbackOf("spotify:track:y")
+        assertEquals(GameplayUiState.NextSong(Difficulty.EXPERT, "spotify:track:x", 6_000), viewModel.uiState.value)
+        viewModel.confirmAndPlay()
+
+        assertTrue(trackMatches.saved.isEmpty())
+        assertTrue(spotifyPlayer.released)
+    }
+
+    @Test
+    fun theSameSongPlayingKeepsThePanel() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", confirmFirst = true)
+
+        controls.playback.value = playbackOf("spotify:track:x", positionMs = 5_000)
+
+        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).awaitingConfirmation)
+    }
+
+    @Test
+    fun confirmTwiceSavesOnce() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", confirmFirst = true)
+
+        viewModel.confirmAndPlay()
+        viewModel.confirmAndPlay()
+
+        assertEquals(1, trackMatches.saved.size)
     }
 
     /** A fila do Spotify não baixa nem apaga o mapa desde a abertura da partida até a tela sair de vez. */

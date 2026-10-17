@@ -154,7 +154,11 @@ class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRep
 
     override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
 
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) = Unit
+    val saved = mutableListOf<String>()
+
+    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
+        saved += "$spotifyTrackUri $chartId $confidence manual=$isManual"
+    }
 
     override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = offsets[spotifyTrackUri to chartId]
 
