@@ -109,4 +109,4 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
   - O tempo da música avança de 500 em 500 ms, então os segundos às vezes atrasam até meio segundo; os screenshots usam a música tocando e dependem do relógio do Robolectric (usar pausada).
   - Botões do pé da tela com largura fixa (172 + 140 dp): em fonte grande do Android ou tela de 320 dp, o texto aperta ("Confirmar mapa" já sai mais largo).
   - Faltam testes da espera pela tela voltar à frente e da navegação que deixa o pedido no Tocando agora.
-  - O ⏮ da partida (início da faixa e depois anterior) ainda não foi conferido no celular com duas músicas com mapa.
+  - O começo automático e o ⏮ da partida foram conferidos no celular pelo usuário (2026-10-17).
