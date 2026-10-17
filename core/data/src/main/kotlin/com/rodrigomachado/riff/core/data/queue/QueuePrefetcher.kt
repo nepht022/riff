@@ -226,8 +226,8 @@ internal fun QueuePick.target(status: MatchStatus, options: Settings): QueueTarg
     is QueuePick.Exact -> QueueTarget(chart, suggestion = null)
 
     is QueuePick.Closest -> QueueTarget(chart, confidence).takeIf {
-        // Trocar uma sugestão por outra sugestão não ajuda.
-        options.queueClosestDuration && status !is MatchStatus.Suggested
+        // Trocar por uma sugestão que não é mais confiável não ajuda.
+        options.queueClosestDuration && !status.suggestsAtLeast(confidence)
     }
 
     QueuePick.NothingReliable, QueuePick.SearchFailed -> null
@@ -241,10 +241,14 @@ internal fun QueuePick.miss(status: MatchStatus): QueueMiss? = when (this) {
     is QueuePick.Exact -> null
 }
 
+/** A biblioteca já sugere um mapa com pelo menos esta confiança. */
+private fun MatchStatus.suggestsAtLeast(confidence: Float) =
+    this is MatchStatus.Suggested && this.confidence >= confidence
+
 internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
     pick == QueuePick.SearchFailed -> "a pesquisa no Encore falhou (tenta de novo na próxima leitura)"
     pick == QueuePick.NothingReliable -> "nenhum mapa do Encore com título, artista e duração parecidos"
-    status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão"
+    status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão tão boa"
     else -> "só com outra duração (opção: não baixar nenhum)"
 }
 

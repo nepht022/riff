@@ -78,10 +78,14 @@ class QueueChartPicker @Inject constructor(private val encore: EncoreSearch) {
             .first().first.chart
     }
 
-    /** A semelhança sem contar a duração (é ela que não bate); originais primeiro, depois a menor diferença. */
+    /**
+     * A semelhança sem contar a duração (é ela que não bate); originais primeiro, depois a menor diferença. Sem
+     * nenhum com duração próxima, um sem duração (o caso do Halo, do Machine Head): também só sugestão.
+     */
     private fun closest(track: TrackQuery, charts: List<EncoreChart>): QueuePick.Closest? {
         val wanted = track.durationMs ?: return null
         val near = charts.filter { chart -> chart.durationMs?.let { abs(it - wanted) <= CLOSEST_LIMIT_MS } == true }
+            .ifEmpty { charts.filter { it.durationMs == null } }
         val best = ranked(track.copy(durationMs = null), near).minWithOrNull(
             compareByDescending<Candidate> { it.original }
                 .thenBy { candidate -> candidate.chart.durationMs?.let { abs(it - wanted) } }

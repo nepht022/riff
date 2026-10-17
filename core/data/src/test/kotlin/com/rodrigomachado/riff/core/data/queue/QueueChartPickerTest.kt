@@ -137,9 +137,27 @@ class QueueChartPickerTest {
 
     @Test
     fun moreThanAMinuteAwayIsNotTaken() = runTest {
-        encore.results = listOf(slayer("longa", 316_000), slayer("sem-duracao", null))
+        encore.results = listOf(slayer("longa", 316_000))
 
         assertEquals(QueuePick.NothingReliable, picker.choose(rainingBlood))
+    }
+
+    /** O caso do Halo (Machine Head): o único mapa do Encore não tem duração; vem como sugestão. */
+    @Test
+    fun aChartWithoutDurationComesAsASuggestionWhenNothingIsClose() = runTest {
+        encore.results = listOf(slayer("longa", 316_000), slayer("sem-duracao", null))
+
+        val pick = picker.choose(rainingBlood)
+
+        assertTrue("$pick", pick is QueuePick.Closest)
+        assertEquals("sem-duracao", (pick as QueuePick.Closest).chart.md5)
+    }
+
+    @Test
+    fun aKnownCloseDurationBeatsAnUnknownOne() = runTest {
+        encore.results = listOf(slayer("sem-duracao", null), slayer("264", 264_000))
+
+        assertEquals("264", (picker.choose(rainingBlood) as QueuePick.Closest).chart.md5)
     }
 
     /** O mais próximo ainda precisa de título e artista: um cover de outra banda não serve. */

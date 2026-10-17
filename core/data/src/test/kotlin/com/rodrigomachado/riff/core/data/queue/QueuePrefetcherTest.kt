@@ -151,9 +151,22 @@ class QueuePrefetcherTest {
         assertTrue(matches.suggestions.isEmpty())
     }
 
-    /** Trocar uma sugestão por outra sugestão não ajuda: fica a que já está na biblioteca. */
+    /** Trocar por uma sugestão que não é mais confiável não ajuda: fica a que já está na biblioteca. */
     @Test
-    fun aSuggestionIsNotSwappedForAnotherSuggestion() = runTest {
+    fun aSuggestionAtLeastAsGoodIsKept() = runTest {
+        queue.next = queued("a")
+        encoreHasOnlyAnotherDuration("a")
+        matches.statuses["a"] = MatchStatus.Suggested(libraryChart("x"), 1f)
+        start()
+
+        nowPlaying("now")
+
+        assertTrue(downloader.downloaded.isEmpty())
+    }
+
+    /** Beautiful Mourning: a sugestão da biblioteca era fraca; a do Encore (título e artista certos) entra. */
+    @Test
+    fun aBetterSuggestionReplacesTheLibraryOne() = runTest {
         queue.next = queued("a")
         encoreHasOnlyAnotherDuration("a")
         matches.statuses["a"] = MatchStatus.Suggested(libraryChart("x"), 0.8f)
@@ -161,7 +174,8 @@ class QueuePrefetcherTest {
 
         nowPlaying("now")
 
-        assertTrue(downloader.downloaded.isEmpty())
+        assertEquals(listOf("md5-a" to null), downloader.downloaded)
+        assertEquals(listOf("a" to "chart-md5-a"), matches.suggestions)
     }
 
     @Test
