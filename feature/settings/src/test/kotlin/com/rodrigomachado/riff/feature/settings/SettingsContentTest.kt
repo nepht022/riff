@@ -384,6 +384,19 @@ class SettingsContentTest {
         assertEquals(listOf(QueueAction.ClosestDuration(false).toString()), events)
     }
 
+    /** Vale para qualquer música do Spotify, com ou sem a fila: fica sempre ativa. */
+    @Test
+    fun theSongEndChoiceIsAlwaysOn() {
+        show()
+        tab("Spotify")
+
+        composeRule.onNode(hasText("Ir direto para a próxima") and isSelectable()).performScrollTo()
+            .assertIsEnabled().assertIsSelected()
+        composeRule.onNode(hasText("Mostrar o resultado") and isSelectable()).performClick()
+
+        assertEquals(listOf(QueueAction.NextSongDirect(false).toString()), events)
+    }
+
     @Test
     fun theChoicesAreOffWithPrefetchOff() {
         show()

@@ -61,6 +61,9 @@
     <string name="settings_tab_ai">AI guitar</string>
     <string name="settings_language">Language</string>
     <string name="settings_tab_spotify">Spotify</string>
+    <string name="settings_spotify_song_end">When the song ends</string>
+    <string name="settings_spotify_song_end_next">Go straight to the next one</string>
+    <string name="settings_spotify_song_end_result">Show the result</string>
     <string name="settings_queue_prefetch">Download queue maps</string>
     <string name="settings_queue_prefetch_hint">While you listen, Riff downloads from Encore the maps of the next two songs in your Spotify queue.</string>
     <string name="settings_queue_delete">Delete the ones I didn\'t play</string>

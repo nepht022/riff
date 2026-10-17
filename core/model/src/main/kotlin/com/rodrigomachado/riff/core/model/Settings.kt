@@ -32,6 +32,8 @@ data class Settings(
     val queueReplaceSuggested: Boolean = true,
     /** Nenhum mapa do Encore com a duração da faixa: baixar o de duração mais próxima, como sugestão (verdadeiro). */
     val queueClosestDuration: Boolean = true,
+    /** Spotify, fim da música: seguir direto para a próxima, salvando o resultado sem mostrar (verdadeiro). */
+    val spotifyNextSongDirect: Boolean = true,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }

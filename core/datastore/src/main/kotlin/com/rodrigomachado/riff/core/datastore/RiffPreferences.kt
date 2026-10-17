@@ -46,6 +46,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[QUEUE_USE_MOBILE_DATA] = updated.queueUseMobileData
             prefs[QUEUE_REPLACE_SUGGESTED] = updated.queueReplaceSuggested
             prefs[QUEUE_CLOSEST_DURATION] = updated.queueClosestDuration
+            prefs[SPOTIFY_NEXT_SONG_DIRECT] = updated.spotifyNextSongDirect
             prefs.remove(LEGACY_ASK_SEPARATION_ALWAYS)
             prefs.remove(LEGACY_SFX_VOLUME)
             prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
@@ -81,6 +82,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             queueUseMobileData = flag(QUEUE_USE_MOBILE_DATA, default.queueUseMobileData),
             queueReplaceSuggested = flag(QUEUE_REPLACE_SUGGESTED, default.queueReplaceSuggested),
             queueClosestDuration = flag(QUEUE_CLOSEST_DURATION, default.queueClosestDuration),
+            spotifyNextSongDirect = flag(SPOTIFY_NEXT_SONG_DIRECT, default.spotifyNextSongDirect),
         )
     }
 
@@ -111,6 +113,7 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val QUEUE_USE_MOBILE_DATA = booleanPreferencesKey("queue_use_mobile_data")
         val QUEUE_REPLACE_SUGGESTED = booleanPreferencesKey("queue_replace_suggested")
         val QUEUE_CLOSEST_DURATION = booleanPreferencesKey("queue_closest_duration")
+        val SPOTIFY_NEXT_SONG_DIRECT = booleanPreferencesKey("spotify_next_song_direct")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")

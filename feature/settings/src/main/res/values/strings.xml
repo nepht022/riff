@@ -61,6 +61,9 @@
     <string name="settings_tab_ai">Guitarra IA</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_tab_spotify">Spotify</string>
+    <string name="settings_spotify_song_end">Ao acabar a música</string>
+    <string name="settings_spotify_song_end_next">Ir direto para a próxima</string>
+    <string name="settings_spotify_song_end_result">Mostrar o resultado</string>
     <string name="settings_queue_prefetch">Baixar mapas da fila</string>
     <string name="settings_queue_prefetch_hint">Enquanto você ouve, o Riff baixa do Encore os mapas das duas próximas músicas da fila do Spotify.</string>
     <string name="settings_queue_delete">Apagar os que eu não joguei</string>

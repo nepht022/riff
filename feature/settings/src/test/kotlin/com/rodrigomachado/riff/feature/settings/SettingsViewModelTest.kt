@@ -200,6 +200,7 @@ class SettingsViewModelTest {
         vm.setQueueUseMobileData(true)
         vm.setQueueReplaceSuggested(false)
         vm.onQueue(QueueAction.ClosestDuration(false))
+        vm.onQueue(QueueAction.NextSongDirect(false))
         advanceUntilIdle()
 
         val saved = repository.settings.value
@@ -207,6 +208,7 @@ class SettingsViewModelTest {
         assertEquals(true, saved.queueUseMobileData)
         assertEquals(false, saved.queueReplaceSuggested)
         assertEquals(false, saved.queueClosestDuration)
+        assertEquals(false, saved.spotifyNextSongDirect)
     }
 
     @Test

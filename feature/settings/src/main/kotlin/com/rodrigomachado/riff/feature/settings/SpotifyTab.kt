@@ -40,11 +40,21 @@ sealed interface QueueAction {
     data class ReplaceSuggested(val replace: Boolean) : QueueAction
 
     data class ClosestDuration(val download: Boolean) : QueueAction
+
+    data class NextSongDirect(val direct: Boolean) : QueueAction
 }
 
 /** Mapas da fila do Spotify: a opção principal, as que dependem dela e os avisos. */
 @Composable
 internal fun SpotifyTab(settings: Settings, queue: QueueUiState, onQueue: (QueueAction) -> Unit) {
+    // Vale para qualquer música do Spotify, com ou sem a fila.
+    QueueChoice(
+        title = R.string.settings_spotify_song_end,
+        yes = R.string.settings_spotify_song_end_next,
+        no = R.string.settings_spotify_song_end_result,
+        chosen = settings.spotifyNextSongDirect,
+        enabled = true,
+    ) { onQueue(QueueAction.NextSongDirect(it)) }
     val on = settings.queuePrefetch
     SwitchRow(
         title = stringResource(R.string.settings_queue_prefetch),

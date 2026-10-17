@@ -62,5 +62,6 @@ class SettingsTest {
         assertEquals(false, settings.queueUseMobileData)
         assertEquals(true, settings.queueReplaceSuggested)
         assertEquals(true, settings.queueClosestDuration)
+        assertEquals(true, settings.spotifyNextSongDirect)
     }
 }

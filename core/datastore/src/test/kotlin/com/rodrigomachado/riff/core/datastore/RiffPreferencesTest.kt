@@ -181,6 +181,7 @@ class RiffPreferencesTest {
                 queueUseMobileData = true,
                 queueReplaceSuggested = false,
                 queueClosestDuration = false,
+                spotifyNextSongDirect = false,
             )
         }
 
@@ -190,5 +191,6 @@ class RiffPreferencesTest {
         assertEquals(true, settings.queueUseMobileData)
         assertEquals(false, settings.queueReplaceSuggested)
         assertEquals(false, settings.queueClosestDuration)
+        assertEquals(false, settings.spotifyNextSongDirect)
     }
 }
