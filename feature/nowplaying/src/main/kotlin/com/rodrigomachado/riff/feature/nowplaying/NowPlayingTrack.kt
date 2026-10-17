@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -46,6 +47,9 @@ internal val LINK_WIDTH = 140.dp
 private const val TICK_MS = 500L
 private const val SECONDS = 60
 private const val TRACK_ALPHA = 0.35f
+
+/** Relógio monotônico da barra de tempo; os screenshots fixam um instante para a imagem não variar. */
+internal val LocalElapsedClock = staticCompositionLocalOf<() -> Long> { SystemClock::elapsedRealtime }
 
 /** Anterior, tocar/pausar e próxima no Spotify. */
 internal class SongControlActions(
@@ -93,11 +97,12 @@ internal fun ColumnScope.TrackHeader(nowPlaying: NowPlaying, controls: SongContr
 /** Barra e tempo da música no Spotify; tocando, anda sozinha entre as leituras do estado do Spotify. */
 @Composable
 private fun SongTime(track: PlaybackState) {
-    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    val elapsedNow = LocalElapsedClock.current
+    var now by remember { mutableLongStateOf(elapsedNow()) }
     if (!track.isPaused) {
         LaunchedEffect(track) {
             while (true) {
-                now = SystemClock.elapsedRealtime()
+                now = elapsedNow()
                 delay(TICK_MS)
             }
         }

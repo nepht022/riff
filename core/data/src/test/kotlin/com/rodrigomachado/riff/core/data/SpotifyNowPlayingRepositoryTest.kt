@@ -75,6 +75,14 @@ class SpotifyNowPlayingRepositoryTest {
         assertEquals(listOf("previous", "pause", "resume", "next"), remote.commands)
     }
 
+    /** Na partida, ⏮ é "a música anterior": volta ao início antes, senão o Spotify só recomeça a atual. */
+    @Test
+    fun thePreviousTrackGoesToTheStartFirst() {
+        repository.previousTrack()
+
+        assertEquals(listOf("seek:0", "previous"), remote.commands)
+    }
+
     private class FakeRemote : SpotifyRemote {
         var connects = 0
         val commands = mutableListOf<String>()
@@ -97,7 +105,9 @@ class SpotifyNowPlayingRepositoryTest {
             commands += "resume"
         }
 
-        override fun seekTo(positionMs: Long) = Unit
+        override fun seekTo(positionMs: Long) {
+            commands += "seek:$positionMs"
+        }
 
         override fun skipNext() {
             commands += "next"

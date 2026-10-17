@@ -67,6 +67,10 @@ class GameplayViewModelTest {
             commands += "previous released=${spotifyPlayer.released}"
         }
 
+        override fun previousTrack() {
+            commands += "previousTrack released=${spotifyPlayer.released}"
+        }
+
         override fun next() {
             commands += "next released=${spotifyPlayer.released}"
         }
@@ -608,7 +612,7 @@ class GameplayViewModelTest {
         val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
         viewModel.pause()
 
-        viewModel.changeSong(forward = true)
+        assertTrue(viewModel.changeSong(forward = true))
 
         assertEquals(listOf("next released=true"), controls.commands)
         assertTrue(scores.saved.isEmpty())
@@ -620,7 +624,7 @@ class GameplayViewModelTest {
         loader.result = { playable() }
         val viewModel = viewModel()
 
-        viewModel.changeSong(forward = false)
+        assertEquals(false, viewModel.changeSong(forward = false))
 
         assertTrue(controls.commands.isEmpty())
         assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
@@ -633,10 +637,21 @@ class GameplayViewModelTest {
         val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
         viewModel.pause()
 
-        viewModel.changeSong(forward = true)
-        viewModel.changeSong(forward = true)
-        viewModel.changeSong(forward = false)
+        assertTrue(viewModel.changeSong(forward = true))
+        assertEquals(false, viewModel.changeSong(forward = true))
+        assertEquals(false, viewModel.changeSong(forward = false))
 
         assertEquals(listOf("next released=true"), controls.commands)
+    }
+
+    @Test
+    fun inTheMatchPreviousMeansTheSongBefore() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        viewModel.pause()
+
+        viewModel.changeSong(forward = false)
+
+        assertEquals(listOf("previousTrack released=true"), controls.commands)
     }
 }

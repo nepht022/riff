@@ -75,6 +75,7 @@ fun NowPlayingScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val autoPlay by viewModel.autoPlay.collectAsStateWithLifecycle()
     LaunchedEffect(autoPlayRequests) { autoPlayRequests?.let(viewModel::watchAutoPlay) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.cancelAutoPlay() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(autoPlay) {
         val start = autoPlay as? NowPlayingAutoPlay.Action.Start ?: return@LaunchedEffect

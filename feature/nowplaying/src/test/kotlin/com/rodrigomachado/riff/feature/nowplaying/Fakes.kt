@@ -40,6 +40,10 @@ class FakeNowPlayingRepository : NowPlayingRepository {
         commands += "next"
     }
 
+    override fun previousTrack() {
+        commands += "previousTrack"
+    }
+
     override fun pause() {
         commands += "pause"
     }

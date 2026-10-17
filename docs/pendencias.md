@@ -104,3 +104,9 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Leitor de tela e visual:** na pausa, "Próxima música" não avisa que encerra a partida; o efeito de toque do botão vermelho redondo sai quadrado.
 - **Sem confirmação:** um toque sem querer em ⏭ na pausa perde a partida (combinado assim; avaliar se incomodar).
 - **Testes:** falta o caso sem conexão.
+- **Revisão do layout e do começo automático (2026-10-17):**
+  - Se o Android fechar o app nos ~6 s de espera pela música nova, o pedido se perde (fica no Tocando agora, sem partida).
+  - O tempo da música avança de 500 em 500 ms, então os segundos às vezes atrasam até meio segundo; os screenshots usam a música tocando e dependem do relógio do Robolectric (usar pausada).
+  - Botões do pé da tela com largura fixa (172 + 140 dp): em fonte grande do Android ou tela de 320 dp, o texto aperta ("Confirmar mapa" já sai mais largo).
+  - Faltam testes da espera pela tela voltar à frente e da navegação que deixa o pedido no Tocando agora.
+  - O ⏮ da partida (início da faixa e depois anterior) ainda não foi conferido no celular com duas músicas com mapa.

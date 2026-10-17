@@ -261,13 +261,14 @@ class GameplayViewModel @Inject constructor(
 
     /**
      * Modo Spotify, na pausa: troca a música no Spotify e larga a partida, sem salvar o placar (a tela sai em
-     * seguida). Larga antes de pedir a troca: assim a partida não reage à faixa nova.
+     * seguida). Larga antes de pedir a troca: assim a partida não reage à faixa nova. Verdadeiro se pediu a troca.
      */
-    fun changeSong(forward: Boolean) {
+    fun changeSong(forward: Boolean): Boolean {
         // Só uma vez: a partida já largada (segundo toque durante a saída da tela) não pede outra troca.
-        if (spotifyTrackUri == null || player == null || finishing) return
+        if (spotifyTrackUri == null || player == null || finishing) return false
         release()
-        if (forward) spotify.next() else spotify.previous()
+        if (forward) spotify.next() else spotify.previousTrack()
+        return true
     }
 
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */

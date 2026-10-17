@@ -20,7 +20,11 @@ import javax.inject.Singleton
 
 /** Controles do Spotify vistos pelo Riff: o efeito aparece no próprio Spotify e volta pela faixa tocando. */
 interface SpotifyControls {
+    /** Como o botão do Spotify: passados os primeiros segundos, volta ao começo da atual. */
     fun previous()
+
+    /** Sempre a música anterior (na partida, "voltar" é trocar de música, não recomeçar a mesma). */
+    fun previousTrack()
 
     fun next()
 
@@ -71,6 +75,12 @@ class SpotifyNowPlayingRepository @Inject constructor(
     override fun connect() = remote.connect()
 
     override fun previous() = remote.skipPrevious()
+
+    override fun previousTrack() {
+        // No começo da faixa o "anterior" do Spotify vai para a música de antes.
+        remote.seekTo(0)
+        remote.skipPrevious()
+    }
 
     override fun next() = remote.skipNext()
 

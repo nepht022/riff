@@ -111,8 +111,8 @@ fun GameplayScreen(
             onPlaybackChanged = viewModel::onPlaybackChanged,
             onAdjustOffset = viewModel::adjustSongOffset,
             onChangeSong = { forward ->
-                viewModel.changeSong(forward)
-                current.spotifyTrackUri?.let { onSongChanged(current.difficulty, it) }
+                val uri = current.spotifyTrackUri
+                if (viewModel.changeSong(forward) && uri != null) onSongChanged(current.difficulty, uri)
             },
             modifier = modifier,
         )

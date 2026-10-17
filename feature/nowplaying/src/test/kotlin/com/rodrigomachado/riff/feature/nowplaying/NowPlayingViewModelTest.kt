@@ -174,4 +174,30 @@ class NowPlayingViewModelTest {
 
         assertNull(viewModel.autoPlay.value)
     }
+
+    /** O Spotify já passou para outra música: a partida pronta para a anterior não começa mais. */
+    @Test
+    fun aReadyStartIsDroppedWhenTheSongChangesAgain() = runTest {
+        val viewModel = viewModel()
+        songChangedDuringAMatch()
+        repository.nowPlaying.value = nextSong(MatchStatus.Matched(chart("b"), 0))
+
+        repository.nowPlaying.value = nextSong(MatchStatus.Matched(chart("c"), 0)).let {
+            it.copy(playback = it.playback.copy(trackUri = "spotify:track:z"))
+        }
+
+        assertNull(viewModel.autoPlay.value)
+    }
+
+    /** Saiu do Tocando agora durante a espera: nada começa sozinho depois. */
+    @Test
+    fun leavingTheScreenCancelsTheRequest() = runTest {
+        val viewModel = viewModel()
+        songChangedDuringAMatch()
+
+        viewModel.cancelAutoPlay()
+        repository.nowPlaying.value = nextSong(MatchStatus.Matched(chart("b"), 0))
+
+        assertNull(viewModel.autoPlay.value)
+    }
 }

@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.nowplaying
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -44,7 +45,10 @@ class NowPlayingScreenshotTest {
 
     private fun snapshot(name: String, content: @Composable () -> Unit) {
         captureRoboImage("src/test/screenshots/$name.png") {
-            RiffTheme { StageBackground(Modifier.fillMaxSize()) { content() } }
+            // Relógio parado no instante da leitura da música: a barra de tempo sai igual toda vez.
+            CompositionLocalProvider(LocalElapsedClock provides { 0L }) {
+                RiffTheme { StageBackground(Modifier.fillMaxSize()) { content() } }
+            }
         }
     }
 }

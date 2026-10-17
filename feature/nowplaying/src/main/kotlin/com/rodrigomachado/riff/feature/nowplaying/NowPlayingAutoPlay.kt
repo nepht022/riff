@@ -23,10 +23,15 @@ object NowPlayingAutoPlay {
         saved[KEY_DIFFICULTY] = difficulty.name
     }
 
+    /** Vale só enquanto [trackUri] for a música tocando. */
     sealed interface Action {
-        data class Start(val request: PlayRequest) : Action
+        val trackUri: String
 
-        data class ChooseDifficulty(val trackUri: String) : Action
+        data class Start(val request: PlayRequest) : Action {
+            override val trackUri: String get() = request.trackUri
+        }
+
+        data class ChooseDifficulty(override val trackUri: String) : Action
     }
 
     internal fun decide(nowPlaying: NowPlaying, difficulty: Difficulty): Action? {
