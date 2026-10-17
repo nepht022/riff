@@ -123,3 +123,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Aviso de autorização perdida:** não sobrevive a reabrir o app.
 - **Logs:** o título da música vai para o logcat ("pronto" já não leva título; conferir os outros).
 - **Estilo/testes:** `queue!!` na leitura da fila; interruptor desabilitado fica esmaecido duas vezes; faltam testes do caminho do Keystore no aparelho.
+
+## Spotify contínuo (revisão final, 2026-10-17)
+
+- Confirmar do painel não reconfere a faixa tocando no instante do toque (depende do vigia, que normalmente já reagiu).
+- Confirmar do painel grava `confidence = 1`, `isManual = true`; o do Tocando agora grava a confiança da sugestão e `isManual = false` (o `matchFor` não lê `isManual`).
+- `QueuePreparing` é um conjunto, não um contador: a mesma faixa enfileirada de novo durante a pesquisa pode sair do preparo cedo.
+- Corrida estreita: o preparo termina entre a emissão "sem mapa" e a checagem do preparo, e a decisão usa o casamento antigo.
+- Prazo do fim da música superestimado (não soma o tempo desde o último estado do Spotify); só deixa a espera mais longa.
+- Abrir a partida de uma sugestão já marca o mapa da fila como jogado: Voltar/Escolher outro deixam esse mapa fora da limpeza automática.
+- Comentários antigos dizem que a fila não baixa durante a partida (`MatchActivity`, `GameplayViewModel`).
