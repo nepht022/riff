@@ -88,3 +88,10 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
   - Permissão `script.scriptapp` no manifesto do script provavelmente sobra (o script não usa `ScriptApp`); tirar, rodar `testarEnvio` e publicar de novo.
   - Campo de categoria no leitor de tela: escolhido, lê só o nome ("Spotify, lista"), sem "Categoria" nem que é obrigatório; a seta "▾" é lida; nada diz por que o Enviar está desligado.
   - O auxiliar dos testes do ViewModel escolhe uma categoria sempre (esconde a exigência); preferir parâmetro explícito.
+
+## Pontos menores da barra de progresso (revisão de 2026-10-17)
+
+- **Áudio que acaba antes da última nota:** a partida também termina quando a música acaba (`player.isCompleted`); se o áudio for mais curto que o mapa (outra edição da música no Spotify), o resultado vem com a barra incompleta. Em músicas normais a diferença é de 1–2%. Corrigir exige a duração no `SongPlayer`.
+- **Ordem de declaração:** `endMs` em `GameSession` vem depois das propriedades que o usam (seguro hoje; mover para junto de `lastNoteEndMs`).
+- **Testes:** faltam o recuo da barra no retrocesso, o fim antecipado pelo áudio e o uso da etiqueta `PROGRESS`; o teste "sem notas" só confere o começo.
+- **Idiomas da direita para a esquerda:** a barra sempre enche da esquerda (irrelevante em pt/en).

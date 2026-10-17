@@ -62,7 +62,12 @@ class GameSession(
     val isPaused: Boolean get() = !player.isPlaying && rewind == null
 
     val isFinished: Boolean
-        get() = player.isCompleted || (engine.isFinished && songTimeMs > lastNoteEndMs + END_GRACE_MS)
+        get() = player.isCompleted || (engine.isFinished && songTimeMs > endMs)
+
+    /** Quanto da partida já passou, de 0 a 1: enche quando vem o resultado (nas duas origens de música). */
+    val progress: Float get() = (songTimeMs.toFloat() / endMs).coerceIn(0f, 1f)
+
+    private val endMs = lastNoteEndMs + END_GRACE_MS
 
     fun start() {
         player.play()

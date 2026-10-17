@@ -67,6 +67,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 ## Jogar
 
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
+- **Barra de progresso:** a linha fina no topo da partida mostra quanto da música já passou (até a última nota mais a folga do fim, quando vem o resultado), na Biblioteca e no Spotify.
 - **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha). No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
 - **Calibração** (Configurações → Jogo → Calibrar atraso do áudio): toque junto com as batidas para medir o atraso do seu fone ou alto-falante. Útil com fone Bluetooth; com o alto-falante do celular costuma ser melhor deixar em 0 (**Zerar**).
 - **Configurações**, em abas (abre sempre em **Geral**):
