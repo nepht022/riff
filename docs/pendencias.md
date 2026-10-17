@@ -81,3 +81,10 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Fonte grande:** os três botões de tipo ficam numa linha fixa e podem ser cortados; usar `FlowRow`.
 - **Privacidade:** a tela não diz para onde o relato vai nem para que serve o email; antes de distribuir, uma linha explicando e uma política de privacidade (Play Store).
 - **API antiga:** `getPackageInfo(String, Int)` está obsoleto no Android 13+ (só aviso do compilador).
+- **Revisão das categorias (2026-10-17):**
+  - `setCategory` muda o tipo na tela mas não grava o tipo no estado salvo; uma categoria de outro tipo, restaurada depois do app fechar, passaria (a tela de hoje não deixa isso acontecer). Gravar o tipo e filtrar a categoria pelo tipo ao restaurar e ao enviar.
+  - O script registra em Execuções o assunto do email, que traz o começo do texto do relato; registrar só tipo e categoria (minimização de dados, LGPD).
+  - O logcat do app guarda o começo da resposta do servidor; melhor só o `motivo` (ou "resposta não é do script"). Uma falha que não seja de rede passa sem linha no log.
+  - Permissão `script.scriptapp` no manifesto do script provavelmente sobra (o script não usa `ScriptApp`); tirar, rodar `testarEnvio` e publicar de novo.
+  - Campo de categoria no leitor de tela: escolhido, lê só o nome ("Spotify, lista"), sem "Categoria" nem que é obrigatório; a seta "▾" é lida; nada diz por que o Enviar está desligado.
+  - O auxiliar dos testes do ViewModel escolhe uma categoria sempre (esconde a exigência); preferir parâmetro explícito.

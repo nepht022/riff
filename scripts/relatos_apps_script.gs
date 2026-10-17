@@ -62,8 +62,9 @@ function doPost(e) {
     console.log('relato enviado: ' + message.subject);
     return answer(true);
   } catch (err) {
-    console.error(err); // aparece em Execuções, no editor do script
-    return answer(false, String(err));
+    // O detalhe fica em Execuções, no editor; quem chamou só sabe que falhou (sem configuração, cota ou o que mandou).
+    console.error(err);
+    return answer(false, 'erro interno');
   }
 }
 

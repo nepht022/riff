@@ -7,10 +7,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -233,5 +236,16 @@ class ReportContentTest {
         show(ReportUiState(device = device))
 
         composeRule.onNodeWithTag(ReportTestTags.CUSTOM_CATEGORY).assertDoesNotExist()
+    }
+
+    /** O TalkBack diz qual categoria está marcada na lista. */
+    @Test
+    fun theListSaysWhichCategoryIsChosen() {
+        show(ReportUiState(category = ReportCategory.SPOTIFY, device = device))
+
+        composeRule.onNodeWithText("Spotify").performClick()
+
+        composeRule.onNode(hasText("Spotify") and isSelectable()).assertIsSelected()
+        composeRule.onNode(hasText("Outro problema") and isSelectable()).performScrollTo().assertIsNotSelected()
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -65,7 +66,9 @@ internal fun CategoryField(
                 ) {
                     for (category in categories) {
                         Row(
-                            Modifier.fillMaxWidth().clickable(
+                            // "Selecionado" é lido pelo leitor de tela na opção marcada.
+                            Modifier.fillMaxWidth().selectable(
+                                selected = category == selected,
                                 role = Role.RadioButton,
                                 onClick = withMenuSound(MenuSound.NAVIGATE) {
                                     open = false
