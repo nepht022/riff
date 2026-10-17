@@ -60,4 +60,17 @@
     <string name="settings_tab_track_look">Highway</string>
     <string name="settings_tab_ai">AI guitar</string>
     <string name="settings_language">Language</string>
+    <string name="settings_tab_spotify">Spotify</string>
+    <string name="settings_queue_prefetch">Download queue maps</string>
+    <string name="settings_queue_prefetch_hint">While you listen, Riff downloads from Encore the maps of the next two songs in your Spotify queue.</string>
+    <string name="settings_queue_delete">Delete the ones I didn\'t play</string>
+    <string name="settings_queue_delete_hint">When the song ends without you playing it, the map downloaded on its own is deleted from the phone.</string>
+    <string name="settings_queue_mobile_data">Use mobile data</string>
+    <string name="settings_queue_mobile_data_hint">Off, downloads only on Wi-Fi. Each map is tens of MB.</string>
+    <string name="settings_queue_suggested">Song with a suggested map</string>
+    <string name="settings_queue_suggested_replace">Download a closer one</string>
+    <string name="settings_queue_suggested_keep">Keep the one I have</string>
+    <string name="settings_queue_refused">Without Spotify\'s permission, Riff can\'t see the queue.</string>
+    <string name="settings_queue_lost">Spotify asked to authorize again. Turn the option on to authorize.</string>
+    <string name="settings_queue_no_folder">To download, Riff needs permission to write to the library folder (Library → Change folder).</string>
 </resources>

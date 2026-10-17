@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -53,6 +54,9 @@ object SettingsTestTags {
     const val MENU_SOUNDS = "settings_menu_sounds"
     const val ASK_ALWAYS = "settings_ask_separation_always"
     const val CHART_IMAGE = "settings_chart_image"
+    const val QUEUE_PREFETCH = "settings_queue_prefetch"
+    const val QUEUE_DELETE = "settings_queue_delete"
+    const val QUEUE_MOBILE_DATA = "settings_queue_mobile_data"
 }
 
 @Composable
@@ -64,6 +68,8 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
+    val queueMessage by viewModel.queueMessage.collectAsStateWithLifecycle()
+    val canWriteToLibrary by viewModel.canWriteToLibrary.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     val current = settings
     if (current == null) {
@@ -88,6 +94,8 @@ fun SettingsScreen(
         onAskAlways = viewModel::setAskSeparationAlways,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
+        queue = QueueUiState(queueMessage, canWriteToLibrary),
+        onQueue = viewModel::onQueue,
         onLanguage = {
             viewModel.setLanguage(it)
             // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
@@ -116,6 +124,8 @@ fun SettingsContent(
     onTrackLook: (TrackLook) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
+    queue: QueueUiState = QueueUiState(message = null, canWriteToLibrary = true),
+    onQueue: (QueueAction) -> Unit = {},
     initialTab: SettingsTab = SettingsTab.GENERAL,
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
@@ -151,6 +161,8 @@ fun SettingsContent(
                     SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
 
                     SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
+
+                    SettingsTab.SPOTIFY -> SpotifyTab(settings, queue, onQueue)
 
                     SettingsTab.AI -> AiSeparationSection(
                         separationUsage,
@@ -322,8 +334,12 @@ internal fun SwitchRow(
     onChange: (Boolean) -> Unit,
     tag: String,
     sound: MenuSound? = MenuSound.NAVIGATE,
+    enabled: Boolean = true,
 ) {
-    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Spacing.sm).alpha(if (enabled) 1f else DISABLED_ALPHA),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.weight(1f)) {
             Text(
                 title,
@@ -339,6 +355,7 @@ internal fun SwitchRow(
         Switch(
             checked = checked,
             onCheckedChange = if (sound == null) onChange else withMenuSound(sound, onChange),
+            enabled = enabled,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,
@@ -364,3 +381,4 @@ private const val PERCENT = 100
 private const val VOLUME_STEPS = 19 // de 5 em 5%
 private const val SPEED_STEPS = 5 // 0,5 a 2,0 de 0,25 em 0,25
 private const val INACTIVE_ALPHA = 0.3f
+internal const val DISABLED_ALPHA = 0.4f

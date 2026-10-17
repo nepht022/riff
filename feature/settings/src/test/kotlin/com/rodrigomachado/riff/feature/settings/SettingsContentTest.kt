@@ -2,6 +2,8 @@ package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
@@ -47,10 +49,11 @@ class SettingsContentTest {
 
     private val looks = mutableListOf<TrackLook>()
     private val languages = mutableListOf<AppLanguage>()
+    private var queueState = QueueUiState(message = null, canWriteToLibrary = true)
 
     /** Abre a aba e esquece o som do toque nela (cada teste confere só os sons do que testa). */
     private fun tab(name: String) {
-        composeRule.onNodeWithText(name).performClick()
+        composeRule.onNodeWithText(name).performScrollTo().performClick()
         sounds.clear()
     }
 
@@ -76,6 +79,8 @@ class SettingsContentTest {
                         onTrackLook = { looks += it },
                         onShowChartImage = { events += "image:$it" },
                         onLanguage = { languages += it },
+                        queue = queueState,
+                        onQueue = { events += it.toString() },
                     )
                 }
             }
@@ -319,5 +324,76 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Português").performClick()
 
         assertEquals(listOf(AppLanguage.PORTUGUESE), languages)
+    }
+
+    @Test
+    fun theSpotifyTabShowsTheFourOptionsWithTheirHints() {
+        show(Settings.DEFAULT.copy(queuePrefetch = true))
+        tab("Spotify")
+
+        composeRule.onNodeWithText("Baixar mapas da fila").assertExists()
+        composeRule.onNodeWithText(
+            "Enquanto você ouve, o Riff baixa do Encore os mapas das duas próximas músicas da fila do Spotify.",
+        ).assertExists()
+        composeRule.onNodeWithText("Apagar os que eu não joguei").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Usar dados móveis").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Desligado, só baixa no Wi-Fi. Cada mapa tem dezenas de MB.").performScrollTo()
+            .assertExists()
+        composeRule.onNodeWithText("Música com mapa sugerido").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Baixar um mais parecido").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theOtherOptionsAreDisabledWithPrefetchOff() {
+        show()
+        tab("Spotify")
+
+        composeRule.onNodeWithTag(SettingsTestTags.QUEUE_DELETE).performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag(SettingsTestTags.QUEUE_MOBILE_DATA).performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag(SettingsTestTags.QUEUE_PREFETCH).assertIsEnabled().performClick()
+
+        assertEquals(listOf(QueueAction.Prefetch(true).toString()), events)
+    }
+
+    @Test
+    fun theSuggestedChoiceOffersBothOptions() {
+        show(Settings.DEFAULT.copy(queuePrefetch = true))
+        tab("Spotify")
+
+        composeRule.onNodeWithText("Música com mapa sugerido").performScrollTo().performClick()
+        composeRule.onNodeWithText("Manter o que já tenho").performClick()
+
+        assertEquals(listOf(QueueAction.ReplaceSuggested(false).toString()), events)
+    }
+
+    @Test
+    fun aRefusedAuthorizationIsExplained() {
+        queueState = QueueUiState(message = QueueMessage.REFUSED, canWriteToLibrary = true)
+        show()
+        tab("Spotify")
+
+        composeRule.onNodeWithText("Sem a autorização do Spotify, o Riff não consegue ver a fila.").assertExists()
+    }
+
+    @Test
+    fun aLostAuthorizationIsExplained() {
+        queueState = QueueUiState(message = QueueMessage.LOST, canWriteToLibrary = true)
+        show()
+        tab("Spotify")
+
+        composeRule.onNodeWithText(
+            "O Spotify pediu para autorizar de novo. Ligue a opção para autorizar.",
+        ).assertExists()
+    }
+
+    @Test
+    fun withoutAWritableFolderTheOptionSaysSo() {
+        queueState = QueueUiState(message = null, canWriteToLibrary = false)
+        show(Settings.DEFAULT.copy(queuePrefetch = true))
+        tab("Spotify")
+
+        composeRule.onNodeWithText(
+            "Para baixar, o Riff precisa de permissão para gravar na pasta da biblioteca (Biblioteca → Trocar pasta).",
+        ).performScrollTo().assertExists()
     }
 }

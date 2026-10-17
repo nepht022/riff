@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.FretStyle
@@ -115,9 +116,10 @@ private fun currentName(choice: LookChoice, look: TrackLook): String = when (cho
 }
 
 @Composable
-internal fun ChoiceRow(title: String, value: String, onClick: () -> Unit) {
+internal fun ChoiceRow(title: String, value: String, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(
+        Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).clickable(
+            enabled = enabled,
             onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
         ).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
