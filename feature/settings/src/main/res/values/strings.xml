@@ -67,8 +67,8 @@
     <string name="settings_queue_delete_hint">Quando a música passa sem você jogar, o mapa baixado sozinho é apagado do celular.</string>
     <string name="settings_queue_mobile_data">Usar dados móveis</string>
     <string name="settings_queue_mobile_data_hint">Desligado, só baixa no Wi-Fi. Cada mapa tem dezenas de MB.</string>
-    <string name="settings_queue_suggested">Música com mapa sugerido</string>
-    <string name="settings_queue_suggested_replace">Baixar um mais parecido</string>
+    <string name="settings_queue_suggested">Músicas com mapas já baixados</string>
+    <string name="settings_queue_suggested_replace">Baixar nova sugestão</string>
     <string name="settings_queue_suggested_keep">Manter o que já tenho</string>
     <string name="settings_queue_refused">Sem a autorização do Spotify, o Riff não consegue ver a fila.</string>
     <string name="settings_queue_lost">O Spotify pediu para autorizar de novo. Ligue a opção para autorizar.</string>

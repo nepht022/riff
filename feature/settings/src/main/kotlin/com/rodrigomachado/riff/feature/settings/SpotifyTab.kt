@@ -1,24 +1,22 @@
 package com.rodrigomachado.riff.feature.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
@@ -84,48 +82,48 @@ private fun Notice(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = RiffColors.Paper)
 }
 
-/** "Música com mapa sugerido": baixar um mais parecido ou manter o que já tem. */
+/** "Músicas com mapas já baixados": as duas escolhas à mostra, só uma marcada. */
 @Composable
 private fun SuggestedChoice(replace: Boolean, enabled: Boolean, onChoose: (Boolean) -> Unit) {
-    var choosing by rememberSaveable { mutableStateOf(false) }
-    ChoiceRow(
-        stringResource(R.string.settings_queue_suggested),
-        stringResource(suggestedName(replace)),
-        enabled = enabled,
-    ) { choosing = true }
-    if (!choosing) return
-    AlertDialog(
-        onDismissRequest = { choosing = false },
-        title = { Text(stringResource(R.string.settings_queue_suggested)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                for (option in listOf(true, false)) {
-                    Row(
-                        Modifier.fillMaxWidth().clickable(
-                            onClick = withMenuSound(MenuSound.NAVIGATE) {
-                                choosing = false
-                                if (option != replace) onChoose(option)
-                            },
+    Column(
+        Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).padding(vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            stringResource(R.string.settings_queue_suggested),
+            style = MaterialTheme.typography.titleMedium,
+            color = RiffColors.Paper,
+        )
+        Column(Modifier.selectableGroup()) {
+            for (option in listOf(true, false)) {
+                Row(
+                    Modifier.fillMaxWidth().selectable(
+                        selected = option == replace,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = withMenuSound(MenuSound.NAVIGATE) { if (option != replace) onChoose(option) },
+                    ).padding(vertical = Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    RadioButton(
+                        selected = option == replace,
+                        onClick = null,
+                        enabled = enabled,
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = RiffColors.TourRed,
+                            unselectedColor = RiffColors.PaperDim,
                         ),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    ) {
-                        RadioButton(
-                            selected = option == replace,
-                            onClick = null,
-                            colors = RadioButtonDefaults.colors(selectedColor = RiffColors.TourRed),
-                        )
-                        Text(stringResource(suggestedName(option)), style = MaterialTheme.typography.titleMedium)
-                    }
+                    )
+                    Text(
+                        stringResource(suggestedName(option)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = RiffColors.Paper,
+                    )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK) { choosing = false }) {
-                Text(stringResource(R.string.settings_look_close))
-            }
-        },
-    )
+        }
+    }
 }
 
 private fun suggestedName(replace: Boolean) =

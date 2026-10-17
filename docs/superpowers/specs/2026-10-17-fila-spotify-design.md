@@ -45,8 +45,8 @@ Uma aba nova **Spotify** depois de "Guitarra IA" (a barra de abas já rola de la
 - **Baixar mapas da fila** (desligado de fábrica). Dica: "Enquanto você ouve, o Riff baixa do Encore os mapas das duas próximas músicas da fila do Spotify."
 - **Apagar os que eu não joguei** (ligado de fábrica). Dica: "Quando a música passa sem você jogar, o mapa baixado sozinho é apagado do celular." Só vale para os baixados pela fila.
 - **Usar dados móveis** (desligado de fábrica). Dica: "Desligado, só baixa no Wi-Fi. Cada mapa tem dezenas de MB."
-- **Música com mapa sugerido** (escolha entre duas, pedida pelo usuário): quando a próxima música já tem um mapa na biblioteca só como sugestão ("CONFIRMAR MAPA"):
-  - **Baixar um mais parecido** (*padrão, decisão minha*: o objetivo é a música chegar pronta para jogar): o Riff procura no Encore um mapa com semelhança alta (§5) e, se achar, baixa e casa com a faixa. O mapa sugerido continua na biblioteca; só o casamento da faixa passa a ser o novo.
+- **Músicas com mapas já baixados** (escolha entre duas, pedida pelo usuário): quando a próxima música já tem um mapa na biblioteca só como sugestão ("CONFIRMAR MAPA"):
+  - **Baixar nova sugestão** (*padrão, decisão minha*: o objetivo é a música chegar pronta para jogar): o Riff procura no Encore um mapa com semelhança alta (§5) e, se achar, baixa e casa com a faixa. O mapa sugerido continua na biblioteca; só o casamento da faixa passa a ser o novo.
   - **Manter o que já tenho**: não baixa nada para essa música; ela continua pedindo confirmação.
 
 As outras três ficam desabilitadas (cinza) com "Baixar mapas da fila" desligada.
@@ -65,7 +65,7 @@ Os mapas baixados pela fila aparecem como os outros, em "Baixados pelo Riff". Se
 
 ## 5. Escolha do "melhor mapa"
 
-Para cada música da janela (as duas próximas) que ainda não tem mapa na biblioteca (casamento automático ou salvo). Música com mapa só **sugerido** segue a opção "Música com mapa sugerido" (§4): com "Baixar um mais parecido" entra na busca; com "Manter o que já tenho" é pulada.
+Para cada música da janela (as duas próximas) que ainda não tem mapa na biblioteca (casamento automático ou salvo). Música com mapa só **sugerido** segue a opção "Músicas com mapas já baixados" (§4): com "Baixar nova sugestão" entra na busca; com "Manter o que já tenho" é pulada.
 
 1. Pesquisa no Encore por "artista título" (primeira página, a mesma API da pesquisa manual).
 2. Fica só com os resultados que têm guitarra e cuja nota de semelhança com a faixa (`TrackMatcher.score`: título, artista e duração) é **pelo menos `AUTOMATIC_THRESHOLD` (0,92)**, o mesmo limiar do "mapa encontrado" automático. Abaixo disso, não baixa nada.
@@ -102,7 +102,7 @@ Desligar "Baixar mapas da fila" para de ler a fila e de baixar. Os mapas da fila
 ## 8. Dados
 
 - Room: tabela nova `queue_downloads(chartId PK, trackUri, downloadedAt, played)`. Migração nova.
-- Preferências (DataStore): `queue_prefetch` (falso), `queue_delete_unplayed` (verdadeiro), `queue_use_mobile_data` (falso), `queue_replace_suggested` (verdadeiro = "Baixar um mais parecido").
+- Preferências (DataStore): `queue_prefetch` (falso), `queue_delete_unplayed` (verdadeiro), `queue_use_mobile_data` (falso), `queue_replace_suggested` (verdadeiro = "Baixar nova sugestão").
 - A linha em `queue_downloads` é gravada no download só se a opção de apagar estiver ligada naquele momento; sem linha, o mapa é normal.
 - Autorização da API Web do Spotify: ver §9.
 
@@ -132,7 +132,7 @@ Desligar "Baixar mapas da fila" para de ler a fila e de baixar. Os mapas da fila
 - Partida em andamento segura os downloads; Wi-Fi × dados móveis.
 - API Web: leitura da fila, renovação do token, 401/429, token guardado criptografado.
 - Configurações: as quatro opções, autorização recusada ou perdida volta a desligada com o aviso, dicas.
-- Música com mapa sugerido: "Baixar um mais parecido" baixa e troca o casamento (o sugerido fica na biblioteca); "Manter o que já tenho" pula.
+- Músicas com mapas já baixados: "Baixar nova sugestão" baixa e troca o casamento (o sugerido fica na biblioteca); "Manter o que já tenho" pula.
 - No celular: fila com músicas sem mapa, ver o mapa da próxima chegar antes de passar, passar sem jogar e ver o mapa sumir, jogar um e ver que fica.
 
 ## 12. O que fica para o construtor

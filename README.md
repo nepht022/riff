@@ -53,7 +53,7 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - **Configurações → Spotify → Baixar mapas da fila** (desligada de fábrica): enquanto você ouve, o Riff lê a fila do Spotify e baixa do Encore os mapas das **duas próximas músicas**, já casados com a faixa. Ao passar de música, ela chega como **MAPA ENCONTRADO** (e, na pausa de uma partida, ⏭ começa a próxima direto).
 - **Escolha do mapa:** só resultados com semelhança alta (a mesma do "mapa encontrado" automático) e com guitarra; originais antes de covers, remixes e ao vivo; desempate pela guitarra separada e por mais dificuldades. Sem resultado confiável, não baixa nada.
 - **Apagar os que eu não joguei** (ligada): o mapa baixado pela fila some quando a música passa (ou sai da fila) sem você jogar. Jogado, ou baixado na mão, nunca é apagado.
-- **Usar dados móveis** (desligada): sem ela, só baixa no Wi-Fi. **Música com mapa sugerido**: baixar um mais parecido (padrão) ou manter o que você já tem.
+- **Usar dados móveis** (desligada): sem ela, só baixa no Wi-Fi. **Músicas com mapas já baixados** (quando o mapa da biblioteca é só sugestão): **Baixar nova sugestão** (padrão) ou **Manter o que já tenho**.
 - Na primeira vez, o Spotify pede uma autorização a mais para o Riff ler a fila (API Web, escopo `user-read-playback-state`, com PKCE: nenhum segredo no app; o token fica criptografado no aparelho). Se o Spotify pedir de novo, a opção desliga e as Configurações avisam.
 - Funciona com o Riff aberto e conectado ao Spotify (qualquer tela). Nunca baixa durante uma partida. Falhas aparecem no logcat com a tag `RiffQueue`.
 - **Privacidade:** o Riff lê a fila do Spotify só para isso; nada é enviado a outro lugar além das pesquisas no Encore.

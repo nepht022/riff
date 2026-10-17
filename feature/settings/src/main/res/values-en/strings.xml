@@ -67,8 +67,8 @@
     <string name="settings_queue_delete_hint">When the song ends without you playing it, the map downloaded on its own is deleted from the phone.</string>
     <string name="settings_queue_mobile_data">Use mobile data</string>
     <string name="settings_queue_mobile_data_hint">Off, downloads only on Wi-Fi. Each map is tens of MB.</string>
-    <string name="settings_queue_suggested">Song with a suggested map</string>
-    <string name="settings_queue_suggested_replace">Download a closer one</string>
+    <string name="settings_queue_suggested">Songs with maps already downloaded</string>
+    <string name="settings_queue_suggested_replace">Download a new suggestion</string>
     <string name="settings_queue_suggested_keep">Keep the one I have</string>
     <string name="settings_queue_refused">Without Spotify\'s permission, Riff can\'t see the queue.</string>
     <string name="settings_queue_lost">Spotify asked to authorize again. Turn the option on to authorize.</string>
