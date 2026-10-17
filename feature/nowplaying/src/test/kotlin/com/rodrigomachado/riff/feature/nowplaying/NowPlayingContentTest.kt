@@ -5,14 +5,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -44,6 +48,7 @@ class NowPlayingContentTest {
     private var libraryOpened = false
     private var settingsOpened = false
     private var reportOpened = false
+    private val controls = mutableListOf<String>()
     private var searchedFor: PlaybackState? = null
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
@@ -59,6 +64,9 @@ class NowPlayingContentTest {
                     onOpenSettings = { settingsOpened = true },
                     onOpenReport = { reportOpened = true },
                     onSearch = { searchedFor = it },
+                    onPrevious = { controls += "previous" },
+                    onPlayPause = { controls += "playPause:$it" },
+                    onNext = { controls += "next" },
                 )
             }
         }
@@ -94,7 +102,7 @@ class NowPlayingContentTest {
 
         composeRule.onNodeWithText("SEM MAPA").assertExists()
         composeRule.onNodeWithText("Pausado no Spotify").assertExists()
-        composeRule.onNodeWithText("Escolher mapa").performClick()
+        composeRule.onNodeWithText("Escolher mapa").performScrollTo().performClick()
 
         assertEquals("spotify:track:x" to "Bohemian Rhapsody - Remastered 2011", chooseFor)
     }
@@ -260,5 +268,93 @@ class NowPlayingContentTest {
         val other = composeRule.onAllNodesWithText("Escolher outro").onLast().getUnclippedBoundsInRoot()
         val root = composeRule.onRoot().getUnclippedBoundsInRoot()
         assertEquals((root.left + root.right).value / 2, (play.left + other.right).value / 2, 1f)
+    }
+
+    @Test
+    fun theSongCanBeChangedOrPausedBeforeChoosingAMap() = useControls(MatchStatus.NoMatch)
+
+    @Test
+    fun theSongCanBeChangedOrPausedAfterChoosingAMap() = useControls(MatchStatus.Matched(chart(), 0))
+
+    private fun useControls(match: MatchStatus) {
+        show(NowPlayingUiState.Playing(playing(match)))
+
+        composeRule.onNodeWithContentDescription("Música anterior").performScrollTo().performClick()
+        composeRule.onNodeWithContentDescription("Pausar música").performClick()
+        composeRule.onNodeWithContentDescription("Próxima música").performClick()
+
+        assertEquals(listOf("previous", "playPause:false", "next"), controls)
+    }
+
+    @Test
+    fun pausedTheMiddleButtonPlays() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch, isPaused = true)))
+
+        composeRule.onNodeWithContentDescription("Tocar música").performClick()
+
+        assertEquals(listOf("playPause:true"), controls)
+    }
+
+    @Test
+    fun withoutASongThereAreNoControls() {
+        show(NowPlayingUiState.NothingPlaying)
+
+        composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
+    }
+
+    /** Onde a música está e quanto dura, como num player. */
+    @Test
+    fun theSongTimeIsShown() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch, isPaused = true)))
+
+        composeRule.onNodeWithText("1:01").assertExists()
+        composeRule.onNodeWithText("5:55").assertExists()
+    }
+
+    /** Jogar ocupa o mesmo espaço que Escolher mapa: trocar de música não faz os botões pularem de lugar. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theMainButtonHasTheSameWidthWithOrWithoutAMap() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))))
+
+        val play = composeRule.onNodeWithText("Jogar").performScrollTo().getUnclippedBoundsInRoot()
+        val other = composeRule.onNode(hasText("Escolher outro") and hasClickAction()).getUnclippedBoundsInRoot()
+
+        assertEquals(MAIN_BUTTON_WIDTH.value, (play.right - play.left).value, 1f)
+        assertEquals(LINK_WIDTH.value, (other.right - other.left).value, 1f)
+    }
+
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theChooseButtonHasTheSameWidthAsPlay() {
+        show(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch)))
+
+        val choose = composeRule.onNodeWithText("Escolher mapa").performScrollTo().getUnclippedBoundsInRoot()
+        val search = composeRule.onNode(hasText("Pesquisar no Encore") and hasClickAction()).getUnclippedBoundsInRoot()
+
+        assertEquals(MAIN_BUTTON_WIDTH.value, (choose.right - choose.left).value, 1f)
+        assertEquals(LINK_WIDTH.value, (search.right - search.left).value, 1f)
+    }
+
+    @Test
+    fun aRequestedDifficultyChoiceOpensTheList() {
+        var asked = 0
+        composeRule.setContent {
+            RiffTheme {
+                NowPlayingContent(
+                    state = NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))),
+                    onRetry = {},
+                    onPlay = { played = it },
+                    onConfirm = { _, _, _ -> },
+                    onChooseChart = { _, _ -> },
+                    onOpenLibrary = {},
+                    askDifficultyFor = "spotify:track:x",
+                    onDifficultyAsked = { asked++ },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+        assertEquals(1, asked)
     }
 }

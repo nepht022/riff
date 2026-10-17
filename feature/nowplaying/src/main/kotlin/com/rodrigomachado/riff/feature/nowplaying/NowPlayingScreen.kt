@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -22,9 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
@@ -41,11 +44,11 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
-import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import kotlinx.coroutines.flow.first
 
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object NowPlayingTestTags {
@@ -65,9 +68,22 @@ fun NowPlayingScreen(
     /** Pesquisar no Encore um mapa para a faixa (sem mapa ou só com sugestão). */
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    /** O estado salvo desta tela na navegação, onde a partida deixa o pedido de começar a próxima música. */
+    autoPlayRequests: SavedStateHandle? = null,
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val autoPlay by viewModel.autoPlay.collectAsStateWithLifecycle()
+    LaunchedEffect(autoPlayRequests) { autoPlayRequests?.let(viewModel::watchAutoPlay) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.cancelAutoPlay() }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(autoPlay) {
+        val start = autoPlay as? NowPlayingAutoPlay.Action.Start ?: return@LaunchedEffect
+        // A tela acabou de voltar da partida: a navegação só aceita a próxima quando ela estiver de volta à frente.
+        lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+        viewModel.autoPlayHandled()
+        onPlay(start.request)
+    }
     // Voltou ao Riff (por exemplo, depois de instalar ou entrar no Spotify): tenta de novo sozinho.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
     NowPlayingContent(
@@ -81,6 +97,11 @@ fun NowPlayingScreen(
         modifier = modifier,
         onSearch = onSearch,
         onOpenReport = onOpenReport,
+        onPrevious = viewModel::previous,
+        onPlayPause = viewModel::playPause,
+        onNext = viewModel::next,
+        askDifficultyFor = (autoPlay as? NowPlayingAutoPlay.Action.ChooseDifficulty)?.trackUri,
+        onDifficultyAsked = viewModel::autoPlayHandled,
     )
 }
 
@@ -96,6 +117,11 @@ fun NowPlayingContent(
     onOpenSettings: () -> Unit = {},
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    onPrevious: () -> Unit = {},
+    onPlayPause: (isPaused: Boolean) -> Unit = {},
+    onNext: () -> Unit = {},
+    askDifficultyFor: String? = null,
+    onDifficultyAsked: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         PosterTitle(
@@ -129,7 +155,16 @@ fun NowPlayingContent(
                 message = stringResource(R.string.nowplaying_nothing_message),
             )
 
-            is NowPlayingUiState.Playing -> Playing(state.nowPlaying, onPlay, onConfirm, onChooseChart, onSearch)
+            is NowPlayingUiState.Playing -> Playing(
+                state.nowPlaying,
+                onPlay,
+                onConfirm,
+                onChooseChart,
+                onSearch,
+                SongControlActions(onPrevious, onPlayPause, onNext),
+                askDifficultyFor,
+                onDifficultyAsked,
+            )
         }
     }
 }
@@ -167,8 +202,8 @@ private fun SpotifyError.message(): Int = when (this) {
 
 @Composable
 private fun ChooseOther(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
-        Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper)
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+        Text(stringResource(R.string.nowplaying_choose_other), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
 
@@ -176,7 +211,12 @@ private fun ChooseOther(onClick: () -> Unit) {
 private fun NoMatchActions(onChoose: () -> Unit, onSearch: () -> Unit) {
     Text(stringResource(R.string.nowplaying_no_match), color = RiffColors.Paper)
     ActionRow {
-        PosterButton(stringResource(R.string.nowplaying_choose), onClick = onChoose, sound = MenuSound.NAVIGATE)
+        PosterButton(
+            stringResource(R.string.nowplaying_choose),
+            onClick = onChoose,
+            sound = MenuSound.NAVIGATE,
+            minWidth = MAIN_BUTTON_WIDTH,
+        )
         SearchEncore(onSearch)
     }
 }
@@ -194,8 +234,8 @@ private fun ActionRow(content: @Composable RowScope.() -> Unit) {
 
 @Composable
 private fun SearchEncore(onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) {
-        Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper)
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.width(LINK_WIDTH)) {
+        Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }
 }
 
@@ -206,20 +246,24 @@ private fun Playing(
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
     onSearch: (PlaybackState) -> Unit,
+    controls: SongControlActions,
+    askDifficultyFor: String?,
+    onDifficultyAsked: () -> Unit,
 ) {
     val track = nowPlaying.playback
     // Por faixa: se o Spotify trocar de música com o diálogo aberto, ele fecha em vez de juntar mapa e faixa errados.
     // Sobrevive à rotação da tela; o mapa vem do casamento atual da faixa.
     var choosingFor by rememberSaveable(track.trackUri) { mutableStateOf(false) }
     val choosing = (nowPlaying.match as? MatchStatus.Matched)?.takeIf { choosingFor }
-    Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        TrackCard(title = track.title, artist = track.artist, tilted = true, badge = { MatchBadge(nowPlaying.match) })
-        if (track.isPaused) {
-            Text(stringResource(R.string.nowplaying_paused), color = RiffColors.PaperDim)
+    // Voltou de uma partida para uma música cujo mapa não tem a dificuldade de antes: abre a escolha.
+    LaunchedEffect(askDifficultyFor, track.trackUri) {
+        if (askDifficultyFor == track.trackUri) {
+            choosingFor = true
+            onDifficultyAsked()
         }
+    }
+    // A faixa e os controles no alto; o mapa e o botão principal no pé da tela, onde o polegar alcança.
+    BottomAnchored(top = { TrackHeader(nowPlaying, controls) }) {
         when (val match = nowPlaying.match) {
             is MatchStatus.Matched -> {
                 Text(
@@ -231,6 +275,7 @@ private fun Playing(
                         stringResource(R.string.nowplaying_play),
                         onClick = { choosingFor = true },
                         sound = MenuSound.CONFIRM,
+                        minWidth = MAIN_BUTTON_WIDTH,
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
@@ -246,6 +291,7 @@ private fun Playing(
                         stringResource(R.string.nowplaying_confirm),
                         onClick = { onConfirm(track.trackUri, match.chart.id, match.confidence) },
                         sound = MenuSound.CONFIRM,
+                        minWidth = MAIN_BUTTON_WIDTH,
                     )
                     ChooseOther { onChooseChart(track.trackUri, track.title) }
                 }
@@ -270,7 +316,7 @@ private fun Playing(
 }
 
 @Composable
-private fun MatchBadge(match: MatchStatus) {
+internal fun MatchBadge(match: MatchStatus) {
     when (match) {
         is MatchStatus.Matched -> StatusBadge(stringResource(R.string.nowplaying_badge_matched), BadgeTone.SUCCESS)
         is MatchStatus.Suggested -> StatusBadge(stringResource(R.string.nowplaying_badge_suggested), BadgeTone.WARNING)

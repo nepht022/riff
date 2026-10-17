@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import androidx.lifecycle.SavedStateHandle
+import com.rodrigomachado.riff.core.data.SpotifyControls
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
@@ -58,6 +59,26 @@ class GameplayViewModelTest {
     private val analyzed = mutableListOf<List<String>>()
     private val art = FakeImage()
     private val artRequests = mutableListOf<String>()
+    private val controls = object : SpotifyControls {
+        val commands = mutableListOf<String>()
+
+        // Registra se a partida já tinha largado a música quando o Spotify recebeu o comando.
+        override fun previous() {
+            commands += "previous released=${spotifyPlayer.released}"
+        }
+
+        override fun previousTrack() {
+            commands += "previousTrack released=${spotifyPlayer.released}"
+        }
+
+        override fun next() {
+            commands += "next released=${spotifyPlayer.released}"
+        }
+
+        override fun pause() = Unit
+
+        override fun resume() = Unit
+    }
     private var artFailure: Exception? = null
     private var playingWhenArtAsked: Boolean? = null
 
@@ -103,6 +124,7 @@ class GameplayViewModelTest {
             artFailure?.let { throw it }
             art
         },
+        controls,
     )
 
     private fun playable(audio: String? = "raiz/a/song.ogg") =
@@ -582,5 +604,54 @@ class GameplayViewModelTest {
 
         val ready = vm.uiState.value as GameplayUiState.Ready
         assertNull(ready.art)
+    }
+
+    @Test
+    fun inSpotifyModeChangingTheSongLeavesTheMatchFirstAndSavesNoScore() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        viewModel.pause()
+
+        assertTrue(viewModel.changeSong(forward = true))
+
+        assertEquals(listOf("next released=true"), controls.commands)
+        assertTrue(scores.saved.isEmpty())
+        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
+    }
+
+    @Test
+    fun inTheLibraryChangingTheSongDoesNothing() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        assertEquals(false, viewModel.changeSong(forward = false))
+
+        assertTrue(controls.commands.isEmpty())
+        assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
+    }
+
+    /** A tela ainda está saindo quando chega o segundo toque: o Spotify só pula uma vez. */
+    @Test
+    fun aDoubleTapChangesTheSongOnlyOnce() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        viewModel.pause()
+
+        assertTrue(viewModel.changeSong(forward = true))
+        assertEquals(false, viewModel.changeSong(forward = true))
+        assertEquals(false, viewModel.changeSong(forward = false))
+
+        assertEquals(listOf("next released=true"), controls.commands)
+    }
+
+    @Test
+    fun inTheMatchPreviousMeansTheSongBefore() = runTest {
+        loader.result = { playable(audio = null) }
+        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
+        viewModel.pause()
+
+        viewModel.changeSong(forward = false)
+
+        assertEquals(listOf("previousTrack released=true"), controls.commands)
     }
 }

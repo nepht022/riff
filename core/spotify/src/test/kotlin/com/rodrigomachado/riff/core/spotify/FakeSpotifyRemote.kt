@@ -37,4 +37,12 @@ class FakeSpotifyRemote : SpotifyRemote {
     override fun seekTo(positionMs: Long) {
         commands += "seek:$positionMs"
     }
+
+    override fun skipNext() {
+        commands += "next"
+    }
+
+    override fun skipPrevious() {
+        commands += "previous"
+    }
 }

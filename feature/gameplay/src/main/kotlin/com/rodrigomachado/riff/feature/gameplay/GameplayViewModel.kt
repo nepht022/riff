@@ -18,6 +18,7 @@ import com.rodrigomachado.riff.core.data.ChartOffsetRepository
 import com.rodrigomachado.riff.core.data.MAX_SONG_OFFSET_MS
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.data.SpotifyControls
 import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
@@ -62,7 +63,11 @@ sealed interface GameplayUiState {
         val songOffsetMs: Int = 0,
         /** Imagem do mapa atrás da pista (com a opção ligada e se o mapa tiver uma). */
         val art: ImageBitmap? = null,
-    ) : GameplayUiState
+        /** Modo Spotify: a faixa tocando; a pausa mostra anterior, tocar e próxima. */
+        val spotifyTrackUri: String? = null,
+    ) : GameplayUiState {
+        val spotifyControls: Boolean get() = spotifyTrackUri != null
+    }
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
 
@@ -85,6 +90,7 @@ class GameplayViewModel @Inject constructor(
     private val timeSource: TimeSource,
     private val interruptionsFactory: PlaybackInterruptionsFactory,
     private val artImages: ChartArtImages,
+    private val spotify: SpotifyControls,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
@@ -148,6 +154,7 @@ class GameplayViewModel @Inject constructor(
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
             art = art,
+            spotifyTrackUri = spotifyTrackUri,
         )
     } catch (e: CancellationException) {
         throw e
@@ -189,29 +196,6 @@ class GameplayViewModel @Inject constructor(
         }
         return created
     }
-
-    private fun reasonFor(error: Exception): UnavailableReason = when (error) {
-        is NoAudioException -> UnavailableReason.NO_AUDIO
-
-        is AudioFailedException -> UnavailableReason.AUDIO_FAILED
-
-        is SpotifyFailedException -> UnavailableReason.SPOTIFY_UNAVAILABLE
-
-        is FolderAccessLostException -> UnavailableReason.FOLDER_ACCESS_LOST
-
-        is ChartNotFoundException -> UnavailableReason.CHART_MISSING
-
-        // O arquivo do mapa não pôde ser lido (corrompido ou mudou desde a importação).
-        is ChartReadException -> UnavailableReason.CHART_UNREADABLE
-
-        else -> UnavailableReason.UNEXPECTED
-    }
-
-    private class NoAudioException : Exception("pasta sem áudio")
-
-    private class AudioFailedException(cause: Throwable) : Exception("áudio não pôde ser preparado", cause)
-
-    private class SpotifyFailedException(cause: Throwable) : Exception("Spotify não pôde tocar", cause)
 
     fun pause() {
         if (state.value is GameplayUiState.Loading) pauseRequested = true
@@ -275,6 +259,18 @@ class GameplayViewModel @Inject constructor(
         viewModelScope.launch { state.value = GameplayUiState.Finished(scores.save(record)) }
     }
 
+    /**
+     * Modo Spotify, na pausa: troca a música no Spotify e larga a partida, sem salvar o placar (a tela sai em
+     * seguida). Larga antes de pedir a troca: assim a partida não reage à faixa nova. Verdadeiro se pediu a troca.
+     */
+    fun changeSong(forward: Boolean): Boolean {
+        // Só uma vez: a partida já largada (segundo toque durante a saída da tela) não pede outra troca.
+        if (spotifyTrackUri == null || player == null || finishing) return false
+        release()
+        if (forward) spotify.next() else spotify.previousTrack()
+        return true
+    }
+
     /** Para e libera o áudio, ao terminar ou quando a tela sai de vez ([onCleared]). */
     fun release() {
         interruptions?.stop()
@@ -310,3 +306,27 @@ private suspend fun ChartTrackLoader.read(chartId: String, difficulty: Difficult
 } catch (e: Exception) {
     throw ChartReadException(e)
 }
+
+/** A explicação na tela para cada falha ao preparar a partida. */
+private fun reasonFor(error: Exception): UnavailableReason = when (error) {
+    is NoAudioException -> UnavailableReason.NO_AUDIO
+
+    is AudioFailedException -> UnavailableReason.AUDIO_FAILED
+
+    is SpotifyFailedException -> UnavailableReason.SPOTIFY_UNAVAILABLE
+
+    is FolderAccessLostException -> UnavailableReason.FOLDER_ACCESS_LOST
+
+    is ChartNotFoundException -> UnavailableReason.CHART_MISSING
+
+    // O arquivo do mapa não pôde ser lido (corrompido ou mudou desde a importação).
+    is ChartReadException -> UnavailableReason.CHART_UNREADABLE
+
+    else -> UnavailableReason.UNEXPECTED
+}
+
+private class NoAudioException : Exception("pasta sem áudio")
+
+private class AudioFailedException(cause: Throwable) : Exception("áudio não pôde ser preparado", cause)
+
+private class SpotifyFailedException(cause: Throwable) : Exception("Spotify não pôde tocar", cause)

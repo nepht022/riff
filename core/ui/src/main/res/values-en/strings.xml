@@ -10,4 +10,8 @@
     <string name="ui_separation_failed">Couldn\'t separate the guitar of %1$s</string>
     <string name="ui_separation_no_space">Not enough space on the phone</string>
     <string name="ui_separation_ok">OK</string>
+    <string name="playback_previous">Previous song</string>
+    <string name="playback_pause">Pause song</string>
+    <string name="playback_play">Play song</string>
+    <string name="playback_next">Next song</string>
 </resources>

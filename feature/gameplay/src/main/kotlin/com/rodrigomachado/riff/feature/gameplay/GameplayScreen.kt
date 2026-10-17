@@ -44,10 +44,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
+import com.rodrigomachado.riff.core.ui.component.PlaybackControls
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
@@ -81,6 +83,8 @@ fun GameplayScreen(
     onFinished: (scoreId: Long) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Trocou de música na pausa (modo Spotify): a partida acabou; quem chama volta e tenta começar a próxima. */
+    onSongChanged: (difficulty: Difficulty, fromTrackUri: String) -> Unit = { _, _ -> onExit() },
     viewModel: GameplayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -106,6 +110,10 @@ fun GameplayScreen(
             onSessionFinished = viewModel::onSessionFinished,
             onPlaybackChanged = viewModel::onPlaybackChanged,
             onAdjustOffset = viewModel::adjustSongOffset,
+            onChangeSong = { forward ->
+                val uri = current.spotifyTrackUri
+                if (viewModel.changeSong(forward) && uri != null) onSongChanged(current.difficulty, uri)
+            },
             modifier = modifier,
         )
 
@@ -127,6 +135,7 @@ internal fun GameStage(
     modifier: Modifier = Modifier,
     onPlaybackChanged: (Boolean) -> Unit = {},
     onAdjustOffset: (Int) -> Unit = {},
+    onChangeSong: (forward: Boolean) -> Unit = {},
     animate: Boolean = true,
 ) {
     val session = state.session
@@ -180,7 +189,7 @@ internal fun GameStage(
                 .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
         )
         Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
-        if (state.isPaused) PauseOverlay(state.songOffsetMs, onAdjustOffset, onResume, onExit)
+        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit, onChangeSong)
     }
 }
 
@@ -270,7 +279,13 @@ private fun NoSeparateGuitarNotice(modifier: Modifier) {
 }
 
 @Composable
-private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onResume: () -> Unit, onExit: () -> Unit) {
+private fun PauseOverlay(
+    state: GameplayUiState.Ready,
+    onAdjustOffset: (Int) -> Unit,
+    onResume: () -> Unit,
+    onExit: () -> Unit,
+    onChangeSong: (forward: Boolean) -> Unit,
+) {
     Column(
         Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA)),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
@@ -278,7 +293,15 @@ private fun PauseOverlay(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit, onRes
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
-        SyncAdjuster(songOffsetMs, onAdjustOffset)
+        if (state.spotifyControls) {
+            PlaybackControls(
+                isPaused = true,
+                onPrevious = { onChangeSong(false) },
+                onPlayPause = onResume,
+                onNext = { onChangeSong(true) },
+            )
+        }
+        SyncAdjuster(state.songOffsetMs, onAdjustOffset)
         TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
             Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper)
         }
