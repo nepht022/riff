@@ -1,5 +1,7 @@
 package com.rodrigomachado.riff.feature.settings
 
+import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,15 +21,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
@@ -58,6 +64,7 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
     val current = settings
     if (current == null) {
         LoadingState(modifier)
@@ -81,6 +88,11 @@ fun SettingsScreen(
         onAskAlways = viewModel::setAskSeparationAlways,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
+        onLanguage = {
+            viewModel.setLanguage(it)
+            // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) activity?.recreate()
+        },
     )
 }
 
@@ -103,60 +115,99 @@ fun SettingsContent(
     onAskAlways: (Boolean) -> Unit = {},
     onTrackLook: (TrackLook) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
+    onLanguage: (AppLanguage) -> Unit = {},
+    initialTab: SettingsTab = SettingsTab.GENERAL,
 ) {
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
+    // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
+    var tab by rememberSaveable { mutableStateOf(initialTab) }
+    // O idioma em que a tela está: acompanha também uma troca feita nas configurações do celular.
+    val language = AppLanguage.fromTag(LocalConfiguration.current.locales[0].toLanguageTag())
+    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.settings_back), color = RiffColors.Paper) }
             Spacer(Modifier.weight(1f))
             SeparationIndicator()
         }
         PosterTitle(stringResource(R.string.settings_title), style = MaterialTheme.typography.displaySmall)
-        Section(stringResource(R.string.settings_sounds))
-        SettingSlider(
-            label = stringResource(R.string.settings_master_volume),
-            value = settings.masterVolume,
-            text = ::percent,
-            onCommit = onMasterVolume,
-            hint = stringResource(R.string.settings_master_volume_hint),
-            modifier = Modifier.testTag(SettingsTestTags.MASTER_VOLUME),
-        )
-        SettingSlider(
-            label = stringResource(R.string.settings_hit_volume),
-            value = settings.hitVolume,
-            text = ::percent,
-            onCommit = {
-                onHitVolume(it)
-                onPreviewHit()
-            },
-        )
-        SettingSlider(
-            label = stringResource(R.string.settings_miss_volume),
-            value = settings.missVolume,
-            text = ::percent,
-            onCommit = {
-                onMissVolume(it)
-                onPreviewMiss()
-            },
-        )
-        MenuSoundsRow(settings.menuSounds, onMenuSounds)
-        GameSection(settings, onNoteSpeed, onLeftHanded, onCalibrate, onTrackLook, onShowChartImage)
-        AiSeparationSection(separationUsage, onDeleteSeparations, settings.askSeparationAlways, onAskAlways)
+        SettingsTabBar(tab, onSelect = { tab = it })
+        // Cada aba começa do topo.
+        key(tab) {
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                when (tab) {
+                    SettingsTab.GENERAL -> GeneralTab(language, onLanguage, settings.menuSounds, onMenuSounds)
+
+                    SettingsTab.SOUNDS -> SoundsTab(
+                        settings,
+                        onMasterVolume,
+                        onHitVolume,
+                        onMissVolume,
+                        onPreviewHit,
+                        onPreviewMiss,
+                    )
+
+                    SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
+
+                    SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
+
+                    SettingsTab.AI -> AiSeparationSection(
+                        separationUsage,
+                        onDeleteSeparations,
+                        settings.askSeparationAlways,
+                        onAskAlways,
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun GameSection(
+private fun SoundsTab(
+    settings: Settings,
+    onMasterVolume: (Float) -> Unit,
+    onHitVolume: (Float) -> Unit,
+    onMissVolume: (Float) -> Unit,
+    onPreviewHit: () -> Unit,
+    onPreviewMiss: () -> Unit,
+) {
+    SettingSlider(
+        label = stringResource(R.string.settings_master_volume),
+        value = settings.masterVolume,
+        text = ::percent,
+        onCommit = onMasterVolume,
+        hint = stringResource(R.string.settings_master_volume_hint),
+        modifier = Modifier.testTag(SettingsTestTags.MASTER_VOLUME),
+    )
+    SettingSlider(
+        label = stringResource(R.string.settings_hit_volume),
+        value = settings.hitVolume,
+        text = ::percent,
+        onCommit = {
+            onHitVolume(it)
+            onPreviewHit()
+        },
+    )
+    SettingSlider(
+        label = stringResource(R.string.settings_miss_volume),
+        value = settings.missVolume,
+        text = ::percent,
+        onCommit = {
+            onMissVolume(it)
+            onPreviewMiss()
+        },
+    )
+}
+
+@Composable
+private fun GameTab(
     settings: Settings,
     onNoteSpeed: (Float) -> Unit,
     onLeftHanded: (Boolean) -> Unit,
     onCalibrate: () -> Unit,
-    onTrackLook: (TrackLook) -> Unit,
-    onShowChartImage: (Boolean) -> Unit,
 ) {
-    Section(stringResource(R.string.settings_game))
     SettingSlider(
         label = stringResource(R.string.settings_note_speed),
         value = settings.noteSpeed,
@@ -172,6 +223,11 @@ private fun GameSection(
         onChange = onLeftHanded,
         tag = SettingsTestTags.LEFT_HANDED,
     )
+    CalibrationRow(settings.audioOffsetMs, onCalibrate)
+}
+
+@Composable
+private fun TrackLookTab(settings: Settings, onTrackLook: (TrackLook) -> Unit, onShowChartImage: (Boolean) -> Unit) {
     TrackLookSection(settings.trackLook, onTrackLook)
     SwitchRow(
         title = stringResource(R.string.settings_chart_image),
@@ -179,17 +235,6 @@ private fun GameSection(
         checked = settings.showChartImage,
         onChange = onShowChartImage,
         tag = SettingsTestTags.CHART_IMAGE,
-    )
-    CalibrationRow(settings.audioOffsetMs, onCalibrate)
-}
-
-@Composable
-internal fun Section(title: String) {
-    Text(
-        title.uppercase(),
-        style = MaterialTheme.typography.labelLarge,
-        color = RiffColors.PaperDim,
-        modifier = Modifier.padding(top = Spacing.md),
     )
 }
 
@@ -258,7 +303,7 @@ private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
 
 /** Sem som próprio: ao desligar, ainda estariam ligados; o app soa quando eles voltam a ser ligados. */
 @Composable
-private fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
     SwitchRow(
         title = stringResource(R.string.settings_menu_sounds),
         hint = stringResource(R.string.settings_menu_sounds_hint),

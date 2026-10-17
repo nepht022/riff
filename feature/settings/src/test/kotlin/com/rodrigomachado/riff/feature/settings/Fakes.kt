@@ -59,3 +59,11 @@ class FakeAiSeparations : AiSeparationRepository {
     }
     override suspend fun pruneOrphans() = Unit
 }
+
+class FakeAppLanguage : com.rodrigomachado.riff.core.data.AppLanguageStore {
+    override var current = com.rodrigomachado.riff.core.model.AppLanguage.PORTUGUESE
+
+    override fun set(language: com.rodrigomachado.riff.core.model.AppLanguage) {
+        current = language
+    }
+}

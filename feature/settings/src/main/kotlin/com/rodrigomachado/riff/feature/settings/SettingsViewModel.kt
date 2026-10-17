@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AppLanguageStore
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
@@ -21,6 +23,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val separations: AiSeparationRepository,
+    private val languages: AppLanguageStore,
     sfxPlayers: SfxPlayerFactory,
 ) : ViewModel() {
     /** `null` enquanto as preferências carregam. */
@@ -37,6 +40,9 @@ class SettingsViewModel @Inject constructor(
     /** Quantas músicas a IA separou e o espaço que ocupam. */
     val separationUsage: StateFlow<SeparationUsage> = separations.usage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeparationUsage(0, 0))
+
+    /** Troca o idioma do jogo; o Android refaz a tela já no idioma novo. */
+    fun setLanguage(language: AppLanguage) = languages.set(language)
 
     fun deleteSeparations() {
         viewModelScope.launch { separations.deleteAll() }

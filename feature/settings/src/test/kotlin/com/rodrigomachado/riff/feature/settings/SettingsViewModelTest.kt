@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.settings
 
+import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.FretStyle
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
@@ -27,6 +28,7 @@ class SettingsViewModelTest {
     private val repository = FakeSettingsRepository()
     private val sfx = FakeSfxPlayer()
     private val separations = FakeAiSeparations()
+    private val language = FakeAppLanguage()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -35,7 +37,7 @@ class SettingsViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository, separations) { sfx }
+        val viewModel = SettingsViewModel(repository, separations, language) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -130,5 +132,14 @@ class SettingsViewModelTest {
 
         assertEquals(look, repository.settings.value.trackLook)
         assertEquals(false, repository.settings.value.showChartImage)
+    }
+
+    @Test
+    fun choosingALanguageChangesIt() = runTest {
+        val vm = viewModel()
+
+        vm.setLanguage(AppLanguage.ENGLISH)
+
+        assertEquals(AppLanguage.ENGLISH, language.current)
     }
 }
