@@ -74,8 +74,11 @@ function newContext() {
 
 const play = (key, extra) => Object.assign({
   acao: 'enviar', chave: key, mapa: 'm1', titulo: 'Música', artista: 'Banda', dificuldade: 'HARD',
-  pontos: 100, precisao: 0.9, combo: 50, perfeitos: 40, semErrar: 30000,
+  pontos: 100, precisao: 0.9, combo: 50, perfeitos: 40, semErrar: 30000, notas: 85,
 }, extra);
+
+// O placar vem inteiro (todas as dificuldades e números): o celular ordena e filtra na hora.
+const boardOf = (c, key, map) => c.call({ acao: 'placar', chave: key, mapa: map || 'm1' }).linhas;
 
 const tests = {
   reservaENomeEmUso() {
@@ -97,8 +100,7 @@ const tests = {
     c.call(play('A'));
     assert.strictEqual(c.call({ acao: 'reservar', nome: 'Digo', chave: 'A' }).ok, true);
     assert.strictEqual(c.call({ acao: 'reservar', nome: 'Rodrigo', chave: 'B' }).ok, true);
-    const board = c.call({ acao: 'placar', chave: 'B', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '' });
-    assert.deepStrictEqual(board.linhas.map((l) => [l.nome, l.valor]), [['Digo', 100]]);
+    assert.deepStrictEqual(boardOf(c, 'B').map((l) => [l.nome, l.pontos]), [['Digo', 100]]);
   },
   aWrongKeyCannotRenameOrSubmit() {
     const c = newContext();
@@ -112,35 +114,26 @@ const tests = {
     c.call(play('A', { pontos: 100, combo: 50 }));
     const second = c.call(play('A', { pontos: 90, combo: 70 }));
     assert.deepStrictEqual([second.posicao, second.total], [1, 1]);
-    const byPoints = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '' });
-    const byCombo = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'combo', sentido: 'desc', busca: '' });
-    assert.strictEqual(byPoints.linhas[0].valor, 100);
-    assert.strictEqual(byCombo.linhas[0].valor, 70);
+    const line = boardOf(c, 'A')[0];
+    assert.deepStrictEqual([line.pontos, line.combo, line.notas], [100, 70, 85]);
   },
-  placarOrdenaBuscaEMarcaVoce() {
+  placarTrazTodosComVoceMarcado() {
     const c = newContext();
-    [['Ana', 'A', 300], ['Bruno', 'B', 200], ['Carla', 'C', 100]].forEach(([n, k, p]) => {
+    [['Ana', 'A', 300], ['Bruno', 'B', 200]].forEach(([n, k, p]) => {
       c.call({ acao: 'reservar', nome: n, chave: k });
       c.call(play(k, { pontos: p }));
     });
-    const q = (extra) => c.call(Object.assign({ acao: 'placar', chave: 'B', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '' }, extra));
-    const desc = q({});
-    assert.deepStrictEqual(desc.linhas.map((l) => l.nome), ['Ana', 'Bruno', 'Carla']);
-    assert.deepStrictEqual(desc.linhas.map((l) => l.posicao), [1, 2, 3]);
-    assert.strictEqual(desc.linhas[1].voce, true);
-    assert.deepStrictEqual(q({ sentido: 'asc' }).linhas.map((l) => l.nome), ['Carla', 'Bruno', 'Ana']);
-    const found = q({ busca: 'car' });
-    assert.deepStrictEqual(found.linhas.map((l) => [l.nome, l.posicao]), [['Carla', 3]]);
-    assert.deepStrictEqual(desc.dificuldades, ['HARD']);
+    c.call(play('A', { dificuldade: 'EXPERT', pontos: 999 }));
+    const lines = boardOf(c, 'B');
+    assert.deepStrictEqual(lines.map((l) => [l.nome, l.dificuldade, l.voce]).sort(),
+      [['Ana', 'EXPERT', false], ['Ana', 'HARD', false], ['Bruno', 'HARD', true]]);
   },
-  boardBySemErrarSkipsPlayersWithoutIt() {
+  semErrarAntigoVemVazio() {
     const c = newContext();
     c.call({ acao: 'reservar', nome: 'Ana', chave: 'A' });
-    c.call({ acao: 'reservar', nome: 'Bruno', chave: 'B' });
-    c.call(play('A', { semErrar: null }));
-    c.call(play('B', { semErrar: 20000 }));
-    const board = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'semErrar', sentido: 'desc', busca: '' });
-    assert.deepStrictEqual(board.linhas.map((l) => l.nome), ['Bruno']);
+    c.call(play('A', { semErrar: null, notas: null }));
+    const line = boardOf(c, 'A')[0];
+    assert.deepStrictEqual([line.semErrar, line.notas], [null, null]);
   },
   musicasComJogadoresESuaPosicao() {
     const c = newContext();
@@ -157,8 +150,7 @@ const tests = {
   semNadaAindaTudoVazio() {
     const c = newContext();
     assert.deepStrictEqual(c.call({ acao: 'musicas', chave: 'A', busca: '' }).musicas, []);
-    const board = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '' });
-    assert.deepStrictEqual([board.linhas, board.dificuldades], [[], []]);
+    assert.deepStrictEqual(boardOf(c, 'A'), []);
   },
   nomesQueAPlanilhaConverteContinuamUnicos() {
     const c = newContext();
@@ -167,8 +159,7 @@ const tests = {
     c.call({ acao: 'reservar', nome: 'true', chave: 'C' });
     c.call(play('A'));
     c.call(play('C'));
-    const board = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '00' });
-    assert.deepStrictEqual(board.linhas.map((l) => l.nome), ['007']);
+    assert.deepStrictEqual(boardOf(c, 'A').map((l) => l.nome).sort(), ['007', 'true']);
   },
   tituloComIgualNaoViraFormula() {
     const c = newContext();

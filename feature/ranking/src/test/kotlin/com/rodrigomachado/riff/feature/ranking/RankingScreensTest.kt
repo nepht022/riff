@@ -4,7 +4,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
+import com.rodrigomachado.riff.core.data.ranking.ApiAnswer
 import com.rodrigomachado.riff.core.data.ranking.Board
+import com.rodrigomachado.riff.core.data.ranking.BoardEntry
 import com.rodrigomachado.riff.core.data.ranking.BoardLine
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
 import com.rodrigomachado.riff.core.data.ranking.RankingMetric
@@ -13,7 +15,6 @@ import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -57,42 +58,61 @@ class RankingScreensTest {
         ranking,
     )
 
+    private fun entry(name: String, points: Double, difficulty: Difficulty = Difficulty.HARD, you: Boolean = false) =
+        BoardEntry(name, you, difficulty, points, 0.9, 50.0, 70.0, 30_000.0, 85)
+
+    /** A lista vem uma vez; a busca filtra no celular, na hora. */
     @Test
-    fun searchingSongsAsksTheServerWithTheText() = runTest(dispatcher) {
+    fun searchingSongsFiltersWithoutAskingAgain() = runTest(dispatcher) {
+        ranking.songsAnswer = ApiAnswer.Ok(
+            listOf(RankedSong("m1", "Schism", "TOOL", 3, null), RankedSong("m2", "Holy Diver", "Dio", 2, null)),
+        )
         val vm = RankingViewModel(ranking)
         advanceUntilIdle()
 
-        vm.onQuery("to")
-        vm.onQuery("tool") // a busca espera parar de digitar
-        advanceTimeBy(301)
+        vm.onQuery("tool")
 
-        assertEquals(listOf("", "tool"), ranking.songQueries)
+        assertEquals(listOf(""), ranking.songQueries)
+        assertEquals(listOf("Schism"), vm.state.value.shown.map { it.title })
     }
 
     @Test
     fun boardStartsOnTheDifficultyFromTheRoute() = runTest(dispatcher) {
-        boardViewModel()
-        advanceUntilIdle()
-
-        assertEquals("m1 HARD pontos desc ''", ranking.boardQueries.single())
-    }
-
-    @Test
-    fun metricDirectionAndDifficultyChangeTheBoard() = runTest(dispatcher) {
+        ranking.boardAnswer = ApiAnswer.Ok(listOf(entry("Ana", 1.0, Difficulty.EASY), entry("Bia", 2.0)))
         val vm = boardViewModel()
         advanceUntilIdle()
 
-        vm.onMetric(RankingMetric.COMBO)
-        advanceUntilIdle()
-        vm.onToggleDirection()
-        advanceUntilIdle()
-        vm.onDifficulty(Difficulty.EXPERT)
+        assertEquals(Difficulty.HARD, vm.state.value.board?.difficulty)
+        assertEquals(listOf("Bia"), vm.state.value.board?.lines?.map { it.name })
+    }
+
+    /** O placar vem inteiro uma vez; trocar de número, de sentido, de dificuldade ou buscar é na hora. */
+    @Test
+    fun filtersDoNotAskTheServerAgain() = runTest(dispatcher) {
+        ranking.boardAnswer = ApiAnswer.Ok(
+            listOf(entry("Ana", 300.0), entry("Bruno", 200.0, you = true), entry("Zé", 999.0, Difficulty.EXPERT)),
+        )
+        val vm = boardViewModel()
         advanceUntilIdle()
 
-        assertEquals(
-            listOf("m1 HARD combo desc ''", "m1 HARD combo asc ''", "m1 EXPERT combo asc ''"),
-            ranking.boardQueries.drop(1),
-        )
+        vm.onToggleDirection()
+        assertEquals(listOf("Bruno", "Ana"), vm.state.value.board?.lines?.map { it.name })
+        vm.onQuery("ana")
+        assertEquals(listOf("Ana"), vm.state.value.board?.lines?.map { it.name })
+        vm.onDifficulty(Difficulty.EXPERT)
+        vm.onMetric(RankingMetric.COMBO)
+        advanceUntilIdle()
+
+        assertEquals(listOf("m1"), ranking.boardQueries)
+    }
+
+    @Test
+    fun theFirstLoadSaysItIsLoading() {
+        composeRule.setContent {
+            RiffTheme { RankingBoardContent(RankingBoardUiState(title = "Música", loading = true), BoardActions()) }
+        }
+
+        composeRule.onNodeWithText("Carregando…").assertExists()
     }
 
     @Test
@@ -121,7 +141,7 @@ class RankingScreensTest {
         composeRule.setContent {
             RiffTheme {
                 RankingBoardContent(
-                    RankingBoardUiState(title = "Música", board = board, difficulty = Difficulty.HARD),
+                    RankingBoardUiState(title = "Música", board = board),
                     actions = BoardActions(onToggleDirection = { events += "sentido" }),
                 )
             }
@@ -139,6 +159,8 @@ class RankingScreensTest {
         assertEquals("88%", formatValue(RankingMetric.ACCURACY, 0.876))
         assertEquals("0:38", formatValue(RankingMetric.CLEAN, 38_500.0))
         assertEquals("42", formatValue(RankingMetric.COMBO, 42.0))
+        assertEquals("70/85", formatValue(RankingMetric.PERFECT, 70.0, outOf = 85))
+        assertEquals("70", formatValue(RankingMetric.PERFECT, 70.0, outOf = null))
     }
 
     @Test

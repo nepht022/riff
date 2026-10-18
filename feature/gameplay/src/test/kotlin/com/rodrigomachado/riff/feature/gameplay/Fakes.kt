@@ -239,11 +239,5 @@ class RecordingRanking(override val isConfigured: Boolean = true) :
 
     override suspend fun songs(query: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
 
-    override suspend fun board(
-        chartId: String,
-        difficulty: com.rodrigomachado.riff.core.model.Difficulty?,
-        metric: com.rodrigomachado.riff.core.data.ranking.RankingMetric,
-        descending: Boolean,
-        query: String,
-    ) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+    override suspend fun board(chartId: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
 }

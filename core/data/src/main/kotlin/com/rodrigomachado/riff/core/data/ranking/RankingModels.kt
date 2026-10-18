@@ -46,7 +46,29 @@ data class RankedSong(
     val yourPosition: Int?,
 )
 
-data class BoardLine(val position: Int, val name: String, val value: Double, val you: Boolean)
+/** [outOf]: em Perfeitos, o total de notas da partida (null em partidas de antes da medida). */
+data class BoardLine(val position: Int, val name: String, val value: Double, val you: Boolean, val outOf: Int? = null)
+
+/** Uma linha do placar como o script manda: um jogador numa dificuldade, com todos os números. */
+data class BoardEntry(
+    val name: String,
+    val you: Boolean,
+    val difficulty: Difficulty,
+    val points: Double?,
+    val accuracy: Double?,
+    val combo: Double?,
+    val perfect: Double?,
+    val clean: Double?,
+    val notes: Int?,
+) {
+    fun value(metric: RankingMetric): Double? = when (metric) {
+        RankingMetric.POINTS -> points
+        RankingMetric.ACCURACY -> accuracy
+        RankingMetric.COMBO -> combo
+        RankingMetric.PERFECT -> perfect
+        RankingMetric.CLEAN -> clean
+    }
+}
 
 data class Board(
     val difficulties: List<Difficulty>,
@@ -66,6 +88,8 @@ data class Submission(
     val combo: Int,
     val perfect: Int,
     val cleanMs: Long?,
+    /** O total de notas da partida (perfeitos + bons + erros), para "perfeitos de quantos". */
+    val notes: Int? = null,
 )
 
 /** Regras do nome (as mesmas do script): 3–20 letras, números, espaço, _ ou -. */

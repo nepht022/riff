@@ -20,15 +20,15 @@
 
 var MAX_BODY = 4000;
 var MAX_PER_HOUR = 60;    // envios por celular: o endereço está no APK
-var BOARD_LIMIT = 100;    // linhas do placar (mais a sua, se estiver fora)
 var NAME = /^[\p{L}\p{N} _-]{3,20}$/u;
 var METRICS = ['pontos', 'precisao', 'combo', 'perfeitos', 'semErrar'];
+var STORED = METRICS.concat(['notas']); // notas: o total da partida, para "perfeitos de quantos"
 var PLAYERS = 'Jogadores';
 var SCORES = 'Pontuações';
 // Colunas das abas (base 0).
 var P = { nome: 0, chaveNome: 1, hash: 2, criado: 3, atualizado: 4 };
 var S = { hash: 0, mapa: 1, titulo: 2, artista: 3, dificuldade: 4, pontos: 5, precisao: 6, combo: 7, perfeitos: 8,
-  semErrar: 9, atualizado: 10 };
+  semErrar: 9, atualizado: 10, notas: 11 };
 
 function doPost(e) {
   try {
@@ -39,7 +39,7 @@ function doPost(e) {
       case 'reservar': return answer(withLock(function () { return reserve(String(data.nome || ''), hash); }));
       case 'enviar': return answer(withLock(function () { return submit(data, hash); }));
       case 'musicas': return answer(songs(String(data.busca || ''), hash));
-      case 'placar': return answer(board(data, hash));
+      case 'placar': return answer(board(String(data.mapa || ''), hash));
       default: return answer({ ok: false, motivo: 'pedido' });
     }
   } catch (err) {
@@ -89,12 +89,13 @@ function submit(data, hash) {
   for (var i = 0; i < rows.length; i++) {
     if (rows[i][S.hash] === hash && rows[i][S.mapa] === map && rows[i][S.dificuldade] === difficulty) index = i;
   }
-  var row = index >= 0 ? rows[index].slice() : [hash, map, '', '', difficulty, '', '', '', '', '', ''];
+  var row = index >= 0 ? rows[index].slice() : [hash, map, '', '', difficulty, '', '', '', '', '', '', ''];
+  while (row.length <= S.notas) row.push(''); // linhas de antes da coluna das notas
   row[S.mapa] = safe(map);
   row[S.dificuldade] = safe(difficulty);
   row[S.titulo] = safe(text(data.titulo, 200));
   row[S.artista] = safe(text(data.artista, 200));
-  METRICS.forEach(function (metric) { row[S[metric]] = best(row[S[metric]], data[metric]); });
+  STORED.forEach(function (metric) { row[S[metric]] = best(row[S[metric]], data[metric]); });
   row[S.atualizado] = new Date().toISOString();
   if (index >= 0) {
     sheet.getRange(index + 1, 1, 1, row.length).setValues([row]);
@@ -137,29 +138,35 @@ function songs(query, hash) {
   return { ok: true, musicas: list };
 }
 
-function board(data, hash) {
-  var map = String(data.mapa || '');
-  var metric = METRICS.indexOf(data.ordem) >= 0 ? data.ordem : 'pontos';
+/**
+ * Todas as linhas de um mapa (todas as dificuldades e números): o celular ordena, troca de número e busca nome na
+ * hora, sem voltar aqui a cada filtro.
+ */
+function board(map, hash) {
   var rows = filled(tab(SCORES).getDataRange().getValues(), S.mapa);
-  var difficulties = [];
-  rows.forEach(function (row) {
-    if (row[S.mapa] === map && difficulties.indexOf(row[S.dificuldade]) < 0) difficulties.push(row[S.dificuldade]);
-  });
-  var difficulty = difficulties.indexOf(data.dificuldade) >= 0 ? data.dificuldade : difficulties[0];
-  var ranked = difficulty ? rank(rows, map, difficulty, metric, data.sentido !== 'asc') : [];
   var names = playerNames();
-  var query = String(data.busca || '').trim().toLowerCase();
   var lines = [];
-  ranked.forEach(function (entry, i) {
-    var name = names[entry.hash];
+  rows.forEach(function (row) {
+    if (row[S.mapa] !== map) return;
+    var name = names[row[S.hash]];
     if (!name) return; // jogador apagado da planilha
-    var mine = entry.hash === hash;
-    if (query && name.toLowerCase().indexOf(query) < 0) return;
-    if (lines.length < BOARD_LIMIT || mine) {
-      lines.push({ posicao: i + 1, nome: name, valor: entry.value, voce: mine });
-    }
+    lines.push({
+      nome: name,
+      voce: row[S.hash] === hash,
+      dificuldade: row[S.dificuldade],
+      pontos: number(row[S.pontos]),
+      precisao: number(row[S.precisao]),
+      combo: number(row[S.combo]),
+      perfeitos: number(row[S.perfeitos]),
+      semErrar: number(row[S.semErrar]),
+      notas: number(row[S.notas]),
+    });
   });
-  return { ok: true, dificuldades: difficulties, dificuldade: difficulty || null, total: ranked.length, linhas: lines };
+  return { ok: true, linhas: lines };
+}
+
+function number(value) {
+  return value === '' || value === null || value === undefined ? null : Number(value);
 }
 
 /** Quem tem o número (vazio não entra), do melhor para o pior ([descending]) ou ao contrário. */

@@ -26,4 +26,5 @@
     <string name="ranking_retry">Tentar de novo</string>
     <string name="ranking_not_configured">Ranking não configurado</string>
     <string name="ranking_empty">Ninguém no ranking ainda</string>
+    <string name="ranking_loading">Carregando…</string>
 </resources>

@@ -66,10 +66,11 @@ fun RankingSongsContent(
         }
         item { SearchField(state.query, stringResource(R.string.ranking_search_song), onQuery) }
         if (state.offline) item { Offline(onRetry) }
-        if (!state.offline && !state.loading && state.songs.isEmpty()) {
+        if (state.loading && state.songs.isEmpty()) item { Message(stringResource(R.string.ranking_loading)) }
+        if (!state.offline && !state.loading && state.shown.isEmpty()) {
             item { Message(stringResource(R.string.ranking_empty)) }
         }
-        items(state.songs, key = { it.chartId }) { song -> SongCard(song) { onSong(song) } }
+        items(state.shown, key = { it.chartId }) { song -> SongCard(song) { onSong(song) } }
     }
 }
 

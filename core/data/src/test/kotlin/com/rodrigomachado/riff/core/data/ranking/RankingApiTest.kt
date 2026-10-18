@@ -21,21 +21,26 @@ class RankingApiTest {
     }
 
     @Test
-    fun theBoardAsksWithOrderDirectionAndSearch() = runTest {
-        server.answer = """{"ok":true,"dificuldades":["HARD","EXPERT"],"dificuldade":"HARD","total":27,
-            "linhas":[{"posicao":3,"nome":"Rodrigo","valor":48300,"voce":true}]}"""
+    fun theBoardComesWholeForTheMap() = runTest {
+        server.answer = """{"ok":true,"linhas":[{"nome":"Rodrigo","voce":true,"dificuldade":"HARD","pontos":48300,
+            "precisao":0.88,"combo":42,"perfeitos":70,"semErrar":null,"notas":85}]}"""
 
-        val answer = RankingApi(
-            "https://x",
-            server,
-        ).board("k", "m1", null, RankingMetric.COMBO, descending = false, "ro")
+        val answer = RankingApi("https://x", server).board("k", "m1")
 
-        assertTrue(server.lastJson.contains(""""ordem":"combo""""))
-        assertTrue(server.lastJson.contains(""""sentido":"asc""""))
-        assertTrue(server.lastJson.contains(""""busca":"ro""""))
-        val board = (answer as ApiAnswer.Ok).value
-        assertEquals(listOf(Difficulty.HARD, Difficulty.EXPERT), board.difficulties)
-        assertEquals(BoardLine(3, "Rodrigo", 48_300.0, you = true), board.lines.single())
+        assertTrue(server.lastJson.contains(""""acao":"placar""""))
+        assertTrue(server.lastJson.contains(""""mapa":"m1""""))
+        val entry = (answer as ApiAnswer.Ok).value.single()
+        assertEquals(BoardEntry("Rodrigo", true, Difficulty.HARD, 48_300.0, 0.88, 42.0, 70.0, null, 85), entry)
+    }
+
+    @Test
+    fun theSubmissionCarriesTheTotalNotes() = runTest {
+        RankingApi("https://x", server).submit(
+            "k",
+            Submission("m1", Difficulty.HARD, "T", "A", 100, 0.9f, 5, 70, null, notes = 85),
+        )
+
+        assertTrue(server.lastJson.contains(""""notas":85"""))
     }
 
     @Test

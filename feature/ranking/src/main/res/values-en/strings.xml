@@ -26,4 +26,5 @@
     <string name="ranking_retry">Try again</string>
     <string name="ranking_not_configured">Ranking not set up</string>
     <string name="ranking_empty">Nobody in the ranking yet</string>
+    <string name="ranking_loading">Loading…</string>
 </resources>

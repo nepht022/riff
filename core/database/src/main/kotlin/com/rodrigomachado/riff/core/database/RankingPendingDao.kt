@@ -24,6 +24,8 @@ data class RankingPendingEntity(
     val perfect: Int,
     val cleanMs: Long?,
     val createdAtEpochMs: Long,
+    /** Total de notas da partida; nulo nas filas de antes da medida. */
+    val notes: Int? = null,
 )
 
 @Dao

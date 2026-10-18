@@ -53,13 +53,8 @@ interface RankingRepository {
 
     suspend fun songs(query: String): ApiAnswer<List<RankedSong>>
 
-    suspend fun board(
-        chartId: String,
-        difficulty: Difficulty?,
-        metric: RankingMetric,
-        descending: Boolean,
-        query: String,
-    ): ApiAnswer<Board>
+    /** Todas as linhas do mapa; o placar é montado no celular ([rankBoard]). */
+    suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>>
 }
 
 @Suppress("LongParameterList")
@@ -162,13 +157,7 @@ class AppsScriptRankingRepository(
 
     override suspend fun songs(query: String) = api.songs(players.player.first().key.orEmpty(), query)
 
-    override suspend fun board(
-        chartId: String,
-        difficulty: Difficulty?,
-        metric: RankingMetric,
-        descending: Boolean,
-        query: String,
-    ) = api.board(players.player.first().key.orEmpty(), chartId, difficulty, metric, descending, query)
+    override suspend fun board(chartId: String) = api.board(players.player.first().key.orEmpty(), chartId)
 
     /** Os melhores de cada número por mapa e dificuldade, inclusive os de antes de ter nome. */
     private suspend fun queueHistory() {
@@ -203,10 +192,14 @@ private fun List<ScoreRecord>.best(title: String, artist: String) = Submission(
     maxOf { it.maxCombo },
     maxOf { it.perfect },
     mapNotNull { it.cleanStreakMs }.maxOrNull(),
+    maxOf { it.notes },
 )
 
 private fun ScoreRecord.toSubmission(title: String, artist: String) =
-    Submission(chartId, difficulty, title, artist, score, accuracy, maxCombo, perfect, cleanStreakMs)
+    Submission(chartId, difficulty, title, artist, score, accuracy, maxCombo, perfect, cleanStreakMs, notes)
+
+/** Todas as notas da partida: no fim, cada uma foi perfeita, boa ou erro. */
+private val ScoreRecord.notes: Int get() = perfect + good + miss
 
 private fun Submission.toPending(scoreId: Long?) = RankingPendingEntity(
     scoreId = scoreId,
@@ -220,6 +213,7 @@ private fun Submission.toPending(scoreId: Long?) = RankingPendingEntity(
     perfect = perfect,
     cleanMs = cleanMs,
     createdAtEpochMs = System.currentTimeMillis(),
+    notes = notes,
 )
 
 private fun RankingPendingEntity.toSubmission() = Submission(
@@ -232,6 +226,7 @@ private fun RankingPendingEntity.toSubmission() = Submission(
     combo,
     perfect,
     cleanMs,
+    notes,
 )
 
 /** O escopo do app para o ranking: o envio continua depois de a tela da partida sair. */

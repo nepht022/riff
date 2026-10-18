@@ -217,4 +217,23 @@ class MigrationTest {
             close()
         }
     }
+
+    @Test
+    fun version10BecomesVersion11WithNotesInTheRankingQueue() {
+        helper.createDatabase(10).apply {
+            execSQL(
+                "INSERT INTO ranking_pending (scoreId, chartId, difficulty, title, artist, points, accuracy, combo, " +
+                    "perfect, cleanMs, createdAtEpochMs) VALUES (1, 'a', 'HARD', 'T', 'A', 100, 0.9, 5, 4, NULL, 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(11).apply {
+            prepare("SELECT notes FROM ranking_pending").use {
+                it.step()
+                assertTrue(it.isNull(0))
+            }
+            close()
+        }
+    }
 }

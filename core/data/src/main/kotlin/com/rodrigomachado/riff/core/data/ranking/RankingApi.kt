@@ -36,7 +36,8 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
             .put("mapa", submission.chartId).put("titulo", submission.title).put("artista", submission.artist)
             .put("dificuldade", submission.difficulty.name).put("pontos", submission.points)
             .put("precisao", submission.accuracy.toDouble()).put("combo", submission.combo)
-            .put("perfeitos", submission.perfect).put("semErrar", submission.cleanMs ?: JSONObject.NULL),
+            .put("perfeitos", submission.perfect).put("semErrar", submission.cleanMs ?: JSONObject.NULL)
+            .put("notas", submission.notes ?: JSONObject.NULL),
     ) { json ->
         if (json.isNull("posicao")) null else SubmitStatus.Placed(json.getInt("posicao"), json.getInt("total"))
     }
@@ -55,30 +56,27 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
             }
         }
 
-    @Suppress("LongParameterList") // os filtros do placar
-    suspend fun board(
-        key: String,
-        chartId: String,
-        difficulty: Difficulty?,
-        metric: RankingMetric,
-        descending: Boolean,
-        query: String,
-    ): ApiAnswer<Board> = call(
-        JSONObject().put("acao", "placar").put("chave", key).put("mapa", chartId)
-            .put("dificuldade", difficulty?.name ?: JSONObject.NULL).put("ordem", metric.wire)
-            .put("sentido", if (descending) "desc" else "asc").put("busca", query),
-    ) { json ->
-        val levels = json.getJSONArray("dificuldades")
-        val lines = json.getJSONArray("linhas")
-        Board(
-            (0 until levels.length()).mapNotNull { difficultyOf(levels.getString(it)) },
-            if (json.isNull("dificuldade")) null else difficultyOf(json.getString("dificuldade")),
-            json.getInt("total"),
-            (0 until lines.length()).map { lines.getJSONObject(it) }.map {
-                BoardLine(it.getInt("posicao"), it.getString("nome"), it.getDouble("valor"), it.getBoolean("voce"))
-            },
-        )
-    }
+    /** Todas as linhas do mapa, de todas as dificuldades: o placar é montado no celular ([rankBoard]). */
+    suspend fun board(key: String, chartId: String): ApiAnswer<List<BoardEntry>> =
+        call(JSONObject().put("acao", "placar").put("chave", key).put("mapa", chartId)) { json ->
+            val lines = json.getJSONArray("linhas")
+            (0 until lines.length()).map { lines.getJSONObject(it) }.mapNotNull { line ->
+                val difficulty = difficultyOf(line.getString("dificuldade")) ?: return@mapNotNull null
+                BoardEntry(
+                    line.getString("nome"),
+                    line.getBoolean("voce"),
+                    difficulty,
+                    line.number("pontos"),
+                    line.number("precisao"),
+                    line.number("combo"),
+                    line.number("perfeitos"),
+                    line.number("semErrar"),
+                    line.number("notas")?.toInt(),
+                )
+            }
+        }
+
+    private fun JSONObject.number(name: String): Double? = if (isNull(name)) null else getDouble(name)
 
     @Suppress("SwallowedException") // sem rede ou resposta estranha: o envio fica na fila e tenta de novo
     private suspend fun <T> call(request: JSONObject, read: (JSONObject) -> T): ApiAnswer<T> {

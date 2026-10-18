@@ -83,7 +83,7 @@ fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modif
                 verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
             ) {
                 for (difficulty in state.board?.difficulties.orEmpty()) {
-                    Chip(stringResource(difficultyLabel(difficulty.ordinal)), difficulty == state.difficulty) {
+                    Chip(stringResource(difficultyLabel(difficulty.ordinal)), difficulty == state.board?.difficulty) {
                         actions.onDifficulty(difficulty)
                     }
                 }
@@ -107,6 +107,7 @@ fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modif
         item { SearchField(state.query, stringResource(R.string.ranking_search_name), actions.onQuery) }
         if (state.offline) item { Offline(actions.onRetry) }
         val lines = state.board?.lines.orEmpty()
+        if (state.loading && state.board == null) item { Message(stringResource(R.string.ranking_loading)) }
         if (!state.offline && !state.loading && lines.isEmpty()) {
             item {
                 Message(
@@ -141,25 +142,25 @@ private fun Line(line: BoardLine, metric: RankingMetric) {
             color = RiffColors.Paper,
         )
         Text(
-            formatValue(metric, line.value, LocalConfiguration.current.locales[0]),
+            formatValue(metric, line.value, line.outOf, LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.titleMedium,
             color = RiffColors.Paper,
         )
     }
 }
 
-/** Pontos agrupados, precisão em %, tempo sem errar em m:ss, o resto inteiro. */
+/** Pontos agrupados, precisão em %, tempo sem errar em m:ss, perfeitos "de quantos" (70/85), o resto inteiro. */
 internal fun formatValue(
     metric: RankingMetric,
     value: Double,
-    locale: Locale = Locale.forLanguageTag(
-        "pt-BR",
-    ),
+    outOf: Int? = null,
+    locale: Locale = Locale.forLanguageTag("pt-BR"),
 ): String = when (metric) {
     RankingMetric.POINTS -> NumberFormat.getIntegerInstance(locale).format(value.toLong())
     RankingMetric.ACCURACY -> NumberFormat.getPercentInstance(locale).format(value)
     RankingMetric.CLEAN -> (value.toLong() / MS_PER_SECOND).let { "%d:%02d".format(it / SECONDS, it % SECONDS) }
-    RankingMetric.COMBO, RankingMetric.PERFECT -> value.toLong().toString()
+    RankingMetric.PERFECT -> value.toLong().toString() + outOf?.let { "/$it" }.orEmpty()
+    RankingMetric.COMBO -> value.toLong().toString()
 }
 
 private fun RankingMetric.label(): Int = when (this) {
