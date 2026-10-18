@@ -22,7 +22,15 @@ class SessionSnapshotTest {
     @Test
     fun aPlayingTrackBecomesPlaybackWithTheSessionClock() {
         assertEquals(
-            PlaybackState("spotify:track:1", "T", "A", 200_000, 10_000 - 340, isPaused = false, capturedAtElapsedMs = 500),
+            PlaybackState(
+                "spotify:track:1",
+                "T",
+                "A",
+                200_000,
+                10_000 - 340,
+                isPaused = false,
+                capturedAtElapsedMs = 500,
+            ),
             snap().toPlaybackState(-340),
         )
     }

@@ -47,7 +47,11 @@ class AndroidSpotifySession @Inject constructor(@ApplicationContext private val 
             false
         }
 
-    private val sessionsChanged = MediaSessionManager.OnActiveSessionsChangedListener { attach(spotifyIn(it.orEmpty())) }
+    private val sessionsChanged = MediaSessionManager.OnActiveSessionsChangedListener {
+        attach(
+            spotifyIn(it.orEmpty()),
+        )
+    }
 
     private val callback = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) = publish()

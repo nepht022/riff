@@ -18,8 +18,7 @@ import org.junit.Test
 class MediaSessionSpotifyTest {
     private val session = FakeSpotifySession()
 
-    private fun TestScope.remote() =
-        MediaSessionSpotify(session, correctionMs = 0, scope = backgroundScope)
+    private fun TestScope.remote() = MediaSessionSpotify(session, correctionMs = 0, scope = backgroundScope)
 
     private fun playing(uri: String, positionMs: Long = 30_000, at: Long = 0) =
         SessionSnapshot(uri, "T", "A", 200_000, STATE_PLAYING, positionMs, at, 1f, isAd = false)
