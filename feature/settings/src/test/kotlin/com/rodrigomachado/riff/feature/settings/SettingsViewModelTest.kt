@@ -84,7 +84,6 @@ class SettingsViewModelTest {
         val viewModel = viewModel()
 
         viewModel.setMasterVolume(0.8f)
-        viewModel.setHitVolume(0.1f)
         viewModel.setMissVolume(0.9f)
         viewModel.setNoteSpeed(1.5f)
         viewModel.setLeftHanded(true)
@@ -92,7 +91,6 @@ class SettingsViewModelTest {
         assertEquals(
             Settings.DEFAULT.copy(
                 masterVolume = 0.8f,
-                hitVolume = 0.1f,
                 missVolume = 0.9f,
                 noteSpeed = 1.5f,
                 leftHanded = true,
@@ -105,10 +103,10 @@ class SettingsViewModelTest {
     fun outOfRangeValuesAreKeptInsideTheLimits() = runTest {
         val viewModel = viewModel()
 
-        viewModel.setHitVolume(1.3f)
+        viewModel.setMissVolume(1.3f)
         viewModel.setNoteSpeed(9f)
 
-        assertEquals(1f, repository.settings.value.hitVolume)
+        assertEquals(1f, repository.settings.value.missVolume)
         assertEquals(Settings.MAX_NOTE_SPEED, repository.settings.value.noteSpeed)
     }
 
@@ -117,19 +115,16 @@ class SettingsViewModelTest {
         val viewModel = viewModel()
 
         viewModel.setMasterVolume(0.5f)
-        viewModel.setHitVolume(0.4f)
-        viewModel.previewHit()
         viewModel.previewMiss()
 
-        assertEquals(listOf("hit:2", "miss"), sfx.played)
-        assertEquals(0.2f, sfx.hitVolume, 1e-6f)
+        assertEquals(listOf("miss"), sfx.played)
         assertEquals(0.3f, sfx.missVolume, 1e-6f)
     }
 
     @Test
     fun leavingTheScreenReleasesTheSounds() = runTest {
         val viewModel = viewModel()
-        viewModel.previewHit()
+        viewModel.previewMiss()
 
         viewModel.release()
 

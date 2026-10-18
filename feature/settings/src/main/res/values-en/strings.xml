@@ -5,7 +5,6 @@
     <string name="settings_sounds">Sounds</string>
     <string name="settings_master_volume">App volume</string>
     <string name="settings_master_volume_hint">Doesn\'t change Spotify\'s volume; use the phone volume.</string>
-    <string name="settings_hit_volume">Hit sound</string>
     <string name="settings_miss_volume">Miss sound</string>
     <string name="settings_game">Game</string>
     <string name="settings_note_speed">Note speed</string>

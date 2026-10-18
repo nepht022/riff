@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -76,7 +77,7 @@ fun RankingSongsContent(
 
 @Composable
 private fun SongCard(song: RankedSong, onClick: () -> Unit) {
-    val players = stringResource(R.string.ranking_players, song.players)
+    val players = pluralStringResource(R.plurals.ranking_players, song.players, song.players)
     val place = song.yourPosition?.let { " · " + stringResource(R.string.ranking_your_place, it) }.orEmpty()
     Column(
         Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small)

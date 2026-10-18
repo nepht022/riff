@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.ui.component
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -142,7 +143,8 @@ private fun failedText(status: SeparationStatus.Failed) = when (status.reason) {
 @Composable
 private fun Pick(failed: Boolean) {
     val color = if (failed) RiffColors.StampError else RiffColors.TourRed
-    Canvas(Modifier.size(PICK)) {
+    // Larga em cima e fina na ponta: centrada pela caixa ela parece subida; desce até o centro de massa cair no meio.
+    Canvas(Modifier.offset(y = PICK_NUDGE).size(PICK)) {
         val w = size.width
         val h = size.height
         val path = Path().apply {
@@ -158,5 +160,6 @@ private fun Pick(failed: Boolean) {
 
 private val RING = 34.dp
 private val PICK = 18.dp
+private val PICK_NUDGE = 1.5.dp
 private const val PERCENT = 100
 private const val MS_PER_MIN = 60_000.0

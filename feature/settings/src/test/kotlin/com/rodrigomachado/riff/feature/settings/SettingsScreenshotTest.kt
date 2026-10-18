@@ -56,12 +56,10 @@ class SettingsScreenshotTest {
                     SettingsContent(
                         settings = Settings.DEFAULT.copy(hitVolume = 0.3f, leftHanded = true, queuePrefetch = true),
                         onMasterVolume = {},
-                        onHitVolume = {},
                         onMissVolume = {},
                         onNoteSpeed = {},
                         onLeftHanded = {},
                         onMenuSounds = {},
-                        onPreviewHit = {},
                         onPreviewMiss = {},
                         onCalibrate = {},
                         onBack = {},

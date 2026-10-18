@@ -69,12 +69,10 @@ class SettingsContentTest {
                     SettingsContent(
                         settings = settings,
                         onMasterVolume = {},
-                        onHitVolume = {},
                         onMissVolume = {},
                         onNoteSpeed = {},
                         onLeftHanded = { leftHanded = it },
                         onMenuSounds = { menuSounds = it },
-                        onPreviewHit = {},
                         onPreviewMiss = {},
                         onCalibrate = {},
                         onBack = { back = true },
@@ -128,7 +126,7 @@ class SettingsContentTest {
         tab("Sons")
         composeRule.onNodeWithText("Volume geral").assertExists()
         composeRule.onNodeWithText("80%").assertExists()
-        composeRule.onNodeWithText("Som de acerto").assertExists()
+        composeRule.onNodeWithText("Som de acerto").assertDoesNotExist() // as partidas não têm mais som de acerto
         composeRule.onNodeWithText("Som de erro").assertExists()
         composeRule.onNodeWithTag(SettingsTestTags.MASTER_VOLUME)
             .assertRangeInfoEquals(ProgressBarRangeInfo(0.8f, 0f..1f, steps = 19))
@@ -172,12 +170,10 @@ class SettingsContentTest {
                 SettingsContent(
                     settings = Settings.DEFAULT.copy(audioOffsetMs = -42),
                     onMasterVolume = {},
-                    onHitVolume = {},
                     onMissVolume = {},
                     onNoteSpeed = {},
                     onLeftHanded = {},
                     onMenuSounds = {},
-                    onPreviewHit = {},
                     onPreviewMiss = {},
                     onCalibrate = { opened = true },
                     onBack = {},

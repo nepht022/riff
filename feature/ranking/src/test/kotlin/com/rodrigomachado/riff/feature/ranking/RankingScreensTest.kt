@@ -136,6 +136,23 @@ class RankingScreensTest {
     }
 
     @Test
+    fun oneSingularPlayer() {
+        composeRule.setContent {
+            RiffTheme {
+                RankingSongsContent(
+                    RankingSongsUiState(songs = listOf(RankedSong("m1", "Teen Spirit", "Nirvana", 1, 1))),
+                    onQuery = {},
+                    onSong = {},
+                    onRetry = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Nirvana · 1 jogador com pontuação · Você em 1º").assertExists()
+    }
+
+    @Test
     fun boardMarksYouAndShowsTheValues() {
         val events = mutableListOf<String>()
         composeRule.setContent {

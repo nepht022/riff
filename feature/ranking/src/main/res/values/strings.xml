@@ -11,7 +11,6 @@
     <string name="ranking_back">Voltar</string>
     <string name="ranking_search_song">Pesquisar música ou artista</string>
     <string name="ranking_search_name">Pesquisar nome</string>
-    <string name="ranking_players">%1$d jogadores com pontuação</string>
     <string name="ranking_your_place">Você em %1$dº</string>
     <string name="ranking_you">%1$s (você)</string>
     <string name="ranking_position">%1$dº</string>
@@ -27,4 +26,8 @@
     <string name="ranking_not_configured">Ranking não configurado</string>
     <string name="ranking_empty">Ninguém no ranking ainda</string>
     <string name="ranking_loading">Carregando…</string>
+    <plurals name="ranking_players">
+        <item quantity="one">%1$d jogador com pontuação</item>
+        <item quantity="other">%1$d jogadores com pontuação</item>
+    </plurals>
 </resources>

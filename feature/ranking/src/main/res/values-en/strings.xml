@@ -11,7 +11,6 @@
     <string name="ranking_back">Back</string>
     <string name="ranking_search_song">Search song or artist</string>
     <string name="ranking_search_name">Search name</string>
-    <string name="ranking_players">%1$d players with a score</string>
     <string name="ranking_your_place">You at #%1$d</string>
     <string name="ranking_you">%1$s (you)</string>
     <string name="ranking_position">#%1$d</string>
@@ -27,4 +26,8 @@
     <string name="ranking_not_configured">Ranking not set up</string>
     <string name="ranking_empty">Nobody in the ranking yet</string>
     <string name="ranking_loading">Loading…</string>
+    <plurals name="ranking_players">
+        <item quantity="one">%1$d player with a score</item>
+        <item quantity="other">%1$d players with a score</item>
+    </plurals>
 </resources>
