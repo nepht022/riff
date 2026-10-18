@@ -60,6 +60,8 @@ class SettingsContentTest {
         sounds.clear()
     }
 
+    private var rankingName: RankingName? = null
+
     private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
         composeRule.setContent {
             CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
@@ -84,10 +86,39 @@ class SettingsContentTest {
                         onLanguage = { languages += it },
                         queue = queueState,
                         onQueue = { events += it.toString() },
+                        rankingName = rankingName,
+                        onRankingName = { events += "rankingName" },
                     )
                 }
             }
         }
+
+    @Test
+    fun generalShowsTheRankingNameAndOpensTheRename() {
+        rankingName = RankingName("Rodrigo")
+        show()
+
+        composeRule.onNodeWithText("Nome no ranking").assertExists()
+        composeRule.onNodeWithText("Rodrigo").performClick()
+
+        assertEquals(listOf("rankingName"), events)
+    }
+
+    @Test
+    fun withoutAChosenNameTheRowInvitesToChoose() {
+        rankingName = RankingName(null)
+        show()
+
+        composeRule.onNodeWithText("Escolher").assertExists()
+    }
+
+    /** Sem o endereço do ranking no build, não há nome a mostrar. */
+    @Test
+    fun withoutTheRankingThereIsNoNameRow() {
+        show()
+
+        composeRule.onNodeWithText("Nome no ranking").assertDoesNotExist()
+    }
 
     @Test
     fun showsEverySettingWithItsCurrentValue() {

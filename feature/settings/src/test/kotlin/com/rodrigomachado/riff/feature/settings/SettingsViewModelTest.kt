@@ -39,8 +39,41 @@ class SettingsViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    private val ranking = object : com.rodrigomachado.riff.core.data.ranking.RankingRepository {
+        override val isConfigured = false
+        override val player = kotlinx.coroutines.flow.MutableStateFlow(
+            com.rodrigomachado.riff.core.data.ranking.Player(null, null),
+        )
+        override val askedLater = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+        override fun askLater() = Unit
+
+        override suspend fun register(name: String) = com.rodrigomachado.riff.core.data.ranking.NameResult.Offline
+
+        override fun submitIfBest(
+            record: com.rodrigomachado.riff.core.model.ScoreRecord,
+            title: String,
+            artist: String,
+        ) = Unit
+
+        override fun statusFor(scoreId: Long) =
+            kotlinx.coroutines.flow.MutableStateFlow<com.rodrigomachado.riff.core.data.ranking.SubmitStatus?>(null)
+
+        override suspend fun flush() = Unit
+
+        override suspend fun songs(query: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+
+        override suspend fun board(
+            chartId: String,
+            difficulty: com.rodrigomachado.riff.core.model.Difficulty?,
+            metric: com.rodrigomachado.riff.core.data.ranking.RankingMetric,
+            descending: Boolean,
+            query: String,
+        ) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+    }
+
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository, separations, language, webAuth, folder, folder) { sfx }
+        val viewModel = SettingsViewModel(repository, separations, language, webAuth, folder, folder, ranking) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }

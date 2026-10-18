@@ -9,6 +9,7 @@ import com.rodrigomachado.riff.core.data.AppLanguageStore
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
+import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,8 +36,14 @@ class SettingsViewModel @Inject constructor(
     private val webAuth: SpotifyWebAuth,
     folders: LibraryFolderStore,
     folderAccess: FolderAccess,
+    ranking: RankingRepository,
     sfxPlayers: SfxPlayerFactory,
 ) : ViewModel() {
+    /** O nome no ranking; `null` sem o ranking no build (a linha some). */
+    val rankingName: StateFlow<RankingName?> =
+        (if (ranking.isConfigured) ranking.player.map { RankingName(it.name) } else flowOf(null))
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
     /** `null` enquanto as preferências carregam. */
     val uiState: StateFlow<Settings?> =
         repository.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)

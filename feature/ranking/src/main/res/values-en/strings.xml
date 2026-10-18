@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ranking_title">Ranking</string>
+    <string name="ranking_name_title">Your ranking name</string>
+    <string name="ranking_name_field">Name</string>
+    <string name="ranking_name_save">Save</string>
+    <string name="ranking_name_later">Not now</string>
+    <string name="ranking_name_taken">That name belongs to someone else</string>
+    <string name="ranking_name_invalid">Use 3 to 20 letters, numbers, space, _ or -</string>
+    <string name="ranking_name_offline">No internet: try again later</string>
+</resources>

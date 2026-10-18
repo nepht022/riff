@@ -64,8 +64,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onCalibrate: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Trocar o nome no ranking (o diálogo é do app, o mesmo da primeira abertura). */
+    onRankingName: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
+    val rankingName by viewModel.rankingName.collectAsStateWithLifecycle()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
     val queueMessage by viewModel.queueMessage.collectAsStateWithLifecycle()
@@ -96,6 +99,8 @@ fun SettingsScreen(
         onShowChartImage = viewModel::setShowChartImage,
         queue = QueueUiState(queueMessage, canWriteToLibrary),
         onQueue = viewModel::onQueue,
+        rankingName = rankingName,
+        onRankingName = onRankingName,
         onLanguage = {
             viewModel.setLanguage(it)
             // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
@@ -127,6 +132,8 @@ fun SettingsContent(
     queue: QueueUiState = QueueUiState(message = null, canWriteToLibrary = true),
     onQueue: (QueueAction) -> Unit = {},
     initialTab: SettingsTab = SettingsTab.GENERAL,
+    rankingName: RankingName? = null,
+    onRankingName: () -> Unit = {},
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
     var tab by rememberSaveable { mutableStateOf(initialTab) }
@@ -147,7 +154,14 @@ fun SettingsContent(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 when (tab) {
-                    SettingsTab.GENERAL -> GeneralTab(language, onLanguage, settings.menuSounds, onMenuSounds)
+                    SettingsTab.GENERAL -> GeneralTab(
+                        language,
+                        onLanguage,
+                        settings.menuSounds,
+                        onMenuSounds,
+                        rankingName,
+                        onRankingName,
+                    )
 
                     SettingsTab.SOUNDS -> SoundsTab(
                         settings,

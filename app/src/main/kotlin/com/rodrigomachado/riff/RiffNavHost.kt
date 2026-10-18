@@ -2,8 +2,11 @@ package com.rodrigomachado.riff
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -24,6 +27,7 @@ import com.rodrigomachado.riff.feature.library.TrackToMatch
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingAutoPlay
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
+import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
@@ -43,17 +47,9 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
     val navController = rememberNavController()
     // Salvo com a tela: girar o celular ou o Android fechar o app em segundo plano não perde as telas abertas.
     val back = rememberSaveable(saver = Saver({ it.save() }, BackNavigation::restore)) { BackNavigation() }
-    val playMenuSound = LocalMenuSound.current
-    // Som de voltar ao sair de uma tela, pelo botão Voltar, pelo gesto do celular ou pelo Sair da partida.
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntryFlow.collect { if (back.onShown(it.id)) playMenuSound(MenuSound.BACK) }
-    }
-    LaunchedEffect(openLibrary) {
-        if (openLibrary) {
-            navController.navigate(LibraryRoute()) { launchSingleTop = true }
-            onLibraryOpened()
-        }
-    }
+    NavigationEffects(navController, back, openLibrary, onLibraryOpened)
+    // Trocar o nome do ranking pelas Configurações (o mesmo diálogo da primeira abertura).
+    var renamingPlayer by rememberSaveable { mutableStateOf(false) }
     NavHost(
         navController,
         startDestination = NowPlayingRoute,
@@ -94,10 +90,33 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
                 },
             )
         }
-        settingsDestinations(navController, back)
+        settingsDestinations(navController, back) { renamingPlayer = true }
         libraryDestinations(navController, back)
         searchDestinations(navController, back)
         matchDestinations(navController)
+    }
+    // O nome do ranking na primeira abertura, por cima do Tocando agora ou da Biblioteca.
+    PlayerNameGate(renaming = renamingPlayer, onRenameClosed = { renamingPlayer = false })
+}
+
+/** O som de voltar entre telas e a Biblioteca aberta pela notificação da separação. */
+@Composable
+private fun NavigationEffects(
+    navController: NavHostController,
+    back: BackNavigation,
+    openLibrary: Boolean,
+    onLibraryOpened: () -> Unit,
+) {
+    val playMenuSound = LocalMenuSound.current
+    // Som de voltar ao sair de uma tela, pelo botão Voltar, pelo gesto do celular ou pelo Sair da partida.
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { if (back.onShown(it.id)) playMenuSound(MenuSound.BACK) }
+    }
+    LaunchedEffect(openLibrary) {
+        if (openLibrary) {
+            navController.navigate(LibraryRoute()) { launchSingleTop = true }
+            onLibraryOpened()
+        }
     }
 }
 
@@ -180,11 +199,16 @@ private fun NavGraphBuilder.searchDestinations(navController: NavHostController,
 }
 
 /** Configurações e calibração, abertas a partir de "Tocando agora". */
-private fun NavGraphBuilder.settingsDestinations(navController: NavHostController, back: BackNavigation) {
+private fun NavGraphBuilder.settingsDestinations(
+    navController: NavHostController,
+    back: BackNavigation,
+    onRankingName: () -> Unit,
+) {
     composable<SettingsRoute> {
         SettingsScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
+            onRankingName = onRankingName,
         )
     }
     composable<ReportRoute> {
