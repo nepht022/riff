@@ -56,6 +56,11 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
     /** Nome de jogador do ranking e a chave deste celular (os dois juntos: um nome sem chave não vale nada). */
     val player: Flow<Pair<String?, String?>> = safeData.map { it[PLAYER_NAME] to it[PLAYER_KEY] }
 
+    /** Só a chave, antes da primeira reserva: se a resposta se perder, a nova tentativa usa a mesma. */
+    suspend fun setPlayerKey(key: String) {
+        dataStore.edit { it[PLAYER_KEY] = key }
+    }
+
     suspend fun setPlayer(name: String, key: String) {
         dataStore.edit {
             it[PLAYER_NAME] = name

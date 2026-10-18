@@ -14,12 +14,16 @@ interface PlayerStore {
     val player: Flow<Player>
 
     suspend fun save(name: String, key: String)
+
+    suspend fun saveKey(key: String)
 }
 
 class DataStorePlayerStore @Inject constructor(private val preferences: RiffPreferences) : PlayerStore {
     override val player: Flow<Player> = preferences.player.map { (name, key) -> Player(name, key) }
 
     override suspend fun save(name: String, key: String) = preferences.setPlayer(name, key)
+
+    override suspend fun saveKey(key: String) = preferences.setPlayerKey(key)
 }
 
 /** O histórico de partidas deste celular, para saber se uma partida é a melhor e enviar os melhores antigos. */

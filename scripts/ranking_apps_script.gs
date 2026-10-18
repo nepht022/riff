@@ -62,14 +62,15 @@ function reserve(rawName, hash) {
   var key = name.toLowerCase();
   var mine = -1;
   for (var i = 0; i < rows.length; i++) {
-    if (rows[i][P.chaveNome] === key && rows[i][P.hash] !== hash) return { ok: false, motivo: 'nome_em_uso' };
-    if (rows[i][P.hash] === hash) mine = i;
+    var owner = String(rows[i][P.hash]);
+    if (String(rows[i][P.chaveNome]) === key && owner !== hash) return { ok: false, motivo: 'nome_em_uso' };
+    if (owner === hash) mine = i;
   }
   var now = new Date().toISOString();
   if (mine < 0) {
-    sheet.appendRow([name, key, hash, now, now]);
+    sheet.appendRow([safe(name), safe(key), hash, now, now]);
   } else {
-    sheet.getRange(mine + 1, P.nome + 1, 1, 2).setValues([[name, key]]);
+    sheet.getRange(mine + 1, P.nome + 1, 1, 2).setValues([[safe(name), safe(key)]]);
     sheet.getRange(mine + 1, P.atualizado + 1, 1, 1).setValues([[now]]);
   }
   return { ok: true, nome: name };
@@ -88,18 +89,19 @@ function submit(data, hash) {
   for (var i = 0; i < rows.length; i++) {
     if (rows[i][S.hash] === hash && rows[i][S.mapa] === map && rows[i][S.dificuldade] === difficulty) index = i;
   }
-  var row = index >= 0 ? rows[index] : [hash, map, '', '', difficulty, '', '', '', '', '', ''];
-  row[S.titulo] = text(data.titulo, 200);
-  row[S.artista] = text(data.artista, 200);
+  var row = index >= 0 ? rows[index].slice() : [hash, map, '', '', difficulty, '', '', '', '', '', ''];
+  row[S.mapa] = safe(map);
+  row[S.dificuldade] = safe(difficulty);
+  row[S.titulo] = safe(text(data.titulo, 200));
+  row[S.artista] = safe(text(data.artista, 200));
   METRICS.forEach(function (metric) { row[S[metric]] = best(row[S[metric]], data[metric]); });
   row[S.atualizado] = new Date().toISOString();
   if (index >= 0) {
     sheet.getRange(index + 1, 1, 1, row.length).setValues([row]);
-    rows[index] = row;
   } else {
     sheet.appendRow(row);
-    rows.push(row);
   }
+  rows = sheet.getDataRange().getValues(); // como a planilha guardou
   var ranked = rank(rows, map, difficulty, 'pontos', true);
   for (var j = 0; j < ranked.length; j++) {
     if (ranked[j].hash === hash) return { ok: true, posicao: j + 1, total: ranked.length };
@@ -192,7 +194,7 @@ function playerOf(hash) {
 
 function playerNames() {
   var names = {};
-  tab(PLAYERS).getDataRange().getValues().forEach(function (row) { names[row[P.hash]] = row[P.nome]; });
+  tab(PLAYERS).getDataRange().getValues().forEach(function (row) { names[row[P.hash]] = String(row[P.nome]); });
   return names;
 }
 
@@ -225,9 +227,23 @@ function book() {
   return created;
 }
 
+/**
+ * A aba, criada em formato de texto: sem ele a planilha converte sozinha ("007" vira 7, "true" vira verdadeiro) e
+ * dois celulares conseguiriam o mesmo nome.
+ */
 function tab(name) {
   var spreadsheet = book();
-  return spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  var existing = spreadsheet.getSheetByName(name);
+  if (existing) return existing;
+  var created = spreadsheet.insertSheet(name);
+  created.getRange('A:Z').setNumberFormat('@');
+  return created;
+}
+
+/** Texto que a planilha leria como fórmula (=, +, -, @) vai com apóstrofo: fica texto e o apóstrofo não aparece. */
+function safe(value) {
+  var v = String(value);
+  return /^[=+\-@]/.test(v) ? "'" + v : v;
 }
 
 /** A chave do celular nunca fica na planilha: só o hash dela. */

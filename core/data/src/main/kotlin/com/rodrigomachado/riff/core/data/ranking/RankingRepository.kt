@@ -99,7 +99,9 @@ class AppsScriptRankingRepository(
         val clean = name.trim()
         if (!PlayerNames.isValid(clean)) return NameResult.Invalid
         val before = players.player.first()
-        val key = before.key ?: keys()
+        // A chave fica guardada antes de reservar: se o script gravar e a resposta se perder, a próxima tentativa
+        // é do mesmo celular (senão o próprio nome viraria "em uso").
+        val key = before.key ?: keys().also { players.saveKey(it) }
         return when (val answer = api.reserve(clean, key)) {
             is ApiAnswer.Ok -> {
                 players.save(answer.value, key)
@@ -121,6 +123,7 @@ class AppsScriptRankingRepository(
             val earlier = history.of(record.chartId, record.difficulty).filter { it.id != record.id }
             if (!record.improves(earlier)) {
                 status.value = SubmitStatus.NotBest
+                flush() // o que ficou na fila sai ao terminar qualquer partida (spec §4)
                 return@launch
             }
             pending.insert(record.toSubmission(title, artist).toPending(record.id))

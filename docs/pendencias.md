@@ -133,3 +133,16 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Prazo do fim da música superestimado (não soma o tempo desde o último estado do Spotify); só deixa a espera mais longa.
 - Abrir a partida de uma sugestão já marca o mapa da fila como jogado: Voltar/Escolher outro deixam esse mapa fora da limpeza automática.
 - Comentários antigos dizem que a fila não baixa durante a partida (`MatchActivity`, `GameplayViewModel`).
+
+## Ranking online (revisão final, 2026-10-17)
+
+- O pedido do nome lê o nome atual com `runBlocking` na abertura do ViewModel (leitura do DataStore na thread da tela).
+- Fechar a troca de nome tocando fora não limpa o erro nem o texto digitado.
+- Depois de o Android matar o app em segundo plano, o pedido do nome pode aparecer sobre a partida restaurada.
+- Jogador apagado da planilha: a fila fica presa (`sem_nome`) e o Resultado diz "Sem internet".
+- Corrida estreita no status do Resultado ("Ranking: Nº" sobrescrito por "Enviando…/Sem internet").
+- O script aceita chave vazia (pedido forjado) e não limita reservas por hora.
+- O envio do histórico pode passar do limite de 60 por hora e se espalhar por várias aberturas.
+- Posições com buracos quando um jogador é apagado da planilha; dificuldades do placar na ordem de inserção.
+- O log de erro do script (do dono) pode conter um trecho da chave num JSON inválido.
+- "Tempo sem errar" subconta quando notas de trilhas diferentes são acertadas fora de ordem.

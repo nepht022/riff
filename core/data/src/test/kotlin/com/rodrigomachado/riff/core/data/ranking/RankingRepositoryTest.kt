@@ -31,6 +31,9 @@ class FakeRankingServer : RankingTransport {
     var offline = false
     var answerHtml = false
 
+    /** O script grava, mas a resposta se perde (Apps Script lento, conexão caiu). */
+    var loseAnswer = false
+
     override suspend fun post(url: String, json: String): Pair<Int, String> {
         val body = JSONObject(json)
         calls += body
@@ -46,6 +49,7 @@ class FakeRankingServer : RankingTransport {
                 } else {
                     names.entries.removeAll { it.value == key }
                     names[name.lowercase()] = key
+                    if (loseAnswer) throw IOException("resposta perdida")
                     """{"ok":true,"nome":"$name"}"""
                 }
             }
@@ -103,6 +107,10 @@ class FakePlayers : PlayerStore {
     override suspend fun save(name: String, key: String) {
         player.value = Player(name, key)
     }
+
+    override suspend fun saveKey(key: String) {
+        player.value = player.value.copy(key = key)
+    }
 }
 
 class FakeHistory(val records: MutableList<ScoreRecord> = mutableListOf()) : ScoreHistory {
@@ -153,6 +161,27 @@ class RankingRepositoryTest {
         assertEquals("chave-1", server.sent("reservar").last().getString("chave"))
     }
 
+    /** A reserva chegou ao script, mas a resposta se perdeu: tentar de novo não pode dar "nome em uso" a si mesmo. */
+    @Test
+    fun aLostAnswerKeepsTheKeySoTheRetryWorks() = runTest {
+        server.loseAnswer = true
+        var nextKey = 0
+        val ranking = AppsScriptRankingRepository(
+            RankingApi("https://script/exec", server),
+            players,
+            history,
+            pending,
+            charts,
+            backgroundScope,
+            keys = { "chave-${++nextKey}" },
+        )
+        assertEquals(NameResult.Offline, ranking.register("Rodrigo"))
+
+        server.loseAnswer = false
+        assertEquals(NameResult.Ok, ranking.register("Rodrigo"))
+        assertEquals(Player("Rodrigo", "chave-1"), players.player.value)
+    }
+
     @Test
     fun aTakenNameIsNotSaved() = runTest {
         server.names["rodrigo"] = "outra-chave"
@@ -192,6 +221,26 @@ class RankingRepositoryTest {
         runCurrent()
         assertEquals(SubmitStatus.NotBest, ranking.statusFor(3).value)
         assertEquals(1, server.sent("enviar").size)
+    }
+
+    /** A fila sai ao terminar qualquer partida (spec §4), não só uma que seja recorde. */
+    @Test
+    fun aMatchThatIsNotABestStillSendsTheQueue() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        history.records += record(1, score = 100)
+        val ranking = repository()
+        server.offline = true
+        ranking.submitIfBest(record(2, score = 200).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+        assertEquals(1, pending.all().size)
+
+        server.offline = false
+        ranking.submitIfBest(record(3, score = 50).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertEquals(SubmitStatus.NotBest, ranking.statusFor(3).value)
+        assertTrue(pending.all().isEmpty())
     }
 
     @Test
