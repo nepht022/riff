@@ -40,12 +40,19 @@ class FakeRankingServer : RankingTransport {
     /** O script recusa reservas (limite por hora). */
     var nameLimit = false
 
+    /** Celulares que o dono tirou do ranking (removerJogador). */
+    val removed = mutableSetOf<String>()
+
+    /** O script novo recusa o lote inteiro com um motivo próprio (não é o "pedido" do script antigo). */
+    var batchRefusal: String? = null
+
     override suspend fun post(url: String, json: String): Pair<Int, String> {
         val body = JSONObject(json)
         calls += body
         if (offline) throw IOException("sem rede")
         if (answerHtml) return 200 to "<html>Entrar no Google</html>"
         val key = body.optString("chave")
+        if (key in removed) return 200 to """{"ok":false,"motivo":"removido"}"""
         val answer = when (body.getString("acao")) {
             "reservar" -> if (nameLimit) {
                 """{"ok":false,"motivo":"limite"}"""
@@ -77,6 +84,8 @@ class FakeRankingServer : RankingTransport {
 
     private fun batch(body: JSONObject, key: String) = when {
         oldScript -> """{"ok":false,"motivo":"pedido"}"""
+
+        batchRefusal != null -> """{"ok":false,"motivo":"$batchRefusal"}"""
 
         key !in names.values -> """{"ok":false,"motivo":"sem_nome"}"""
 
@@ -145,6 +154,10 @@ class FakePlayers : PlayerStore {
 
     override suspend fun forgetName() {
         player.value = player.value.copy(name = null)
+    }
+
+    override suspend fun forget() {
+        player.value = Player(null, null)
     }
 }
 
@@ -399,6 +412,38 @@ class RankingRepositoryTest {
         assertNull(players.player.value.name)
         assertEquals("chave-1", players.player.value.key)
         assertEquals(SubmitStatus.NoName, ranking.statusFor(1).value)
+        assertEquals(1, pending.all().size)
+    }
+
+    /** O dono tirou o jogador do ranking (pedido de exclusão): o celular esquece nome, chave e fila. */
+    @Test
+    fun aPlayerRemovedByTheOwnerLeavesTheRanking() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        server.removed += "chave-1"
+        val ranking = repository()
+
+        ranking.submitIfBest(record(1).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertEquals(Player(null, null), players.player.value)
+        assertTrue(pending.all().isEmpty())
+        assertTrue(server.sent("reservar").isEmpty()) // não volta sozinho
+        assertEquals(SubmitStatus.NoName, ranking.statusFor(1).value)
+    }
+
+    /** Só o "pedido" do script antigo faz mandar uma por vez; uma recusa do lote pelo script novo espera. */
+    @Test
+    fun aBatchRefusedByTheNewScriptKeepsTheQueue() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        server.batchRefusal = "lote_invalido"
+        val ranking = repository()
+
+        ranking.submitIfBest(record(1).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertTrue(server.sent("enviar").isEmpty())
         assertEquals(1, pending.all().size)
     }
 

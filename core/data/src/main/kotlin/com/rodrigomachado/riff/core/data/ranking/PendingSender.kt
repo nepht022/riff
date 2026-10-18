@@ -4,7 +4,8 @@ import com.rodrigomachado.riff.core.database.RankingPendingDao
 import com.rodrigomachado.riff.core.database.RankingPendingEntity
 import com.rodrigomachado.riff.core.model.Difficulty
 
-internal enum class Outcome { SENT, WAIT, NO_NAME }
+/** [REMOVED]: o dono tirou este celular do ranking (removerJogador). */
+internal enum class Outcome { SENT, WAIT, NO_NAME, REMOVED }
 
 /**
  * Manda a fila do ranking: em lotes de até [BATCH] ("enviarVarios", um pedido no limite por hora) ou, com o script de
@@ -28,6 +29,8 @@ internal class PendingSender(
                 is ApiAnswer.Refused -> return when (answer.reason) {
                     "sem_nome" -> Outcome.NO_NAME
 
+                    "removido" -> Outcome.REMOVED
+
                     // O script de antes do "enviarVarios" (ainda não republicado): uma por vez.
                     "pedido" -> sendOneByOne(key).also { batches = false }
 
@@ -44,6 +47,7 @@ internal class PendingSender(
         for (entry in pending.all()) {
             val answer = api.submit(key, entry.toSubmission())
             if (answer is ApiAnswer.Refused && answer.reason == "sem_nome") return Outcome.NO_NAME
+            if (answer is ApiAnswer.Refused && answer.reason == "removido") return Outcome.REMOVED
             if (!settle(entry, answer)) return Outcome.WAIT
         }
         return Outcome.SENT

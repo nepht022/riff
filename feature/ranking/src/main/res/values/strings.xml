@@ -9,7 +9,7 @@
     <string name="ranking_name_invalid">Use de 3 a 20 letras, números, espaço, _ ou -</string>
     <string name="ranking_name_offline">Sem internet: tente de novo depois</string>
     <string name="ranking_name_limit">Muitas tentativas agora: tente de novo daqui a uma hora</string>
-    <string name="ranking_name_privacy">Seu nome e suas melhores pontuações ficam visíveis para todos que jogam o Riff. O celular é identificado por um código anônimo.</string>
+    <string name="ranking_name_privacy">Seu nome e suas melhores pontuações ficam visíveis para todos que jogam o Riff. O celular é identificado por um código aleatório.</string>
     <string name="ranking_back">Voltar</string>
     <string name="ranking_search_song">Pesquisar música ou artista</string>
     <string name="ranking_search_name">Pesquisar nome</string>

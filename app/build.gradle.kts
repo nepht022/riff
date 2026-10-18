@@ -16,6 +16,16 @@ val localProperties = Properties().apply {
 val releaseKeystore = file("${System.getProperty("user.home")}/.android/riff-release.jks")
     .takeIf { it.exists() && localProperties.getProperty("riff.keystore.password") != null }
 
+// Um release com a chave de debug não instala por cima do APK de quem já tem o Riff: sem a chave própria, para aqui.
+gradle.taskGraph.whenReady {
+    if (releaseKeystore == null && allTasks.any { it.path == ":app:packageRelease" }) {
+        throw GradleException(
+            "Release sem a chave própria: crie ~/.android/riff-release.jks e ponha riff.keystore.password no " +
+                "local.properties (README, Chave de release).",
+        )
+    }
+}
+
 android {
     namespace = "com.rodrigomachado.riff"
     defaultConfig {

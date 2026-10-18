@@ -66,6 +66,14 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it.remove(PLAYER_NAME) }
     }
 
+    /** Tirado do ranking pelo dono: nome e chave somem; um nome novo começa do zero, com outra chave. */
+    suspend fun forgetPlayer() {
+        dataStore.edit {
+            it.remove(PLAYER_NAME)
+            it.remove(PLAYER_KEY)
+        }
+    }
+
     suspend fun setPlayer(name: String, key: String) {
         dataStore.edit {
             it[PLAYER_NAME] = name

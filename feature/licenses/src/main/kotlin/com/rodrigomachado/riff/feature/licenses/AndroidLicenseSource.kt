@@ -39,12 +39,26 @@ class AndroidLicenseSource @Inject constructor(@ApplicationContext private val c
 
     private companion object {
         /** O AAR do Spotify vem sem licença no pom: fica só na lista manual (Apache 2.0, do manifesto do AAR). */
-        val IN_CONTENT = setOf("com.spotify.android:spotify-app-remote")
+        val IN_CONTENT = setOf(
+            "com.spotify.android:spotify-app-remote",
+            // MIT e BSD pedem o aviso de copyright de verdade; o AboutLibraries traz só o modelo da licença.
+            "com.microsoft.onnxruntime:onnxruntime-android",
+            "com.github.wendykierp:JTransforms",
+            "org.visnow:JLargeArrays",
+            "androidx.datastore:datastore-preferences-external-protobuf",
+            // Vêm junto do JLargeArrays no Gradle, mas o R8 tira do APK.
+            "junit:junit",
+            "org.hamcrest:hamcrest-core",
+        )
 
         val CONTENT = listOf(
             Item("Demucs v4 (htdemucs_6s)", "Meta Platforms", "MIT", "demucs.txt"),
             Item("demucs.onnx", "Sevag Hanssian", "MIT", "demucs-onnx.txt"),
             Item("Spotify App Remote SDK", "Spotify AB", "Apache 2.0", "apache-2.0.txt"),
+            Item("ONNX Runtime", "Microsoft Corporation", "MIT", "onnxruntime.txt"),
+            Item("JTransforms", "Piotr Wendykier", "BSD 2-Clause", "jtransforms.txt"),
+            Item("JLargeArrays", "University of Warsaw, ICM; visnow.org", "BSD 2-Clause", "jlargearrays.txt"),
+            Item("Protocol Buffers", "Google", "BSD 3-Clause", "protobuf.txt"),
             Item("New Rocker", "Pablo Impallari, Brenda Gallo", "SIL Open Font License 1.1", "new-rocker-ofl.txt"),
             Item("Oswald", "The Oswald Project Authors", "SIL Open Font License 1.1", "oswald-ofl.txt"),
             Item(

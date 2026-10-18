@@ -8,6 +8,7 @@ const assert = require('assert');
 
 function newContext() {
   const sheets = {};
+  const reads = { n: 0 };
   const props = {};
   const cache = {};
   // Como o Google Planilhas: sem o formato de texto ('@'), "007" vira 7, "true" vira booleano e "=..." vira
@@ -29,8 +30,9 @@ function newContext() {
       rows,
       getLastRow: () => rows.length,
       appendRow: (row) => rows.push(row.map(cell)),
+      deleteRow: (n) => rows.splice(n - 1, 1),
       // Como no Google: uma aba vazia devolve uma linha com uma célula vazia.
-      getDataRange: () => ({ getValues: () => (rows.length ? rows.map((r) => r.slice()) : [['']]) }),
+      getDataRange: () => ({ getValues: () => { reads.n++; return rows.length ? rows.map((r) => r.slice()) : [['']]; } }),
       getRange: (row, col, numRows, numCols) => ({
         setNumberFormat: (format) => { if (format === '@') text = true; },
         setValues: (values) => {
@@ -48,6 +50,7 @@ function newContext() {
   };
   const context = {
     sheets,
+    reads,
     console,
     SpreadsheetApp: { create: () => book, openById: () => book },
     PropertiesService: {
@@ -229,7 +232,53 @@ const tests = {
     c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
     const many = [];
     for (let i = 0; i < 51; i++) many.push(play(K('A')));
-    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: many }).motivo, 'pedido');
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: many }).motivo, 'lote_invalido');
+  },
+  removerJogadorTiraTudoENaoVoltaSozinho() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    c.call(play(K('A')));
+    c.call({ acao: 'reservar', nome: 'Bruno', chave: K('B') });
+    c.call(play(K('B')));
+    c.removerJogador('ana');
+    assert.deepStrictEqual(boardOf(c, K('B')).map((l) => l.nome), ['Bruno']);
+    assert.strictEqual(c.call(play(K('A'))).motivo, 'removido');
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: [play(K('A'))] }).motivo, 'removido');
+    assert.strictEqual(c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') }).motivo, 'removido');
+    // O nome fica livre para outra pessoa.
+    assert.strictEqual(c.call({ acao: 'reservar', nome: 'Ana', chave: K('C') }).ok, true);
+  },
+  loteRecusadoPeloScriptNovoNaoParecePedidoDoAntigo() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: 'curta', envios: [play('curta')] }).motivo, 'lote_invalido');
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: [] }).motivo, 'lote_invalido');
+  },
+  nomesEmUsoNaoGastamOLimiteDeTodos() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    for (let i = 0; i < 150; i++) c.call({ acao: 'reservar', nome: 'Ana', chave: String(i).padStart(36, 'x') });
+    assert.strictEqual(c.call({ acao: 'reservar', nome: 'Bruno', chave: K('B') }).ok, true);
+  },
+  salvarOMesmoNomeDeNovoNaoGastaOLimiteDoCelular() {
+    const c = newContext();
+    for (let i = 0; i < 10; i++) assert.strictEqual(c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') }).ok, true);
+  },
+  loteLeAPlanilhaPoucasVezes() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    const envios = [];
+    for (let i = 0; i < 50; i++) envios.push(play(K('A'), { mapa: 'm' + i }));
+    c.reads.n = 0;
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios }).ok, true);
+    assert.ok(c.reads.n <= 4, 'leituras: ' + c.reads.n);
+  },
+  pontuacoesPorHoraTemTeto() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    const lote = (n) => Array.from({ length: 50 }, (_, i) => play(K('A'), { mapa: n + '-' + i }));
+    for (let i = 0; i < 6; i++) assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: lote(i) }).ok, true);
+    assert.strictEqual(c.call({ acao: 'enviarVarios', chave: K('A'), envios: lote(9) }).motivo, 'limite');
   },
   pedidoEstranhoNaoQuebra() {
     const c = newContext();

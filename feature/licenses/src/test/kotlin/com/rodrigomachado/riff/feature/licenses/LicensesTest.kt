@@ -72,6 +72,11 @@ class LicensesTest {
             substring = true,
         )
             .performScrollTo().assertExists()
+        composeRule.onNodeWithText(
+            "o Riff pesquisa no Encore (enchor.us) o artista e o nome das músicas",
+            substring = true,
+        )
+            .performScrollTo().assertExists()
         composeRule.onNodeWithText("Demucs v4").performScrollTo().assertExists()
         composeRule.onNodeWithText("Meta Platforms · MIT").assertExists()
         // A lista é preguiçosa: rola até o item existir.

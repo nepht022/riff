@@ -14,7 +14,9 @@
  *    ranking.url=https://script.google.com/macros/s/.../exec
  *
  * A planilha tem duas abas: Jogadores (nome e o hash da chave do celular dono dele) e Pontuações (o melhor de cada
- * número por jogador, mapa e dificuldade). Para liberar um nome ou tirar uma pontuação, apague a linha.
+ * número por jogador, mapa e dificuldade). Para tirar alguém do ranking (pedido pelo Reportar, nome ofensivo), rode
+ * removerJogador("Nome") no editor: apaga o jogador e as pontuações e o celular não volta sozinho (aba Removidos).
+ * Apagar só a linha do jogador à mão faz o celular reservar o mesmo nome de novo no próximo envio.
  * Ao mudar este arquivo, publique de novo em Implantar → Gerenciar implantações → editar → Nova versão.
  */
 
@@ -24,12 +26,14 @@ var MAX_BATCH = 50;       // pontuações num pedido "enviarVarios" (o históric
 var MAX_BODY_BATCH = 40000;
 var MIN_KEY = 16;         // o app manda um UUID; chave vazia ou curta é pedido forjado
 var NAMES_PER_HOUR = 5;   // reservas (e trocas) de nome por celular
-var NAMES_PER_HOUR_ALL = 100; // reservas por hora somando todos: o endereço está no APK
+var NAMES_PER_HOUR_ALL = 100; // nomes novos por hora somando todos: o endereço está no APK
+var SCORES_PER_HOUR = 300; // pontuações por celular (um lote conta cada uma)
 var NAME = /^[\p{L}\p{N} _-]{3,20}$/u;
 var METRICS = ['pontos', 'precisao', 'combo', 'perfeitos', 'semErrar'];
 var STORED = METRICS.concat(['notas']); // notas: o total da partida, para "perfeitos de quantos"
 var PLAYERS = 'Jogadores';
 var SCORES = 'Pontuações';
+var REMOVED = 'Removidos'; // celulares (hash) tirados do ranking pelo dono: não voltam sozinhos
 // Colunas das abas (base 0).
 var P = { nome: 0, chaveNome: 1, hash: 2, criado: 3, atualizado: 4 };
 var S = { hash: 0, mapa: 1, titulo: 2, artista: 3, dificuldade: 4, pontos: 5, precisao: 6, combo: 7, perfeitos: 8,
@@ -41,7 +45,9 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var hash = digest(String(data.chave || ''));
     var writes = data.acao === 'reservar' || data.acao === 'enviar' || data.acao === 'enviarVarios';
-    if (writes && String(data.chave || '').length < MIN_KEY) return answer({ ok: false, motivo: 'pedido' });
+    if (writes && String(data.chave || '').length < MIN_KEY) {
+      return answer({ ok: false, motivo: data.acao === 'enviarVarios' ? 'lote_invalido' : 'pedido' });
+    }
     if (data.acao !== 'enviarVarios' && e.postData.contents.length > MAX_BODY) {
       return answer({ ok: false, motivo: 'pedido' });
     }
@@ -64,76 +70,169 @@ function prepararPlanilha() {
   book();
 }
 
-/** Reserva o nome para este celular; com outro nome já dele, troca (o antigo fica livre). */
+/**
+ * Reserva o nome para este celular; com outro nome já dele, troca (o antigo fica livre). Só contam no limite as
+ * reservas que mudam algo e os nomes em uso (procurar nomes); o limite de todos só conta nomes novos.
+ */
 function reserve(rawName, hash) {
   var name = rawName.trim();
   if (!NAME.test(name)) return { ok: false, motivo: 'nome_invalido' };
-  if (!withinLimit('nomes:' + hash, NAMES_PER_HOUR) || !withinLimit('nomes', NAMES_PER_HOUR_ALL)) {
-    return { ok: false, motivo: 'limite' };
-  }
+  if (isRemoved(hash)) return { ok: false, motivo: 'removido' };
   var sheet = tab(PLAYERS);
   var rows = sheet.getDataRange().getValues();
   var key = name.toLowerCase();
   var mine = -1;
+  var taken = false;
   for (var i = 0; i < rows.length; i++) {
     var owner = String(rows[i][P.hash]);
-    if (String(rows[i][P.chaveNome]) === key && owner !== hash) return { ok: false, motivo: 'nome_em_uso' };
+    if (String(rows[i][P.chaveNome]) === key && owner !== hash) taken = true;
     if (owner === hash) mine = i;
   }
+  if (!taken && mine >= 0 && String(rows[mine][P.nome]) === name) return { ok: true, nome: name };
+  if (overLimit('nomes:' + hash, NAMES_PER_HOUR)) return { ok: false, motivo: 'limite' };
+  if (taken) {
+    countUse('nomes:' + hash, 1);
+    return { ok: false, motivo: 'nome_em_uso' };
+  }
+  if (mine < 0 && overLimit('nomes', NAMES_PER_HOUR_ALL)) return { ok: false, motivo: 'limite' };
   var now = new Date().toISOString();
   if (mine < 0) {
     sheet.appendRow([safe(name), safe(key), hash, now, now]);
+    countUse('nomes', 1);
   } else {
     sheet.getRange(mine + 1, P.nome + 1, 1, 2).setValues([[safe(name), safe(key)]]);
     sheet.getRange(mine + 1, P.atualizado + 1, 1, 1).setValues([[now]]);
   }
+  countUse('nomes:' + hash, 1);
   return { ok: true, nome: name };
 }
 
-/** Guarda o melhor de cada número; devolve a posição em pontos naquele mapa e dificuldade. */
+/** Uma pontuação: guarda o melhor de cada número e devolve a posição em pontos naquele mapa e dificuldade. */
 function submit(data, hash) {
-  if (!playerOf(hash)) return { ok: false, motivo: 'sem_nome' };
-  if (!withinLimit('envios:' + hash, MAX_PER_HOUR)) return { ok: false, motivo: 'limite' };
-  return store(data, hash);
+  var refused = refuseSubmit(hash, 1);
+  if (refused) return refused;
+  return storeAll([data], hash)[0];
 }
 
-/** Várias pontuações num pedido (conta uma vez no limite): um resultado por envio, na mesma ordem. */
+/** Várias pontuações num pedido: um resultado por envio, na mesma ordem. */
 function submitMany(list, hash) {
-  if (!Array.isArray(list) || list.length === 0 || list.length > MAX_BATCH) return { ok: false, motivo: 'pedido' };
-  if (!playerOf(hash)) return { ok: false, motivo: 'sem_nome' };
-  if (!withinLimit('envios:' + hash, MAX_PER_HOUR)) return { ok: false, motivo: 'limite' };
-  return { ok: true, resultados: list.map(function (data) { return store(data || {}, hash); }) };
+  // Motivo próprio: o app volta a mandar uma por vez só quando ouve "pedido" (o script antigo não conhece o lote).
+  if (!Array.isArray(list) || list.length === 0 || list.length > MAX_BATCH) return { ok: false, motivo: 'lote_invalido' };
+  var refused = refuseSubmit(hash, list.length);
+  if (refused) return refused;
+  return { ok: true, resultados: storeAll(list, hash) };
 }
 
-function store(data, hash) {
+/** Removido, sem nome ou passou do limite (pedidos e pontuações por hora); senão conta o uso e devolve null. */
+function refuseSubmit(hash, scores) {
+  if (isRemoved(hash)) return { ok: false, motivo: 'removido' };
+  if (!playerOf(hash)) return { ok: false, motivo: 'sem_nome' };
+  if (overLimit('envios:' + hash, MAX_PER_HOUR) || overLimit('pontuacoes:' + hash, SCORES_PER_HOUR, scores)) {
+    return { ok: false, motivo: 'limite' };
+  }
+  countUse('envios:' + hash, 1);
+  countUse('pontuacoes:' + hash, scores);
+  return null;
+}
+
+/**
+ * Lê a aba uma vez, junta o melhor de cada número na memória e grava só as linhas que mudaram. Na memória os textos
+ * ficam como vieram (o apóstrofo do [safe] é só para gravar), iguais ao que a planilha devolve na leitura.
+ */
+function storeAll(list, hash) {
+  var sheet = tab(SCORES);
+  var rows = sheet.getLastRow() ? sheet.getDataRange().getValues() : [];
+  var changed = {};
+  var results = list.map(function (data) {
+    var index = merge(rows, data || {}, hash);
+    if (index < 0) return { ok: false, motivo: 'pedido' };
+    changed[index] = true;
+    return index;
+  });
+  var existing = sheet.getLastRow();
+  Object.keys(changed).map(Number).sort(function (a, b) { return a - b; }).forEach(function (index) {
+    var cells = forSheet(rows[index]);
+    if (index < existing) {
+      sheet.getRange(index + 1, 1, 1, cells.length).setValues([cells]);
+    } else {
+      sheet.appendRow(cells);
+    }
+  });
+  return results.map(function (result) {
+    if (typeof result !== 'number') return result;
+    var row = rows[result];
+    var ranked = rank(rows, row[S.mapa], row[S.dificuldade], 'pontos', true);
+    for (var j = 0; j < ranked.length; j++) {
+      if (ranked[j].hash === hash) return { ok: true, posicao: j + 1, total: ranked.length };
+    }
+    return { ok: true, posicao: null, total: ranked.length };
+  });
+}
+
+/** Junta a pontuação na linha do jogador (ou numa nova) e devolve o índice dela; -1 se o envio não serve. */
+function merge(rows, data, hash) {
   var map = text(data.mapa, 100);
   var difficulty = text(data.dificuldade, 20);
-  if (!map || !difficulty) return { ok: false, motivo: 'pedido' };
-  var sheet = tab(SCORES);
-  var rows = sheet.getDataRange().getValues();
+  if (!map || !difficulty) return -1;
   var index = -1;
   for (var i = 0; i < rows.length; i++) {
-    if (rows[i][S.hash] === hash && rows[i][S.mapa] === map && rows[i][S.dificuldade] === difficulty) index = i;
+    if (rows[i][S.hash] === hash && String(rows[i][S.mapa]) === map && String(rows[i][S.dificuldade]) === difficulty) {
+      index = i;
+    }
   }
-  var row = index >= 0 ? rows[index].slice() : [hash, map, '', '', difficulty, '', '', '', '', '', '', ''];
+  if (index < 0) {
+    rows.push([hash, map, '', '', difficulty, '', '', '', '', '', '', '']);
+    index = rows.length - 1;
+  }
+  var row = rows[index];
   while (row.length <= S.notas) row.push(''); // linhas de antes da coluna das notas
-  row[S.mapa] = safe(map);
-  row[S.dificuldade] = safe(difficulty);
-  row[S.titulo] = safe(text(data.titulo, 200));
-  row[S.artista] = safe(text(data.artista, 200));
+  row[S.titulo] = text(data.titulo, 200);
+  row[S.artista] = text(data.artista, 200);
   STORED.forEach(function (metric) { row[S[metric]] = best(row[S[metric]], data[metric]); });
   row[S.atualizado] = new Date().toISOString();
-  if (index >= 0) {
-    sheet.getRange(index + 1, 1, 1, row.length).setValues([row]);
-  } else {
-    sheet.appendRow(row);
-  }
-  rows = sheet.getDataRange().getValues(); // como a planilha guardou
-  var ranked = rank(rows, map, difficulty, 'pontos', true);
-  for (var j = 0; j < ranked.length; j++) {
-    if (ranked[j].hash === hash) return { ok: true, posicao: j + 1, total: ranked.length };
-  }
-  return { ok: true, posicao: null, total: ranked.length };
+  return index;
+}
+
+/** A linha como vai para a planilha: os textos que ela leria como fórmula ganham o apóstrofo. */
+function forSheet(row) {
+  var cells = row.slice();
+  [S.mapa, S.titulo, S.artista, S.dificuldade].forEach(function (column) { cells[column] = safe(cells[column]); });
+  return cells;
+}
+
+/**
+ * Para o dono (rode no editor, ex.: removerJogador("Nome")): apaga o jogador e as pontuações dele, e o celular fica
+ * marcado para não voltar sozinho. O nome fica livre para outra pessoa. Use quando alguém pedir para sair do ranking.
+ */
+function removerJogador(nome) {
+  return withLock(function () {
+    var key = String(nome).trim().toLowerCase();
+    var players = tab(PLAYERS);
+    var rows = players.getDataRange().getValues();
+    var hash = null;
+    for (var i = rows.length - 1; i >= 0; i--) {
+      if (String(rows[i][P.chaveNome]) === key) {
+        hash = String(rows[i][P.hash]);
+        players.deleteRow(i + 1);
+      }
+    }
+    if (!hash) return 'Jogador não encontrado: ' + nome;
+    var scores = tab(SCORES);
+    var scoreRows = scores.getDataRange().getValues();
+    var removed = 0;
+    for (var j = scoreRows.length - 1; j >= 0; j--) {
+      if (scoreRows[j][S.hash] === hash) {
+        scores.deleteRow(j + 1);
+        removed++;
+      }
+    }
+    tab(REMOVED).appendRow([hash, new Date().toISOString()]);
+    return 'Removido: ' + nome + ' (' + removed + ' pontuações)';
+  });
+}
+
+function isRemoved(hash) {
+  return tab(REMOVED).getDataRange().getValues().some(function (row) { return row[0] === hash; });
 }
 
 function songs(query, hash) {
@@ -231,14 +330,20 @@ function playerNames() {
   return names;
 }
 
-/** Conta [name] nesta hora; falso quando já chegou a [max]. */
-function withinLimit(name, max) {
+/** Já chegou a [max] nesta hora contando mais [extra] (1 se omitido)? */
+function overLimit(name, max, extra) {
+  var used = Number(CacheService.getScriptCache().get(hourKey(name)) || 0);
+  return used + (extra || 1) > max;
+}
+
+function countUse(name, amount) {
   var cache = CacheService.getScriptCache();
-  var key = name + ':' + Math.floor(Date.now() / 3600000);
-  var count = Number(cache.get(key) || 0);
-  if (count >= max) return false;
-  cache.put(key, String(count + 1), 3600);
-  return true;
+  var key = hourKey(name);
+  cache.put(key, String(Number(cache.get(key) || 0) + amount), 3600);
+}
+
+function hourKey(name) {
+  return name + ':' + Math.floor(Date.now() / 3600000);
 }
 
 /** Reservar e enviar leem e gravam a planilha: um de cada vez, para dois celulares não pegarem o mesmo nome. */

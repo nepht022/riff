@@ -146,3 +146,14 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Posições com buracos quando um jogador é apagado da planilha; dificuldades do placar na ordem de inserção.
 - O log de erro do script (do dono) pode conter um trecho da chave num JSON inválido.
 - "Tempo sem errar" subconta quando notas de trilhas diferentes são acertadas fora de ordem.
+
+## Pronto para enviar: licenças, privacidade e ranking (revisão final, 2026-10-18)
+
+- O debug é assinado com a mesma chave do release: um APK de debug instala por cima do de um amigo e permite `run-as` nos dados dele (escolhido para o desempenho.sh trocar debug e release sem apagar dados).
+- `register()` roda fora da trava do envio: ao mesmo tempo que uma nova reserva automática, pode salvar um nome local diferente do do script (raro).
+- Depois de esquecer o nome (nome pego por outra pessoa), o próximo nome reenvia o histórico (o script guarda o maior; só gasta pedidos).
+- O app não corta título e artista antes de enviar: uma pontuação com mais de 4000 caracteres é aceita no lote, mas apagada da fila no modo de uma por vez (script antigo).
+- Os limites por hora usam janelas fixas e o cache do Apps Script: perto da virada da hora passam até o dobro; o cache pode esquecer (melhor esforço).
+- Quem foi tirado do ranking vê de novo o pedido do nome (como numa instalação nova; "Agora não" vale até reabrir o app).
+- O aviso de terceiros do ONNX Runtime tem ~330 KB num único texto: abrir pode demorar num celular fraco.
+- Leitura do ranking (`musicas`, `placar`) continua aberta e sem limite, e o script não confere se uma pontuação é plausível (vale para quem forjar pedidos).

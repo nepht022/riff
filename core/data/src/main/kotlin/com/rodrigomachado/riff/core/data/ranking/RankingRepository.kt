@@ -147,6 +147,7 @@ class AppsScriptRankingRepository(
             val (name, key) = players.player.first()
             if (name == null || key == null) return@withLock
             val outcome = sender.send(key)
+            if (outcome == Outcome.REMOVED) return@withLock leave()
             // O dono apagou o jogador da planilha: reserva o mesmo nome de novo (uma vez) e tenta outra vez.
             if (outcome != Outcome.NO_NAME || registeredAgain || !registerAgain(name, key)) return@withLock
             registeredAgain = true
@@ -156,8 +157,19 @@ class AppsScriptRankingRepository(
     /** O mesmo nome de novo; se outra pessoa já pegou, esquece o nome para o pedido aparecer outra vez. */
     private suspend fun registerAgain(name: String, key: String): Boolean = when (val answer = api.reserve(name, key)) {
         is ApiAnswer.Ok -> true.also { players.save(answer.value, key) }
-        is ApiAnswer.Refused -> false.also { if (answer.reason == "nome_em_uso") players.forgetName() }
+
+        is ApiAnswer.Refused -> false.also {
+            if (answer.reason == "nome_em_uso") players.forgetName()
+            if (answer.reason == "removido") leave()
+        }
+
         ApiAnswer.Offline -> false
+    }
+
+    /** Pedido de exclusão atendido pelo dono: sem nome, sem chave e sem nada na fila (não volta sozinho). */
+    private suspend fun leave() {
+        players.forget()
+        pending.all().forEach { pending.delete(it.id) }
     }
 
     override suspend fun songs(query: String) = api.songs(players.player.first().key.orEmpty(), query)
