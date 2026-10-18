@@ -33,5 +33,6 @@
     <string name="nowplaying_badge_none">Sem mapa</string>
     <string name="nowplaying_settings">Configurações</string>
     <string name="nowplaying_search">Pesquisar no Encore</string>
+    <string name="nowplaying_ranking">Ranking</string>
     <string name="nowplaying_report">Reportar</string>
 </resources>

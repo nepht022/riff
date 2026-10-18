@@ -28,6 +28,10 @@ import com.rodrigomachado.riff.feature.nowplaying.NowPlayingAutoPlay
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
 import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
+import com.rodrigomachado.riff.feature.ranking.RankingBoardRoute
+import com.rodrigomachado.riff.feature.ranking.RankingBoardScreen
+import com.rodrigomachado.riff.feature.ranking.RankingRoute
+import com.rodrigomachado.riff.feature.ranking.RankingSongsScreen
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
@@ -77,6 +81,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
                 onOpenLibrary = dropUnlessResumed { navController.navigate(LibraryRoute()) },
                 onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
                 onOpenReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+                onOpenRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
                 onSearch = dropUnlessResumed { track ->
                     navController.navigate(
                         SearchRoute(
@@ -92,6 +97,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         }
         settingsDestinations(navController, back) { renamingPlayer = true }
         libraryDestinations(navController, back)
+        rankingDestinations(navController)
         searchDestinations(navController, back)
         matchDestinations(navController) { renamingPlayer = true }
     }
@@ -117,6 +123,19 @@ private fun NavigationEffects(
             navController.navigate(LibraryRoute()) { launchSingleTop = true }
             onLibraryOpened()
         }
+    }
+}
+
+/** O ranking: as músicas e o placar de cada uma. */
+private fun NavGraphBuilder.rankingDestinations(navController: NavHostController) {
+    composable<RankingRoute> {
+        RankingSongsScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onSong = dropUnlessResumed { song -> navController.navigate(RankingBoardRoute(song.chartId, song.title)) },
+        )
+    }
+    composable<RankingBoardRoute> {
+        RankingBoardScreen(onBack = dropUnlessResumed { navController.popBackStack() })
     }
 }
 
@@ -156,6 +175,9 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
             onChooseName = onChooseName,
+            onSeeRanking = dropUnlessResumed { chartId, title, difficulty ->
+                navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
+            },
         )
     }
 }
@@ -178,6 +200,7 @@ private fun NavGraphBuilder.libraryDestinations(navController: NavHostController
             onSearch = dropUnlessResumed { match ->
                 navController.navigate(SearchRoute(matchTrackUri = match?.trackUri, matchTrackTitle = match?.title))
             },
+            onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
         )
     }
 }

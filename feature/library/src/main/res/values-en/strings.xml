@@ -35,6 +35,7 @@
         <item quantity="one">and %d more folder</item>
         <item quantity="other">and %d more folders</item>
     </plurals>
+    <string name="library_ranking">Ranking</string>
     <string name="library_search">Search</string>
     <string name="library_separate_title">Separate the guitar with AI?</string>
     <string name="library_separate_message">Separating the guitar makes its sound drop out when you miss notes and come back only when you hit them, for more immersion. It takes around 3 minutes and can warm the phone up. Separated songs stay stored on the device.</string>

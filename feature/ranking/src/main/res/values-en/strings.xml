@@ -8,4 +8,22 @@
     <string name="ranking_name_taken">That name belongs to someone else</string>
     <string name="ranking_name_invalid">Use 3 to 20 letters, numbers, space, _ or -</string>
     <string name="ranking_name_offline">No internet: try again later</string>
+    <string name="ranking_back">Back</string>
+    <string name="ranking_search_song">Search song or artist</string>
+    <string name="ranking_search_name">Search name</string>
+    <string name="ranking_players">%1$d players</string>
+    <string name="ranking_your_place">you #%1$d</string>
+    <string name="ranking_you">%1$s (you)</string>
+    <string name="ranking_position">#%1$d</string>
+    <string name="ranking_metric_points">Points</string>
+    <string name="ranking_metric_accuracy">Accuracy</string>
+    <string name="ranking_metric_combo">Combo</string>
+    <string name="ranking_metric_perfect">Perfect</string>
+    <string name="ranking_metric_clean">Time without missing</string>
+    <string name="ranking_descending">↓ highest</string>
+    <string name="ranking_ascending">↑ lowest</string>
+    <string name="ranking_offline">No connection to the ranking</string>
+    <string name="ranking_retry">Try again</string>
+    <string name="ranking_not_configured">Ranking not set up</string>
+    <string name="ranking_empty">Nobody in the ranking yet</string>
 </resources>

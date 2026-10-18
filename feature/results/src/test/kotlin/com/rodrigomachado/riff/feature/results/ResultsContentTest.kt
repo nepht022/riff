@@ -54,7 +54,7 @@ class ResultsContentTest {
                 ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", false, ranking = status, rankingOn = true),
                 onPlayAgain = { _, _ -> },
                 onDone = {},
-                onSeeRanking = { id, difficulty -> events += "see:$id:$difficulty" },
+                onSeeRanking = { id, title, difficulty -> events += "see:$id:$title:$difficulty" },
                 onChooseName = { events += "name" },
             )
         }
@@ -68,7 +68,7 @@ class ResultsContentTest {
         composeRule.onNodeWithText("Ranking: 3º de 27").performScrollTo().assertExists()
         composeRule.onNodeWithText("Ver ranking").performScrollTo().performClick()
 
-        assertEquals(listOf("see:a:HARD"), events)
+        assertEquals(listOf("see:a:Música:HARD"), events)
     }
 
     @Test

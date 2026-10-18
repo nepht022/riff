@@ -33,5 +33,6 @@
     <string name="nowplaying_badge_none">No chart</string>
     <string name="nowplaying_settings">Settings</string>
     <string name="nowplaying_search">Search Encore</string>
+    <string name="nowplaying_ranking">Ranking</string>
     <string name="nowplaying_report">Report</string>
 </resources>

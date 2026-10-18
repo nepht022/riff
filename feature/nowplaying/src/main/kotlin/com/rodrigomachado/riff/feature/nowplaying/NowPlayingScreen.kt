@@ -1,7 +1,9 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
@@ -57,6 +61,9 @@ object NowPlayingTestTags {
     const val QUEUE_MISS = "nowplaying_queue_miss"
 }
 
+/** Os botões do topo com menos folga: Biblioteca, Configurações, Reportar e Ranking cabem num celular de 360 dp. */
+private val TOP_BUTTON_PADDING = PaddingValues(horizontal = 6.dp, vertical = 8.dp)
+
 /** O que "Jogar" leva para a partida; [confirmFirst]: o mapa é só sugestão e a partida abre pedindo confirmação. */
 data class PlayRequest(
     val chartId: String,
@@ -76,6 +83,7 @@ fun NowPlayingScreen(
     /** Pesquisar no Encore um mapa para a faixa (sem mapa ou só com sugestão). */
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    onOpenRanking: () -> Unit = {},
     /** O estado salvo desta tela na navegação, onde a partida deixa o pedido de começar a próxima música. */
     autoPlayRequests: SavedStateHandle? = null,
     viewModel: NowPlayingViewModel = hiltViewModel(),
@@ -109,6 +117,7 @@ fun NowPlayingScreen(
         modifier = modifier,
         onSearch = onSearch,
         onOpenReport = onOpenReport,
+        onOpenRanking = onOpenRanking,
         onPrevious = viewModel::previous,
         onPlayPause = viewModel::playPause,
         onNext = viewModel::next,
@@ -129,6 +138,7 @@ fun NowPlayingContent(
     onOpenSettings: () -> Unit = {},
     onSearch: (PlaybackState) -> Unit = {},
     onOpenReport: () -> Unit = {},
+    onOpenRanking: () -> Unit = {},
     onPrevious: () -> Unit = {},
     onPlayPause: (isPaused: Boolean) -> Unit = {},
     onNext: () -> Unit = {},
@@ -141,20 +151,34 @@ fun NowPlayingContent(
             Modifier.padding(top = Spacing.md),
             style = MaterialTheme.typography.displaySmall,
         )
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // Rola de lado se os botões não couberem (celular estreito, inglês).
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE, onOpenLibrary),
+                contentPadding = TOP_BUTTON_PADDING,
                 modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY),
             ) {
                 Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
             }
-            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings),
+                contentPadding = TOP_BUTTON_PADDING,
+            ) {
                 Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
             }
-            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenReport)) {
+            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenReport), contentPadding = TOP_BUTTON_PADDING) {
                 Text(stringResource(R.string.nowplaying_report), color = RiffColors.Paper)
             }
-            Spacer(Modifier.weight(1f))
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenRanking),
+                contentPadding = TOP_BUTTON_PADDING,
+            ) {
+                Text(stringResource(R.string.nowplaying_ranking), color = RiffColors.Paper)
+            }
+            Spacer(Modifier.width(Spacing.sm))
             SeparationIndicator()
         }
         when (state) {

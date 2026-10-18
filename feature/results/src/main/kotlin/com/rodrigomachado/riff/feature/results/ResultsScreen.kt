@@ -42,7 +42,7 @@ fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
-    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit = { _, _ -> },
+    onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
     viewModel: ResultsViewModel = hiltViewModel(),
 ) {
@@ -56,7 +56,7 @@ fun ResultsContent(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
-    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit = { _, _ -> },
+    onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
 ) {
     when (state) {
@@ -80,7 +80,7 @@ private fun ReadyResults(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier,
-    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit,
+    onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit,
     onChooseName: () -> Unit,
 ) {
     val record = state.record
@@ -120,7 +120,7 @@ private fun ReadyResults(
             Stat(stringResource(R.string.results_miss), record.miss.toString())
         }
         if (state.rankingOn) {
-            RankingCard(state.ranking, { onSeeRanking(record.chartId, record.difficulty) }, onChooseName)
+            RankingCard(state.ranking, { onSeeRanking(record.chartId, state.title, record.difficulty) }, onChooseName)
         }
         PosterButton(
             stringResource(R.string.results_play_again),

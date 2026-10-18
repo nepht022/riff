@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -64,6 +65,7 @@ fun LibraryScreen(
     onMatched: () -> Unit = {},
     /** Pesquisar no Encore; no modo de escolha, com a música do Spotify para casar o mapa baixado. */
     onSearch: (TrackToMatch?) -> Unit = {},
+    onRanking: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -92,6 +94,7 @@ fun LibraryScreen(
         matchingTitle = match?.title,
         onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
         onSearch = { onSearch(match) },
+        onRanking = onRanking,
         onDifficultyChosen = viewModel::onDifficultyChosen,
         onSeparate = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -128,6 +131,7 @@ fun LibraryContent(
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
     onSearch: () -> Unit = {},
+    onRanking: () -> Unit = {},
     onDifficultyChosen: (Chart, Difficulty) -> Unit = { chart, difficulty -> onPlay(chart.id, difficulty) },
     onSeparate: () -> Unit = {},
     onPlayWithoutSeparating: () -> Unit = {},
@@ -139,7 +143,7 @@ fun LibraryContent(
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        LibraryHeader(onBack, onSearch)
+        LibraryHeader(onBack, onSearch, onRanking)
         PosterTitle(
             stringResource(R.string.library_title),
             style = MaterialTheme.typography.displaySmall,
@@ -205,16 +209,19 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
     ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
 }
 
-/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
+/** Voltar, Ranking e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
 @Composable
-private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
+private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit, onRanking: () -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
+        Spacer(Modifier.weight(1f))
         SeparationIndicator()
+        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onRanking)) {
+            Text(stringResource(R.string.library_ranking), color = RiffColors.Paper)
+        }
         TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearch)) {
             Text(stringResource(R.string.library_search), color = RiffColors.Paper)
         }
