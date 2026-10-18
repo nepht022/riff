@@ -155,7 +155,9 @@ class GameplayViewModel @Inject constructor(
             effects,
             timeSource,
             offset,
-            hitSounds = spotifyTrackUri == null,
+            // Sem som de acerto em nenhum modo: no Spotify e na biblioteca sem guitarra separada a música toca
+            // inteira; com a guitarra separada, ela mesma é a resposta do acerto.
+            hitSounds = false,
             // Na biblioteca o jogador veio jogar: volta um pouco para retomar. No Spotify veio ouvir: segue.
             rewindOnResumeMs = if (spotifyTrackUri == null) LIBRARY_REWIND_MS else 0,
         )

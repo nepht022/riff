@@ -293,8 +293,9 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         assertEquals(0, sfx.hits)
     }
 
+    /** Sem guitarra separada, a biblioteca é como o Spotify: a música toca inteira e o acerto fica em silêncio. */
     @Test
-    fun libraryModeKeepsTheHitSound() = runTest {
+    fun libraryWithoutSeparateGuitarHasNoHitSoundLikeSpotify() = runTest {
         loader.result = { playable() }
         val state = viewModel().uiState.value as GameplayUiState.Ready
         player.positionMs = 1_040
@@ -304,7 +305,7 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         state.session.press(0)
 
         assertTrue(state.session.lastJudgment != null)
-        assertEquals(1, sfx.hits)
+        assertEquals(0, sfx.hits)
     }
 
     @Test
