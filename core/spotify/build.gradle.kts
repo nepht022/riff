@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.spotify.app.remote)
     implementation(libs.spotify.auth)
     implementation(libs.androidx.activity)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.gson)
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit4)
