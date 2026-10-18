@@ -130,7 +130,7 @@ class RankingScreensTest {
             }
         }
 
-        composeRule.onNodeWithText("DragonForce · 27 jogadores · você 3º").assertExists()
+        composeRule.onNodeWithText("DragonForce · 27 jogadores com pontuação · Você em 3º").assertExists()
         composeRule.onNodeWithText("Through the Fire").performClick()
         assertEquals(listOf("m1"), events)
     }

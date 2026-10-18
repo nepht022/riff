@@ -11,8 +11,8 @@
     <string name="ranking_back">Back</string>
     <string name="ranking_search_song">Search song or artist</string>
     <string name="ranking_search_name">Search name</string>
-    <string name="ranking_players">%1$d players</string>
-    <string name="ranking_your_place">you #%1$d</string>
+    <string name="ranking_players">%1$d players with a score</string>
+    <string name="ranking_your_place">You at #%1$d</string>
     <string name="ranking_you">%1$s (you)</string>
     <string name="ranking_position">#%1$d</string>
     <string name="ranking_metric_points">Points</string>

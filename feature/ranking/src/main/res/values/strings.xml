@@ -11,8 +11,8 @@
     <string name="ranking_back">Voltar</string>
     <string name="ranking_search_song">Pesquisar música ou artista</string>
     <string name="ranking_search_name">Pesquisar nome</string>
-    <string name="ranking_players">%1$d jogadores</string>
-    <string name="ranking_your_place">você %1$dº</string>
+    <string name="ranking_players">%1$d jogadores com pontuação</string>
+    <string name="ranking_your_place">Você em %1$dº</string>
     <string name="ranking_you">%1$s (você)</string>
     <string name="ranking_position">%1$dº</string>
     <string name="ranking_metric_points">Pontos</string>
