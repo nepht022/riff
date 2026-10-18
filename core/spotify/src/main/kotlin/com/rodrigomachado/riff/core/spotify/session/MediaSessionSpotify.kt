@@ -16,8 +16,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Correção da posição tocando, medida no S25 contra o SDK (spec da sessão de mídia, Task 3). */
-const val SESSION_CORRECTION_MS = -340L
+/**
+ * Correção da posição tocando, medida no S25 contra o SDK em 2026-10-18: a sessão e o SDK ficaram a ±3 ms um do outro
+ * tocando (os ~250 ms de salto ao retomar acontecem nos dois e o [com.rodrigomachado.riff.core.spotify.SpotifySongPlayer]
+ * já trata). Zero mantém valendo os ajustes por música feitos com o SDK.
+ */
+const val SESSION_CORRECTION_MS = 0L
 
 /**
  * [SpotifyRemote] pela sessão de mídia do Android: sem SDK, sem login, sem cadastro no Dashboard. "Conectado" quer
