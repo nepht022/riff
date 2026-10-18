@@ -74,6 +74,14 @@ Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a bib
 - **Configurar (uma vez):** publique `scripts/relatos_apps_script.gs` como app da Web (instruções no começo do arquivo) e coloque o endereço no `local.properties`: `report.url=https://script.google.com/macros/s/.../exec`. Sem ele, a tela avisa que o envio não está configurado.
 - Antes de distribuir o app (Play Store), declarar na ficha de segurança dos dados que ele envia o texto do relato, o email opcional e as informações do aparelho.
 
+## Ranking online
+
+- **Nome de jogador:** na primeira vez que o Riff abre, ele pede o seu nome no ranking (3 a 20 letras, números, espaço, `_` ou `-`). O nome fica com este celular: ninguém mais pode usar ("Rodrigo" e "rodrigo" contam como o mesmo). **Agora não** adia até a próxima abertura. Para trocar: **Configurações → Geral → Nome no ranking** (o antigo fica livre; as suas pontuações acompanham o nome novo).
+- **Envio automático:** ao acabar uma partida que seja a sua melhor naquele mapa e dificuldade em algum número, ela vai sozinha para o ranking — também quando o Resultado é pulado ("Ir direto para a próxima"). O Resultado mostra "Ranking: 3º de 27" e **Ver ranking**. Sem internet, a partida fica na fila e vai quando a conexão voltar. No primeiro nome, os seus melhores já guardados no celular vão uma vez.
+- **Tela Ranking** (no topo do Tocando agora e da Biblioteca): as músicas com pontuação (busca por música ou artista) e o placar de cada uma, por dificuldade, ordenado por **Pontos**, **Precisão**, **Combo**, **Perfeitos** ou **Tempo sem errar** (a maior sequência sem erro, em m:ss), do maior para o menor ou ao contrário, com busca por nome e a sua linha em destaque.
+- **"Mesma música" = mesmo mapa** (as mesmas notas): mapas diferentes da mesma música têm rankings separados.
+- **Onde fica:** um Google Apps Script com uma planilha na conta do dono do app (`scripts/ranking_apps_script.gs`; o passo a passo de publicar está no começo do arquivo). O endereço vai no `local.properties` como `ranking.url=…/exec`; sem ele, o ranking fica desligado. Só o apelido e as pontuações ficam guardados; a chave do celular vai como hash. Para liberar um nome ou tirar uma pontuação, apague a linha na planilha. Testes do script sem o Google: `node scripts/ranking_apps_script.test.js`.
+
 ## Jogar
 
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
