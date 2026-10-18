@@ -105,7 +105,7 @@ class PlayerNameTest {
             }
         }
 
-        composeRule.onNodeWithText("Seu nome no ranking").assertExists()
+        composeRule.onNodeWithText("Digite seu nome").assertExists()
         composeRule.onNodeWithText("Esse nome já é de outra pessoa").assertExists()
         composeRule.onNodeWithText("Salvar").performClick()
         composeRule.onNodeWithText("Agora não").performClick()

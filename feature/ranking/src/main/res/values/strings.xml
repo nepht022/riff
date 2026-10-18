@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ranking_title">Ranking</string>
-    <string name="ranking_name_title">Seu nome no ranking</string>
+    <string name="ranking_name_title">Digite seu nome</string>
     <string name="ranking_name_field">Nome</string>
     <string name="ranking_name_save">Salvar</string>
     <string name="ranking_name_later">Agora não</string>
