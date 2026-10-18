@@ -1,15 +1,25 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.riff.android.application.compose)
     alias(libs.plugins.riff.android.hilt)
     alias(libs.plugins.baselineprofile)
 }
 
+// A chave de release fica fora do git (a senha no local.properties). Sem ela, o build usa a chave de debug.
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+// Fica em ~/.android/riff-release.jks (o mesmo lugar da chave de debug), fora do projeto.
+val releaseKeystore = file("${System.getProperty("user.home")}/.android/riff-release.jks")
+    .takeIf { it.exists() && localProperties.getProperty("riff.keystore.password") != null }
+
 android {
     namespace = "com.rodrigomachado.riff"
     defaultConfig {
         applicationId = "com.rodrigomachado.riff"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         // Só celulares (ARM): as bibliotecas x86 do ONNX Runtime (~80 MB) servem apenas a emuladores e PCs.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -20,12 +30,26 @@ android {
     androidResources {
         noCompress += "onnx"
     }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("riff") {
+                storeFile = releaseKeystore
+                storePassword = localProperties.getProperty("riff.keystore.password")
+                keyAlias = localProperties.getProperty("riff.key.alias", "riff")
+                keyPassword = localProperties.getProperty("riff.keystore.password")
+            }
+        }
+    }
     buildTypes {
+        // Debug e release com a mesma chave: um substitui o outro sem apagar os dados (o desempenho.sh troca os dois).
+        val signing = signingConfigs.findByName("riff") ?: signingConfigs.getByName("debug")
+        debug {
+            signingConfig = signing
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Uso pessoal: a mesma chave do debug deixa o app medido substituir o de debug sem apagar os dados.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signing
         }
     }
 }

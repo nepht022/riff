@@ -19,7 +19,7 @@ Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não �
 
 ### Spotify
 
-1. Crie um app em https://developer.spotify.com/dashboard com o redirect URI `riff://callback` e a plataforma **Android**, com o package `com.rodrigomachado.riff` e o SHA-1 da sua chave de debug (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`). Em modo de desenvolvimento, a conta do Spotify usada no aparelho precisa estar em "User Management".
+1. Crie um app em https://developer.spotify.com/dashboard com o redirect URI `riff://callback` e a plataforma **Android**, com o package `com.rodrigomachado.riff` e o SHA-1 da chave que assina o app (veja [Chave de release](#chave-de-release); sem ela, a de debug: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`). Em modo de desenvolvimento, a conta do Spotify usada no aparelho precisa estar em "User Management".
 2. No `local.properties` (fora do git):
    ```
    spotify.clientId=<Client ID do Dashboard>
@@ -28,6 +28,25 @@ Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não �
 3. O aparelho precisa do app do Spotify instalado e logado numa conta Premium. Na primeira conexão o Riff abre o login do Spotify pedindo o controle remoto; aceite.
 
 Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a biblioteca continua jogando com o áudio das pastas. O AAR do SDK está em `third_party/maven` (veja `third_party/README.md`). Falhas de conexão aparecem no logcat com a tag `RiffSpotify`.
+
+### Chave de release
+
+O debug e o release são assinados com a mesma chave própria, fora do git: assim um substitui o outro no celular sem apagar os dados, e quem recebeu o APK consegue atualizar. A chave fica em `~/.android/riff-release.jks` (no Windows, `C:\Users\<você>\.android\`) e a senha no `local.properties`:
+
+```
+riff.keystore.password=<senha>
+riff.key.alias=riff
+```
+
+Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.jks -alias riff -keyalg RSA -keysize 4096 -validity 10000` e cadastre o SHA-1 dela (`keytool -list -v -keystore riff-release.jks`) no Dashboard do Spotify. **Guarde o `.jks` e a senha fora do PC**: sem eles, nenhuma atualização instala por cima e todo mundo precisa desinstalar (perdendo recordes e ajustes). Sem `riff.keystore`, o build usa a chave de debug.
+
+### Enviar o APK para outras pessoas
+
+1. Suba `versionCode` e `versionName` em `app/build.gradle.kts` (a versão nova só instala por cima de uma mais antiga).
+2. `./scripts/gw :app:assembleRelease` e envie `app/build/outputs/apk/release/app-release.apk` (~190 MB, só celulares ARM, Android 8+). A pessoa precisa permitir "instalar apps desconhecidos" para o app que abrir o arquivo.
+3. Funciona sem nada além do APK: biblioteca, pesquisa no Encore, guitarra separada por IA, ranking e Reportar (os endereços dos scripts vão dentro do APK).
+4. **Spotify:** o app está em modo de desenvolvimento, então só contas adicionadas em "User Management" no Dashboard (nome + email da conta do Spotify) conseguem conectar, com limite de poucas contas. Para outras, o Tocando agora não conecta; o resto do app funciona.
+
 
 ## Importar mapas
 
@@ -150,7 +169,7 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 O **Baseline Profile** diz ao Android quais partes do app compilar antes da primeira execução, para a abertura e a partida já começarem rápidas. Ele é gerado no celular por percursos automáticos (abrir o app, rolar a biblioteca, jogar 20 s de uma música e sair).
 
-**Vale só para o build release** (`./scripts/gw :app:assembleRelease`, assinado com a chave de debug): o Android ignora o perfil em apps de debug. Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois. Depois de mexer nas regras do R8 (`app/proguard-rules.pro`), rode `scripts/conferir_r8_spotify.sh`: ele confere que o SDK do Spotify continua achando o app no release.
+**Vale só para o build release** (`./scripts/gw :app:assembleRelease`, assinado com a mesma chave do debug): o Android ignora o perfil em apps de debug. Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois. Depois de mexer nas regras do R8 (`app/proguard-rules.pro`), rode `scripts/conferir_r8_spotify.sh`: ele confere que o SDK do Spotify continua achando o app no release.
 
 ```bash
 scripts/desempenho.sh perfil    # gera o perfil de novo
@@ -162,7 +181,7 @@ uv run --with perfetto python3 scripts/quadros_travados.py   # fps e quadros com
 - Celular conectado, desbloqueado, com a tela ligada (tempo de tela longo) e sem economia de bateria; não mexa nele durante a execução (10 a 15 minutos).
 - A música do percurso precisa estar na biblioteca (o percurso rola a lista até achá-la): por padrão "Smells Like Teen Spirit"; outra com `scripts/desempenho.sh tudo "-Pandroid.testInstrumentationRunnerArguments.riff.song=<nome>"`.
 - O perfil de abertura (`startup-prof.txt`) leva só a abertura do app; a biblioteca e a partida entram no perfil geral. A medição da partida conta só os 20 s de jogo (abrir a música e sair ficam de fora).
-- O app medido substitui o de debug no celular sem apagar os dados (mesma chave). Antes, o script para o app e copia os dados para uma pasta nova em `.copias-dados/<data>/` (fora do git); no fim, reinstala o debug, mesmo se algo falhar.
+- O app medido substitui o de debug no celular sem apagar os dados (mesma chave, veja [Chave de release](#chave-de-release)). Antes, o script para o app e copia os dados para uma pasta nova em `.copias-dados/<data>/` (fora do git); no fim, reinstala o debug, mesmo se algo falhar.
 - **Restaurar uma cópia** (só se os dados sumirem), com o app de debug instalado e parado (`adb shell am force-stop com.rodrigomachado.riff`): para cada arquivo da pasta, `adb push <arquivo> /data/local/tmp/` e `adb shell "run-as com.rodrigomachado.riff sh -c 'cat /data/local/tmp/<arquivo> > databases/<arquivo>'"` (o `riff_settings.preferences_pb` vai para `files/datastore/`). Apague do aparelho o `riff.db-wal`/`-shm` que não estiver na cópia.
 - **Quando regerar o perfil:** depois de mudanças grandes em telas ou no gameplay. Um perfil desatualizado não quebra nada: só deixa de acelerar o que mudou.
 - O `frameDurationCpuMs` do Macrobenchmark inclui a espera na fila da tela ("Buffer Stuffing", o app adiantado). Para saber se a partida trava, use o `quadros_travados.py`.
