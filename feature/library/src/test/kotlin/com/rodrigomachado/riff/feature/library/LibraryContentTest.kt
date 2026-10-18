@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
 import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
 import com.rodrigomachado.riff.core.data.importer.ImportReport
@@ -546,5 +547,55 @@ class LibraryContentTest {
         val search = composeRule.onNodeWithText("Pesquisar", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val select = composeRule.onNodeWithText("Selecionar", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertEquals(search.right.value, select.right.value, 1.5f) // arredondamento da medida do texto
+    }
+
+    private val songs = listOf(
+        chart("a", title = "Smells Like Teen Spirit", artist = "Nirvana"),
+        chart("b", title = "Bohemian Rhapsody", artist = "Queen"),
+        chart("c", title = "Música Brasileira", artist = "Banda"),
+    )
+
+    private fun search(text: String) {
+        composeRule.onNodeWithContentDescription("Pesquisar na biblioteca").performClick()
+        composeRule.onNodeWithTag(LibraryTestTags.FILTER).performTextReplacement(text)
+    }
+
+    /** O ranking fica no Tocando agora; aqui, a lupa procura nos mapas baixados. */
+    @Test
+    fun theLibraryHasNoRankingButton() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
+
+        composeRule.onNodeWithText("Ranking").assertDoesNotExist()
+    }
+
+    @Test
+    fun theMagnifierFiltersBySongOrArtist() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
+
+        search("nirv")
+        composeRule.onNodeWithText("Smells Like Teen Spirit").assertExists()
+        composeRule.onNodeWithText("Bohemian Rhapsody").assertDoesNotExist()
+
+        composeRule.onNodeWithTag(LibraryTestTags.FILTER).performTextReplacement("rhapsody")
+        composeRule.onNodeWithText("Bohemian Rhapsody").assertExists()
+        composeRule.onNodeWithText("Smells Like Teen Spirit").assertDoesNotExist()
+    }
+
+    @Test
+    fun theSearchIgnoresAccentsAndCase() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
+
+        search("MUSICA")
+
+        composeRule.onNodeWithText("Música Brasileira").assertExists()
+    }
+
+    @Test
+    fun aSearchWithoutResultsSaysSo() {
+        show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
+
+        search("metallica")
+
+        composeRule.onNodeWithText("Nenhum mapa com esse nome").assertExists()
     }
 }

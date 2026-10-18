@@ -200,7 +200,6 @@ private fun NavGraphBuilder.libraryDestinations(navController: NavHostController
             onSearch = dropUnlessResumed { match ->
                 navController.navigate(SearchRoute(matchTrackUri = match?.trackUri, matchTrackTitle = match?.title))
             },
-            onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
         )
     }
 }

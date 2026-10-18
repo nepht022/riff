@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object LibraryTestTags {
     const val LIST = "library_list"
+    const val FILTER = "library_filter"
 }
 
 @Composable
@@ -65,7 +67,6 @@ fun LibraryScreen(
     onMatched: () -> Unit = {},
     /** Pesquisar no Encore; no modo de escolha, com a música do Spotify para casar o mapa baixado. */
     onSearch: (TrackToMatch?) -> Unit = {},
-    onRanking: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -94,7 +95,6 @@ fun LibraryScreen(
         matchingTitle = match?.title,
         onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
         onSearch = { onSearch(match) },
-        onRanking = onRanking,
         onDifficultyChosen = viewModel::onDifficultyChosen,
         onSeparate = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -131,7 +131,6 @@ fun LibraryContent(
     matchingTitle: String? = null,
     onChartMatched: (String) -> Unit = {},
     onSearch: () -> Unit = {},
-    onRanking: () -> Unit = {},
     onDifficultyChosen: (Chart, Difficulty) -> Unit = { chart, difficulty -> onPlay(chart.id, difficulty) },
     onSeparate: () -> Unit = {},
     onPlayWithoutSeparating: () -> Unit = {},
@@ -143,14 +142,34 @@ fun LibraryContent(
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        LibraryHeader(onBack, onSearch, onRanking)
-        PosterTitle(
-            stringResource(R.string.library_title),
-            style = MaterialTheme.typography.displaySmall,
-        )
+        LibraryHeader(onBack, onSearch)
+        var filtering by rememberSaveable { mutableStateOf(false) }
+        var filter by rememberSaveable { mutableStateOf("") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PosterTitle(
+                stringResource(R.string.library_title),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.displaySmall,
+            )
+            MagnifierButton(stringResource(R.string.library_filter_open)) {
+                filtering = !filtering
+                if (!filtering) filter = ""
+            }
+        }
+        if (filtering) FilterField(filter) { filter = it }
         matchingTitle?.let { MatchHeader(it) }
-        LibraryBody(state, onPickFolder, onRescan) {
-            ChartList(state, onPickFolder, onRescan, onReportDismissed, deletion) { chart ->
+        val shown = remember(state.charts, filter) { state.copy(charts = state.charts.matching(filter)) }
+        if (filter.isNotBlank() && shown.charts.isEmpty() && state.charts.isNotEmpty()) {
+            Text(
+                stringResource(R.string.library_filter_none),
+                Modifier.padding(vertical = Spacing.md),
+                style = MaterialTheme.typography.bodyLarge,
+                color = RiffColors.PaperDim,
+            )
+            return@Column
+        }
+        LibraryBody(shown, onPickFolder, onRescan) {
+            ChartList(shown, onPickFolder, onRescan, onReportDismissed, deletion) { chart ->
                 // Escolher o mapa da música do Spotify conclui (confirma); senão, abre a escolha da dificuldade.
                 playMenuSound(if (matchingTitle != null) MenuSound.CONFIRM else MenuSound.NAVIGATE)
                 if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
@@ -209,9 +228,9 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
     ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
 }
 
-/** Voltar, Ranking e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
+/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
 @Composable
-private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit, onRanking: () -> Unit) {
+private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -219,9 +238,6 @@ private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit, onRanking: (
         TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
         Spacer(Modifier.weight(1f))
         SeparationIndicator()
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onRanking)) {
-            Text(stringResource(R.string.library_ranking), color = RiffColors.Paper)
-        }
         TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearch)) {
             Text(stringResource(R.string.library_search), color = RiffColors.Paper)
         }
