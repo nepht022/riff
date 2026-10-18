@@ -1,17 +1,14 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -146,14 +143,19 @@ fun NowPlayingContent(
     onDifficultyAsked: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        PosterTitle(
-            stringResource(R.string.nowplaying_title),
-            Modifier.padding(top = Spacing.md),
-            style = MaterialTheme.typography.displaySmall,
-        )
-        // Rola de lado se os botões não couberem (celular estreito, inglês).
+        // O título e, no canto direito, o ícone da separação da guitarra (quando houver uma).
+        Row(Modifier.fillMaxWidth().padding(top = Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+            PosterTitle(
+                stringResource(R.string.nowplaying_title),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.displaySmall,
+            )
+            SeparationIndicator()
+        }
+        // Os quatro espalhados pela linha toda.
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(
@@ -178,8 +180,6 @@ fun NowPlayingContent(
             ) {
                 Text(stringResource(R.string.nowplaying_ranking), color = RiffColors.Paper)
             }
-            Spacer(Modifier.width(Spacing.sm))
-            SeparationIndicator()
         }
         when (state) {
             NowPlayingUiState.Connecting -> LoadingState(message = stringResource(R.string.nowplaying_connecting))

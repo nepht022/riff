@@ -343,6 +343,24 @@ class NowPlayingContentTest {
         composeRule.onNodeWithTag(NowPlayingTestTags.QUEUE_MISS).assertDoesNotExist()
     }
 
+    /** Os quatro botões ocupam a linha toda: o primeiro encosta à esquerda, o último à direita. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp")
+    fun theMenuButtonsSpreadAcrossTheRow() {
+        show(NowPlayingUiState.NothingPlaying)
+
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val library = composeRule.onNodeWithText("Biblioteca").getUnclippedBoundsInRoot()
+        val ranking = composeRule.onNodeWithText("Ranking").getUnclippedBoundsInRoot()
+        val settings = composeRule.onNodeWithText("Configurações").getUnclippedBoundsInRoot()
+        val report = composeRule.onNodeWithText("Reportar").getUnclippedBoundsInRoot()
+        val gaps = listOf(settings.left - library.right, report.left - settings.right, ranking.left - report.right)
+        // As folgas entre eles são iguais e a linha vai de borda a borda (menos a margem e a folga do botão).
+        assertTrue("$gaps", gaps.maxOf { it.value } - gaps.minOf { it.value } < 2f)
+        assertTrue("$ranking $root", (root.right - ranking.right).value < 32f)
+        assertTrue("$library", library.left.value < 32f)
+    }
+
     @Test
     fun theSongCanBeChangedOrPausedBeforeChoosingAMap() = useControls(MatchStatus.NoMatch)
 
