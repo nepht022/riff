@@ -11,11 +11,9 @@ import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.SpotifyConnection
+import com.rodrigomachado.riff.core.spotify.QueueRead
+import com.rodrigomachado.riff.core.spotify.SpotifyQueue
 import com.rodrigomachado.riff.core.spotify.SpotifyRemote
-import com.rodrigomachado.riff.core.spotify.web.QueueRead
-import com.rodrigomachado.riff.core.spotify.web.SpotifyQueue
-import com.rodrigomachado.riff.core.spotify.web.SpotifyWebAuth
-import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 fun playing(uri: String) = PlaybackState(uri, "Música $uri", "Banda", 200_000, 0, false, 0)
@@ -46,6 +44,7 @@ class FakeRemote : SpotifyRemote {
 
 class FakeQueue : SpotifyQueue {
     var next: QueueRead = QueueRead.Tracks(emptyList())
+    override val changes = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var reads = 0
     var failOnce: RuntimeException? = null
 
@@ -57,16 +56,6 @@ class FakeQueue : SpotifyQueue {
         }
         return next
     }
-}
-
-class FakeAuth : SpotifyWebAuth {
-    override val state = MutableStateFlow(WebAuthState.AUTHORIZED)
-
-    override suspend fun authorize() = true
-
-    override suspend fun accessToken(): String? = "token"
-
-    override suspend fun onUnauthorized(): String? = null
 }
 
 class FakeSettings(initial: Settings) : SettingsRepository {

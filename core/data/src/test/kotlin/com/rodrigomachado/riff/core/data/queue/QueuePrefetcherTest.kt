@@ -7,16 +7,14 @@ import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.Settings
-import com.rodrigomachado.riff.core.spotify.web.QueueRead
-import com.rodrigomachado.riff.core.spotify.web.QueuedTrack
-import com.rodrigomachado.riff.core.spotify.web.WebAuthState
+import com.rodrigomachado.riff.core.spotify.QueueRead
+import com.rodrigomachado.riff.core.spotify.QueuedTrack
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,7 +25,6 @@ import org.robolectric.RobolectricTestRunner
 class QueuePrefetcherTest {
     private val remote = FakeRemote()
     private val queue = FakeQueue()
-    private val auth = FakeAuth()
     private val settings = FakeSettings(Settings.DEFAULT.copy(queuePrefetch = true))
     private val matches = FakeMatches()
     private val encore = FakeEncoreSearch()
@@ -65,7 +62,7 @@ class QueuePrefetcherTest {
 
     private fun TestScope.start() {
         QueuePrefetcher(
-            remote, queue, auth, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
+            remote, queue, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
             QueueCleaner(rows, deleter, settings, matchActivity), misses, preparing,
             clock = { testScheduler.currentTime },
         ).start(backgroundScope)
@@ -332,28 +329,6 @@ class QueuePrefetcherTest {
     }
 
     @Test
-    fun retryAfterIsRespected() = runTest {
-        queue.next = QueueRead.RetryAfter(120)
-        start()
-        nowPlaying("now")
-        advanceTimeBy(61_000)
-        assertEquals(1, queue.reads)
-
-        advanceTimeBy(60_000)
-        assertEquals(2, queue.reads)
-    }
-
-    @Test
-    fun aLostAuthorizationTurnsTheOptionOff() = runTest {
-        queue.next = QueueRead.Unavailable
-        auth.state.value = WebAuthState.LOST
-        start()
-        nowPlaying("now")
-
-        assertFalse(settings.settings.value.queuePrefetch)
-    }
-
-    @Test
     fun theFeatureNeverStartsTheSpotifyConnection() = runTest {
         remote.connection.value = com.rodrigomachado.riff.core.model.SpotifyConnection.Idle
         start()
@@ -482,14 +457,49 @@ class QueuePrefetcherTest {
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 
-    /** Opção ligada mas sem autorização (token ilegível depois de um backup restaurado): desliga e não fica muda. */
+    /** Sem sessão (Spotify fechado): a leitura não serve; a opção fica ligada e a próxima leitura tenta de novo. */
     @Test
-    fun withoutAuthorizationTheOptionIsTurnedOff() = runTest {
+    fun anUnavailableQueueKeepsTheOption() = runTest {
         queue.next = QueueRead.Unavailable
-        auth.state.value = WebAuthState.NOT_AUTHORIZED
         start()
         nowPlaying("now")
 
-        assertFalse(settings.settings.value.queuePrefetch)
+        assertTrue(settings.settings.value.queuePrefetch)
+    }
+
+    /** A fila da sessão não traz a duração: o mapa baixado não vira casamento (outra versão ficaria presa). */
+    @Test
+    fun aMapForATrackWithoutDurationIsNotSavedAsAMatch() = runTest {
+        queue.next = QueueRead.Tracks(listOf(QueuedTrack("a", "Música a", "Banda", durationMs = null)))
+        encoreHas("a")
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(listOf("md5-a" to null), downloader.downloaded)
+        assertTrue(rows.rows.isNotEmpty()) // a limpeza dos não jogados continua sabendo a faixa
+    }
+
+    @Test
+    fun aTrackWithDurationStillMatchesAsToday() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        start()
+
+        nowPlaying("now")
+
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    @Test
+    fun theQueueIsReadAgainWhenItChanges() = runTest {
+        start()
+        nowPlaying("now")
+        val before = queue.reads
+
+        queue.changes.tryEmit(Unit)
+        runCurrent()
+
+        assertEquals(before + 1, queue.reads)
     }
 }

@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.audio.SpotifySong
 import com.rodrigomachado.riff.core.spotify.session.AndroidSpotifySession
 import com.rodrigomachado.riff.core.spotify.session.MediaSessionSpotify
 import com.rodrigomachado.riff.core.spotify.session.SESSION_CORRECTION_MS
+import com.rodrigomachado.riff.core.spotify.session.SessionSpotifyQueue
 import com.rodrigomachado.riff.core.spotify.session.SpotifySession
 import dagger.Binds
 import dagger.Module
@@ -22,6 +23,9 @@ import javax.inject.Singleton
 abstract class SpotifyBindsModule {
     @Binds
     abstract fun spotifySession(impl: AndroidSpotifySession): SpotifySession
+
+    @Binds
+    abstract fun spotifyQueue(impl: SessionSpotifyQueue): SpotifyQueue
 }
 
 @Module

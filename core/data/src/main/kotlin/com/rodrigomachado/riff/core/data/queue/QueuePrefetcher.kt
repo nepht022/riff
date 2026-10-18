@@ -8,19 +8,17 @@ import com.rodrigomachado.riff.core.data.download.ChartDownloadException
 import com.rodrigomachado.riff.core.data.download.ChartDownloader
 import com.rodrigomachado.riff.core.encore.EncoreChart
 import com.rodrigomachado.riff.core.model.MatchStatus
-import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.SpotifyConnection
+import com.rodrigomachado.riff.core.spotify.QueueRead
+import com.rodrigomachado.riff.core.spotify.QueuedTrack
+import com.rodrigomachado.riff.core.spotify.SpotifyQueue
 import com.rodrigomachado.riff.core.spotify.SpotifyRemote
-import com.rodrigomachado.riff.core.spotify.web.QueueRead
-import com.rodrigomachado.riff.core.spotify.web.QueuedTrack
-import com.rodrigomachado.riff.core.spotify.web.SpotifyQueue
-import com.rodrigomachado.riff.core.spotify.web.SpotifyWebAuth
-import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -43,7 +41,6 @@ import javax.inject.Singleton
 class QueuePrefetcher(
     private val remote: SpotifyRemote,
     private val queue: SpotifyQueue,
-    private val auth: SpotifyWebAuth,
     private val settings: SettingsRepository,
     private val matches: TrackMatchRepository,
     private val picker: QueueChartPicker,
@@ -58,7 +55,6 @@ class QueuePrefetcher(
     @Inject constructor(
         remote: SpotifyRemote,
         queue: SpotifyQueue,
-        auth: SpotifyWebAuth,
         settings: SettingsRepository,
         matches: TrackMatchRepository,
         picker: QueueChartPicker,
@@ -69,7 +65,7 @@ class QueuePrefetcher(
         misses: QueueMisses,
         preparing: QueuePreparing,
     ) : this(
-        remote, queue, auth, settings, matches, picker, downloader, downloads, conditions, cleaner, misses, preparing,
+        remote, queue, settings, matches, picker, downloader, downloads, conditions, cleaner, misses, preparing,
         System::currentTimeMillis,
     )
 
@@ -108,28 +104,25 @@ class QueuePrefetcher(
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun follow() {
         remote.playback.map { it?.trackUri }.filterNotNull().distinctUntilChanged().collectLatest { current ->
-            while (true) delay(guarded("leitura da fila") { read(current) } ?: READ_INTERVAL_MS)
+            coroutineScope {
+                // Ler a fila da sessão é de graça: lê de novo a cada mudança, e de tempos em tempos por segurança.
+                launch { queue.changes.collect { guarded("leitura da fila") { read(current) } } }
+                while (true) {
+                    guarded("leitura da fila") { read(current) }
+                    delay(READ_INTERVAL_MS)
+                }
+            }
         }
     }
 
-    /** Lê a fila e devolve quanto esperar até a próxima leitura. */
-    private suspend fun read(current: String): Long = when (val read = queue.next(WINDOW)) {
-        is QueueRead.Tracks -> {
-            // Só com a fila lida dá para saber o que passou ou saiu dela.
-            cleaner.keepOnly(current, read.tracks.map { it.uri })
-            read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach {
-                preparing.start(it.uri)
-                pending.send(it)
-            }
-            READ_INTERVAL_MS
-        }
-
-        is QueueRead.RetryAfter -> read.seconds * MS_PER_SECOND
-
-        QueueRead.Unavailable -> {
-            // Sem autorização (perdida, ou token ilegível): desliga, e as Configurações explicam.
-            if (auth.state.value != WebAuthState.AUTHORIZED) settings.update { it.copy(queuePrefetch = false) }
-            READ_INTERVAL_MS
+    /** Lê a fila; sem sessão agora, tenta na próxima leitura. */
+    private suspend fun read(current: String) {
+        val read = queue.next(WINDOW) as? QueueRead.Tracks ?: return
+        // Só com a fila lida dá para saber o que passou ou saiu dela.
+        cleaner.keepOnly(current, read.tracks.map { it.uri })
+        read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach {
+            preparing.start(it.uri)
+            pending.send(it)
         }
     }
 
@@ -169,7 +162,9 @@ class QueuePrefetcher(
         val suggestion = target.suggestion
         val saved = try {
             // Com outra duração, o mapa não casa com a faixa: fica como sugestão, para confirmar no Tocando agora.
-            downloader.download(target.chart, track.uri.takeIf { suggestion == null }) {}
+            // Sem a duração (a fila da sessão não traz), também não: ao tocar, o casamento automático decide.
+            val matchTo = track.uri.takeIf { suggestion == null && track.durationMs != null }
+            downloader.download(target.chart, matchTo) {}
         } catch (e: ChartDownloadException) {
             Log.w(TAG, "${track.label()}: mapa da fila não baixado: ${e.reason}")
             misses.record(track.uri, QueueMiss.DOWNLOAD_FAILED)
@@ -196,7 +191,7 @@ class QueuePrefetcher(
     }
 
     private suspend fun statusOf(track: QueuedTrack): MatchStatus =
-        matches.matchFor(PlaybackState(track.uri, track.title, track.artist, track.durationMs, 0, true, 0))
+        matches.matchFor(track.uri, TrackQuery(track.title, track.artist, track.durationMs))
 
     private fun needsMap(track: QueuedTrack, status: MatchStatus, replaceSuggested: Boolean): Boolean = when (status) {
         is MatchStatus.Matched -> {
@@ -214,7 +209,6 @@ class QueuePrefetcher(
         const val WINDOW = 2
         const val MAX_QUEUE_MAPS = 3
         const val READ_INTERVAL_MS = 60_000L
-        const val MS_PER_SECOND = 1_000L
     }
 }
 

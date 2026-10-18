@@ -22,6 +22,10 @@ interface TrackMatchRepository {
     /** Casamento salvo (prioridade) ou automático (spec §5). */
     suspend fun matchFor(track: PlaybackState): MatchStatus
 
+    /** O mesmo, para uma faixa da fila: a duração pode faltar (a sessão de mídia não traz). */
+    suspend fun matchFor(trackUri: String, query: TrackQuery): MatchStatus =
+        matchFor(PlaybackState(trackUri, query.title, query.artist, query.durationMs ?: 0, 0, true, 0))
+
     /** Grava a confirmação ou a escolha manual; mantém o ajuste fino se o mapa for o mesmo. */
     suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean)
 
@@ -43,8 +47,11 @@ class RoomTrackMatchRepository @Inject constructor(
     private val version = MutableStateFlow(0)
     override val changes: StateFlow<Int> = version.asStateFlow()
 
-    override suspend fun matchFor(track: PlaybackState): MatchStatus {
-        val saved = dao.get(track.trackUri)
+    override suspend fun matchFor(track: PlaybackState): MatchStatus =
+        matchFor(track.trackUri, TrackQuery(track.title, track.artist, track.durationMs))
+
+    override suspend fun matchFor(trackUri: String, query: TrackQuery): MatchStatus {
+        val saved = dao.get(trackUri)
         val savedChart = saved?.let { charts.getChart(it.chartId) }
         if (saved != null && savedChart != null) {
             return if (saved.suggested) {
@@ -53,7 +60,6 @@ class RoomTrackMatchRepository @Inject constructor(
                 MatchStatus.Matched(savedChart, saved.trackOffsetMs)
             }
         }
-        val query = TrackQuery(track.title, track.artist, track.durationMs)
         val candidate = TrackMatcher.bestMatch(query, charts.observeCharts().first()) ?: return MatchStatus.NoMatch
         return when (candidate.kind) {
             MatchKind.AUTOMATIC -> MatchStatus.Matched(candidate.chart, 0)
