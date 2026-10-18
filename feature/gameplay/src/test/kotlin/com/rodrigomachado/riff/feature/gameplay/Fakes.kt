@@ -18,6 +18,7 @@ class FakeSongPlayer : SongPlayer {
     var released = false
     override var isCompleted: Boolean = false
     override var isStarting: Boolean = false
+    override var trackRefused: Boolean = false
     val seeks = mutableListOf<Long>()
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.

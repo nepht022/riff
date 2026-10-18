@@ -307,6 +307,15 @@ private fun PauseOverlay(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
+        if (state.spotifyControls && state.session.trackRefused) {
+            Text(
+                stringResource(R.string.gameplay_spotify_go_back),
+                style = MaterialTheme.typography.bodyLarge,
+                color = RiffColors.Paper,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(horizontal = Spacing.lg),
+            )
+        }
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
         if (state.spotifyControls) {
             PlaybackControls(

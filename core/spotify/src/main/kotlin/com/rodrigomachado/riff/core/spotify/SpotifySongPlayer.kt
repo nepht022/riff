@@ -38,8 +38,12 @@ class SpotifySongPlayer(
     // O jogo pausou e o Spotify ainda não confirmou: um "tocando" agora é atraso dele, não retomada de fora.
     private var pauseUnconfirmed = false
 
-    // Conexão caiu: a posição fica congelada e o que o Spotify mostrar na volta só vale no próximo play.
+    // A sessão sumiu (permissão, Spotify fechado, anúncio): a posição fica congelada e o que o Spotify mostrar na volta
+    // só vale no próximo play, menos depois de um anúncio.
     private var disconnected = false
+
+    // Houve anúncio desde que a sessão sumiu: a música volta sozinha, e outra faixa depois dele é a seguinte.
+    private var adBreak = false
     private var afterReconnect: PlaybackState? = null
     private var last: PlaybackState? = null
     private var listening: Job? = null
@@ -56,6 +60,7 @@ class SpotifySongPlayer(
         if (released) return
         trackUri = uri
         listening = scope.launch {
+            launch { remote.adPlaying.collect { if (it) adBreak = true } }
             launch { remote.playback.collect(::onState) }
             while (isActive) {
                 delay(REFRESH_INTERVAL_MS)
@@ -66,7 +71,8 @@ class SpotifySongPlayer(
                 if (waitingForOurTrack && nowMs() - startedAtMs > START_TIMEOUT_MS) {
                     started = false
                     starting = false
-                    last = last?.frozenAt(0)
+                    trackRefused = true
+                    last = last?.frozenAt(0, nowMs())
                 }
                 // Mandou continuar e o Spotify não voltou: o jogo pausa em vez de esperar para sempre.
                 if (starting && sawOurTrack && nowMs() - lastCommandAtMs > START_TIMEOUT_MS) starting = false
@@ -79,11 +85,11 @@ class SpotifySongPlayer(
             !started -> Unit
 
             state == null -> {
-                last = last?.frozenAt(positionMs)
+                last = last?.frozenAt(positionMs, nowMs())
                 disconnected = true
             }
 
-            disconnected -> afterReconnect = state
+            disconnected -> onSessionBack(state)
 
             state.capturedAtElapsedMs < lastCommandAtMs -> Unit
 
@@ -96,6 +102,21 @@ class SpotifySongPlayer(
                 Unit
 
             else -> onOurTrack(state)
+        }
+    }
+
+    /** Depois de um anúncio a música segue sozinha; noutros casos espera o Continuar. */
+    private fun onSessionBack(state: PlaybackState) {
+        if (!adBreak) {
+            afterReconnect = state
+            return
+        }
+        adBreak = false
+        disconnected = false
+        afterReconnect = null
+        when {
+            state.trackUri == trackUri -> onOurTrack(state)
+            sawOurTrack -> completed = true
         }
     }
 
@@ -144,6 +165,7 @@ class SpotifySongPlayer(
         }
         val now = nowMs()
         lastCommandAtMs = now
+        trackRefused = false
         when {
             // Ainda não começou (ou pausou, ou a conexão caiu, antes de o Spotify começar a nossa faixa): toca do
             // começo, e o prazo para ela começar conta a partir daqui.
@@ -174,21 +196,23 @@ class SpotifySongPlayer(
         starting = true
     }
 
-    /** Volta a nossa faixa para onde o jogo parou; se o Spotify já estiver lá, só retoma. */
+    /**
+     * A sessão voltou: na nossa faixa, volta para onde o jogo parou e retoma. Noutra faixa, a sessão de mídia não tem
+     * como pôr a nossa no lugar sem trocar a playlist: a partida espera e a pausa pede para voltar a música no Spotify.
+     */
     private fun resumeAfterReconnecting(uri: String, now: Long) {
+        val back = afterReconnect
+        if (back?.trackUri != uri) {
+            trackRefused = back != null
+            return
+        }
         val position = positionMs
         startFromMs = position
         pauseUnconfirmed = false
-        val back = afterReconnect
         disconnected = false
         afterReconnect = null
-        if (back?.trackUri == uri) {
-            remote.seekTo(position)
-            remote.resume()
-        } else {
-            remote.play(uri)
-            remote.seekTo(position)
-        }
+        remote.seekTo(position)
+        remote.resume()
         // Como numa retomada normal: a pista espera o Spotify confirmar que voltou.
         starting = true
         last = last?.copy(positionMs = position, isPaused = true, capturedAtElapsedMs = now)
@@ -201,7 +225,7 @@ class SpotifySongPlayer(
         pauseUnconfirmed = true
         lastCommandAtMs = nowMs()
         remote.pause()
-        last = last?.frozenAt(position)
+        last = last?.frozenAt(position, nowMs())
     }
 
     override fun release() {
@@ -229,8 +253,8 @@ class SpotifySongPlayer(
 
     override val isCompleted: Boolean get() = completed
 
-    private fun PlaybackState.frozenAt(position: Long) =
-        copy(positionMs = position, isPaused = true, capturedAtElapsedMs = nowMs())
+    override var trackRefused: Boolean = false
+        private set
 
     companion object {
         const val REFRESH_INTERVAL_MS = 2_000L
@@ -246,3 +270,7 @@ class SpotifySongPlayer(
         private const val NEAR_END_MS = END_TOLERANCE_MS + REFRESH_INTERVAL_MS
     }
 }
+
+/** Parado em [position] desde [now]. */
+private fun PlaybackState.frozenAt(position: Long, now: Long) =
+    copy(positionMs = position, isPaused = true, capturedAtElapsedMs = now)

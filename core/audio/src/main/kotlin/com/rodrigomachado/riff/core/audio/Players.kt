@@ -28,6 +28,9 @@ interface SongPlayer {
     val isStarting: Boolean get() = false
 
     val isCompleted: Boolean
+
+    /** A música pedida nunca começou (Spotify: "Jogar de novo" sem conseguir voltar a faixa); a pausa explica. */
+    val trackRefused: Boolean get() = false
 }
 
 /** Sons de acerto e erro, tocados no instante do toque. */

@@ -61,6 +61,9 @@ class GameSession(
 
     val isPaused: Boolean get() = !player.isPlaying && rewind == null
 
+    /** A música pedida nunca começou (Spotify: "Jogar de novo" sem conseguir voltar a faixa). */
+    val trackRefused: Boolean get() = player.trackRefused
+
     val isFinished: Boolean
         get() = player.isCompleted || (engine.isFinished && songTimeMs > endMs)
 

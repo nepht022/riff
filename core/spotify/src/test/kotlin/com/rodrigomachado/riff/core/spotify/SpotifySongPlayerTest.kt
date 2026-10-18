@@ -418,8 +418,9 @@ class SpotifySongPlayerTest {
         assertFalse(player.isCompleted)
     }
 
+    /** Pela sessão de mídia não há como pôr outra faixa no lugar sem trocar a playlist: espera o jogador voltar. */
     @Test
-    fun resumingAfterReconnectingPutsOurTrackBackWhereTheGameStopped() = runTest {
+    fun resumingAfterTheSessionCameBackOnAnotherTrackWaitsAndAsksToGoBack() = runTest {
         val player = prepared()
         player.play()
         now += 100
@@ -432,9 +433,9 @@ class SpotifySongPlayerTest {
 
         player.play()
 
-        assertEquals(listOf("play:$ours", "seek:30400"), remote.commands)
-        assertTrue(player.isPlaying)
-        assertTrue(player.isStarting)
+        assertEquals(emptyList<String>(), remote.commands)
+        assertFalse(player.isPlaying)
+        assertTrue(player.trackRefused)
     }
 
     @Test
@@ -473,6 +474,88 @@ class SpotifySongPlayerTest {
 
         assertEquals(connectsBefore + 1, remote.connects)
         assertFalse(player.isPlaying)
+    }
+
+    private fun TestScope.playOurs(player: SpotifySongPlayer, at: Long = 30_000) {
+        player.play()
+        now += 100
+        emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
+        emit(state(position = at))
+    }
+
+    /** Conta grátis: anúncio no meio da música. A pista para e volta sozinha com a música, sem acabar a partida. */
+    @Test
+    fun anAdMidSongPausesAndResumesWithoutEnding() = runTest {
+        val player = prepared()
+        playOurs(player)
+        now += 500
+        remote.adPlaying.value = true
+        emit(null)
+        now += 15_000
+        assertEquals(30_500L, player.positionMs)
+        assertFalse(player.isCompleted)
+
+        remote.adPlaying.value = false
+        emit(state(position = 30_500))
+        now += 1_000
+        assertEquals(31_500L, player.positionMs)
+        assertTrue(player.isPlaying)
+    }
+
+    /** Conta grátis no modo contínuo: o anúncio vem entre as músicas; a seguinte depois dele acaba a partida. */
+    @Test
+    fun anAdBetweenSongsStillEndsTheMatch() = runTest {
+        val player = prepared()
+        playOurs(player, at = 199_000)
+        remote.adPlaying.value = true
+        emit(null)
+        remote.adPlaying.value = false
+        emit(state(position = 0, uri = "spotify:track:proxima"))
+
+        assertTrue(player.isCompleted)
+    }
+
+    /** A permissão caiu (ou o Spotify fechou): a pista congela e só volta pelo Continuar. */
+    @Test
+    fun losingTheSessionFreezesTheTrack() = runTest {
+        val player = prepared()
+        playOurs(player)
+        now += 400
+        emit(null)
+        now += 5_000
+        assertEquals(30_400L, player.positionMs)
+        emit(state(position = 30_400, isPaused = true))
+        assertFalse(player.isPlaying)
+    }
+
+    @Test
+    fun resumingAfterTheSessionCameBackSeeksTheSameTrack() = runTest {
+        val player = prepared()
+        playOurs(player)
+        now += 400
+        emit(null)
+        emit(state(position = 30_300, isPaused = true))
+        remote.commands.clear()
+
+        player.play()
+
+        assertEquals(listOf("seek:30400", "resume"), remote.commands)
+    }
+
+    /** "Jogar de novo" sem conseguir voltar a música (conta grátis): a pausa pede para voltar no Spotify. */
+    @Test
+    fun aTrackThatNeverStartsIsRefused() = runTest {
+        val player = prepared()
+        player.play()
+        assertFalse(player.trackRefused)
+
+        now += SpotifySongPlayer.START_TIMEOUT_MS + SpotifySongPlayer.REFRESH_INTERVAL_MS
+        advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
+
+        assertTrue(player.trackRefused)
+        assertFalse(player.isPlaying)
+        player.play()
+        assertFalse(player.trackRefused) // tenta de novo
     }
 
     @Test

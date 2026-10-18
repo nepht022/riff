@@ -18,6 +18,7 @@
     <string name="gameplay_chart_unreadable">This chart could not be read: the file may be corrupted or may have changed. Rescan the library.</string>
     <string name="gameplay_folder_lost">Lost access to this chart\'s folder. Choose the folder again in the library.</string>
     <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
+    <string name="gameplay_spotify_go_back">Go back to the song on Spotify to play again</string>
     <string name="gameplay_unavailable_spotify">Couldn\'t play through Spotify. Check that the Spotify app is open and connected.</string>
     <string name="gameplay_no_separate_guitar">Playing without the separate guitar</string>
     <string name="gameplay_sync">Sync for this song: %1$s ms</string>

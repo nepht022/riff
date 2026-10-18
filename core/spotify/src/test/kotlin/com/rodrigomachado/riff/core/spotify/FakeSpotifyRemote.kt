@@ -11,6 +11,7 @@ class FakeSpotifyRemote : SpotifyRemote {
     var connects = 0
     override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
     override val playback = MutableStateFlow<PlaybackState?>(null)
+    override val adPlaying = MutableStateFlow(false)
 
     override fun connect() {
         connects++

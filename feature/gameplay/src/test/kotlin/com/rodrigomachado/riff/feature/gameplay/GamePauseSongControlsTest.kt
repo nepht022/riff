@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.gameplay
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
@@ -22,10 +23,10 @@ class GamePauseSongControlsTest {
 
     private val events = mutableListOf<String>()
 
-    private fun showPaused(spotify: Boolean) {
+    private fun showPaused(spotify: Boolean, refused: Boolean = false) {
         val session = GameSession(
             listOf(note(60_000)),
-            FakeSongPlayer(),
+            FakeSongPlayer().apply { trackRefused = refused },
             FakeSfxPlayer(),
             FakeTime(),
             audioOffsetMs = 0,
@@ -65,6 +66,21 @@ class GamePauseSongControlsTest {
 
         // Trocar de música encerra a partida: quem chama (a tela) sai e tenta começar a próxima.
         assertEquals(listOf("resume", "next", "previous"), events)
+    }
+
+    /** "Jogar de novo" sem conseguir voltar a música no Spotify (conta grátis, outra faixa): a pausa explica. */
+    @Test
+    fun aRefusedTrackShowsGoBackInThePause() {
+        showPaused(spotify = true, refused = true)
+
+        composeRule.onNodeWithText("Volte a música no Spotify para jogar de novo").assertExists()
+    }
+
+    @Test
+    fun withTheTrackPlayingThereIsNoGoBackNotice() {
+        showPaused(spotify = true)
+
+        composeRule.onNodeWithText("Volte a música no Spotify para jogar de novo").assertDoesNotExist()
     }
 
     @Test

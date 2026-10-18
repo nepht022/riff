@@ -18,6 +18,7 @@
     <string name="gameplay_chart_unreadable">Não deu para ler este mapa: o arquivo pode estar corrompido ou ter mudado. Reimporte a biblioteca.</string>
     <string name="gameplay_folder_lost">Perdi o acesso à pasta deste mapa. Escolha a pasta de novo na biblioteca.</string>
     <string name="gameplay_audio_failed">Não consegui tocar o áudio desta pasta.</string>
+    <string name="gameplay_spotify_go_back">Volte a música no Spotify para jogar de novo</string>
     <string name="gameplay_unavailable_spotify">Não deu para tocar pelo Spotify. Confira se o app do Spotify está aberto e conectado.</string>
     <string name="gameplay_no_separate_guitar">Tocando sem a guitarra separada</string>
     <string name="gameplay_sync">Sincronia desta música: %1$s ms</string>
