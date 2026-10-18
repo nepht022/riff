@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.ScoreRepository
+import com.rodrigomachado.riff.core.data.ranking.RankingRepository
+import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,8 +21,15 @@ sealed interface ResultsUiState {
 
     data object Missing : ResultsUiState
 
-    data class Ready(val record: ScoreRecord, val title: String, val artist: String, val isNewBest: Boolean) :
-        ResultsUiState
+    /** [ranking]: o que aconteceu com a partida no ranking; [rankingOn]: o ranking está configurado no build. */
+    data class Ready(
+        val record: ScoreRecord,
+        val title: String,
+        val artist: String,
+        val isNewBest: Boolean,
+        val ranking: SubmitStatus? = null,
+        val rankingOn: Boolean = false,
+    ) : ResultsUiState
 }
 
 @HiltViewModel
@@ -27,6 +37,7 @@ class ResultsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val scores: ScoreRepository,
     private val charts: ChartRepository,
+    private val ranking: RankingRepository,
 ) : ViewModel() {
     private val scoreId: Long = checkNotNull(savedStateHandle["scoreId"])
     private val state = MutableStateFlow<ResultsUiState>(ResultsUiState.Loading)
@@ -45,7 +56,12 @@ class ResultsViewModel @Inject constructor(
                     chart?.title.orEmpty(),
                     chart?.artist.orEmpty(),
                     isNewBest = best?.id == record.id,
+                    rankingOn = ranking.isConfigured,
                 )
+            }
+            // O envio segue depois da partida (enviando → posição): a tela acompanha.
+            ranking.statusFor(scoreId).collect { status ->
+                state.update { (it as? ResultsUiState.Ready)?.copy(ranking = status) ?: it }
             }
         }
     }

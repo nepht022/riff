@@ -93,7 +93,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         settingsDestinations(navController, back) { renamingPlayer = true }
         libraryDestinations(navController, back)
         searchDestinations(navController, back)
-        matchDestinations(navController)
+        matchDestinations(navController) { renamingPlayer = true }
     }
     // O nome do ranking na primeira abertura, por cima do Tocando agora ou da Biblioteca.
     PlayerNameGate(renaming = renamingPlayer, onRenameClosed = { renamingPlayer = false })
@@ -121,7 +121,7 @@ private fun NavigationEffects(
 }
 
 /** A partida e o resultado. */
-private fun NavGraphBuilder.matchDestinations(navController: NavHostController) {
+private fun NavGraphBuilder.matchDestinations(navController: NavHostController, onChooseName: () -> Unit) {
     composable<GameplayRoute> { entry ->
         val route = entry.toRoute<GameplayRoute>()
         GameplayScreen(
@@ -155,6 +155,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController) 
                 ) { popUpTo<ResultsRoute> { inclusive = true } }
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
+            onChooseName = onChooseName,
         )
     }
 }

@@ -214,3 +214,36 @@ class FakeImage : androidx.compose.ui.graphics.ImageBitmap {
         stride: Int,
     ) = Unit
 }
+
+/** Ranking falso: guarda as partidas enviadas e devolve o status que o teste definir. */
+class RecordingRanking(override val isConfigured: Boolean = true) :
+    com.rodrigomachado.riff.core.data.ranking.RankingRepository {
+    val submitted = mutableListOf<Pair<com.rodrigomachado.riff.core.model.ScoreRecord, String>>()
+    val status = kotlinx.coroutines.flow.MutableStateFlow<com.rodrigomachado.riff.core.data.ranking.SubmitStatus?>(null)
+    override val player = kotlinx.coroutines.flow.MutableStateFlow(
+        com.rodrigomachado.riff.core.data.ranking.Player(null, null),
+    )
+    override val askedLater = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    override fun askLater() = Unit
+
+    override suspend fun register(name: String) = com.rodrigomachado.riff.core.data.ranking.NameResult.Ok
+
+    override fun submitIfBest(record: com.rodrigomachado.riff.core.model.ScoreRecord, title: String, artist: String) {
+        submitted += record to "$title — $artist"
+    }
+
+    override fun statusFor(scoreId: Long) = status
+
+    override suspend fun flush() = Unit
+
+    override suspend fun songs(query: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+
+    override suspend fun board(
+        chartId: String,
+        difficulty: com.rodrigomachado.riff.core.model.Difficulty?,
+        metric: com.rodrigomachado.riff.core.data.ranking.RankingMetric,
+        descending: Boolean,
+        query: String,
+    ) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+}

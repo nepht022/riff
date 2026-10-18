@@ -25,6 +25,7 @@ import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.queue.MatchActivity
+import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
@@ -101,6 +102,7 @@ class GameplayViewModel @Inject constructor(
     private val artImages: ChartArtImages,
     private val spotify: SpotifyControls,
     private val matchActivity: MatchActivity,
+    private val ranking: RankingRepository,
 ) : ViewModel() {
     private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val difficulty: Difficulty = Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"]))
@@ -281,6 +283,8 @@ class GameplayViewModel @Inject constructor(
         )
         viewModelScope.launch {
             val scoreId = scores.save(record)
+            // Também quando o Resultado é pulado: o envio é deste passo, não da tela (spec do ranking §4).
+            ranking.submitIfBest(record.copy(id = scoreId), ready.title, ready.artist)
             // Spotify, "Ir direto para a próxima": o placar fica salvo e o Tocando agora começa a próxima música.
             state.value = if (goOn && uri != null) {
                 GameplayUiState.NextSong(difficulty, uri, waitMs)

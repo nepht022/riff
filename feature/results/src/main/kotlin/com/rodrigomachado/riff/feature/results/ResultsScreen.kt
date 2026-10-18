@@ -42,10 +42,12 @@ fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit = { _, _ -> },
+    onChooseName: () -> Unit = {},
     viewModel: ResultsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ResultsContent(state, onPlayAgain, onDone, modifier)
+    ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName)
 }
 
 @Composable
@@ -54,6 +56,8 @@ fun ResultsContent(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit = { _, _ -> },
+    onChooseName: () -> Unit = {},
 ) {
     when (state) {
         ResultsUiState.Loading -> LoadingState(modifier)
@@ -66,7 +70,7 @@ fun ResultsContent(
             modifier = modifier,
         )
 
-        is ResultsUiState.Ready -> ReadyResults(state, onPlayAgain, onDone, modifier)
+        is ResultsUiState.Ready -> ReadyResults(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName)
     }
 }
 
@@ -76,6 +80,8 @@ private fun ReadyResults(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier,
+    onSeeRanking: (chartId: String, difficulty: Difficulty) -> Unit,
+    onChooseName: () -> Unit,
 ) {
     val record = state.record
     val locale = LocalConfiguration.current.locales[0]
@@ -112,6 +118,9 @@ private fun ReadyResults(
             record.cleanStreakMs?.let { Stat(stringResource(R.string.results_clean_time), minutesSeconds(it)) }
             Stat(stringResource(R.string.results_good), record.good.toString())
             Stat(stringResource(R.string.results_miss), record.miss.toString())
+        }
+        if (state.rankingOn) {
+            RankingCard(state.ranking, { onSeeRanking(record.chartId, record.difficulty) }, onChooseName)
         }
         PosterButton(
             stringResource(R.string.results_play_again),

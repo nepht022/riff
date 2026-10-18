@@ -3,6 +3,11 @@
     <string name="results_accuracy">Precisão</string>
     <string name="results_max_combo">Maior combo</string>
     <string name="results_clean_time">Tempo sem errar</string>
+    <string name="results_ranking_position">Ranking: %1$dº de %2$d</string>
+    <string name="results_ranking_sending">Enviando para o ranking…</string>
+    <string name="results_ranking_queued">Sem internet: vai para o ranking quando voltar</string>
+    <string name="results_ranking_no_name">Escolha um nome para entrar no ranking</string>
+    <string name="results_see_ranking">Ver ranking</string>
     <string name="results_perfect">Perfeitos</string>
     <string name="results_good">Bons</string>
     <string name="results_miss">Erros</string>

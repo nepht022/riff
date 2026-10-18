@@ -34,4 +34,34 @@ class ResultsScreenshotTest {
             }
         }
     }
+
+    @Test
+    fun rankingPlaced() = card(
+        "Results_ranking_placed",
+        com.rodrigomachado.riff.core.data.ranking.SubmitStatus.Placed(3, 27),
+    )
+
+    @Test
+    fun rankingNoName() = card("Results_ranking_no_name", com.rodrigomachado.riff.core.data.ranking.SubmitStatus.NoName)
+
+    private fun card(name: String, status: com.rodrigomachado.riff.core.data.ranking.SubmitStatus) {
+        captureRoboImage("src/test/screenshots/$name.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    ResultsContent(
+                        ResultsUiState.Ready(
+                            record(2, 48_300).copy(cleanStreakMs = 38_000),
+                            "Through the Fire and Flames",
+                            "DragonForce",
+                            isNewBest = true,
+                            ranking = status,
+                            rankingOn = true,
+                        ),
+                        onPlayAgain = { _, _ -> },
+                        onDone = {},
+                    )
+                }
+            }
+        }
+    }
 }

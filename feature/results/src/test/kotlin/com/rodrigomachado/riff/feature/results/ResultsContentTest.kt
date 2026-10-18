@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
@@ -45,6 +46,65 @@ class ResultsContentTest {
         composeRule.onNodeWithText("DIFÍCIL").assertExists()
         composeRule.onNodeWithText("Jogar de novo").performScrollTo().performClick()
         assertEquals("a" to Difficulty.HARD, playAgain)
+    }
+
+    private fun showRanking(status: SubmitStatus?, events: MutableList<String>) = composeRule.setContent {
+        RiffTheme {
+            ResultsContent(
+                ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", false, ranking = status, rankingOn = true),
+                onPlayAgain = { _, _ -> },
+                onDone = {},
+                onSeeRanking = { id, difficulty -> events += "see:$id:$difficulty" },
+                onChooseName = { events += "name" },
+            )
+        }
+    }
+
+    @Test
+    fun theResultShowsThePosition() {
+        val events = mutableListOf<String>()
+        showRanking(SubmitStatus.Placed(3, 27), events)
+
+        composeRule.onNodeWithText("Ranking: 3º de 27").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Ver ranking").performScrollTo().performClick()
+
+        assertEquals(listOf("see:a:HARD"), events)
+    }
+
+    @Test
+    fun withoutANameTheResultInvitesToChooseOne() {
+        val events = mutableListOf<String>()
+        showRanking(SubmitStatus.NoName, events)
+
+        composeRule.onNodeWithText("Escolha um nome para entrar no ranking").performScrollTo().performClick()
+
+        assertEquals(listOf("name"), events)
+    }
+
+    @Test
+    fun queuedSaysItGoesWhenOnline() {
+        showRanking(SubmitStatus.Queued, mutableListOf())
+
+        composeRule.onNodeWithText("Sem internet: vai para o ranking quando voltar").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun notBestShowsOnlyTheWayToTheRanking() {
+        showRanking(SubmitStatus.NotBest, mutableListOf())
+
+        composeRule.onNodeWithText("Ranking:", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("Ver ranking").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun withoutTheRankingNothingIsShown() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", false), { _, _ -> }, {})
+            }
+        }
+
+        composeRule.onNodeWithText("Ver ranking").assertDoesNotExist()
     }
 
     @Test
