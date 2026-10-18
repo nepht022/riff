@@ -304,7 +304,7 @@ class LibraryContentTest {
     fun searchOpensTheEncoreSearchWithANavigateSound() {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a"))))
 
-        composeRule.onNodeWithText("Pesquisar").performClick()
+        composeRule.onNodeWithText("Pesquisar Mapas").performClick()
 
         assertEquals(1, searched)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
@@ -547,9 +547,10 @@ class LibraryContentTest {
     fun selectLinesUpWithSearchOnTheRight() {
         showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
 
-        val search = composeRule.onNodeWithText("Pesquisar", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val select = composeRule.onNodeWithText("Selecionar", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertEquals(search.right.value, select.right.value, 1.5f) // arredondamento da medida do texto
+        // Os botões, não os textos: o Robolectric mede texto com uma fonte falsa e centraliza no tamanho mínimo.
+        val search = composeRule.onNodeWithText("Pesquisar Mapas").getUnclippedBoundsInRoot()
+        val select = composeRule.onNodeWithText("Selecionar").getUnclippedBoundsInRoot()
+        assertEquals(search.right.value, select.right.value, 0.5f)
     }
 
     private val songs = listOf(
