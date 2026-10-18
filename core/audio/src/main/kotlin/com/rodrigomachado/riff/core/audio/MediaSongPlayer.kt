@@ -57,8 +57,15 @@ class MediaSongPlayer(
         player.prepare()
     }
 
+    // De onde o último play começou: até a posição sair dali, o som ainda não saiu (registro no S25: o MediaPlayer
+    // diz "tocando" em 0 ms antes; a pista andava sozinha e meio segundo depois voltava 155 ms).
+    @Volatile
+    private var startedFrom: Long? = null
+
     override fun play() {
-        if (!released) player.start()
+        if (released) return
+        startedFrom = player.currentPosition.toLong()
+        player.start()
     }
 
     override fun pause() {
@@ -87,4 +94,12 @@ class MediaSongPlayer(
     override val isPlaying: Boolean get() = !released && player.isPlaying
 
     override val isCompleted: Boolean get() = completed
+
+    override val isStarting: Boolean
+        get() {
+            val from = startedFrom ?: return false
+            if (!isPlaying) return false
+            if (player.currentPosition > from) startedFrom = null
+            return startedFrom != null
+        }
 }

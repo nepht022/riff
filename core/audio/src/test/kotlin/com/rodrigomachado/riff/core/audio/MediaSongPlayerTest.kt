@@ -66,6 +66,26 @@ class MediaSongPlayerTest {
         assertEquals(29_500L, song.positionMs)
     }
 
+    /**
+     * Registro no S25: o MediaPlayer diz "tocando" em 0 ms antes de o som sair; a pista andava sozinha e meio segundo
+     * depois voltava 155 ms. Até a posição andar, o player está começando (a pista espera, como nas faixas separadas).
+     */
+    @Test
+    fun theStartWaitsUntilThePositionMoves() {
+        ShadowMediaPlayer.addMediaInfo(DataSource.toDataSource("inicio.ogg"), ShadowMediaPlayer.MediaInfo(60_000, 0))
+        val media = MediaPlayer()
+        media.setDataSource("inicio.ogg")
+        media.prepare()
+        val song = MediaSongPlayer(ApplicationProvider.getApplicationContext(), noPackages, media)
+
+        song.play()
+        assertTrue(song.isStarting)
+
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
+        assertTrue(song.positionMs > 0)
+        assertFalse(song.isStarting)
+    }
+
     /** MediaPlayer que conta as chamadas: liberar no meio do prepare (em outra thread) quebra o player nativo. */
     private class WatchedPlayer : MediaPlayer() {
         var duringPrepare: () -> Unit = {}
