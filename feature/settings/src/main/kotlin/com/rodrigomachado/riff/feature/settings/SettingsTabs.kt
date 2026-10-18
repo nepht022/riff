@@ -86,7 +86,7 @@ private fun tabTitle(tab: SettingsTab): String = stringResource(
 /** O nome no ranking na aba Geral; [name] nulo = ainda sem nome. */
 data class RankingName(val name: String?)
 
-/** Geral: o idioma do jogo, o nome no ranking e os sons do menu. */
+/** Geral: o idioma do jogo, o nome no ranking, os sons do menu e as licenças e a privacidade. */
 @Composable
 internal fun GeneralTab(
     language: AppLanguage,
@@ -95,6 +95,7 @@ internal fun GeneralTab(
     onMenuSounds: (Boolean) -> Unit,
     rankingName: RankingName? = null,
     onRankingName: () -> Unit = {},
+    onLicenses: () -> Unit = {},
 ) {
     var choosing by rememberSaveable { mutableStateOf(false) }
     ChoiceRow(stringResource(R.string.settings_language), languageName(language)) { choosing = true }
@@ -106,6 +107,11 @@ internal fun GeneralTab(
         )
     }
     MenuSoundsRow(menuSounds, onMenuSounds)
+    ChoiceRow(
+        stringResource(R.string.settings_licenses),
+        stringResource(R.string.settings_licenses_open),
+        onClick = onLicenses,
+    )
     if (choosing) {
         AlertDialog(
             onDismissRequest = { choosing = false },

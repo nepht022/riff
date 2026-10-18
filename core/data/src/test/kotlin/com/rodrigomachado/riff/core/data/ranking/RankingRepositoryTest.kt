@@ -34,6 +34,12 @@ class FakeRankingServer : RankingTransport {
     /** O script grava, mas a resposta se perde (Apps Script lento, conexão caiu). */
     var loseAnswer = false
 
+    /** O script de antes do "enviarVarios": responde "pedido" à ação que não conhece. */
+    var oldScript = false
+
+    /** O script recusa reservas (limite por hora). */
+    var nameLimit = false
+
     override suspend fun post(url: String, json: String): Pair<Int, String> {
         val body = JSONObject(json)
         calls += body
@@ -41,7 +47,9 @@ class FakeRankingServer : RankingTransport {
         if (answerHtml) return 200 to "<html>Entrar no Google</html>"
         val key = body.optString("chave")
         val answer = when (body.getString("acao")) {
-            "reservar" -> {
+            "reservar" -> if (nameLimit) {
+                """{"ok":false,"motivo":"limite"}"""
+            } else {
                 val name = body.getString("nome").trim()
                 val owner = names[name.lowercase()]
                 if (owner != null && owner != key) {
@@ -60,12 +68,35 @@ class FakeRankingServer : RankingTransport {
                 """{"ok":false,"motivo":"sem_nome"}"""
             }
 
+            "enviarVarios" -> batch(body, key)
+
             else -> """{"ok":false,"motivo":"pedido"}"""
         }
         return 200 to answer
     }
 
+    private fun batch(body: JSONObject, key: String) = when {
+        oldScript -> """{"ok":false,"motivo":"pedido"}"""
+
+        key !in names.values -> """{"ok":false,"motivo":"sem_nome"}"""
+
+        else -> {
+            val placed = """{"ok":true,"posicao":3,"total":27}"""
+            val results = List(body.getJSONArray("envios").length()) { placed }
+            """{"ok":true,"resultados":[${results.joinToString(",")}]}"""
+        }
+    }
+
     fun sent(action: String) = calls.filter { it.getString("acao") == action }
+
+    /** Cada pontuação que o script recebeu, sozinha ou num lote (as do lote vêm sem ação nem chave). */
+    fun submitted(): List<JSONObject> = calls.flatMap { call ->
+        when (call.getString("acao")) {
+            "enviar" -> listOf(call)
+            "enviarVarios" -> call.getJSONArray("envios").let { list -> List(list.length()) { list.getJSONObject(it) } }
+            else -> emptyList()
+        }
+    }
 }
 
 /** A fila do Room em memória (o Room roda nas threads dele, fora do relógio do teste). */
@@ -111,6 +142,10 @@ class FakePlayers : PlayerStore {
     override suspend fun saveKey(key: String) {
         player.value = player.value.copy(key = key)
     }
+
+    override suspend fun forgetName() {
+        player.value = player.value.copy(name = null)
+    }
 }
 
 class FakeHistory(val records: MutableList<ScoreRecord> = mutableListOf()) : ScoreHistory {
@@ -150,14 +185,14 @@ class RankingRepositoryTest {
         assertEquals(NameResult.Ok, ranking.register("Rodrigo"))
         runCurrent()
         assertEquals(Player("Rodrigo", "chave-1"), players.player.value)
-        val uploads = server.sent("enviar")
+        val uploads = server.submitted()
         assertEquals(2, uploads.size) // um por mapa+dificuldade, com o melhor de cada número
         assertEquals(120, uploads.first { it.getString("mapa") == "m1" }.getInt("pontos"))
         assertEquals("Música m1", uploads.first { it.getString("mapa") == "m1" }.getString("titulo"))
 
         assertEquals(NameResult.Ok, ranking.register("Digo")) // trocar o nome não reenvia o histórico
         runCurrent()
-        assertEquals(2, server.sent("enviar").size)
+        assertEquals(2, server.submitted().size)
         assertEquals("chave-1", server.sent("reservar").last().getString("chave"))
     }
 
@@ -220,7 +255,7 @@ class RankingRepositoryTest {
         ranking.submitIfBest(worse, "Música", "Banda")
         runCurrent()
         assertEquals(SubmitStatus.NotBest, ranking.statusFor(3).value)
-        assertEquals(1, server.sent("enviar").size)
+        assertEquals(1, server.submitted().size)
     }
 
     /** A fila sai ao terminar qualquer partida (spec §4), não só uma que seja recorde. */
@@ -251,11 +286,11 @@ class RankingRepositoryTest {
         ranking.submitIfBest(match, "Música", "Banda")
         runCurrent()
         assertEquals(SubmitStatus.NoName, ranking.statusFor(1).value)
-        assertTrue(server.sent("enviar").isEmpty())
+        assertTrue(server.submitted().isEmpty())
 
         ranking.register("Rodrigo")
         runCurrent()
-        assertTrue(server.sent("enviar").isNotEmpty())
+        assertTrue(server.submitted().isNotEmpty())
         assertTrue(pending.all().isEmpty())
     }
 
@@ -272,7 +307,7 @@ class RankingRepositoryTest {
         server.offline = false
         repository().flush() // o app foi fechado e aberto de novo: outro repositório, mesma fila guardada
 
-        assertEquals(2, server.sent("enviar").size) // a tentativa sem rede e a que chegou
+        assertEquals(2, server.submitted().size) // a tentativa sem rede e a que chegou
         assertTrue(pending.all().isEmpty())
     }
 
@@ -308,7 +343,70 @@ class RankingRepositoryTest {
         repository().register("Rodrigo")
         runCurrent()
 
-        assertTrue(server.sent("enviar").single().isNull("semErrar"))
+        assertTrue(server.submitted().single().isNull("semErrar"))
+    }
+
+    @Test
+    fun theHistoryGoesInOneRequest() = runTest {
+        history.records += listOf(record(1, "m1"), record(2, "m2"))
+
+        repository().register("Rodrigo")
+        runCurrent()
+
+        assertEquals(1, server.sent("enviarVarios").size)
+        assertEquals(2, server.submitted().size)
+        assertTrue(server.sent("enviar").isEmpty())
+        assertTrue(pending.all().isEmpty())
+    }
+
+    /** O app novo com o script antigo (antes de republicar): manda uma por vez, sem perder nada. */
+    @Test
+    fun anOldScriptStillGetsEverythingOneByOne() = runTest {
+        server.oldScript = true
+        history.records += listOf(record(1, "m1"), record(2, "m2"))
+
+        repository().register("Rodrigo")
+        runCurrent()
+
+        assertEquals(2, server.sent("enviar").size)
+        assertTrue(pending.all().isEmpty())
+    }
+
+    /** O dono apagou o jogador da planilha: o celular reserva o mesmo nome de novo e envia. */
+    @Test
+    fun aPlayerDeletedFromTheSheetIsRegisteredAgain() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1") // o servidor não conhece mais ninguém
+        val ranking = repository()
+
+        ranking.submitIfBest(record(1).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertEquals("Rodrigo", server.sent("reservar").single().getString("nome"))
+        assertEquals(SubmitStatus.Placed(3, 27), ranking.statusFor(1).value)
+        assertTrue(pending.all().isEmpty())
+    }
+
+    /** Apagado e o nome já é de outra pessoa: pede um nome novo, sem perder a partida. */
+    @Test
+    fun aDeletedPlayerWhoseNameWasTakenIsAskedAgain() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "outra-chave"
+        val ranking = repository()
+
+        ranking.submitIfBest(record(1).also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertNull(players.player.value.name)
+        assertEquals("chave-1", players.player.value.key)
+        assertEquals(SubmitStatus.NoName, ranking.statusFor(1).value)
+        assertEquals(1, pending.all().size)
+    }
+
+    @Test
+    fun tooManyNamesInAnHourSaysSo() = runTest {
+        server.nameLimit = true
+
+        assertEquals(NameResult.Limit, repository().register("Rodrigo"))
     }
 
     @Test

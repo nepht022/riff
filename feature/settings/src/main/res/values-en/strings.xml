@@ -60,6 +60,8 @@
     <string name="settings_tab_ai">AI guitar</string>
     <string name="settings_ranking_name">Ranking name</string>
     <string name="settings_ranking_choose">Choose</string>
+    <string name="settings_licenses">Licenses and privacy</string>
+    <string name="settings_licenses_open">View</string>
     <string name="settings_language">Language</string>
     <string name="settings_tab_spotify">Spotify</string>
     <string name="settings_spotify_song_end">When the song ends</string>

@@ -8,6 +8,7 @@
     <string name="report_contact_label">Seu email (opcional)</string>
     <string name="report_contact_hint">Só se quiser resposta.</string>
     <string name="report_contact_invalid">Confira o email.</string>
+    <string name="report_privacy">O relato vai para o desenvolvedor do Riff. O email é opcional e só serve para ele responder você.</string>
     <string name="report_device_title">Incluir informações do aparelho</string>
     <string name="report_send">Enviar</string>
     <string name="report_sending">Enviando…</string>

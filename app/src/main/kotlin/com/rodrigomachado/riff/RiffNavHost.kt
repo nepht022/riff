@@ -24,6 +24,8 @@ import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.library.TrackToMatch
+import com.rodrigomachado.riff.feature.licenses.LicensesRoute
+import com.rodrigomachado.riff.feature.licenses.LicensesScreen
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingAutoPlay
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
 import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
@@ -232,7 +234,11 @@ private fun NavGraphBuilder.settingsDestinations(
             onBack = dropUnlessResumed { navController.popBackStack() },
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
             onRankingName = onRankingName,
+            onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
         )
+    }
+    composable<LicensesRoute> {
+        LicensesScreen(onBack = dropUnlessResumed { navController.popBackStack() })
     }
     composable<ReportRoute> {
         ReportScreen(onBack = dropUnlessResumed { navController.popBackStack() })

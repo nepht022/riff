@@ -171,6 +171,12 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.CONTACT),
     )
+    // Para onde vai e para que serve o email, antes de enviar (LGPD).
+    Text(
+        stringResource(R.string.report_privacy),
+        style = MaterialTheme.typography.bodySmall,
+        color = RiffColors.PaperDim,
+    )
     DeviceRow(state.device, state.includeDevice, inputs.onIncludeDevice)
 }
 

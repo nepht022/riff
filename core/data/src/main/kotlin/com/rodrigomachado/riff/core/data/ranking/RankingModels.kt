@@ -22,6 +22,9 @@ sealed interface NameResult {
     data object Invalid : NameResult
 
     data object Offline : NameResult
+
+    /** Tentativas demais nesta hora (o script limita as reservas). */
+    data object Limit : NameResult
 }
 
 /** O que aconteceu com a partida no ranking (o Resultado mostra). */

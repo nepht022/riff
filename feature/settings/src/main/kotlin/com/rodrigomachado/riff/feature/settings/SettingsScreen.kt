@@ -66,6 +66,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     /** Trocar o nome no ranking (o diálogo é do app, o mesmo da primeira abertura). */
     onRankingName: () -> Unit = {},
+    onLicenses: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val rankingName by viewModel.rankingName.collectAsStateWithLifecycle()
@@ -99,6 +100,7 @@ fun SettingsScreen(
         onQueue = viewModel::onQueue,
         rankingName = rankingName,
         onRankingName = onRankingName,
+        onLicenses = onLicenses,
         onLanguage = {
             viewModel.setLanguage(it)
             // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
@@ -130,6 +132,7 @@ fun SettingsContent(
     initialTab: SettingsTab = SettingsTab.GENERAL,
     rankingName: RankingName? = null,
     onRankingName: () -> Unit = {},
+    onLicenses: () -> Unit = {},
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
     var tab by rememberSaveable { mutableStateOf(initialTab) }
@@ -157,6 +160,7 @@ fun SettingsContent(
                         onMenuSounds,
                         rankingName,
                         onRankingName,
+                        onLicenses,
                     )
 
                     SettingsTab.SOUNDS -> SoundsTab(

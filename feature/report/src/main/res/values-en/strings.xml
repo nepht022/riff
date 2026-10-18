@@ -7,6 +7,7 @@
     <string name="report_text_label">What happened?</string>
     <string name="report_contact_label">Your email (optional)</string>
     <string name="report_contact_hint">Only if you want a reply.</string>
+    <string name="report_privacy">Reports go to the developer of Riff. The email is optional and only used to reply to you.</string>
     <string name="report_contact_invalid">Check the email.</string>
     <string name="report_device_title">Include device information</string>
     <string name="report_send">Send</string>

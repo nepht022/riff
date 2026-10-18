@@ -85,6 +85,16 @@ class ReportContentTest {
         composeRule.onNodeWithText("Riff 1.4 · Android 16 · samsung SM-S931B · pt-BR").performScrollTo().assertExists()
     }
 
+    /** Antes de enviar, a pessoa sabe para onde o relato vai e para que serve o email (LGPD). */
+    @Test
+    fun itSaysWhereTheReportGoesAndWhatTheEmailIsFor() {
+        show(ReportUiState(device = device))
+
+        composeRule.onNodeWithText(
+            "O relato vai para o desenvolvedor do Riff. O email é opcional e só serve para ele responder você.",
+        ).performScrollTo().assertExists()
+    }
+
     @Test
     fun whatIsTypedAndChosenGoesToTheScreenState() {
         show(ReportUiState(device = device))

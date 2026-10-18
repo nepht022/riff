@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="licenses_back">Voltar</string>
+    <string name="licenses_title">Licenças e privacidade</string>
+    <string name="licenses_privacy">Privacidade</string>
+    <string name="licenses_privacy_text">Seus mapas, recordes e configurações ficam só no celular. O que sai dele:\n\n• Ranking: seu nome, suas melhores pontuações e um código anônimo do celular vão para uma planilha do desenvolvedor do Riff e aparecem no ranking para todos.\n• Reportar: o texto, o email (se você puser) e, se deixar ligado, as informações do aparelho vão para o desenvolvedor.\n• Spotify: o Riff lê a música tocando e a sua fila direto do Spotify; nada disso vai para o desenvolvedor.\n• Pesquisa de mapas: as buscas e os downloads vão para o Encore (enchor.us).\n\nPara tirar seu nome e suas pontuações do ranking, peça pelo Reportar.</string>
+    <string name="licenses_content">Conteúdo e modelos</string>
+    <string name="licenses_libraries">Bibliotecas</string>
+</resources>

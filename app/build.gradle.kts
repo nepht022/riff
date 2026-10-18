@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.riff.android.application.compose)
     alias(libs.plugins.riff.android.hilt)
     alias(libs.plugins.baselineprofile)
+    // Gera a lista das bibliotecas (com as licenças) para a tela Licenças e privacidade.
+    alias(libs.plugins.aboutlibraries)
 }
 
 // A chave de release fica fora do git (a senha no local.properties). Sem ela, o build usa a chave de debug.
@@ -74,6 +76,7 @@ dependencies {
     implementation(project(":feature:calibration"))
     implementation(project(":feature:report"))
     implementation(project(":feature:ranking"))
+    implementation(project(":feature:licenses"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

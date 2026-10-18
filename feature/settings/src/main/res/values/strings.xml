@@ -60,6 +60,8 @@
     <string name="settings_tab_ai">Guitarra IA</string>
     <string name="settings_ranking_name">Nome no ranking</string>
     <string name="settings_ranking_choose">Escolher</string>
+    <string name="settings_licenses">Licenças e privacidade</string>
+    <string name="settings_licenses_open">Ver</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_tab_spotify">Spotify</string>
     <string name="settings_spotify_song_end">Ao acabar a música</string>

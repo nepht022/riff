@@ -91,15 +91,22 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 - Na tela inicial, **Reportar** (ao lado de Configurações) abre um formulário: tipo (Problema, Sugestão ou Outro), o que aconteceu, email para resposta (opcional) e **Incluir informações do aparelho** (versão do Riff, Android, modelo e idioma, mostrados na tela; ligado de fábrica). Depois de um envio, o próximo espera 5 minutos.
 - O relato vai para um Google Apps Script na conta do desenvolvedor, que manda um email "[Riff] Problema: ..." para essa mesma conta (responder vai direto para quem relatou, se deixou o email). Nenhuma senha fica no app; o Google limita a ~100 emails por dia.
 - **Configurar (uma vez):** publique `scripts/relatos_apps_script.gs` como app da Web (instruções no começo do arquivo) e coloque o endereço no `local.properties`: `report.url=https://script.google.com/macros/s/.../exec`. Sem ele, a tela avisa que o envio não está configurado.
+- A tela diz, abaixo do email, que o relato vai para o desenvolvedor e que o email só serve para a resposta.
 - Antes de distribuir o app (Play Store), declarar na ficha de segurança dos dados que ele envia o texto do relato, o email opcional e as informações do aparelho.
 
 ## Ranking online
 
-- **Nome de jogador:** na primeira vez que o Riff abre, ele pede o seu nome no ranking (3 a 20 letras, números, espaço, `_` ou `-`). O nome fica com este celular: ninguém mais pode usar ("Rodrigo" e "rodrigo" contam como o mesmo). **Agora não** adia até a próxima abertura. Para trocar: **Configurações → Geral → Nome no ranking** (o antigo fica livre; as suas pontuações acompanham o nome novo).
-- **Envio automático:** ao acabar uma partida que seja a sua melhor naquele mapa e dificuldade em algum número, ela vai sozinha para o ranking — também quando o Resultado é pulado ("Ir direto para a próxima"). O Resultado mostra "Ranking: 3º de 27" e **Ver ranking**. Sem internet, a partida fica na fila e vai quando a conexão voltar. No primeiro nome, os seus melhores já guardados no celular vão uma vez.
+- **Nome de jogador:** na primeira vez que o Riff abre, ele pede o seu nome no ranking (3 a 20 letras, números, espaço, `_` ou `-`), avisando que o nome e as melhores pontuações ficam visíveis para todos. O nome fica com este celular: ninguém mais pode usar ("Rodrigo" e "rodrigo" contam como o mesmo). **Agora não** adia até a próxima abertura. Para trocar: **Configurações → Geral → Nome no ranking** (o antigo fica livre; as suas pontuações acompanham o nome novo).
+- **Envio automático:** ao acabar uma partida que seja a sua melhor naquele mapa e dificuldade em algum número, ela vai sozinha para o ranking — também quando o Resultado é pulado ("Ir direto para a próxima"). O Resultado mostra "Ranking: 3º de 27" e **Ver ranking**. Sem internet, a partida fica na fila e vai quando a conexão voltar. No primeiro nome, os seus melhores já guardados no celular vão uma vez, em lotes de até 50 por pedido.
 - **Tela Ranking** (no topo do Tocando agora e da Biblioteca): as músicas com pontuação (busca por música ou artista) e o placar de cada uma, por dificuldade, ordenado por **Pontos**, **Precisão**, **Combo**, **Perfeitos** ou **Tempo sem errar** (a maior sequência sem erro, em m:ss), do maior para o menor ou ao contrário, com busca por nome e a sua linha em destaque.
 - **"Mesma música" = mesmo mapa** (as mesmas notas): mapas diferentes da mesma música têm rankings separados.
 - **Onde fica:** um Google Apps Script com uma planilha na conta do dono do app (`scripts/ranking_apps_script.gs`; o passo a passo de publicar está no começo do arquivo). O endereço vai no `local.properties` como `ranking.url=…/exec`; sem ele, o ranking fica desligado. Só o apelido e as pontuações ficam guardados; a chave do celular vai como hash. Para liberar um nome ou tirar uma pontuação, apague a linha na planilha. Testes do script sem o Google: `node scripts/ranking_apps_script.test.js`.
+- **Jogador apagado da planilha:** no próximo envio, o celular reserva o mesmo nome de novo e manda a partida; se outra pessoa já tiver pego o nome, o app pede um nome novo (a partida espera na fila).
+- **Limites do script** (o endereço vai dentro do APK): 60 pedidos de envio por hora por celular (um lote conta como um), 5 reservas de nome por hora por celular e 100 no total; chaves curtas ou vazias são recusadas. O app continua funcionando com uma versão antiga do script (manda uma pontuação por vez) até ela ser republicada.
+
+## Licenças e privacidade
+
+**Configurações → Geral → Licenças e privacidade**: o que o app guarda e envia (ranking, Reportar, Spotify, Encore), como pedir para sair do ranking e as licenças de tudo que vem de fora. A lista das bibliotecas é gerada no build pelo plugin AboutLibraries (`app/build.gradle.kts`); o que não vem do Gradle (modelo Demucs, demucs.onnx, SDK do Spotify, fontes, sons do Freesound, mapas do Encore) está em `feature/licenses/.../AndroidLicenseSource.kt`, com os textos em `feature/licenses/src/main/assets/licencas/`. Ao adicionar algo de fora do Gradle, acrescente nessa lista.
 
 ## Jogar
 
@@ -152,7 +159,10 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
 | `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
-| `:feature:settings` | Configurações: volume geral, de acerto e de erro, sons do menu, velocidade das notas e modo canhoto |
+| `:feature:settings` | Configurações em abas: idioma, nome no ranking, sons, jogo, visual da pista, guitarra IA e Spotify |
+| `:feature:ranking` | Pedido do nome, músicas com pontuação e placar do ranking online |
+| `:feature:report` | Reportar problema ou sugestão |
+| `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
 | `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 

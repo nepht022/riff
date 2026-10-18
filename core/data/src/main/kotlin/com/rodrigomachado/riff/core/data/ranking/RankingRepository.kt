@@ -4,7 +4,6 @@ import com.rodrigomachado.riff.core.data.BuildConfig
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.database.RankingPendingDao
 import com.rodrigomachado.riff.core.database.RankingPendingEntity
-import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import dagger.Binds
 import dagger.Module
@@ -80,6 +79,7 @@ class AppsScriptRankingRepository(
     private val statuses = ConcurrentHashMap<Long, MutableStateFlow<SubmitStatus?>>()
     private val sending = Mutex()
     private val later = MutableStateFlow(false)
+    private val sender = PendingSender(api, pending) { scoreId, placed -> statusOf(scoreId).value = placed }
 
     override val isConfigured: Boolean get() = api.isConfigured
     override val player: Flow<Player> get() = players.player
@@ -105,7 +105,11 @@ class AppsScriptRankingRepository(
                 NameResult.Ok
             }
 
-            is ApiAnswer.Refused -> if (answer.reason == "nome_em_uso") NameResult.Taken else NameResult.Invalid
+            is ApiAnswer.Refused -> when (answer.reason) {
+                "nome_em_uso" -> NameResult.Taken
+                "limite" -> NameResult.Limit
+                else -> NameResult.Invalid
+            }
 
             ApiAnswer.Offline -> NameResult.Offline
         }
@@ -128,31 +132,32 @@ class AppsScriptRankingRepository(
             }
             status.value = SubmitStatus.Sending
             flush()
-            if (status.value == SubmitStatus.Sending) status.value = SubmitStatus.Queued
+            if (status.value == SubmitStatus.Sending) {
+                // Sem nome depois do envio: o jogador foi apagado do ranking e outra pessoa pegou o nome.
+                status.value = if (players.player.first().name == null) SubmitStatus.NoName else SubmitStatus.Queued
+            }
         }
     }
 
     override fun statusFor(scoreId: Long): StateFlow<SubmitStatus?> = statusOf(scoreId)
 
     override suspend fun flush() = sending.withLock {
-        val player = players.player.first()
-        val key = player.key ?: return@withLock
-        if (player.name == null) return@withLock
-        for (entry in pending.all()) {
-            when (val answer = api.submit(key, entry.toSubmission())) {
-                is ApiAnswer.Ok -> {
-                    pending.delete(entry.id)
-                    val placed = answer.value
-                    val scoreId = entry.scoreId
-                    if (scoreId != null && placed != null) statusOf(scoreId).value = placed
-                }
-
-                // Um pedido que o script nunca vai aceitar sai da fila; sem nome ou limite, espera.
-                is ApiAnswer.Refused -> if (answer.reason == "pedido") pending.delete(entry.id) else return@withLock
-
-                ApiAnswer.Offline -> return@withLock
-            }
+        var registeredAgain = false
+        while (true) {
+            val (name, key) = players.player.first()
+            if (name == null || key == null) return@withLock
+            val outcome = sender.send(key)
+            // O dono apagou o jogador da planilha: reserva o mesmo nome de novo (uma vez) e tenta outra vez.
+            if (outcome != Outcome.NO_NAME || registeredAgain || !registerAgain(name, key)) return@withLock
+            registeredAgain = true
         }
+    }
+
+    /** O mesmo nome de novo; se outra pessoa já pegou, esquece o nome para o pedido aparecer outra vez. */
+    private suspend fun registerAgain(name: String, key: String): Boolean = when (val answer = api.reserve(name, key)) {
+        is ApiAnswer.Ok -> true.also { players.save(answer.value, key) }
+        is ApiAnswer.Refused -> false.also { if (answer.reason == "nome_em_uso") players.forgetName() }
+        ApiAnswer.Offline -> false
     }
 
     override suspend fun songs(query: String) = api.songs(players.player.first().key.orEmpty(), query)
@@ -214,19 +219,6 @@ private fun Submission.toPending(scoreId: Long?) = RankingPendingEntity(
     cleanMs = cleanMs,
     createdAtEpochMs = System.currentTimeMillis(),
     notes = notes,
-)
-
-private fun RankingPendingEntity.toSubmission() = Submission(
-    chartId,
-    Difficulty.entries.firstOrNull { it.name == difficulty } ?: Difficulty.EXPERT,
-    title,
-    artist,
-    points,
-    accuracy,
-    combo,
-    perfect,
-    cleanMs,
-    notes,
 )
 
 /** O escopo do app para o ranking: o envio continua depois de a tela da partida sair. */

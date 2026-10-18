@@ -19,7 +19,12 @@
  */
 
 var MAX_BODY = 4000;
-var MAX_PER_HOUR = 60;    // envios por celular: o endereço está no APK
+var MAX_PER_HOUR = 60;    // pedidos de envio por celular: o endereço está no APK
+var MAX_BATCH = 50;       // pontuações num pedido "enviarVarios" (o histórico de quem acabou de pôr o nome)
+var MAX_BODY_BATCH = 40000;
+var MIN_KEY = 16;         // o app manda um UUID; chave vazia ou curta é pedido forjado
+var NAMES_PER_HOUR = 5;   // reservas (e trocas) de nome por celular
+var NAMES_PER_HOUR_ALL = 100; // reservas por hora somando todos: o endereço está no APK
 var NAME = /^[\p{L}\p{N} _-]{3,20}$/u;
 var METRICS = ['pontos', 'precisao', 'combo', 'perfeitos', 'semErrar'];
 var STORED = METRICS.concat(['notas']); // notas: o total da partida, para "perfeitos de quantos"
@@ -32,12 +37,18 @@ var S = { hash: 0, mapa: 1, titulo: 2, artista: 3, dificuldade: 4, pontos: 5, pr
 
 function doPost(e) {
   try {
-    if (!e || !e.postData || e.postData.contents.length > MAX_BODY) return answer({ ok: false, motivo: 'pedido' });
+    if (!e || !e.postData || e.postData.contents.length > MAX_BODY_BATCH) return answer({ ok: false, motivo: 'pedido' });
     var data = JSON.parse(e.postData.contents);
     var hash = digest(String(data.chave || ''));
+    var writes = data.acao === 'reservar' || data.acao === 'enviar' || data.acao === 'enviarVarios';
+    if (writes && String(data.chave || '').length < MIN_KEY) return answer({ ok: false, motivo: 'pedido' });
+    if (data.acao !== 'enviarVarios' && e.postData.contents.length > MAX_BODY) {
+      return answer({ ok: false, motivo: 'pedido' });
+    }
     switch (data.acao) {
       case 'reservar': return answer(withLock(function () { return reserve(String(data.nome || ''), hash); }));
       case 'enviar': return answer(withLock(function () { return submit(data, hash); }));
+      case 'enviarVarios': return answer(withLock(function () { return submitMany(data.envios, hash); }));
       case 'musicas': return answer(songs(String(data.busca || ''), hash));
       case 'placar': return answer(board(String(data.mapa || ''), hash));
       default: return answer({ ok: false, motivo: 'pedido' });
@@ -57,6 +68,9 @@ function prepararPlanilha() {
 function reserve(rawName, hash) {
   var name = rawName.trim();
   if (!NAME.test(name)) return { ok: false, motivo: 'nome_invalido' };
+  if (!withinLimit('nomes:' + hash, NAMES_PER_HOUR) || !withinLimit('nomes', NAMES_PER_HOUR_ALL)) {
+    return { ok: false, motivo: 'limite' };
+  }
   var sheet = tab(PLAYERS);
   var rows = sheet.getDataRange().getValues();
   var key = name.toLowerCase();
@@ -79,7 +93,19 @@ function reserve(rawName, hash) {
 /** Guarda o melhor de cada número; devolve a posição em pontos naquele mapa e dificuldade. */
 function submit(data, hash) {
   if (!playerOf(hash)) return { ok: false, motivo: 'sem_nome' };
-  if (!withinHourlyLimit(hash)) return { ok: false, motivo: 'limite' };
+  if (!withinLimit('envios:' + hash, MAX_PER_HOUR)) return { ok: false, motivo: 'limite' };
+  return store(data, hash);
+}
+
+/** Várias pontuações num pedido (conta uma vez no limite): um resultado por envio, na mesma ordem. */
+function submitMany(list, hash) {
+  if (!Array.isArray(list) || list.length === 0 || list.length > MAX_BATCH) return { ok: false, motivo: 'pedido' };
+  if (!playerOf(hash)) return { ok: false, motivo: 'sem_nome' };
+  if (!withinLimit('envios:' + hash, MAX_PER_HOUR)) return { ok: false, motivo: 'limite' };
+  return { ok: true, resultados: list.map(function (data) { return store(data || {}, hash); }) };
+}
+
+function store(data, hash) {
   var map = text(data.mapa, 100);
   var difficulty = text(data.dificuldade, 20);
   if (!map || !difficulty) return { ok: false, motivo: 'pedido' };
@@ -205,11 +231,12 @@ function playerNames() {
   return names;
 }
 
-function withinHourlyLimit(hash) {
+/** Conta [name] nesta hora; falso quando já chegou a [max]. */
+function withinLimit(name, max) {
   var cache = CacheService.getScriptCache();
-  var key = 'envios:' + hash + ':' + Math.floor(Date.now() / 3600000);
+  var key = name + ':' + Math.floor(Date.now() / 3600000);
   var count = Number(cache.get(key) || 0);
-  if (count >= MAX_PER_HOUR) return false;
+  if (count >= max) return false;
   cache.put(key, String(count + 1), 3600);
   return true;
 }

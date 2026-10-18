@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.data.ranking
 import com.rodrigomachado.riff.core.model.Difficulty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
@@ -31,15 +32,24 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
     suspend fun reserve(name: String, key: String): ApiAnswer<String> =
         call(JSONObject().put("acao", "reservar").put("nome", name).put("chave", key)) { it.getString("nome") }
 
-    suspend fun submit(key: String, submission: Submission): ApiAnswer<SubmitStatus.Placed?> = call(
-        JSONObject().put("acao", "enviar").put("chave", key)
-            .put("mapa", submission.chartId).put("titulo", submission.title).put("artista", submission.artist)
-            .put("dificuldade", submission.difficulty.name).put("pontos", submission.points)
-            .put("precisao", submission.accuracy.toDouble()).put("combo", submission.combo)
-            .put("perfeitos", submission.perfect).put("semErrar", submission.cleanMs ?: JSONObject.NULL)
-            .put("notas", submission.notes ?: JSONObject.NULL),
+    suspend fun submit(key: String, submission: Submission): ApiAnswer<SubmitStatus.Placed?> =
+        call(submission.toJson().put("acao", "enviar").put("chave", key)) { it.placed() }
+
+    /**
+     * Várias pontuações num pedido (o limite por hora conta uma vez): um resultado por envio, na mesma ordem. O
+     * script de antes desta ação responde [ApiAnswer.Refused] "pedido".
+     */
+    suspend fun submitMany(
+        key: String,
+        submissions: List<Submission>,
+    ): ApiAnswer<List<ApiAnswer<SubmitStatus.Placed?>>> = call(
+        JSONObject().put("acao", "enviarVarios").put("chave", key)
+            .put("envios", JSONArray(submissions.map { it.toJson() })),
     ) { json ->
-        if (json.isNull("posicao")) null else SubmitStatus.Placed(json.getInt("posicao"), json.getInt("total"))
+        val results = json.getJSONArray("resultados")
+        (0 until results.length()).map { results.getJSONObject(it) }.map {
+            if (it.optBoolean("ok")) ApiAnswer.Ok(it.placed()) else ApiAnswer.Refused(it.optString("motivo"))
+        }
     }
 
     suspend fun songs(key: String, query: String): ApiAnswer<List<RankedSong>> =
@@ -75,6 +85,16 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
                 )
             }
         }
+
+    private fun JSONObject.placed() =
+        if (isNull("posicao")) null else SubmitStatus.Placed(getInt("posicao"), getInt("total"))
+
+    private fun Submission.toJson() = JSONObject()
+        .put("mapa", chartId).put("titulo", title).put("artista", artist)
+        .put("dificuldade", difficulty.name).put("pontos", points)
+        .put("precisao", accuracy.toDouble()).put("combo", combo)
+        .put("perfeitos", perfect).put("semErrar", cleanMs ?: JSONObject.NULL)
+        .put("notas", notes ?: JSONObject.NULL)
 
     private fun JSONObject.number(name: String): Double? = if (isNull(name)) null else getDouble(name)
 

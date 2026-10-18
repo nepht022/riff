@@ -113,6 +113,26 @@ class PlayerNameTest {
     }
 
     @Test
+    fun theDialogSaysWhoSeesTheNameAndExplainsTheLimit() {
+        composeRule.setContent {
+            RiffTheme {
+                PlayerNameDialog(
+                    PlayerNameUiState(name = "Rodrigo", error = NameResult.Limit),
+                    onName = {},
+                    onSave = {},
+                    onLater = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            "Seu nome e suas melhores pontuações ficam visíveis para todos que jogam o Riff. " +
+                "O celular é identificado por um código anônimo.",
+        ).assertExists()
+        composeRule.onNodeWithText("Muitas tentativas agora: tente de novo daqui a uma hora").assertExists()
+    }
+
+    @Test
     fun renamingHasNoNotNow() {
         composeRule.setContent {
             RiffTheme {

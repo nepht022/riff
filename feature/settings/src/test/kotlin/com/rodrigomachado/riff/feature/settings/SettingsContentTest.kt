@@ -86,6 +86,7 @@ class SettingsContentTest {
                         onQueue = { events += it.toString() },
                         rankingName = rankingName,
                         onRankingName = { events += "rankingName" },
+                        onLicenses = { events += "licenses" },
                     )
                 }
             }
@@ -108,6 +109,15 @@ class SettingsContentTest {
         show()
 
         composeRule.onNodeWithText("Escolher").assertExists()
+    }
+
+    @Test
+    fun generalOpensLicensesAndPrivacy() {
+        show()
+
+        composeRule.onNodeWithText("Licenças e privacidade").performScrollTo().performClick()
+
+        assertEquals(listOf("licenses"), events)
     }
 
     /** Sem o endereço do ranking no build, não há nome a mostrar. */

@@ -16,6 +16,9 @@ interface PlayerStore {
     suspend fun save(name: String, key: String)
 
     suspend fun saveKey(key: String)
+
+    /** Tira só o nome (a chave continua): o pedido do nome aparece de novo. */
+    suspend fun forgetName()
 }
 
 class DataStorePlayerStore @Inject constructor(private val preferences: RiffPreferences) : PlayerStore {
@@ -24,6 +27,8 @@ class DataStorePlayerStore @Inject constructor(private val preferences: RiffPref
     override suspend fun save(name: String, key: String) = preferences.setPlayer(name, key)
 
     override suspend fun saveKey(key: String) = preferences.setPlayerKey(key)
+
+    override suspend fun forgetName() = preferences.forgetPlayerName()
 }
 
 /** O histórico de partidas deste celular, para saber se uma partida é a melhor e enviar os melhores antigos. */

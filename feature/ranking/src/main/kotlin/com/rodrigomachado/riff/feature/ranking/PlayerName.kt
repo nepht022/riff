@@ -134,6 +134,12 @@ fun PlayerNameDialog(
                     enabled = !state.saving,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                // Quem vê o nome e o que identifica o celular (LGPD: dito antes de enviar).
+                Text(
+                    stringResource(R.string.ranking_name_privacy),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = RiffColors.PaperDim,
+                )
                 state.error?.let {
                     Text(
                         stringResource(it.message()),
@@ -161,5 +167,6 @@ fun PlayerNameDialog(
 private fun NameResult.message(): Int = when (this) {
     NameResult.Taken -> R.string.ranking_name_taken
     NameResult.Invalid -> R.string.ranking_name_invalid
+    NameResult.Limit -> R.string.ranking_name_limit
     NameResult.Offline, NameResult.Ok -> R.string.ranking_name_offline
 }
