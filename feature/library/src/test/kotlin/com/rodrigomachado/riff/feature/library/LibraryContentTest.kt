@@ -1,6 +1,9 @@
 package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
@@ -597,5 +600,30 @@ class LibraryContentTest {
         search("metallica")
 
         composeRule.onNodeWithText("Nenhum mapa com esse nome").assertExists()
+    }
+
+    /** O filtro da lupa não pode congelar o resto da tela: Selecionar muda o estado e a tela acompanha na hora. */
+    @Test
+    fun selectingShowsUpRightAwayEvenWithTheFilter() {
+        var state by mutableStateOf(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
+        composeRule.setContent {
+            RiffTheme {
+                LibraryContent(
+                    state = state,
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> },
+                    onBack = {},
+                    deletion = DeletionCallbacks(
+                        onStartSelecting = { state = state.copy(deletion = DeletionState(selecting = true)) },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Selecionar").performClick()
+
+        composeRule.onNodeWithText("Cancelar").assertExists()
     }
 }

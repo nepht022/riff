@@ -158,7 +158,9 @@ fun LibraryContent(
         }
         if (filtering) FilterField(filter) { filter = it }
         matchingTitle?.let { MatchHeader(it) }
-        val shown = remember(state.charts, filter) { state.copy(charts = state.charts.matching(filter)) }
+        // Só a lista filtrada fica guardada; o resto do estado (seleção, importação, aviso) é sempre o atual.
+        val charts = remember(state.charts, filter) { state.charts.matching(filter) }
+        val shown = state.copy(charts = charts)
         if (filter.isNotBlank() && shown.charts.isEmpty() && state.charts.isNotEmpty()) {
             Text(
                 stringResource(R.string.library_filter_none),
