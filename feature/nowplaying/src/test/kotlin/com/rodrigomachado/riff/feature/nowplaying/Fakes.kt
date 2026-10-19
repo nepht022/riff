@@ -26,6 +26,7 @@ class FakeNowPlayingRepository : NowPlayingRepository {
     var connects = 0
     override val connection = MutableStateFlow<SpotifyConnection>(SpotifyConnection.Idle)
     override val nowPlaying = MutableStateFlow<NowPlaying?>(null)
+    override val adPlaying = MutableStateFlow(false)
 
     /** A faixa de [nowPlaying], como no repositório de verdade (os dois vêm do mesmo estado do Spotify). */
     override val playback: StateFlow<PlaybackState?> get() = MutableStateFlow(nowPlaying.value?.playback)

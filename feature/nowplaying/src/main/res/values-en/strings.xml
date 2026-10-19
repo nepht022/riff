@@ -5,16 +5,9 @@
     <string name="nowplaying_connecting">Connecting to Spotify…</string>
     <string name="nowplaying_not_installed_title">Spotify not installed</string>
     <string name="nowplaying_not_installed_message">Install the Spotify app to play along with what\'s playing. Meanwhile, the library plays with the folders\' audio.</string>
-    <string name="nowplaying_not_configured_title">Spotify not configured</string>
-    <string name="nowplaying_not_configured_message">This build has no spotify.clientId in local.properties.</string>
     <string name="nowplaying_open_library">Open library</string>
-    <string name="nowplaying_error_not_logged_in">Log in to the Spotify app and try again.</string>
-    <string name="nowplaying_error_not_authorized">Riff wasn\'t authorized on Spotify. Try again and accept the access request.</string>
-    <string name="nowplaying_error_offline">Spotify is in offline mode.</string>
-    <string name="nowplaying_error_disconnected">The connection to Spotify dropped. Reconnecting…</string>
-    <string name="nowplaying_error_unknown">Couldn\'t connect to Spotify.</string>
     <string name="nowplaying_nothing_title">Nothing playing</string>
-    <string name="nowplaying_nothing_message">Play a song on Spotify and it shows up here.</string>
+    <string name="nowplaying_nothing_message">Open Spotify and play a song.</string>
     <string name="nowplaying_paused">Paused on Spotify</string>
     <string name="nowplaying_chart">Chart: %1$s — %2$s</string>
     <string name="nowplaying_play">Play</string>
@@ -35,4 +28,11 @@
     <string name="nowplaying_search">Search Encore</string>
     <string name="nowplaying_ranking">Ranking</string>
     <string name="nowplaying_report">Report</string>
+    <string name="nowplaying_permission_title">See the Spotify song</string>
+    <string name="nowplaying_permission_message">To play along with Spotify, Riff needs to see what is playing. Tap Allow and turn Riff on in “Notification access”.</string>
+    <string name="nowplaying_allow">Allow</string>
+    <string name="nowplaying_or_library">If you prefer, play in Library mode</string>
+    <string name="nowplaying_open_spotify">Open Spotify</string>
+    <string name="nowplaying_ad_title">Ad</string>
+    <string name="nowplaying_ad_message">Ad on Spotify: the match starts when it ends.</string>
 </resources>

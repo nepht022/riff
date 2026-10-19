@@ -33,6 +33,9 @@ sealed interface NowPlayingUiState {
 
     data object NothingPlaying : NowPlayingUiState
 
+    /** Anúncio no Spotify (conta grátis): a partida espera ele acabar. */
+    data object Ad : NowPlayingUiState
+
     /**
      * [queueMiss]: a fila procurou um mapa para esta música e não conseguiu; [preparingMap]: a fila ainda está
      * preparando o mapa dela. Os dois só sem mapa.
@@ -57,11 +60,14 @@ class NowPlayingViewModel @Inject constructor(
             repository.nowPlaying,
             misses.misses,
             preparing.tracks,
-        ) { connection, nowPlaying, missed, preparingNow ->
+            repository.adPlaying,
+        ) { connection, nowPlaying, missed, preparingNow, ad ->
             when (connection) {
                 SpotifyConnection.Idle, SpotifyConnection.Connecting -> NowPlayingUiState.Connecting
 
                 is SpotifyConnection.Failed -> NowPlayingUiState.Unavailable(connection.error)
+
+                SpotifyConnection.Connected if ad && nowPlaying == null -> NowPlayingUiState.Ad
 
                 SpotifyConnection.Connected ->
                     nowPlaying?.let {
@@ -87,6 +93,8 @@ class NowPlayingViewModel @Inject constructor(
         viewModelScope.launch {
             repository.nowPlaying.collect { now ->
                 val pending = pendingAutoPlay.value
+                // Um anúncio (conta grátis) não é outra música: a partida pronta continua esperando.
+                if (now == null && repository.adPlaying.value) return@collect
                 if (pending != null && now?.playback?.trackUri != pending.trackUri) pendingAutoPlay.value = null
             }
         }
@@ -112,9 +120,7 @@ class NowPlayingViewModel @Inject constructor(
                 saved.remove<Long>(NowPlayingAutoPlay.KEY_WAIT)
                 waiting?.cancel()
                 waiting = launch {
-                    val next = withTimeoutOrNull(waitMs) {
-                        repository.nowPlaying.first { it != null && it.playback.trackUri != from }
-                    } ?: return@launch
+                    val next = nextSongAfter(from, waitMs) ?: return@launch
                     val ready = afterPreparing(next)
                     // O Spotify passou de música durante a espera: decidir pela anterior o puxaria de volta para ela.
                     if (repository.playback.value?.trackUri != ready.playback.trackUri) return@launch
@@ -122,6 +128,22 @@ class NowPlayingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * A próxima música depois de [from], esperando até [waitMs]. Um anúncio (conta grátis) no meio estende a espera até
+     * ele acabar: a próxima partida começa depois dele.
+     */
+    private suspend fun nextSongAfter(from: String?, waitMs: Long): NowPlaying? {
+        val isNext = { now: NowPlaying? -> now != null && now.playback.trackUri != from }
+        val first = withTimeoutOrNull(waitMs) {
+            combine(
+                repository.nowPlaying,
+                repository.adPlaying,
+            ) { now, ad -> now to ad }.first { (now, ad) -> ad || isNext(now) }
+        } ?: return null
+        if (isNext(first.first)) return first.first
+        return withTimeoutOrNull(AD_WAIT_MS) { repository.nowPlaying.first(isNext) }
     }
 
     /**
@@ -153,15 +175,13 @@ class NowPlayingViewModel @Inject constructor(
     /** Pausado, volta a tocar; tocando, pausa. */
     fun playPause(isPaused: Boolean) = if (isPaused) repository.resume() else repository.pause()
 
-    fun retry() = repository.connect()
-
     /**
-     * O jogador voltou ao Riff: se o Spotify faltava ou estava deslogado, ele pode ter resolvido lá fora; tenta de novo
-     * sem pedir o toque em "Tentar de novo". O que não muda com o app aberto (Client ID ausente) fica como está.
+     * O jogador voltou ao Riff: ele pode ter instalado o Spotify ou ligado o "Acesso às notificações" lá fora; confere
+     * de novo sem pedir toque nenhum.
      */
     fun onReturn() {
         val error = (uiState.value as? NowPlayingUiState.Unavailable)?.error ?: return
-        if (error == SpotifyError.NOT_INSTALLED || error == SpotifyError.NOT_LOGGED_IN) repository.connect()
+        if (error == SpotifyError.NOT_INSTALLED || error == SpotifyError.NO_PERMISSION) repository.connect()
     }
 
     /** O jogador confirmou o mapa sugerido (confiança média, spec §5). */
@@ -171,5 +191,8 @@ class NowPlayingViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+
+        /** Quanto esperar a música depois de um anúncio (os do Spotify grátis têm de 15 s a 1 min, às vezes dois). */
+        const val AD_WAIT_MS = 180_000L
     }
 }

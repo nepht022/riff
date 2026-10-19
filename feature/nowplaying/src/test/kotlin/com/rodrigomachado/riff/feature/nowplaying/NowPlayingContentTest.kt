@@ -51,19 +51,19 @@ class NowPlayingContentTest {
     private var played: PlayRequest? = null
     private var confirmed: Triple<String, String, Float>? = null
     private var chooseFor: Pair<String, String>? = null
-    private var retries = 0
     private var libraryOpened = false
     private var settingsOpened = false
     private var reportOpened = false
     private val controls = mutableListOf<String>()
     private var searchedFor: PlaybackState? = null
+    private var allowed = false
+    private var spotifyOpened = false
 
     private fun show(state: NowPlayingUiState) = composeRule.setContent {
         CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
             RiffTheme {
                 NowPlayingContent(
                     state = state,
-                    onRetry = { retries++ },
                     onPlay = { played = it },
                     onConfirm = { uri, id, confidence -> confirmed = Triple(uri, id, confidence) },
                     onChooseChart = { uri, title -> chooseFor = uri to title },
@@ -74,6 +74,8 @@ class NowPlayingContentTest {
                     onPrevious = { controls += "previous" },
                     onPlayPause = { controls += "playPause:$it" },
                     onNext = { controls += "next" },
+                    onAllow = { allowed = true },
+                    onOpenSpotify = { spotifyOpened = true },
                 )
             }
         }
@@ -124,14 +126,38 @@ class NowPlayingContentTest {
         assertTrue(libraryOpened)
     }
 
+    /** Sem "Acesso às notificações": explica, leva à tela do Android e oferece a Biblioteca (pedido do dono). */
     @Test
-    fun otherFailuresOfferToTryAgain() {
-        show(NowPlayingUiState.Unavailable(SpotifyError.NOT_LOGGED_IN))
+    fun withoutPermissionItAsksAndOffersTheLibrary() {
+        show(NowPlayingUiState.Unavailable(SpotifyError.NO_PERMISSION))
 
-        composeRule.onNodeWithText("Entre na sua conta no app do Spotify e tente de novo.").assertExists()
-        composeRule.onNodeWithText("Tentar de novo").performClick()
+        composeRule.onNodeWithText(
+            "Para jogar com a música do Spotify, o Riff precisa ver o que está tocando.",
+            substring = true,
+        )
+            .assertExists()
+        composeRule.onNodeWithText("Permitir").performClick()
+        composeRule.onNodeWithText("Se preferir, jogue no modo Biblioteca").performClick()
 
-        assertEquals(1, retries)
+        assertTrue(allowed)
+        assertTrue(libraryOpened)
+    }
+
+    @Test
+    fun nothingPlayingOffersToOpenSpotify() {
+        show(NowPlayingUiState.NothingPlaying)
+
+        composeRule.onNodeWithText("Abra o Spotify e dê play numa música.").assertExists()
+        composeRule.onNodeWithText("Abrir o Spotify").performClick()
+
+        assertTrue(spotifyOpened)
+    }
+
+    @Test
+    fun anAdSaysTheMatchWaits() {
+        show(NowPlayingUiState.Ad)
+
+        composeRule.onNodeWithText("Anúncio no Spotify: a partida começa quando ele acabar.").assertExists()
     }
 
     @Test
@@ -150,7 +176,7 @@ class NowPlayingContentTest {
         )
         composeRule.setContent {
             RiffTheme {
-                NowPlayingContent(state, {}, { played = it }, { _, _, _ -> }, { _, _ -> }, {})
+                NowPlayingContent(state, { played = it }, { _, _, _ -> }, { _, _ -> }, {})
             }
         }
         composeRule.onNodeWithText("Jogar").performClick()
@@ -198,7 +224,6 @@ class NowPlayingContentTest {
             RiffTheme {
                 NowPlayingContent(
                     state = NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), trackOffsetMs = 25))),
-                    onRetry = {},
                     onPlay = { played = it },
                     onConfirm = { _, _, _ -> },
                     onChooseChart = { _, _ -> },
@@ -312,7 +337,6 @@ class NowPlayingContentTest {
             RiffTheme {
                 NowPlayingContent(
                     state = NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), miss),
-                    onRetry = {},
                     onPlay = {},
                     onConfirm = { _, _, _ -> },
                     onChooseChart = { _, _ -> },
@@ -436,7 +460,6 @@ class NowPlayingContentTest {
             RiffTheme {
                 NowPlayingContent(
                     state = NowPlayingUiState.Playing(playing(MatchStatus.Matched(chart(), 0))),
-                    onRetry = {},
                     onPlay = { played = it },
                     onConfirm = { _, _, _ -> },
                     onChooseChart = { _, _ -> },

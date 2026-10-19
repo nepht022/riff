@@ -43,6 +43,9 @@ interface NowPlayingRepository : SpotifyControls {
     /** A faixa tocando no Spotify com o mapa casado; `null` sem faixa. */
     val nowPlaying: Flow<NowPlaying?>
 
+    /** Anúncio tocando (conta grátis): sem faixa, mas a música volta sozinha. */
+    val adPlaying: StateFlow<Boolean>
+
     fun connect()
 }
 
@@ -53,6 +56,8 @@ class SpotifyNowPlayingRepository @Inject constructor(
     charts: ChartRepository,
 ) : NowPlayingRepository {
     override val connection: StateFlow<SpotifyConnection> get() = remote.connection
+
+    override val adPlaying: StateFlow<Boolean> get() = remote.adPlaying
 
     // O casamento só é recalculado quando a faixa muda, quando a biblioteca muda (importação) ou quando um casamento
     // é salvo; pausar ou avançar na mesma faixa reaproveita o último (cada busca lê o banco e a lista de mapas).

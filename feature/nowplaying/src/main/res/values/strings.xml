@@ -5,16 +5,9 @@
     <string name="nowplaying_connecting">Conectando ao Spotify…</string>
     <string name="nowplaying_not_installed_title">Spotify não instalado</string>
     <string name="nowplaying_not_installed_message">Instale o app do Spotify para jogar com a música que está tocando. Enquanto isso, a biblioteca joga com o áudio das pastas.</string>
-    <string name="nowplaying_not_configured_title">Spotify não configurado</string>
-    <string name="nowplaying_not_configured_message">Este build não tem o spotify.clientId no local.properties.</string>
     <string name="nowplaying_open_library">Abrir biblioteca</string>
-    <string name="nowplaying_error_not_logged_in">Entre na sua conta no app do Spotify e tente de novo.</string>
-    <string name="nowplaying_error_not_authorized">O Riff não foi autorizado no Spotify. Tente de novo e aceite o pedido de acesso.</string>
-    <string name="nowplaying_error_offline">O Spotify está no modo offline.</string>
-    <string name="nowplaying_error_disconnected">A conexão com o Spotify caiu. Tentando reconectar…</string>
-    <string name="nowplaying_error_unknown">Não deu para conectar ao Spotify.</string>
     <string name="nowplaying_nothing_title">Nada tocando</string>
-    <string name="nowplaying_nothing_message">Toque uma música no Spotify e ela aparece aqui.</string>
+    <string name="nowplaying_nothing_message">Abra o Spotify e dê play numa música.</string>
     <string name="nowplaying_paused">Pausado no Spotify</string>
     <string name="nowplaying_chart">Mapa: %1$s — %2$s</string>
     <string name="nowplaying_play">Jogar</string>
@@ -35,4 +28,11 @@
     <string name="nowplaying_search">Pesquisar no Encore</string>
     <string name="nowplaying_ranking">Ranking</string>
     <string name="nowplaying_report">Reportar</string>
+    <string name="nowplaying_permission_title">Ver a música do Spotify</string>
+    <string name="nowplaying_permission_message">Para jogar com a música do Spotify, o Riff precisa ver o que está tocando. Toque em Permitir e ligue o Riff em “Acesso às notificações”.</string>
+    <string name="nowplaying_allow">Permitir</string>
+    <string name="nowplaying_or_library">Se preferir, jogue no modo Biblioteca</string>
+    <string name="nowplaying_open_spotify">Abrir o Spotify</string>
+    <string name="nowplaying_ad_title">Anúncio</string>
+    <string name="nowplaying_ad_message">Anúncio no Spotify: a partida começa quando ele acabar.</string>
 </resources>

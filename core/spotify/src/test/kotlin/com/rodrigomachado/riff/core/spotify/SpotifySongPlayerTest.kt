@@ -369,7 +369,7 @@ class SpotifySongPlayerTest {
         now += 100
         emit(state(position = 0)) // o Spotify recomeçou a nossa faixa
         emit(state(position = 30_000))
-        remote.connection.value = SpotifyConnection.Failed(SpotifyError.DISCONNECTED)
+        remote.connection.value = SpotifyConnection.Failed(SpotifyError.NO_PERMISSION)
         emit(null)
 
         player.play() // "Continuar" antes de a conexão voltar
@@ -378,7 +378,7 @@ class SpotifySongPlayerTest {
         assertEquals(listOf("play:$ours"), remote.commands)
     }
 
-    private fun TestScope.loseConnection(error: SpotifyError = SpotifyError.DISCONNECTED) {
+    private fun TestScope.loseConnection(error: SpotifyError = SpotifyError.NO_PERMISSION) {
         remote.connection.value = SpotifyConnection.Failed(error)
         emit(null)
     }
@@ -466,7 +466,7 @@ class SpotifySongPlayerTest {
         player.play()
         now += 100
         emit(state(position = 1_000))
-        loseConnection(SpotifyError.UNKNOWN)
+        loseConnection(SpotifyError.NO_PERMISSION)
         val connectsBefore = remote.connects
         remote.connectTo = SpotifyConnection.Connecting
 

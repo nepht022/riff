@@ -58,7 +58,7 @@ class NowPlayingViewModelTest {
         repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_INSTALLED)
 
         assertEquals(NowPlayingUiState.Unavailable(SpotifyError.NOT_INSTALLED), viewModel.uiState.value)
-        viewModel.retry()
+        viewModel.onReturn()
         assertEquals(2, repository.connects)
     }
 
@@ -106,21 +106,46 @@ class NowPlayingViewModelTest {
         viewModel.onReturn() // o jogador instalou o Spotify e voltou ao Riff
         assertEquals(2, repository.connects)
 
-        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_LOGGED_IN)
-        viewModel.onReturn()
+        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NO_PERMISSION)
+        viewModel.onReturn() // ligou "Acesso às notificações" e voltou
         assertEquals(3, repository.connects)
     }
 
     @Test
-    fun comingBackDoesNotRetryWhatCannotChangeWithTheAppOpen() = runTest {
+    fun comingBackWhileConnectedDoesNotReconnect() = runTest {
         val viewModel = viewModel()
-        repository.connection.value = SpotifyConnection.Failed(SpotifyError.NOT_CONFIGURED)
-
-        viewModel.onReturn()
         repository.connection.value = SpotifyConnection.Connected
+
         viewModel.onReturn()
 
         assertEquals(1, repository.connects)
+    }
+
+    @Test
+    fun anAdIsShownWhileNothingElsePlays() = runTest {
+        val viewModel = viewModel()
+        repository.connection.value = SpotifyConnection.Connected
+        repository.adPlaying.value = true
+
+        assertEquals(NowPlayingUiState.Ad, viewModel.uiState.value)
+    }
+
+    /** Conta grátis no modo contínuo: o anúncio vem entre as músicas; a próxima partida espera ele acabar. */
+    @Test
+    fun anAdDoesNotCancelTheNextSong() = runTest {
+        val viewModel = viewModel()
+        songChangedDuringAMatch(Difficulty.EXPERT)
+
+        repository.nowPlaying.value = null
+        repository.adPlaying.value = true
+        advanceTimeBy(NowPlayingAutoPlay.WAIT_MS + 30_000)
+        repository.adPlaying.value = false
+        repository.nowPlaying.value = nextSong(MatchStatus.Matched(chart("b"), trackOffsetMs = 0))
+
+        assertEquals(
+            NowPlayingAutoPlay.Action.Start(PlayRequest("b", Difficulty.EXPERT, "spotify:track:y", 0)),
+            viewModel.autoPlay.value,
+        )
     }
 
     @Test

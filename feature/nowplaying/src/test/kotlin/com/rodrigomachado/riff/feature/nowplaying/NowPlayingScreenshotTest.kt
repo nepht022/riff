@@ -44,10 +44,20 @@ class NowPlayingScreenshotTest {
         content(NowPlayingUiState.Playing(playing(MatchStatus.NoMatch), preparingMap = true))
     }
 
+    @Test
+    fun permission() = snapshot("NowPlaying_permission") {
+        content(NowPlayingUiState.Unavailable(com.rodrigomachado.riff.core.model.SpotifyError.NO_PERMISSION))
+    }
+
+    @Test
+    fun nothingPlaying() = snapshot("NowPlaying_nothing") { content(NowPlayingUiState.NothingPlaying) }
+
+    @Test
+    fun ad() = snapshot("NowPlaying_ad") { content(NowPlayingUiState.Ad) }
+
     @Composable
     private fun content(state: NowPlayingUiState) = NowPlayingContent(
         state = state,
-        onRetry = {},
         onPlay = {},
         onConfirm = { _, _, _ -> },
         onChooseChart = { _, _ -> },

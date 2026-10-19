@@ -1,15 +1,10 @@
 package com.rodrigomachado.riff.core.model
 
-/** Por que o Spotify não está disponível. Cada valor vira uma explicação na tela. */
+/** Por que o Riff não consegue acompanhar o Spotify agora. Cada valor vira uma explicação na tela. */
 enum class SpotifyError {
+    /** O Riff não está ligado em "Acesso às notificações" (sem isso o Android não mostra a sessão do Spotify). */
     NO_PERMISSION,
-    NOT_CONFIGURED,
     NOT_INSTALLED,
-    NOT_LOGGED_IN,
-    NOT_AUTHORIZED,
-    OFFLINE,
-    DISCONNECTED,
-    UNKNOWN,
 }
 
 /** Estado da conexão com o app do Spotify. */

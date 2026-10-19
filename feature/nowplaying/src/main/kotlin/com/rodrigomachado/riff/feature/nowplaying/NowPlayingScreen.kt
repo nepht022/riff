@@ -1,5 +1,7 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -36,11 +39,9 @@ import com.rodrigomachado.riff.core.model.MatchStatus
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NowPlaying
 import com.rodrigomachado.riff.core.model.PlaybackState
-import com.rodrigomachado.riff.core.model.SpotifyError
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.EmptyState
-import com.rodrigomachado.riff.core.ui.component.ErrorState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
@@ -85,6 +86,7 @@ fun NowPlayingScreen(
     autoPlayRequests: SavedStateHandle? = null,
     viewModel: NowPlayingViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val autoPlay by viewModel.autoPlay.collectAsStateWithLifecycle()
     LaunchedEffect(autoPlayRequests) { autoPlayRequests?.let(viewModel::watchAutoPlay) }
@@ -105,7 +107,8 @@ fun NowPlayingScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
     NowPlayingContent(
         state = state,
-        onRetry = viewModel::retry,
+        onAllow = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+        onOpenSpotify = { context.packageManager.getLaunchIntentForPackage(SPOTIFY_APP)?.let(context::startActivity) },
         onPlay = onPlay,
         onConfirm = viewModel::confirmSuggestion,
         onChooseChart = onChooseChart,
@@ -126,7 +129,6 @@ fun NowPlayingScreen(
 @Composable
 fun NowPlayingContent(
     state: NowPlayingUiState,
-    onRetry: () -> Unit,
     onPlay: (PlayRequest) -> Unit,
     onConfirm: (trackUri: String, chartId: String, confidence: Float) -> Unit,
     onChooseChart: (trackUri: String, title: String) -> Unit,
@@ -141,54 +143,28 @@ fun NowPlayingContent(
     onNext: () -> Unit = {},
     askDifficultyFor: String? = null,
     onDifficultyAsked: () -> Unit = {},
+    /** Abre a tela do Android "Acesso às notificações". */
+    onAllow: () -> Unit = {},
+    onOpenSpotify: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        // O título e, no canto direito, o ícone da separação da guitarra (quando houver uma).
-        Row(Modifier.fillMaxWidth().padding(top = Spacing.md), verticalAlignment = Alignment.CenterVertically) {
-            PosterTitle(
-                stringResource(R.string.nowplaying_title),
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.displaySmall,
-            )
-            SeparationIndicator()
-        }
-        // Os quatro espalhados pela linha toda.
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenLibrary),
-                contentPadding = TOP_BUTTON_PADDING,
-                modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY),
-            ) {
-                Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
-            }
-            TextButton(
-                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings),
-                contentPadding = TOP_BUTTON_PADDING,
-            ) {
-                Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
-            }
-            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenReport), contentPadding = TOP_BUTTON_PADDING) {
-                Text(stringResource(R.string.nowplaying_report), color = RiffColors.Paper)
-            }
-            TextButton(
-                onClick = withMenuSound(MenuSound.NAVIGATE, onOpenRanking),
-                contentPadding = TOP_BUTTON_PADDING,
-            ) {
-                Text(stringResource(R.string.nowplaying_ranking), color = RiffColors.Paper)
-            }
-        }
+        NowPlayingHeader(onOpenLibrary, onOpenSettings, onOpenReport, onOpenRanking)
         when (state) {
             NowPlayingUiState.Connecting -> LoadingState(message = stringResource(R.string.nowplaying_connecting))
 
-            is NowPlayingUiState.Unavailable -> Unavailable(state.error, onRetry, onOpenLibrary)
+            is NowPlayingUiState.Unavailable -> Unavailable(state.error, onAllow, onOpenLibrary)
 
             NowPlayingUiState.NothingPlaying -> EmptyState(
                 title = stringResource(R.string.nowplaying_nothing_title),
                 message = stringResource(R.string.nowplaying_nothing_message),
+                actionLabel = stringResource(R.string.nowplaying_open_spotify),
+                onAction = onOpenSpotify,
+                actionSound = MenuSound.NAVIGATE,
+            )
+
+            NowPlayingUiState.Ad -> EmptyState(
+                title = stringResource(R.string.nowplaying_ad_title),
+                message = stringResource(R.string.nowplaying_ad_message),
             )
 
             is NowPlayingUiState.Playing -> Playing(
@@ -207,26 +183,51 @@ fun NowPlayingContent(
     }
 }
 
+/** O título com o ícone da separação e, embaixo, os quatro botões do menu. */
 @Composable
-private fun Unavailable(error: SpotifyError, onRetry: () -> Unit, onOpenLibrary: () -> Unit) {
-    when (error) {
-        SpotifyError.NOT_INSTALLED -> EmptyState(
-            title = stringResource(R.string.nowplaying_not_installed_title),
-            message = stringResource(R.string.nowplaying_not_installed_message),
-            actionLabel = stringResource(R.string.nowplaying_open_library),
-            onAction = onOpenLibrary,
-            actionSound = MenuSound.NAVIGATE,
+private fun NowPlayingHeader(
+    onOpenLibrary: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenReport: () -> Unit,
+    onOpenRanking: () -> Unit,
+) {
+    // O título e, no canto direito, o ícone da separação da guitarra (quando houver uma).
+    Row(Modifier.fillMaxWidth().padding(top = Spacing.md), verticalAlignment = Alignment.CenterVertically) {
+        PosterTitle(
+            stringResource(R.string.nowplaying_title),
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.displaySmall,
         )
-
-        SpotifyError.NOT_CONFIGURED -> EmptyState(
-            title = stringResource(R.string.nowplaying_not_configured_title),
-            message = stringResource(R.string.nowplaying_not_configured_message),
-            actionLabel = stringResource(R.string.nowplaying_open_library),
-            onAction = onOpenLibrary,
-            actionSound = MenuSound.NAVIGATE,
-        )
-
-        else -> ErrorState(stringResource(error.message()), onRetry = onRetry)
+        SeparationIndicator()
+    }
+    // Os quatro espalhados pela linha toda.
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onOpenLibrary),
+            contentPadding = TOP_BUTTON_PADDING,
+            modifier = Modifier.testTag(NowPlayingTestTags.OPEN_LIBRARY),
+        ) {
+            Text(stringResource(R.string.nowplaying_library), color = RiffColors.Paper)
+        }
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onOpenSettings),
+            contentPadding = TOP_BUTTON_PADDING,
+        ) {
+            Text(stringResource(R.string.nowplaying_settings), color = RiffColors.Paper)
+        }
+        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onOpenReport), contentPadding = TOP_BUTTON_PADDING) {
+            Text(stringResource(R.string.nowplaying_report), color = RiffColors.Paper)
+        }
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onOpenRanking),
+            contentPadding = TOP_BUTTON_PADDING,
+        ) {
+            Text(stringResource(R.string.nowplaying_ranking), color = RiffColors.Paper)
+        }
     }
 }
 
@@ -371,3 +372,6 @@ internal fun MatchBadge(match: MatchStatus) {
         MatchStatus.NoMatch -> StatusBadge(stringResource(R.string.nowplaying_badge_none), BadgeTone.NEUTRAL)
     }
 }
+
+/** O app do Spotify (o mesmo pacote que a sessão de mídia acompanha). */
+private const val SPOTIFY_APP = "com.spotify.music"
