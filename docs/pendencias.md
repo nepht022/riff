@@ -157,3 +157,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Quem foi tirado do ranking vê de novo o pedido do nome (como numa instalação nova; "Agora não" vale até reabrir o app).
 - O aviso de terceiros do ONNX Runtime tem ~330 KB num único texto: abrir pode demorar num celular fraco.
 - Leitura do ranking (`musicas`, `placar`) continua aberta e sem limite, e o script não confere se uma pontuação é plausível (vale para quem forjar pedidos).
+
+## Spotify pela sessão de mídia (revisão final, 2026-10-19)
+
+- "Jogar de novo": se a metadata da faixa anterior demorar mais de 1,5 s, um segundo ⏮ volta duas faixas; ao chegar não há `seekTo(0)` + `play()` (Spotify pausado faz a faixa ser recusada); o job do ⏮ não é cancelado ao sair da partida.
+- `AndroidSpotifySession`: se `addOnActiveSessionsChangedListener` der certo e `getActiveSessions` falhar, o listener é registrado de novo na próxima conferência; nada força chamar só na thread principal; `publish()` lê a fila (binder) a cada aviso de estado.
+- `playback` e `adPlaying` são dois `stateIn` do mesmo estado: o filtro de anúncio no `NowPlayingViewModel` (init) pode ver um antes do outro (impacto baixo; a espera da próxima usa `combine`).
+- "Não deu para reconhecer a música no Spotify" (risco 4 da spec) não existe: `MEDIA_ID` ausente aparece como "Nada tocando". As Configurações não avisam quando a fila está ligada sem a permissão.
+- A chave antiga do Keystore (`riff_spotify_web`) fica no aparelho; o alias `androidx-activity` do catálogo ficou sem uso.
+- Sem testes do `AndroidSpotifySession` (registro/desregistro, SecurityException, permissão tirada); os testes antigos da fila marcam a música atual como casada, então a música atual × limite de 3 mapas não é exercitada.
+- A sincronia depois de um avanço (seek) não foi medida contra o SDK (o adb não manda seek).
+- O ajuste automático de começo da música ainda supõe que o Spotify começa direto (mapas oficiais com intro dão +3,6 s): proposta aprovada (limitar pela diferença de duração e pelo primeiro botão), numa branch própria.
+
