@@ -34,12 +34,22 @@ class SessionSpotifyQueueTest {
         )
     }
 
+    /** Sem saber o que toca (rádio, aleatório, Spotify fechado), não dá para dizer quais vêm depois. */
     @Test
-    fun withoutAnActiveItemThereIsNoNext() = runTest {
+    fun withoutAnActiveItemTheQueueIsUnavailable() = runTest {
         session.queue.value = listOf(item(16), item(17))
         session.activeQueueId.value = null
 
-        assertEquals(QueueRead.Tracks(emptyList()), queue.next(2))
+        assertEquals(QueueRead.Unavailable, queue.next(2))
+    }
+
+    /** Spotify fechado: a fila some, mas isso não é "a fila ficou vazia" (os mapas das próximas seriam apagados). */
+    @Test
+    fun withoutASessionTheQueueIsUnavailable() = runTest {
+        session.queue.value = emptyList()
+        session.activeQueueId.value = null
+
+        assertEquals(QueueRead.Unavailable, queue.next(2))
     }
 
     @Test
