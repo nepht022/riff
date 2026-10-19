@@ -548,4 +548,26 @@ class QueuePrefetcherTest {
 
         assertTrue(downloader.downloaded.isEmpty())
     }
+
+    /** A mesma música esperando na fila sem a duração não pode engolir a conferência dela tocando, com a duração. */
+    @Test
+    fun aSongWaitingWithoutDurationIsStillCheckedWhenItPlays() = runTest {
+        downloader.gate = kotlinx.coroutines.CompletableDeferred()
+        queue.next = QueueRead.Tracks(
+            listOf(
+                QueuedTrack("z", "Música z", "Banda", durationMs = null),
+                QueuedTrack("a", "Música a", "Banda", durationMs = null),
+            ),
+        )
+        matches.statusesWithoutDuration["a"] = MatchStatus.Matched(libraryChart("outra-versao"), 0)
+        encoreHas("z", "a")
+        start()
+        nowPlaying("now") // "z" baixando (segurado), "a" esperando a vez sem a duração
+
+        nowPlaying("a") // tocando, com a duração
+        downloader.gate!!.complete(Unit)
+        runCurrent()
+
+        assertTrue(("md5-a" to "a") in downloader.downloaded)
+    }
 }

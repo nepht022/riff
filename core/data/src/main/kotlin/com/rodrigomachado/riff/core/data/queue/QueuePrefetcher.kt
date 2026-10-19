@@ -128,14 +128,14 @@ class QueuePrefetcher(
     }
 
     private suspend fun enqueue(track: QueuedTrack) {
-        if (handled.contains(track) || !waiting.add(track.uri)) return
+        if (handled.contains(track) || !waiting.add(track.waitingKey)) return
         preparing.start(track.uri)
         pending.send(track)
     }
 
     /** Também durante uma partida: a próxima música fica pronta enquanto se joga (spec Spotify contínuo §2.1). */
     private suspend fun prepare(track: QueuedTrack) {
-        waiting -= track.uri
+        waiting -= track.waitingKey
         if (handled.contains(track)) return
         val options = settings.settings.first()
         val status = statusOf(track)
@@ -252,6 +252,9 @@ internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
     status is MatchStatus.Suggested -> "só com outra duração, e a biblioteca já tem uma sugestão tão boa"
     else -> "só com outra duração (opção: não baixar nenhum)"
 }
+
+/** Na fila de preparo, a mesma música sem e com a duração são dois pedidos (a conferência com duração decide). */
+private val QueuedTrack.waitingKey: String get() = if (durationMs == null) "$uri?" else uri
 
 private fun QueuedTrack.label() = "$artist – $title"
 
