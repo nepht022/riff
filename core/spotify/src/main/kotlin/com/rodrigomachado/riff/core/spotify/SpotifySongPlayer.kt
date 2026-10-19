@@ -221,10 +221,15 @@ class SpotifySongPlayer(
     override fun pause() {
         if (!started) return
         val position = positionMs
+        // Só manda pausar se o Spotify toca (ou está começando) a nossa: se ele parou sozinho (anúncio, carregando,
+        // sessão perdida), um pause pararia o anúncio de vez e a música não voltaria.
+        val spotifyPlaying = !disconnected && (starting || last?.isPaused == false)
         starting = false
-        pauseUnconfirmed = true
         lastCommandAtMs = nowMs()
-        remote.pause()
+        if (spotifyPlaying) {
+            pauseUnconfirmed = true
+            remote.pause()
+        }
         last = last?.frozenAt(position, nowMs())
     }
 

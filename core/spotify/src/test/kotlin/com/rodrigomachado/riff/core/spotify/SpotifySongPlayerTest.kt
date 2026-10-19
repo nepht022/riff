@@ -502,6 +502,45 @@ class SpotifySongPlayerTest {
         assertTrue(player.isPlaying)
     }
 
+    /** A tela pausa a partida quando a música para; num anúncio, mandar o Spotify pausar pararia o anúncio de vez. */
+    @Test
+    fun theGamePausingDuringAnAdDoesNotPauseSpotify() = runTest {
+        val player = prepared()
+        playOurs(player)
+        remote.adPlaying.value = true
+        emit(null)
+        remote.commands.clear()
+
+        player.pause()
+
+        assertFalse("pause" in remote.commands)
+    }
+
+    /** O Spotify parou sozinho (carregando, notificação): o jogo acompanha sem mandar pausar de novo. */
+    @Test
+    fun theGamePausingAfterSpotifyStoppedDoesNotSendPause() = runTest {
+        val player = prepared()
+        playOurs(player)
+        now += 300
+        emit(state(position = 30_300, isPaused = true)) // carregando
+        remote.commands.clear()
+
+        player.pause()
+
+        assertFalse("pause" in remote.commands)
+    }
+
+    @Test
+    fun pausingTheGameWhileSpotifyPlaysPausesSpotify() = runTest {
+        val player = prepared()
+        playOurs(player)
+        remote.commands.clear()
+
+        player.pause()
+
+        assertEquals(listOf("pause"), remote.commands)
+    }
+
     /** Conta grátis no modo contínuo: o anúncio vem entre as músicas; a seguinte depois dele acaba a partida. */
     @Test
     fun anAdBetweenSongsStillEndsTheMatch() = runTest {
