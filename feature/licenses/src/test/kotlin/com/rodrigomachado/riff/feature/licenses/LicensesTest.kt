@@ -73,6 +73,10 @@ class LicensesTest {
         )
             .performScrollTo().assertExists()
         composeRule.onNodeWithText(
+            "pelo controle de mídia do Android",
+            substring = true,
+        ).performScrollTo().assertExists()
+        composeRule.onNodeWithText(
             "o Riff pesquisa no Encore (enchor.us) o artista e o nome das músicas",
             substring = true,
         )

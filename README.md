@@ -17,17 +17,15 @@ Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não �
 - Um celular com Android 8 ou mais novo (o desempenho foi medido num Galaxy S25)
 - No WSL, o Gradle roda pelo `./scripts/gw`, que chama o `gradlew.bat` do Windows; no Linux e no macOS, use `./gradlew`
 
-### Spotify
+### Spotify: permitir o acesso a notificações
 
-1. Crie um app em https://developer.spotify.com/dashboard com o redirect URI `riff://callback` e a plataforma **Android**, com o package `com.rodrigomachado.riff` e o SHA-1 da chave que assina o app (veja [Chave de release](#chave-de-release); sem ela, a de debug: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`). Em modo de desenvolvimento, a conta do Spotify usada no aparelho precisa estar em "User Management".
-2. No `local.properties` (fora do git):
-   ```
-   spotify.clientId=<Client ID do Dashboard>
-   spotify.redirectUri=riff://callback
-   ```
-3. O aparelho precisa do app do Spotify instalado e logado numa conta Premium. Na primeira conexão o Riff abre o login do Spotify pedindo o controle remoto; aceite.
+O Riff acompanha o Spotify pela **sessão de mídia do Android** (o mesmo controle de música da tela de bloqueio): nada de SDK, login, Client ID ou cadastro no Dashboard do Spotify, e funciona com conta grátis.
 
-Sem `spotify.clientId`, o app compila e mostra "Spotify não configurado"; a biblioteca continua jogando com o áudio das pastas. O AAR do SDK está em `third_party/maven` (veja `third_party/README.md`). Falhas de conexão aparecem no logcat com a tag `RiffSpotify`.
+1. Instale o app do Spotify no celular.
+2. No **Tocando agora**, toque em **Permitir** e ligue o **Riff** em "Acesso às notificações". O Riff usa a permissão só para ver a música, a posição e a fila do Spotify e mandar tocar, pausar e pular; ele não lê as notificações.
+3. Dê play numa música no Spotify: ela aparece no Tocando agora.
+
+Sem a permissão, o Tocando agora explica e oferece o modo Biblioteca. Numa conta grátis, um anúncio pausa a partida (ou adia a próxima, no modo contínuo) até acabar; ⏮, ⏭ e "Jogar de novo" seguem os limites do Spotify grátis. Até a versão 0.2.0 o Riff usava o App Remote SDK; os mapas escolhidos e os ajustes por música continuam valendo (a música é reconhecida pelo mesmo `spotify:track:…`).
 
 ### Chave de release
 
@@ -38,14 +36,14 @@ riff.keystore.password=<senha>
 riff.key.alias=riff
 ```
 
-Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.jks -alias riff -keyalg RSA -keysize 4096 -validity 10000` e cadastre o SHA-1 dela (`keytool -list -v -keystore riff-release.jks`) no Dashboard do Spotify. **Guarde o `.jks` e a senha fora do PC**: sem eles, nenhuma atualização instala por cima e todo mundo precisa desinstalar (perdendo recordes e ajustes). Sem a chave, o debug usa a chave de debug e o release **para com erro** (um APK com outra chave não instala por cima do de quem já tem o Riff). **Trocar a chave** obriga quem tem a versão antiga a desinstalar, perdendo recordes, ajustes e a chave do ranking (o nome fica preso até ser liberado na planilha); no próprio celular dá para salvar os dados antes com o app de debug (`run-as`, como em [Desempenho](#desempenho)) e devolvê-los depois.
+Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.jks -alias riff -keyalg RSA -keysize 4096 -validity 10000` . **Guarde o `.jks` e a senha fora do PC**: sem eles, nenhuma atualização instala por cima e todo mundo precisa desinstalar (perdendo recordes e ajustes). Sem a chave, o debug usa a chave de debug e o release **para com erro** (um APK com outra chave não instala por cima do de quem já tem o Riff). **Trocar a chave** obriga quem tem a versão antiga a desinstalar, perdendo recordes, ajustes e a chave do ranking (o nome fica preso até ser liberado na planilha); no próprio celular dá para salvar os dados antes com o app de debug (`run-as`, como em [Desempenho](#desempenho)) e devolvê-los depois.
 
 ### Enviar o APK para outras pessoas
 
 1. Suba `versionCode` e `versionName` em `app/build.gradle.kts` (a versão nova só instala por cima de uma mais antiga).
 2. `./scripts/gw :app:assembleRelease` e envie `app/build/outputs/apk/release/app-release.apk` (~190 MB, só celulares ARM, Android 8+). A pessoa precisa permitir "instalar apps desconhecidos" para o app que abrir o arquivo.
 3. Funciona sem nada além do APK: biblioteca, pesquisa no Encore, guitarra separada por IA, ranking e Reportar (os endereços dos scripts vão dentro do APK).
-4. **Spotify:** o app está em modo de desenvolvimento, então só contas adicionadas em "User Management" no Dashboard (nome + email da conta do Spotify) conseguem conectar, com limite de poucas contas. Para outras, o Tocando agora não conecta; o resto do app funciona.
+4. **Spotify:** basta a pessoa ter o app do Spotify (Premium ou grátis) e ligar o Riff em "Acesso às notificações" quando o Tocando agora pedir. Ninguém precisa ser cadastrado.
 
 
 ## Importar mapas
@@ -69,12 +67,11 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 ## Mapas da fila do Spotify
 
-- **Configurações → Spotify → Baixar mapas da fila** (desligada de fábrica): enquanto você ouve, o Riff lê a fila do Spotify e baixa do Encore os mapas das **duas próximas músicas**, já casados com a faixa. A fila baixa também **durante a partida**, um mapa por vez. Ao passar de música, ela chega como **MAPA ENCONTRADO** e a partida dela começa direto; se o mapa ainda estiver baixando, o Tocando agora mostra "Baixando o mapa desta música…" e espera.
+- **Configurações → Spotify → Baixar mapas da fila** (desligada de fábrica): enquanto você ouve, o Riff lê a fila do Spotify (pela sessão de mídia, relida a cada mudança) e baixa do Encore os mapas das **duas próximas músicas**. A fila da sessão não traz a duração: o mapa baixado vira **MAPA ENCONTRADO** quando a música começa e a duração bate (ou **CONFIRMAR MAPA**, se for outra). A fila baixa também **durante a partida**, um mapa por vez. Ao passar de música, ela chega como **MAPA ENCONTRADO** e a partida dela começa direto; se o mapa ainda estiver baixando, o Tocando agora mostra "Baixando o mapa desta música…" e espera.
 - **Escolha do mapa:** só resultados com semelhança alta (a mesma do "mapa encontrado" automático) e com guitarra; originais antes de covers, remixes e ao vivo; desempate pela guitarra separada e por mais dificuldades. Sem resultado confiável, não baixa nada.
 - **Apagar os que eu não joguei** (ligada): o mapa baixado pela fila some quando a música passa (ou sai da fila) sem você jogar. Jogado, ou baixado na mão, nunca é apagado.
 - **Usar dados móveis** (desligada): sem ela, só baixa no Wi-Fi. **Músicas com mapas já baixados** (quando o mapa da biblioteca é só sugestão): **Baixar nova sugestão** (padrão) ou **Manter o que já tenho**. **Sem mapa com a mesma duração** (o Encore só tem mapas com duração diferente da faixa do Spotify): **Baixar o de duração mais próxima** (padrão; até 1 minuto de diferença ou, sem nenhum assim, um mapa sem duração no Encore; o mapa chega como sugestão, com **CONFIRMAR MAPA**, e substitui uma sugestão da biblioteca menos confiável) ou **Não baixar nenhum**. Quando a fila não consegue um mapa, o **Tocando agora** conta o motivo embaixo de "Nenhum mapa da biblioteca…": não achou no Encore, só com outra duração, a pesquisa falhou ou o download falhou. O motivo também vai para o registro do Android (`adb logcat -s RiffQueue`).
-- Na primeira vez, o Spotify pede uma autorização a mais para o Riff ler a fila (API Web, escopo `user-read-playback-state`, com PKCE: nenhum segredo no app; o token fica criptografado no aparelho). Se o Spotify pedir de novo, a opção desliga e as Configurações avisam.
-- Funciona com o Riff aberto e conectado ao Spotify (qualquer tela). Nunca baixa durante uma partida. Falhas aparecem no logcat com a tag `RiffQueue`.
+- Funciona com o Riff aberto e com o "Acesso às notificações" ligado (qualquer tela). **Sem a duração** (a fila não traz), a opção **Baixar o de duração mais próxima** só vale quando a duração já é conhecida. Em rádio ou aleatório, o Spotify pode não mostrar a fila: aí nada é adiantado. Falhas aparecem no logcat com a tag `RiffQueue`.
 - **Privacidade:** o Riff lê a fila do Spotify só para isso; nada é enviado a outro lugar além das pesquisas no Encore.
 
 ## Guitarra separada por IA
@@ -150,7 +147,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
 | `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify, ajustes de sincronia e recordes (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
-| `:core:spotify` | Conexão com o app do Spotify (App Remote SDK), autorização, estado do player e o player da partida sobre o Spotify |
+| `:core:spotify` | Spotify pela sessão de mídia do Android ("Acesso às notificações"): estado do player, comandos, fila e o player da partida sobre o Spotify |
 | `:core:data` | Repositório de mapas, acesso a pastas por SAF (leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
 | `:core:encore` | Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
 | `:core:separation` | Guitarra separada por IA: o modelo htdemucs_6s em ONNX (`scripts/exportar_modelo_ia.sh`), a STFT e a separação por trechos portadas do demucs.onnx, a decodificação, a gravação em `.m4a` e o trabalho em segundo plano (WorkManager) |
@@ -179,7 +176,7 @@ A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de c
 
 O **Baseline Profile** diz ao Android quais partes do app compilar antes da primeira execução, para a abertura e a partida já começarem rápidas. Ele é gerado no celular por percursos automáticos (abrir o app, rolar a biblioteca, jogar 20 s de uma música e sair).
 
-**Vale só para o build release** (`./scripts/gw :app:assembleRelease`, assinado com a mesma chave do debug): o Android ignora o perfil em apps de debug. Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois. Depois de mexer nas regras do R8 (`app/proguard-rules.pro`), rode `scripts/conferir_r8_spotify.sh`: ele confere que o SDK do Spotify continua achando o app no release.
+**Vale só para o build release** (`./scripts/gw :app:assembleRelease`, assinado com a mesma chave do debug): o Android ignora o perfil em apps de debug. Os números abaixo são do release. As otimizações do desenho da pista (sem alocar memória a cada quadro) valem nos dois.
 
 ```bash
 scripts/desempenho.sh perfil    # gera o perfil de novo

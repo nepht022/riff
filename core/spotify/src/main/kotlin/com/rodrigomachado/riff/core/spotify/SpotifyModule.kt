@@ -31,9 +31,6 @@ abstract class SpotifyBindsModule {
 @Module
 @InstallIn(SingletonComponent::class)
 object SpotifyProvidesModule {
-    @Provides
-    fun config(): SpotifyConfig = SpotifyConfig(BuildConfig.SPOTIFY_CLIENT_ID, BuildConfig.SPOTIFY_REDIRECT_URI)
-
     /** O Spotify pela sessão de mídia do Android (sem SDK nem cadastro no Dashboard). */
     @Provides
     @Singleton

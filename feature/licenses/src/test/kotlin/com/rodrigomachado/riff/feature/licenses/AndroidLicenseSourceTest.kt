@@ -27,4 +27,10 @@ class AndroidLicenseSourceTest {
     fun everyItemWithATextFileOpens() = runTest {
         assertTrue(source.content().filter { it.text != null }.all { it.text!!.isNotBlank() })
     }
+
+    /** O SDK do Spotify saiu: o Riff acompanha o Spotify pela sessão de mídia do Android. */
+    @Test
+    fun theSpotifySdkIsNoLongerListed() = runTest {
+        assertTrue(source.content().none { it.name.contains("Spotify App Remote") })
+    }
 }

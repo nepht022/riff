@@ -5,20 +5,6 @@
         <package android:name="com.spotify.music" />
     </queries>
     <application>
-        <!-- Volta do login do Spotify (biblioteca de auth 5+): mesmo redirect do Dashboard, riff://callback. -->
-        <activity
-            android:name="com.spotify.sdk.android.auth.browser.RedirectUriReceiverActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="callback"
-                    android:pathPattern=".*"
-                    android:scheme="riff" />
-            </intent-filter>
-        </activity>
         <!-- "Acesso às notificações": só para ler a sessão de mídia do Spotify; nenhuma notificação é lida. -->
         <service
             android:name="com.rodrigomachado.riff.core.spotify.session.RiffNotificationListener"

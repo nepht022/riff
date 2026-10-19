@@ -12,11 +12,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // AAR do Spotify App Remote (não está no Maven): veja third_party/README.md
-        maven {
-            url = uri("third_party/maven")
-            content { includeGroup("com.spotify.android") }
-        }
     }
 }
 

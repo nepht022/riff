@@ -10,7 +10,6 @@ import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SystemAppLanguageStore
 import com.rodrigomachado.riff.core.data.queue.QueuePrefetcher
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
-import com.rodrigomachado.riff.core.spotify.ForegroundActivity
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +26,7 @@ class RiffApplication :
 
     @Inject lateinit var language: SystemAppLanguageStore
 
-    // Só criada fora da thread da tela: monta a autorização do Spotify, que lê o Keystore.
+    // Só criada fora da thread da tela (lê o banco e as preferências).
     @Inject lateinit var queuePrefetcher: dagger.Lazy<QueuePrefetcher>
 
     // O que ficou para o ranking sem internet vai na abertura (o repositório só nasce fora da thread da tela).
@@ -53,8 +52,8 @@ class RiffApplication :
 
     override fun onCreate() {
         super.onCreate()
-        // Antes da primeira tela: a conexão com o Spotify precisa saber qual tela está aberta.
-        registerActivityLifecycleCallbacks(ForegroundActivity)
+        // O login do Spotify (até a versão 0.2.0) guardava um token aqui; agora o Spotify vem pela sessão de mídia.
+        deleteSharedPreferences(OLD_SPOTIFY_TOKEN)
         // Sem escolha guardada, Português (decisão do usuário, mesmo num celular em outro idioma). Escolher
         // "Padrão do sistema" nas configurações do celular também volta a Português na próxima abertura.
         language.applyDefault()
@@ -63,3 +62,5 @@ class RiffApplication :
         appScope.launch { ranking.get().flush() }
     }
 }
+
+private const val OLD_SPOTIFY_TOKEN = "riff_spotify_web"
