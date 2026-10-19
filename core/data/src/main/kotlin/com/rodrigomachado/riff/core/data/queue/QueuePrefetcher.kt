@@ -23,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -71,6 +72,10 @@ class QueuePrefetcher(
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
     private val handled: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    // Decididas sem a duração (a fila da sessão não traz): valem para a fila, mas não quando a música toca e a duração
+    // chega (um mapa de outra versão parecia "encontrado").
+    private val handledWithoutDuration: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val waiting: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val pending = Channel<QueuedTrack>(Channel.UNLIMITED)
     private var started = false
@@ -103,7 +108,10 @@ class QueuePrefetcher(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun follow() {
-        remote.playback.map { it?.trackUri }.filterNotNull().distinctUntilChanged().collectLatest { current ->
+        remote.playback.filterNotNull().distinctUntilChangedBy { it.trackUri }.collectLatest { playing ->
+            val current = playing.trackUri
+            // A música que está tocando também (aberta direto no Spotify, ou vista na fila sem a duração).
+            enqueue(QueuedTrack(current, playing.title, playing.artist, playing.durationMs.takeIf { it > 0 }))
             coroutineScope {
                 // Ler a fila da sessão é de graça: lê de novo a cada mudança, e de tempos em tempos por segurança.
                 launch { queue.changes.collect { guarded("leitura da fila") { read(current) } } }
@@ -120,22 +128,32 @@ class QueuePrefetcher(
         val read = queue.next(WINDOW) as? QueueRead.Tracks ?: return
         // Só com a fila lida dá para saber o que passou ou saiu dela.
         cleaner.keepOnly(current, read.tracks.map { it.uri })
-        read.tracks.filter { it.uri !in handled && waiting.add(it.uri) }.forEach {
-            preparing.start(it.uri)
-            pending.send(it)
-        }
+        read.tracks.forEach { enqueue(it) }
+    }
+
+    private suspend fun enqueue(track: QueuedTrack) {
+        if (isHandled(track) || !waiting.add(track.uri)) return
+        preparing.start(track.uri)
+        pending.send(track)
+    }
+
+    private fun isHandled(track: QueuedTrack) =
+        track.uri in handled || (track.durationMs == null && track.uri in handledWithoutDuration)
+
+    private fun markHandled(track: QueuedTrack) {
+        if (track.durationMs == null) handledWithoutDuration += track.uri else handled += track.uri
     }
 
     /** Também durante uma partida: a próxima música fica pronta enquanto se joga (spec Spotify contínuo §2.1). */
     private suspend fun prepare(track: QueuedTrack) {
         waiting -= track.uri
-        if (track.uri in handled) return
+        if (isHandled(track)) return
         val options = settings.settings.first()
         val status = statusOf(track)
         if (!wanted(track, status, options) || !canDownload(track, options)) return
         val chosen = picker.choose(TrackQuery(track.title, track.artist, track.durationMs))
         // Só a falha da pesquisa é tentada de novo, na próxima leitura.
-        if (chosen != QueuePick.SearchFailed) handled += track.uri
+        if (chosen != QueuePick.SearchFailed) markHandled(track)
         val target = chosen.target(status, options)
         if (target == null) {
             Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
@@ -195,7 +213,7 @@ class QueuePrefetcher(
 
     private fun needsMap(track: QueuedTrack, status: MatchStatus, replaceSuggested: Boolean): Boolean = when (status) {
         is MatchStatus.Matched -> {
-            handled += track.uri
+            markHandled(track)
             false
         }
 

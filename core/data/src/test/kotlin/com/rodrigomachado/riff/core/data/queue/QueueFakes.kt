@@ -68,9 +68,14 @@ class FakeSettings(initial: Settings) : SettingsRepository {
 
 class FakeMatches : TrackMatchRepository {
     val statuses = mutableMapOf<String, MatchStatus>()
+
+    /** O casamento quando a duração não é conhecida (a fila da sessão não traz): sem ela, outra versão passa. */
+    val statusesWithoutDuration = mutableMapOf<String, MatchStatus>()
     override val changes = MutableStateFlow(0)
 
-    override suspend fun matchFor(track: PlaybackState): MatchStatus = statuses[track.trackUri] ?: MatchStatus.NoMatch
+    override suspend fun matchFor(track: PlaybackState): MatchStatus =
+        (if (track.durationMs == 0L) statusesWithoutDuration[track.trackUri] else null)
+            ?: statuses[track.trackUri] ?: MatchStatus.NoMatch
 
     val suggestions = mutableListOf<Pair<String, String>>()
 

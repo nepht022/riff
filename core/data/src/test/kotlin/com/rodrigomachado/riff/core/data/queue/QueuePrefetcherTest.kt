@@ -36,6 +36,11 @@ class QueuePrefetcherTest {
     private val misses = MemoryQueueMisses()
     private val preparing = MemoryQueuePreparing()
 
+    init {
+        // As músicas "tocando" dos testes já têm mapa: a fila também prepara a música atual, e os testes olham a fila.
+        listOf("now", "now2").forEach { matches.statuses[it] = MatchStatus.Matched(libraryChart(it), 0) }
+    }
+
     private fun queued(vararg uris: String) = QueueRead.Tracks(
         uris.map { QueuedTrack(it, "Música $it", "Banda", 200_000) },
     )
@@ -501,5 +506,46 @@ class QueuePrefetcherTest {
         runCurrent()
 
         assertEquals(before + 1, queue.reads)
+    }
+
+    /**
+     * Sem a duração, um mapa de outra versão na biblioteca parece "mapa encontrado". Quando a música toca e a duração
+     * chega, ele não casa mais: a fila confere de novo e baixa o certo.
+     */
+    @Test
+    fun aMatchSeenWithoutDurationIsCheckedAgainWhenTheSongPlays() = runTest {
+        queue.next = QueueRead.Tracks(listOf(QueuedTrack("a", "Música a", "Banda", durationMs = null)))
+        matches.statusesWithoutDuration["a"] = MatchStatus.Matched(libraryChart("outra-versao"), 0)
+        encoreHas("a")
+        start()
+
+        nowPlaying("now")
+        assertTrue(downloader.downloaded.isEmpty())
+
+        queue.next = QueueRead.Tracks(emptyList())
+        nowPlaying("a") // tocando, com a duração: o mapa da biblioteca não casa
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
+    }
+
+    /** A música aberta direto no Spotify (que a fila nunca viu) também ganha o mapa. */
+    @Test
+    fun theCurrentSongWithoutAMapIsPreparedToo() = runTest {
+        encoreHas("x")
+        start()
+
+        nowPlaying("x")
+
+        assertEquals(listOf("md5-x" to "x"), downloader.downloaded)
+    }
+
+    @Test
+    fun theCurrentSongWithAMapIsLeftAlone() = runTest {
+        encoreHas("x")
+        matches.statuses["x"] = MatchStatus.Matched(libraryChart("x"), 0)
+        start()
+
+        nowPlaying("x")
+
+        assertTrue(downloader.downloaded.isEmpty())
     }
 }
