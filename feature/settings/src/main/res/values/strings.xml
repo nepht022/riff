@@ -79,7 +79,5 @@
     <string name="settings_queue_closest">Sem mapa com a mesma duração</string>
     <string name="settings_queue_closest_download">Baixar o de duração mais próxima</string>
     <string name="settings_queue_closest_none">Não baixar nenhum</string>
-    <string name="settings_queue_refused">Sem a autorização do Spotify, o Riff não consegue ver a fila.</string>
-    <string name="settings_queue_lost">O Spotify pediu para autorizar de novo. Ligue a opção para autorizar.</string>
     <string name="settings_queue_no_folder">Para baixar, o Riff precisa de permissão para gravar na pasta da biblioteca (Biblioteca → Trocar pasta).</string>
 </resources>

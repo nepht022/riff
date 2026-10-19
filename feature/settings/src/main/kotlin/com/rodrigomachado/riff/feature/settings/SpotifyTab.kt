@@ -24,10 +24,8 @@ import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
-/** Por que a fila não está ligada: o usuário recusou a autorização, ou o Spotify pediu para autorizar de novo. */
-enum class QueueMessage { REFUSED, LOST }
-
-data class QueueUiState(val message: QueueMessage?, val canWriteToLibrary: Boolean)
+/** O que a aba Spotify precisa saber de fora das preferências: se a pasta da biblioteca aceita gravar. */
+data class QueueUiState(val canWriteToLibrary: Boolean)
 
 /** O que a aba Spotify pede ao ViewModel. */
 sealed interface QueueAction {
@@ -63,13 +61,6 @@ internal fun SpotifyTab(settings: Settings, queue: QueueUiState, onQueue: (Queue
         onChange = { onQueue(QueueAction.Prefetch(it)) },
         tag = SettingsTestTags.QUEUE_PREFETCH,
     )
-    queue.message?.let { message ->
-        Notice(
-            stringResource(
-                if (message == QueueMessage.REFUSED) R.string.settings_queue_refused else R.string.settings_queue_lost,
-            ),
-        )
-    }
     if (on && !queue.canWriteToLibrary) Notice(stringResource(R.string.settings_queue_no_folder))
     SwitchRow(
         title = stringResource(R.string.settings_queue_delete),

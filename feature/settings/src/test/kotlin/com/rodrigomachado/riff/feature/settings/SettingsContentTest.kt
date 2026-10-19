@@ -52,7 +52,7 @@ class SettingsContentTest {
 
     private val looks = mutableListOf<TrackLook>()
     private val languages = mutableListOf<AppLanguage>()
-    private var queueState = QueueUiState(message = null, canWriteToLibrary = true)
+    private var queueState = QueueUiState(canWriteToLibrary = true)
 
     /** Abre a aba e esquece o som do toque nela (cada teste confere só os sons do que testa). */
     private fun tab(name: String) {
@@ -444,28 +444,16 @@ class SettingsContentTest {
     }
 
     @Test
-    fun aRefusedAuthorizationIsExplained() {
-        queueState = QueueUiState(message = QueueMessage.REFUSED, canWriteToLibrary = true)
-        show()
+    fun theSpotifyTabHasNoAuthorizationMessage() {
+        show(Settings.DEFAULT.copy(queuePrefetch = true))
         tab("Spotify")
 
-        composeRule.onNodeWithText("Sem a autorização do Spotify, o Riff não consegue ver a fila.").assertExists()
-    }
-
-    @Test
-    fun aLostAuthorizationIsExplained() {
-        queueState = QueueUiState(message = QueueMessage.LOST, canWriteToLibrary = true)
-        show()
-        tab("Spotify")
-
-        composeRule.onNodeWithText(
-            "O Spotify pediu para autorizar de novo. Ligue a opção para autorizar.",
-        ).assertExists()
+        composeRule.onNodeWithText("autoriza", substring = true, ignoreCase = true).assertDoesNotExist()
     }
 
     @Test
     fun withoutAWritableFolderTheOptionSaysSo() {
-        queueState = QueueUiState(message = null, canWriteToLibrary = false)
+        queueState = QueueUiState(canWriteToLibrary = false)
         show(Settings.DEFAULT.copy(queuePrefetch = true))
         tab("Spotify")
 

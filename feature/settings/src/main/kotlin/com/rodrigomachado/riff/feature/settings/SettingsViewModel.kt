@@ -14,13 +14,9 @@ import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
-import com.rodrigomachado.riff.core.spotify.web.SpotifyWebAuth
-import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -33,7 +29,6 @@ class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val separations: AiSeparationRepository,
     private val languages: AppLanguageStore,
-    private val webAuth: SpotifyWebAuth,
     folders: LibraryFolderStore,
     folderAccess: FolderAccess,
     ranking: RankingRepository,
@@ -59,17 +54,6 @@ class SettingsViewModel @Inject constructor(
     val separationUsage: StateFlow<SeparationUsage> = separations.usage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeparationUsage(0, 0))
 
-    private val refused = MutableStateFlow(false)
-
-    /** Recusa da autorização (nesta tela) ou autorização perdida (o Spotify pediu de novo). */
-    val queueMessage: StateFlow<QueueMessage?> = combine(refused, webAuth.state) { refusedNow, auth ->
-        when {
-            refusedNow -> QueueMessage.REFUSED
-            auth == WebAuthState.LOST -> QueueMessage.LOST
-            else -> null
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
-
     /** A fila só baixa com permissão de gravar na pasta da biblioteca. */
     val canWriteToLibrary: StateFlow<Boolean> = folders.rootUri
         .map { root -> root != null && folderAccess.canWrite(root) }
@@ -84,18 +68,8 @@ class SettingsViewModel @Inject constructor(
         is QueueAction.NextSongDirect -> save { it.copy(spotifyNextSongDirect = action.direct) }
     }
 
-    /** Ligar pede a autorização do Spotify na primeira vez (ou depois de perdida); recusada, continua desligada. */
-    fun setQueuePrefetch(on: Boolean) {
-        if (!on || webAuth.state.value == WebAuthState.AUTHORIZED) {
-            save { it.copy(queuePrefetch = on) }
-            return
-        }
-        viewModelScope.launch {
-            val authorized = webAuth.authorize()
-            refused.value = !authorized
-            if (authorized) save { it.copy(queuePrefetch = true) }
-        }
-    }
+    /** A fila vem da sessão de mídia (a mesma permissão do Tocando agora): ligar só grava a opção. */
+    fun setQueuePrefetch(on: Boolean) = save { it.copy(queuePrefetch = on) }
 
     fun setQueueDeleteUnplayed(on: Boolean) = save { it.copy(queueDeleteUnplayed = on) }
 

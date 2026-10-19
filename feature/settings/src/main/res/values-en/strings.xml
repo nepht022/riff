@@ -79,7 +79,5 @@
     <string name="settings_queue_closest">No map with the same length</string>
     <string name="settings_queue_closest_download">Download the closest length</string>
     <string name="settings_queue_closest_none">Download none</string>
-    <string name="settings_queue_refused">Without Spotify\'s permission, Riff can\'t see the queue.</string>
-    <string name="settings_queue_lost">Spotify asked to authorize again. Turn the option on to authorize.</string>
     <string name="settings_queue_no_folder">To download, Riff needs permission to write to the library folder (Library → Change folder).</string>
 </resources>

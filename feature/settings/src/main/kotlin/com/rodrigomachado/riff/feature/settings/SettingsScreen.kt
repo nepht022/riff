@@ -72,7 +72,6 @@ fun SettingsScreen(
     val rankingName by viewModel.rankingName.collectAsStateWithLifecycle()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
-    val queueMessage by viewModel.queueMessage.collectAsStateWithLifecycle()
     val canWriteToLibrary by viewModel.canWriteToLibrary.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     val current = settings
@@ -96,7 +95,7 @@ fun SettingsScreen(
         onAskAlways = viewModel::setAskSeparationAlways,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
-        queue = QueueUiState(queueMessage, canWriteToLibrary),
+        queue = QueueUiState(canWriteToLibrary),
         onQueue = viewModel::onQueue,
         rankingName = rankingName,
         onRankingName = onRankingName,
@@ -127,7 +126,7 @@ fun SettingsContent(
     onTrackLook: (TrackLook) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
-    queue: QueueUiState = QueueUiState(message = null, canWriteToLibrary = true),
+    queue: QueueUiState = QueueUiState(canWriteToLibrary = true),
     onQueue: (QueueAction) -> Unit = {},
     initialTab: SettingsTab = SettingsTab.GENERAL,
     rankingName: RankingName? = null,

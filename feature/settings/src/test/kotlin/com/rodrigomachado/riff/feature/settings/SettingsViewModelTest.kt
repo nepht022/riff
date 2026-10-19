@@ -8,7 +8,6 @@ import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
-import com.rodrigomachado.riff.core.spotify.web.WebAuthState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -30,7 +29,6 @@ class SettingsViewModelTest {
     private val sfx = FakeSfxPlayer()
     private val separations = FakeAiSeparations()
     private val language = FakeAppLanguage()
-    private val webAuth = FakeWebAuth()
     private val folder = FakeLibraryFolder()
 
     @Before
@@ -67,7 +65,7 @@ class SettingsViewModelTest {
     }
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository, separations, language, webAuth, folder, folder, ranking) { sfx }
+        val viewModel = SettingsViewModel(repository, separations, language, folder, folder, ranking) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -168,50 +166,18 @@ class SettingsViewModelTest {
         assertEquals(AppLanguage.ENGLISH, language.current)
     }
 
+    /** A fila vem da sessão de mídia: ligar não abre login nenhum. */
     @Test
-    fun turningPrefetchOnAsksForAuthorization() = runTest {
+    fun turningOnQueueMapsOnlySavesTheOption() = runTest {
         val vm = viewModel()
 
-        vm.setQueuePrefetch(true)
+        vm.onQueue(QueueAction.Prefetch(true))
         advanceUntilIdle()
-
-        assertEquals(1, webAuth.asked)
         assertEquals(true, repository.settings.value.queuePrefetch)
-        assertEquals(null, vm.queueMessage.value)
-    }
 
-    @Test
-    fun aRefusedAuthorizationKeepsItOffAndSaysWhy() = runTest {
-        webAuth.accept = false
-        val vm = viewModel()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.queueMessage.collect {} }
-
-        vm.setQueuePrefetch(true)
+        vm.onQueue(QueueAction.Prefetch(false))
         advanceUntilIdle()
-
         assertEquals(false, repository.settings.value.queuePrefetch)
-        assertEquals(QueueMessage.REFUSED, vm.queueMessage.value)
-    }
-
-    @Test
-    fun alreadyAuthorizedTurnsOnWithoutAsking() = runTest {
-        webAuth.state.value = WebAuthState.AUTHORIZED
-        val vm = viewModel()
-
-        vm.setQueuePrefetch(true)
-        advanceUntilIdle()
-
-        assertEquals(0, webAuth.asked)
-        assertEquals(true, repository.settings.value.queuePrefetch)
-    }
-
-    @Test
-    fun aLostAuthorizationIsExplained() = runTest {
-        webAuth.state.value = WebAuthState.LOST
-        val vm = viewModel()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.queueMessage.collect {} }
-
-        assertEquals(QueueMessage.LOST, vm.queueMessage.value)
     }
 
     @Test
