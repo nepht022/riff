@@ -9,7 +9,9 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -435,7 +437,7 @@ class SpotifySongPlayerTest {
 
         assertEquals(emptyList<String>(), remote.commands)
         assertFalse(player.isPlaying)
-        assertTrue(player.trackRefused)
+        assertEquals(PlayerNotice.GO_BACK_TO_TRACK, player.notice)
     }
 
     @Test
@@ -554,6 +556,17 @@ class SpotifySongPlayerTest {
         assertTrue(player.isCompleted)
     }
 
+    @Test
+    fun aLostSessionAndAnAdAreExplained() = runTest {
+        val player = prepared()
+        playOurs(player)
+        emit(null)
+        assertEquals(PlayerNotice.SOURCE_LOST, player.notice)
+
+        remote.adPlaying.value = true
+        assertEquals(PlayerNotice.AD, player.notice)
+    }
+
     /** A permissão caiu (ou o Spotify fechou): a pista congela e só volta pelo Continuar. */
     @Test
     fun losingTheSessionFreezesTheTrack() = runTest {
@@ -586,15 +599,15 @@ class SpotifySongPlayerTest {
     fun aTrackThatNeverStartsIsRefused() = runTest {
         val player = prepared()
         player.play()
-        assertFalse(player.trackRefused)
+        assertNull(player.notice)
 
         now += SpotifySongPlayer.START_TIMEOUT_MS + SpotifySongPlayer.REFRESH_INTERVAL_MS
         advanceTimeBy(SpotifySongPlayer.REFRESH_INTERVAL_MS + 1)
 
-        assertTrue(player.trackRefused)
+        assertEquals(PlayerNotice.GO_BACK_TO_TRACK, player.notice)
         assertFalse(player.isPlaying)
         player.play()
-        assertFalse(player.trackRefused) // tenta de novo
+        assertNull(player.notice) // tenta de novo
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.spotify
 
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
@@ -258,8 +259,15 @@ class SpotifySongPlayer(
 
     override val isCompleted: Boolean get() = completed
 
-    override var trackRefused: Boolean = false
-        private set
+    private var trackRefused = false
+
+    override val notice: PlayerNotice?
+        get() = when {
+            trackRefused -> PlayerNotice.GO_BACK_TO_TRACK
+            remote.adPlaying.value -> PlayerNotice.AD
+            disconnected || remote.connection.value is SpotifyConnection.Failed -> PlayerNotice.SOURCE_LOST
+            else -> null
+        }
 
     companion object {
         const val REFRESH_INTERVAL_MS = 2_000L

@@ -29,8 +29,8 @@ interface SongPlayer {
 
     val isCompleted: Boolean
 
-    /** A música pedida nunca começou (Spotify: "Jogar de novo" sem conseguir voltar a faixa); a pausa explica. */
-    val trackRefused: Boolean get() = false
+    /** Por que a música parou sem o jogo pedir (a pausa explica); `null` quando não há o que explicar. */
+    val notice: PlayerNotice? get() = null
 }
 
 /** Sons de acerto e erro, tocados no instante do toque. */
@@ -52,4 +52,16 @@ fun interface SongPlayerFactory {
 
 fun interface SfxPlayerFactory {
     fun create(): SfxPlayer
+}
+
+/** O que a pausa da partida explica quando a música (Spotify) parou por fora. */
+enum class PlayerNotice {
+    /** "Jogar de novo" sem conseguir voltar a faixa no Spotify (conta grátis, outra faixa). */
+    GO_BACK_TO_TRACK,
+
+    /** O Spotify sumiu (fechado) ou o Riff perdeu o "Acesso às notificações". */
+    SOURCE_LOST,
+
+    /** Anúncio (conta grátis): a música volta sozinha. */
+    AD,
 }

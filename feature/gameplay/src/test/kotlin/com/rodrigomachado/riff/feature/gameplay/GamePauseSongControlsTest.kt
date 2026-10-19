@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
@@ -23,10 +24,10 @@ class GamePauseSongControlsTest {
 
     private val events = mutableListOf<String>()
 
-    private fun showPaused(spotify: Boolean, refused: Boolean = false) {
+    private fun showPaused(spotify: Boolean, notice: PlayerNotice? = null) {
         val session = GameSession(
             listOf(note(60_000)),
-            FakeSongPlayer().apply { trackRefused = refused },
+            FakeSongPlayer().apply { this.notice = notice },
             FakeSfxPlayer(),
             FakeTime(),
             audioOffsetMs = 0,
@@ -71,9 +72,23 @@ class GamePauseSongControlsTest {
     /** "Jogar de novo" sem conseguir voltar a música no Spotify (conta grátis, outra faixa): a pausa explica. */
     @Test
     fun aRefusedTrackShowsGoBackInThePause() {
-        showPaused(spotify = true, refused = true)
+        showPaused(spotify = true, notice = PlayerNotice.GO_BACK_TO_TRACK)
 
         composeRule.onNodeWithText("Volte a música no Spotify para jogar de novo").assertExists()
+    }
+
+    @Test
+    fun aLostSpotifyIsExplainedInThePause() {
+        showPaused(spotify = true, notice = PlayerNotice.SOURCE_LOST)
+
+        composeRule.onNodeWithText("O Riff perdeu o Spotify", substring = true).assertExists()
+    }
+
+    @Test
+    fun anAdIsExplainedInThePause() {
+        showPaused(spotify = true, notice = PlayerNotice.AD)
+
+        composeRule.onNodeWithText("Anúncio no Spotify: a partida continua quando ele acabar.").assertExists()
     }
 
     @Test

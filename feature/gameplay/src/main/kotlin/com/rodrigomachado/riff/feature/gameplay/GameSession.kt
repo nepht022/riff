@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.gameplay
 
 import com.rodrigomachado.riff.core.audio.GuitarTrackControl
 import com.rodrigomachado.riff.core.audio.SfxPlayer
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.GameEngine
 import com.rodrigomachado.riff.core.game.SongClock
@@ -61,8 +62,8 @@ class GameSession(
 
     val isPaused: Boolean get() = !player.isPlaying && rewind == null
 
-    /** A música pedida nunca começou (Spotify: "Jogar de novo" sem conseguir voltar a faixa). */
-    val trackRefused: Boolean get() = player.trackRefused
+    /** Por que a música parou por fora (Spotify); a pausa explica. */
+    val notice: PlayerNotice? get() = player.notice
 
     val isFinished: Boolean
         get() = player.isCompleted || (engine.isFinished && songTimeMs > endMs)
