@@ -1,7 +1,5 @@
 package com.rodrigomachado.riff.feature.nowplaying
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -107,7 +105,7 @@ fun NowPlayingScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onReturn() }
     NowPlayingContent(
         state = state,
-        onAllow = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+        onAllow = { openNotificationAccess(context::startActivity) },
         onOpenSpotify = { context.packageManager.getLaunchIntentForPackage(SPOTIFY_APP)?.let(context::startActivity) },
         onPlay = onPlay,
         onConfirm = viewModel::confirmSuggestion,
