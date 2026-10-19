@@ -176,13 +176,10 @@ class NowPlayingViewModel @Inject constructor(
     fun playPause(isPaused: Boolean) = if (isPaused) repository.resume() else repository.pause()
 
     /**
-     * O jogador voltou ao Riff: ele pode ter instalado o Spotify ou ligado o "Acesso às notificações" lá fora; confere
-     * de novo sem pedir toque nenhum.
+     * O jogador voltou ao Riff: ele pode ter instalado o Spotify, ligado ou desligado o "Acesso às notificações" lá
+     * fora; confere de novo (é barato) sem pedir toque nenhum.
      */
-    fun onReturn() {
-        val error = (uiState.value as? NowPlayingUiState.Unavailable)?.error ?: return
-        if (error == SpotifyError.NOT_INSTALLED || error == SpotifyError.NO_PERMISSION) repository.connect()
-    }
+    fun onReturn() = repository.connect()
 
     /** O jogador confirmou o mapa sugerido (confiança média, spec §5). */
     fun confirmSuggestion(trackUri: String, chartId: String, confidence: Float) {

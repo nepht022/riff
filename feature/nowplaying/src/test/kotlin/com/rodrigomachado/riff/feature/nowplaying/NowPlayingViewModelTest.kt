@@ -111,14 +111,15 @@ class NowPlayingViewModelTest {
         assertEquals(3, repository.connects)
     }
 
+    /** O jogador pode ter desligado o "Acesso às notificações" lá fora: voltar ao app sempre confere de novo. */
     @Test
-    fun comingBackWhileConnectedDoesNotReconnect() = runTest {
+    fun comingBackWhileConnectedChecksThePermissionAgain() = runTest {
         val viewModel = viewModel()
         repository.connection.value = SpotifyConnection.Connected
 
         viewModel.onReturn()
 
-        assertEquals(1, repository.connects)
+        assertEquals(2, repository.connects)
     }
 
     @Test
