@@ -167,5 +167,4 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - A chave antiga do Keystore (`riff_spotify_web`) fica no aparelho; o alias `androidx-activity` do catálogo ficou sem uso.
 - Sem testes do `AndroidSpotifySession` (registro/desregistro, SecurityException, permissão tirada); os testes antigos da fila marcam a música atual como casada, então a música atual × limite de 3 mapas não é exercitada.
 - A sincronia depois de um avanço (seek) não foi medida contra o SDK (o adb não manda seek).
-- O ajuste automático de começo da música ainda supõe que o Spotify começa direto (mapas oficiais com intro dão +3,6 s): proposta aprovada (limitar pela diferença de duração e pelo primeiro botão), numa branch própria.
 

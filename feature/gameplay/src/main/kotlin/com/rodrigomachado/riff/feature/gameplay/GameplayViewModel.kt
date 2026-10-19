@@ -146,8 +146,11 @@ class GameplayViewModel @Inject constructor(
             sfx = it
             it.setVolumes(settings.effectiveHitVolume, settings.effectiveMissVolume)
         }
-        songOffsetMs = spotifyTrackUri?.let { spotifyOffsets.forTrack(it, chartId, trackOffsetMs, playable.audio) }
-            ?: chartOffsets.get(chartId)
+        songOffsetMs = spotifyTrackUri?.let { uri ->
+            val spotifyDurationMs = spotify.playback.value?.takeIf { it.trackUri == uri }?.durationMs
+            val firstNoteMs = playable.notes.firstOrNull()?.timeMs
+            spotifyOffsets.forTrack(uri, chartId, trackOffsetMs, playable.audio, spotifyDurationMs, firstNoteMs)
+        } ?: chartOffsets.get(chartId)
         val offset = settings.audioOffsetMs.toLong() + songOffsetMs
         val session = GameSession(
             playable.notes,

@@ -311,7 +311,8 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
     @Test
     fun spotifyWithoutAnAdjustmentStartsAlignedWithWhereTheChartMusicBegins() = runTest {
         musicStartMs = 3_900 // o áudio do mapa tem uma contagem de entrada antes da banda
-        loader.result = { playable() }
+        // A guitarra entra depois da contagem (a primeira nota limita o ajuste).
+        loader.result = { playable().copy(notes = listOf(note(5_000), note(6_000))) }
 
         val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
 
