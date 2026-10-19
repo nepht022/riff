@@ -3,8 +3,8 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import com.rodrigomachado.riff.core.audio.PlayerNotice
 import androidx.compose.ui.test.performClick
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme

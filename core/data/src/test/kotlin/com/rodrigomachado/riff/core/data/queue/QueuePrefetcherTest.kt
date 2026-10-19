@@ -35,6 +35,7 @@ class QueuePrefetcherTest {
     private val deleter = FakeChartDeleter(rows)
     private val misses = MemoryQueueMisses()
     private val preparing = MemoryQueuePreparing()
+    private val visible = kotlinx.coroutines.flow.MutableStateFlow(true)
 
     init {
         // As músicas "tocando" dos testes já têm mapa: a fila também prepara a música atual, e os testes olham a fila.
@@ -68,7 +69,7 @@ class QueuePrefetcherTest {
     private fun TestScope.start() {
         QueuePrefetcher(
             remote, queue, settings, matches, QueueChartPicker(encore), downloader, rows, conditions,
-            QueueCleaner(rows, deleter, settings, matchActivity), misses, preparing,
+            QueueCleaner(rows, deleter, settings, matchActivity), misses, preparing, AppVisibility { visible },
             clock = { testScheduler.currentTime },
         ).start(backgroundScope)
         runCurrent()
@@ -569,5 +570,25 @@ class QueuePrefetcherTest {
         runCurrent()
 
         assertTrue(("md5-a" to "a") in downloader.downloaded)
+    }
+
+    /**
+     * O "Acesso às notificações" mantém o processo do Riff vivo em segundo plano: a fila só lê e baixa com o app à
+     * vista (o README promete "com o Riff aberto").
+     */
+    @Test
+    fun theQueueOnlyWorksWithTheAppVisible() = runTest {
+        visible.value = false
+        queue.next = queued("a")
+        encoreHas("a")
+        start()
+        nowPlaying("now")
+
+        assertEquals(0, queue.reads)
+        assertTrue(downloader.downloaded.isEmpty())
+
+        visible.value = true
+        runCurrent()
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 }

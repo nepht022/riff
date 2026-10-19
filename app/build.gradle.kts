@@ -69,6 +69,8 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+    // Se o Riff está à vista (a fila do Spotify só roda com ele aberto).
+    implementation(libs.androidx.lifecycle.process)
     implementation(project(":core:model"))
     implementation(project(":core:ui"))
     implementation(project(":core:audio"))

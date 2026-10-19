@@ -44,7 +44,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -386,10 +385,4 @@ private fun UnavailableReason.message(): Int = when (this) {
     UnavailableReason.AUDIO_FAILED -> R.string.gameplay_audio_failed
     UnavailableReason.SPOTIFY_UNAVAILABLE -> R.string.gameplay_unavailable_spotify
     UnavailableReason.UNEXPECTED -> R.string.gameplay_unexpected
-}
-
-private fun PlayerNotice.message(): Int = when (this) {
-    PlayerNotice.GO_BACK_TO_TRACK -> R.string.gameplay_spotify_go_back
-    PlayerNotice.SOURCE_LOST -> R.string.gameplay_spotify_lost
-    PlayerNotice.AD -> R.string.gameplay_spotify_ad
 }

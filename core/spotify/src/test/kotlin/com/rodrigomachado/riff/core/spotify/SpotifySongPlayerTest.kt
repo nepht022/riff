@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.spotify
 
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.model.PlaybackState
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.model.SpotifyError
@@ -9,10 +10,9 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import com.rodrigomachado.riff.core.audio.PlayerNotice
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test

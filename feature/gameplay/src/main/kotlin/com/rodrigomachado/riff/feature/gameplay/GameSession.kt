@@ -1,8 +1,8 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import com.rodrigomachado.riff.core.audio.GuitarTrackControl
-import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.PlayerNotice
+import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.GameEngine
 import com.rodrigomachado.riff.core.game.SongClock

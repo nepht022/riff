@@ -14,7 +14,7 @@ class SessionSpotifyQueue @Inject constructor(private val session: SpotifySessio
     override suspend fun next(count: Int): QueueRead {
         val items = session.queue.value
         val active = items.indexOfFirst { it.queueId == session.activeQueueId.value }
-        // Sem saber o que toca (Spotify fechado, rádio): não é fila vazia, senão a limpeza apagaria os mapas das próximas.
+        // Sem saber o que toca (Spotify fechado, rádio): não é fila vazia (a limpeza apagaria os mapas das próximas).
         if (active < 0) return QueueRead.Unavailable
         return QueueRead.Tracks(
             items.drop(active + 1)

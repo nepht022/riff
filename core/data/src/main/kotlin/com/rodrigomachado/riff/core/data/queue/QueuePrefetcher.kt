@@ -51,6 +51,7 @@ class QueuePrefetcher(
     private val cleaner: QueueCleaner,
     private val misses: QueueMisses,
     private val preparing: QueuePreparing,
+    private val visibility: AppVisibility,
     private val clock: () -> Long,
 ) {
     @Inject constructor(
@@ -65,9 +66,10 @@ class QueuePrefetcher(
         cleaner: QueueCleaner,
         misses: QueueMisses,
         preparing: QueuePreparing,
+        visibility: AppVisibility,
     ) : this(
         remote, queue, settings, matches, picker, downloader, downloads, conditions, cleaner, misses, preparing,
-        System::currentTimeMillis,
+        visibility, System::currentTimeMillis,
     )
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
@@ -96,7 +98,8 @@ class QueuePrefetcher(
             combine(
                 settings.settings.map { it.queuePrefetch }.distinctUntilChanged(),
                 remote.connection.map { it == SpotifyConnection.Connected }.distinctUntilChanged(),
-            ) { on, connected -> on && connected }
+                visibility.visible().distinctUntilChanged(),
+            ) { on, connected, visible -> on && connected && visible }
                 .distinctUntilChanged()
                 .collectLatest { active -> if (active) follow() }
         }
