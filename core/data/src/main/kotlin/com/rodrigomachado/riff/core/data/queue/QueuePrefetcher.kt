@@ -71,11 +71,7 @@ class QueuePrefetcher(
     )
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
-    private val handled: MutableSet<String> = ConcurrentHashMap.newKeySet()
-
-    // Decididas sem a duração (a fila da sessão não traz): valem para a fila, mas não quando a música toca e a duração
-    // chega (um mapa de outra versão parecia "encontrado").
-    private val handledWithoutDuration: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val handled = HandledTracks()
     private val waiting: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val pending = Channel<QueuedTrack>(Channel.UNLIMITED)
     private var started = false
@@ -132,28 +128,21 @@ class QueuePrefetcher(
     }
 
     private suspend fun enqueue(track: QueuedTrack) {
-        if (isHandled(track) || !waiting.add(track.uri)) return
+        if (handled.contains(track) || !waiting.add(track.uri)) return
         preparing.start(track.uri)
         pending.send(track)
-    }
-
-    private fun isHandled(track: QueuedTrack) =
-        track.uri in handled || (track.durationMs == null && track.uri in handledWithoutDuration)
-
-    private fun markHandled(track: QueuedTrack) {
-        if (track.durationMs == null) handledWithoutDuration += track.uri else handled += track.uri
     }
 
     /** Também durante uma partida: a próxima música fica pronta enquanto se joga (spec Spotify contínuo §2.1). */
     private suspend fun prepare(track: QueuedTrack) {
         waiting -= track.uri
-        if (isHandled(track)) return
+        if (handled.contains(track)) return
         val options = settings.settings.first()
         val status = statusOf(track)
         if (!wanted(track, status, options) || !canDownload(track, options)) return
         val chosen = picker.choose(TrackQuery(track.title, track.artist, track.durationMs))
         // Só a falha da pesquisa é tentada de novo, na próxima leitura.
-        if (chosen != QueuePick.SearchFailed) markHandled(track)
+        if (chosen != QueuePick.SearchFailed) handled.add(track)
         val target = chosen.target(status, options)
         if (target == null) {
             Log.i(TAG, "${track.label()} sem mapa: ${whyNoMap(chosen, status)}")
@@ -213,7 +202,7 @@ class QueuePrefetcher(
 
     private fun needsMap(track: QueuedTrack, status: MatchStatus, replaceSuggested: Boolean): Boolean = when (status) {
         is MatchStatus.Matched -> {
-            markHandled(track)
+            handled.add(track)
             false
         }
 
@@ -265,3 +254,20 @@ internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
 }
 
 private fun QueuedTrack.label() = "$artist – $title"
+
+/**
+ * As músicas já decididas (com mapa, baixado ou sem mapa confiável). As decididas sem a duração (a fila da sessão
+ * não traz) valem para a fila, mas não quando a música toca e a duração chega: um mapa de outra versão parecia
+ * "encontrado".
+ */
+private class HandledTracks {
+    private val withDuration: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val withoutDuration: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    fun contains(track: QueuedTrack) =
+        track.uri in withDuration || (track.durationMs == null && track.uri in withoutDuration)
+
+    fun add(track: QueuedTrack) {
+        if (track.durationMs == null) withoutDuration += track.uri else withDuration += track.uri
+    }
+}
