@@ -66,4 +66,32 @@ class InitialSongOffsetTest {
             initialSongOffset(startMs = null, chartAudioMs = 250_000, spotifyMs = 240_000, firstNoteMs = 9_000),
         )
     }
+
+    /**
+     * Áudio do mapa que acaba antes do Spotify (outra mixagem, fade cortado): a diferença está no fim, não no começo.
+     * As durações não dizem nada da introdução, e vale o começo detectado (a contagem de entrada).
+     */
+    @Test
+    fun aChartEndingEarlierKeepsTheDetection() {
+        assertEquals(
+            2_000,
+            initialSongOffset(startMs = 2_000, chartAudioMs = 247_500, spotifyMs = 250_000, firstNoteMs = 9_000),
+        )
+    }
+
+    @Test
+    fun theSameRecordingMarginIsUpTo300Ms() {
+        assertEquals(
+            0,
+            initialSongOffset(startMs = 3_600, chartAudioMs = 250_300, spotifyMs = 250_000, firstNoteMs = 9_000),
+        )
+        assertEquals(
+            0,
+            initialSongOffset(startMs = 3_600, chartAudioMs = 249_700, spotifyMs = 250_000, firstNoteMs = 9_000),
+        )
+        assertEquals(
+            301,
+            initialSongOffset(startMs = 3_600, chartAudioMs = 250_301, spotifyMs = 250_000, firstNoteMs = 9_000),
+        )
+    }
 }
