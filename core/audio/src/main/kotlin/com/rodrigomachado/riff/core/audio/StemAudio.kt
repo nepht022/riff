@@ -8,6 +8,9 @@ interface PcmSource : Closeable {
     val sampleRate: Int
     val channelCount: Int
 
+    /** A duração da faixa, quando o arquivo diz (sem decodificar até o fim). */
+    val durationMs: Long? get() = null
+
     /** Preenche até [maxFrames] quadros intercalados; devolve menos só no fim da faixa (0 = acabou). */
     fun read(buffer: FloatArray, maxFrames: Int): Int
 

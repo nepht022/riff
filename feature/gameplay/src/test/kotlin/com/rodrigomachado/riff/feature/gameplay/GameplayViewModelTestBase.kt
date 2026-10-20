@@ -78,7 +78,7 @@ abstract class GameplayViewModelTestBase {
             trackMatches,
             { uris ->
                 analyzed += uris
-                musicStartMs
+                com.rodrigomachado.riff.core.audio.ChartAudioInfo(musicStartMs, null)
             },
             {
                 playersCreated++

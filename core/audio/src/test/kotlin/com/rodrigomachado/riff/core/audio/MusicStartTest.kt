@@ -42,7 +42,11 @@ class MusicStartTest {
         assertNull(MusicStart.find(DoubleArray(0)))
     }
 
-    private class Tone(private val silentFrames: Int, private val totalFrames: Int) : PcmSource {
+    private class Tone(
+        private val silentFrames: Int,
+        private val totalFrames: Int,
+        override val durationMs: Long? = null,
+    ) : PcmSource {
         override val sampleRate = 1_000
         override val channelCount = 2
         private var at = 0
@@ -66,14 +70,26 @@ class MusicStartTest {
         val tracks = mapOf("guitar.ogg" to Tone(3_000, 10_000), "song.ogg" to Tone(5_000, 10_000))
         val finder = PcmMusicStartFinder { uri -> tracks.getValue(uri) }
 
-        assertEquals(3_000L, runBlocking { finder.musicStartMs(listOf("guitar.ogg", "song.ogg")) })
+        assertEquals(3_000L, runBlocking { finder.analyze(listOf("guitar.ogg", "song.ogg")).musicStartMs })
+    }
+
+    /** A duração do áudio do mapa (a faixa mais longa): comparada com a do Spotify, limita o ajuste de sincronia. */
+    @Test
+    fun theDurationIsTheLongestTrack() {
+        val tracks = mapOf(
+            "guitar.ogg" to Tone(3_000, 10_000, durationMs = 250_000),
+            "song.ogg" to Tone(5_000, 10_000, durationMs = 253_000),
+        )
+        val finder = PcmMusicStartFinder { uri -> tracks.getValue(uri) }
+
+        assertEquals(253_000L, runBlocking { finder.analyze(listOf("guitar.ogg", "song.ogg")).durationMs })
     }
 
     @Test
     fun aTrackThatCannotBeDecodedGivesNoStart() {
         val finder = PcmMusicStartFinder { throw IOException("arquivo quebrado") }
 
-        assertNull(runBlocking { finder.musicStartMs(listOf("song.ogg")) })
+        assertNull(runBlocking { finder.analyze(listOf("song.ogg")).musicStartMs })
     }
 
     @Test
@@ -98,7 +114,7 @@ class MusicStartTest {
         }
 
         runBlocking {
-            job = launch { finder.musicStartMs(listOf("guitar.ogg", "song.ogg")) }
+            job = launch { finder.analyze(listOf("guitar.ogg", "song.ogg")) }
             job.join()
         }
 

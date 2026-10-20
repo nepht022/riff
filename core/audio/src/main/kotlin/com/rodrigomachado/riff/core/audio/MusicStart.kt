@@ -36,26 +36,33 @@ object MusicStart {
     }
 }
 
+/**
+ * O áudio de um mapa: onde a música começa ([musicStartMs], `null` se nenhuma faixa abrir ou só houver silêncio) e a
+ * duração da faixa mais longa ([durationMs], `null` se nenhuma disser).
+ */
+data class ChartAudioInfo(val musicStartMs: Long?, val durationMs: Long?)
+
 /** Decodifica o começo do áudio de um mapa e acha onde a música começa. */
 fun interface MusicStartFinder {
-    /** `null` se nenhuma faixa abrir ou só houver silêncio. */
-    suspend fun musicStartMs(uris: List<String>): Long?
+    suspend fun analyze(uris: List<String>): ChartAudioInfo
 }
 
 class PcmMusicStartFinder(private val opener: PcmSourceOpener) : MusicStartFinder {
-    override suspend fun musicStartMs(uris: List<String>): Long? = withContext(Dispatchers.IO) { find(uris) }
+    override suspend fun analyze(uris: List<String>): ChartAudioInfo = withContext(Dispatchers.IO) { find(uris) }
 
-    private suspend fun find(uris: List<String>): Long? {
+    private suspend fun find(uris: List<String>): ChartAudioInfo {
         var total = DoubleArray(0)
+        var longest: Long? = null
         for (uri in uris) {
             // Faixa que não abre ou não decodifica: conta com as outras. Sair da partida interrompe tudo.
-            val power = runCatching { opener.open(uri).use { windowPower(it) } }
+            val (power, duration) = runCatching { opener.open(uri).use { windowPower(it) to it.durationMs } }
                 .onFailure { if (it is CancellationException) throw it }
                 .getOrNull() ?: continue
+            if (duration != null) longest = maxOf(longest ?: 0, duration)
             if (power.size > total.size) total = total.copyOf(power.size)
             for (i in power.indices) total[i] += power[i]
         }
-        return MusicStart.find(total)
+        return ChartAudioInfo(MusicStart.find(total), longest)
     }
 
     /** Decodifica até 30 s; para entre um bloco e outro se a partida for embora (saiu durante o carregamento). */

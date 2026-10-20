@@ -12,8 +12,11 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /** Decodifica uma faixa aos poucos (MediaExtractor + MediaCodec), sem carregar a música inteira. */
-class MediaCodecPcmSource private constructor(private val extractor: MediaExtractor, private val codec: MediaCodec) :
-    PcmSource {
+class MediaCodecPcmSource private constructor(
+    private val extractor: MediaExtractor,
+    private val codec: MediaCodec,
+    override val durationMs: Long?,
+) : PcmSource {
     private val info = MediaCodec.BufferInfo()
     private var outputIndex = -1
     private var inputDone = false
@@ -119,6 +122,7 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
         private const val TIMEOUT_US = 10_000L
         private const val PRIME_ATTEMPTS = 200
         private const val MICROS_PER_SECOND = 1_000_000L
+        private const val MICROS_PER_MS = 1_000L
 
         @Throws(IOException::class)
         @Suppress("TooGenericExceptionCaught") // erros do MediaCodec chegam como RuntimeException
@@ -157,7 +161,12 @@ class MediaCodecPcmSource private constructor(private val extractor: MediaExtrac
             try {
                 codec.configure(format, null, null, 0)
                 codec.start()
-                return MediaCodecPcmSource(extractor, codec).also { it.prime() }
+                val durationMs = if (format.containsKey(MediaFormat.KEY_DURATION)) {
+                    format.getLong(MediaFormat.KEY_DURATION) / MICROS_PER_MS
+                } else {
+                    null
+                }
+                return MediaCodecPcmSource(extractor, codec, durationMs).also { it.prime() }
             } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
                 // Formato não suportado ou decodificador quebrado: o codec não pode ficar vivo até o GC.
                 runCatching { codec.stop() }

@@ -163,7 +163,14 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - A chave antiga do Keystore (`riff_spotify_web`) fica no aparelho; o alias `androidx-activity` do catálogo ficou sem uso.
 - Sem testes do `AndroidSpotifySession` (registro/desregistro, SecurityException, permissão tirada); os testes antigos da fila marcam a música atual como casada, então a música atual × limite de 3 mapas não é exercitada.
 - A sincronia depois de um avanço (seek) não foi medida contra o SDK (o adb não manda seek).
-- O ajuste automático de começo da música ainda supõe que o Spotify começa direto (mapas oficiais com intro dão +3,6 s): proposta aprovada (limitar pela diferença de duração e pelo primeiro botão), numa branch própria.
+
+## Ajuste inicial de sincronia (revisão final, 2026-10-19)
+
+- Mapa oficial com silêncio no fim além de 300 ms: o ajuste cai para a sobra (ex.: 900 ms em vez de 0), melhor que os 3,6 s de antes mas não zero. Medir onde a música termina no áudio do mapa (últimos 10–15 s) resolveria; falta conferir com arquivos reais.
+- O teto da primeira nota usa a dificuldade jogada, mas o ajuste salvo vale para todas: a primeira dificuldade jogada decide o valor.
+- A ligação no `GameplayViewModel` (duração do Spotify só se a faixa for a mesma) não tem teste; a duração é lida depois da análise (se o Spotify trocar de música durante ela, vale a regra antiga).
+- `PcmSource.durationMs` em mp3 VBR sem cabeçalho é estimativa do Android, não metadado.
+- Ajustes já salvos (ex.: +3,6 s de mapas oficiais) não mudam: zerar na pausa uma vez.
 
 ## Fila e Spotify (revisão final, 2026-10-19)
 
