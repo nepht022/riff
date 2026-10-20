@@ -84,6 +84,16 @@ class GamePauseSongControlsTest {
         composeRule.onNodeWithText("O Riff perdeu o Spotify", substring = true).assertExists()
     }
 
+    /** Sem o Spotify, trocar de música encerraria a partida sem trocar nada: os controles somem. */
+    @Test
+    fun withSpotifyLostTheSongControlsAreHidden() {
+        showPaused(spotify = true, notice = PlayerNotice.SOURCE_LOST)
+
+        composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Música anterior").assertDoesNotExist()
+        composeRule.onNodeWithText("Continuar").assertExists()
+    }
+
     @Test
     fun anAdIsExplainedInThePause() {
         showPaused(spotify = true, notice = PlayerNotice.AD)

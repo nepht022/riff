@@ -44,6 +44,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -318,7 +319,8 @@ private fun PauseOverlay(
             )
         }
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
-        if (state.spotifyControls) {
+        // Sem o Spotify, trocar de música encerraria a partida sem trocar nada.
+        if (state.spotifyControls && notice != PlayerNotice.SOURCE_LOST) {
             PlaybackControls(
                 isPaused = true,
                 onPrevious = { onChangeSong(false) },
