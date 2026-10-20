@@ -253,10 +253,10 @@ class QueuePrefetcherTest {
     }
 
     @Test
-    fun aFailedDownloadCountsAsTried() = runTest {
+    fun aBrokenDownloadCountsAsTried() = runTest {
         queue.next = queued("a")
         encoreHas("a")
-        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.NETWORK, null)
+        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.BROKEN_FILE, null)
         start()
         nowPlaying("now")
         downloader.failure = null
@@ -264,6 +264,21 @@ class QueuePrefetcherTest {
 
         assertEquals(1, encore.queries.size)
         assertTrue(downloader.downloaded.isEmpty())
+    }
+
+    /** Uma falha momentânea de rede (Wi-Fi caiu, Encore fora) não deixa a música sem mapa até reabrir o app. */
+    @Test
+    fun aNetworkFailureIsTriedAgain() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.NETWORK, null)
+        start()
+        nowPlaying("now")
+        downloader.failure = null
+
+        nowPlaying("now2") // a próxima leitura da fila
+
+        assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
 
     @Test

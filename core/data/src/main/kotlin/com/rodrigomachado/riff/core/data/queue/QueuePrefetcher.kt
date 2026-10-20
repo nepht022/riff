@@ -178,6 +178,8 @@ class QueuePrefetcher(
         } catch (e: ChartDownloadException) {
             Log.w(TAG, "${track.label()}: mapa da fila não baixado: ${e.reason}")
             misses.record(track.uri, QueueMiss.DOWNLOAD_FAILED)
+            // Rede caiu ou o Encore falhou agora: tenta de novo na próxima leitura (arquivo quebrado não melhora).
+            if (e.reason == ChartDownloadException.Reason.NETWORK) handled.remove(track)
             return
         }
         misses.clear(track.uri)
@@ -275,5 +277,10 @@ private class HandledTracks {
 
     fun add(track: QueuedTrack) {
         if (track.durationMs == null) withoutDuration += track.uri else withDuration += track.uri
+    }
+
+    fun remove(track: QueuedTrack) {
+        withDuration -= track.uri
+        withoutDuration -= track.uri
     }
 }
