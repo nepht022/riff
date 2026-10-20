@@ -220,6 +220,8 @@ class SpotifySongPlayer(
     }
 
     override fun pause() {
+        // O ⏮ do "Jogar de novo" ainda esperando mandaria tocar debaixo da pausa.
+        remote.cancelPendingCommands()
         if (!started) return
         val position = positionMs
         // Só manda pausar se o Spotify toca (ou está começando) a nossa: se ele parou sozinho (anúncio, carregando,

@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.spotify.session
 
+import android.media.session.PlaybackState.STATE_PAUSED
 import android.media.session.PlaybackState.STATE_PLAYING
 import com.rodrigomachado.riff.core.model.SpotifyConnection
 import com.rodrigomachado.riff.core.model.SpotifyError
@@ -96,66 +97,67 @@ class MediaSessionSpotifyTest {
         assertEquals(listOf("seekTo:0", "play"), session.commands)
     }
 
-    /** "Jogar de novo": o Spotify já passou para a seguinte; o ⏮ volta mantendo a playlist e a fila. */
+    /**
+     * "Jogar de novo": o Spotify já passou para a seguinte. Do começo dela, um ⏮ sempre vai para a anterior (a posição
+     * da sessão fica parada entre os avisos e não serve para decidir), mantendo a playlist e a fila.
+     */
     @Test
-    fun playingThePreviousTrackGoesBackWithPreviousAndStartsItOver() = runTest {
+    fun goingBackRestartsTheCurrentThenGoesToThePrevious() = runTest {
         val remote = remote()
         remote.connect()
-        session.snapshot.value = playing("spotify:track:2", positionMs = 8_000)
+        session.snapshot.value = playing("spotify:track:2", positionMs = 0, at = 0) // parada desde o começo dela
         runCurrent()
+
         remote.play("spotify:track:1")
         runCurrent()
-        assertEquals(listOf("previous"), session.commands)
-        // Passados os primeiros segundos, o primeiro ⏮ só reinicia a atual: vai um segundo.
-        session.snapshot.value = playing("spotify:track:2", positionMs = 0)
-        runCurrent()
-        assertEquals(listOf("previous", "previous"), session.commands)
-        session.snapshot.value = playing("spotify:track:1", positionMs = 200)
+        session.snapshot.value = playing("spotify:track:1", positionMs = 0)
         advanceTimeBy(5_000)
-        assertEquals(listOf("previous", "previous", "seekTo:0", "play"), session.commands)
+
+        assertEquals(listOf("seekTo:0", "previous"), session.commands)
     }
 
-    /** No começo da seguinte, um ⏮ já chega à anterior (um segundo voltaria duas). */
+    /** Chegou pausada (o Spotify às vezes para no ⏮): manda tocar. */
     @Test
-    fun nearTheStartOnePreviousIsEnough() = runTest {
+    fun arrivingPausedIsResumed() = runTest {
         val remote = remote()
         remote.connect()
-        session.snapshot.value = playing("spotify:track:2", positionMs = 1_000)
+        session.snapshot.value = playing("spotify:track:2")
         runCurrent()
+
         remote.play("spotify:track:1")
-        advanceTimeBy(2_000) // a anterior demora a aparecer
-        session.snapshot.value = playing("spotify:track:1", positionMs = 100)
+        runCurrent()
+        session.snapshot.value = playing("spotify:track:1", positionMs = 0).copy(state = STATE_PAUSED)
         advanceTimeBy(5_000)
 
-        assertEquals(listOf("previous", "seekTo:0", "play"), session.commands)
+        assertEquals(listOf("seekTo:0", "previous", "play"), session.commands)
     }
 
     @Test
-    fun aTrackThatIsNotThereGivesUpAfterTwoPrevious() = runTest {
+    fun aTrackThatIsNotThereSendsNothingMore() = runTest {
         val remote = remote()
         remote.connect()
         session.snapshot.value = playing("spotify:track:2")
         runCurrent()
         remote.play("spotify:track:1")
         advanceTimeBy(10_000)
-        assertEquals(listOf("previous", "previous"), session.commands)
+        assertEquals(listOf("seekTo:0", "previous"), session.commands)
     }
 
-    /** Saiu da partida enquanto o ⏮ esperava: nada mais é mandado ao Spotify. */
+    /** Saiu (ou pausou) enquanto o ⏮ esperava: nada mais é mandado ao Spotify. */
     @Test
     fun leavingStopsGoingBack() = runTest {
         val remote = remote()
         remote.connect()
-        session.snapshot.value = playing("spotify:track:2", positionMs = 8_000)
+        session.snapshot.value = playing("spotify:track:2")
         runCurrent()
         remote.play("spotify:track:1")
         runCurrent()
 
         remote.cancelPendingCommands()
-        session.snapshot.value = playing("spotify:track:1", positionMs = 0)
+        session.snapshot.value = playing("spotify:track:1", positionMs = 0).copy(state = STATE_PAUSED)
         advanceTimeBy(5_000)
 
-        assertEquals(listOf("previous"), session.commands)
+        assertEquals(listOf("seekTo:0", "previous"), session.commands)
     }
 
     @Test

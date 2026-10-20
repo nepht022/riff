@@ -622,6 +622,17 @@ class SpotifySongPlayerTest {
         assertEquals(2, remote.cancels)
     }
 
+    /** Pausou enquanto o ⏮ do "Jogar de novo" esperava: a música não pode voltar a tocar debaixo da pausa. */
+    @Test
+    fun pausingCancelsWhatSpotifyStillWaitedFor() = runTest {
+        val player = prepared()
+        player.play()
+
+        player.pause()
+
+        assertEquals(1, remote.cancels)
+    }
+
     @Test
     fun ourTrackNeverStartingPausesTheGame() = runTest {
         val player = prepared()
