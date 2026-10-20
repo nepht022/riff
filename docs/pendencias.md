@@ -17,9 +17,7 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 
 Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada depois de reconectar, pausa antes do primeiro início).
 
-- A detecção do começo da música supõe que a versão do Spotify começa direto na música; uma introdução baixa pode exagerar o valor (o jogador refina na pausa).
 - `MediaCodec.getOutputBuffer` aloca um objeto por bloco decodificado (interno à plataforma, ~40 por segundo); sem efeito medido.
-- Se a Activity for recriada durante o login do Spotify, o resultado do login se perde (só um log; a reconexão acontece igual).
 - Continuar no meio de uma ligação pausa de novo sem explicar por quê (e, sem retrocesso, alguns ms de música podem tocar antes); uma dica "áudio ocupado" ajudaria.
 - Soltar um dedo também pode marcar um erro antes do quadro e religar a guitarra um pouco antes da hora.
 - Relatório: o mapa repetido mostra só o nome da pasta ("Song: igual ao de Song" quando há duas pastas "Song" em pacotes diferentes); qual cópia vence depende da ordem de listagem do Android.
@@ -30,7 +28,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - A precisão é formatada duas vezes na tela de resultado (só arrumação).
 - Decodificador que trava no meio da música: a leitura desiste em 2 a 4 s, mas segura a trava de áudio nesse tempo (pausar e continuar espera; sair fecha o decodificador com a leitura em andamento).
 - Troca de canais ou de taxa no meio da faixa: a checagem compara com o início de cada leitura, não com o formato inicial; depois de voltar 0,5 s, a faixa pode tocar com ruído.
-- Spotify: uma falha avisada durante a própria reconexão é ignorada (defensivo); um aviso atrasado da conexão antiga ainda marca a nova como falha.
 - Partida indisponível (UNEXPECTED, CHART_UNREADABLE) e ajuste não salvo por restrição do banco não deixam registro no logcat.
 - Erro do banco ao ler o mapa e arquivo apagado (FileNotFoundException) aparecem como "não deu para ler este mapa".
 - Se a saída de áudio nova não abrir ao continuar, a pista anima a volta de 0,5 s e depois pula de volta (a música segue de onde estava).
@@ -79,7 +76,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 - **Mensagens da tela:** "Não deu para enviar" e "Espere alguns minutos" continuam enquanto a pessoa edita (e a espera continua aparecendo depois dos 5 minutos); a espera só aparece ao tocar em Enviar. O leitor de tela não anuncia essas mensagens nem o "Obrigado" (`liveRegion`).
 - **Fonte grande:** os três botões de tipo ficam numa linha fixa e podem ser cortados; usar `FlowRow`.
-- **Privacidade:** a tela não diz para onde o relato vai nem para que serve o email; antes de distribuir, uma linha explicando e uma política de privacidade (Play Store).
 - **API antiga:** `getPackageInfo(String, Int)` está obsoleto no Android 13+ (só aviso do compilador).
 - **Revisão das categorias (2026-10-17):**
   - `setCategory` muda o tipo na tela mas não grava o tipo no estado salvo; uma categoria de outro tipo, restaurada depois do app fechar, passaria (a tela de hoje não deixa isso acontecer). Gravar o tipo e filtrar a categoria pelo tipo ao restaurar e ao enviar.
@@ -112,14 +108,11 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Pontos menores dos mapas da fila do Spotify (revisão de 2026-10-17)
 
-- **Retry-After:** `0` vira espera de zero; trocar de música lê a fila na hora, ignorando o Retry-After pendente.
 - **Mesmo mapa já na biblioteca com outros dados:** a fila poderia baixar de novo e marcar como apagável o mapa que já era seu (improvável; conferir `EncoreDownloads.chartIdOf(md5)` antes).
 - **Rede conferida só antes de baixar:** trocar de Wi-Fi para dados móveis durante o download não é percebido.
 - **App fechado logo depois de importar:** o registro da fila vem depois da importação; nesse intervalo o mapa vira normal para sempre.
-- **Autorização tocada duas vezes:** com a tela de autorização aberta, um segundo toque deixa o primeiro esperando para sempre; desabilitar o interruptor durante a autorização.
-- **Aviso de autorização perdida:** não sobrevive a reabrir o app.
 - **Logs:** o título da música vai para o logcat ("pronto" já não leva título; conferir os outros).
-- **Estilo/testes:** `queue!!` na leitura da fila; interruptor desabilitado fica esmaecido duas vezes; faltam testes do caminho do Keystore no aparelho.
+- **Estilo/testes:** `queue!!` na leitura da fila; interruptor desabilitado fica esmaecido duas vezes.
 
 ## Spotify contínuo (revisão final, 2026-10-17)
 
@@ -136,10 +129,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - O pedido do nome lê o nome atual com `runBlocking` na abertura do ViewModel (leitura do DataStore na thread da tela).
 - Fechar a troca de nome tocando fora não limpa o erro nem o texto digitado.
 - Depois de o Android matar o app em segundo plano, o pedido do nome pode aparecer sobre a partida restaurada.
-- Jogador apagado da planilha: a fila fica presa (`sem_nome`) e o Resultado diz "Sem internet".
 - Corrida estreita no status do Resultado ("Ranking: Nº" sobrescrito por "Enviando…/Sem internet").
-- O script aceita chave vazia (pedido forjado) e não limita reservas por hora.
-- O envio do histórico pode passar do limite de 60 por hora e se espalhar por várias aberturas.
 - Posições com buracos quando um jogador é apagado da planilha; dificuldades do placar na ordem de inserção.
 - O log de erro do script (do dono) pode conter um trecho da chave num JSON inválido.
 - "Tempo sem errar" subconta quando notas de trilhas diferentes são acertadas fora de ordem.
