@@ -85,7 +85,7 @@ class MediaSessionSpotify(
             val arrived = withTimeoutOrNull(ARRIVAL_WAIT_MS) {
                 session.snapshot.first { it?.mediaId == trackUri }
             } ?: return@launch
-            // Chegou do começo; se ficou pausada no ⏮, manda tocar (sem voltar a posição: a pista já pode estar andando).
+            // Chegou do começo; se ficou pausada no ⏮, manda tocar (sem mexer na posição: a pista pode estar andando).
             if (arrived?.state != android.media.session.PlaybackState.STATE_PLAYING) session.play()
         }
     }

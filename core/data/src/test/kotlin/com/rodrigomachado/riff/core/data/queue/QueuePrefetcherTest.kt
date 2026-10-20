@@ -623,4 +623,36 @@ class QueuePrefetcherTest {
         nowPlaying("a") // voltou
         assertEquals(listOf("md5-a" to "a", "md5-a" to "a"), downloader.downloaded)
     }
+
+    /** A música que está tocando também é tentada de novo depois de uma falha de rede (na próxima leitura). */
+    @Test
+    fun aNetworkFailureOnTheCurrentSongIsTriedAgain() = runTest {
+        encoreHas("x")
+        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.NETWORK, null)
+        start()
+        nowPlaying("x")
+        downloader.failure = null
+
+        advanceTimeBy(60_001)
+        runCurrent()
+
+        assertEquals(listOf("md5-x" to "x"), downloader.downloaded)
+    }
+
+    /** Um mapa que sempre falha não vira pesquisa e download a cada leitura: no máximo 3 tentativas por música. */
+    @Test
+    fun aSongIsTriedAtMostThreeTimes() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        downloader.failure = ChartDownloadException(ChartDownloadException.Reason.NETWORK, null)
+        start()
+        nowPlaying("now")
+
+        repeat(6) {
+            advanceTimeBy(60_001)
+            runCurrent()
+        }
+
+        assertEquals(3, encore.queries.count { it == "Banda Música a" })
+    }
 }

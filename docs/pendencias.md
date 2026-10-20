@@ -165,3 +165,11 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - A sincronia depois de um avanço (seek) não foi medida contra o SDK (o adb não manda seek).
 - O ajuste automático de começo da música ainda supõe que o Spotify começa direto (mapas oficiais com intro dão +3,6 s): proposta aprovada (limitar pela diferença de duração e pelo primeiro botão), numa branch própria.
 
+## Fila e Spotify (revisão final, 2026-10-19)
+
+- `cancelPendingCommands()` é global no remote: soltar qualquer player cancela o ⏮ pendente (hoje a ordem de soltar e começar não causa problema).
+- A limpeza devolve também as músicas cujo mapa não conseguiu apagar (só esquece a decisão; não baixa de novo, porque o mapa continua lá).
+- Uma música que entra e sai da fila várias vezes (edições, aleatório, playlist curta repetindo) é apagada e baixada a cada vez.
+- Na pausa, ⏮/⏭ continuam escondidos depois de o Spotify voltar na mesma música até tocar Continuar; um episódio de podcast também conta como "Spotify perdido".
+- "Rede" (NETWORK) no download inclui falha ao gravar na pasta e erro HTTP do Encore; esses também são tentados (até 3 vezes).
+

@@ -74,6 +74,7 @@ class QueuePrefetcher(
 
     // Lidos pela leitura da fila e pela fila de downloads, que rodam em paralelo.
     private val handled = HandledTracks()
+    private val networkAttempts = ConcurrentHashMap<String, Int>()
     private val waiting: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val pending = Channel<QueuedTrack>(Channel.UNLIMITED)
     private var started = false
@@ -108,9 +109,13 @@ class QueuePrefetcher(
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun follow() {
         remote.playback.filterNotNull().distinctUntilChangedBy { it.trackUri }.collectLatest { playing ->
-            val current = playing.trackUri
             // A música que está tocando também (aberta direto no Spotify, ou vista na fila sem a duração).
-            enqueue(QueuedTrack(current, playing.title, playing.artist, playing.durationMs.takeIf { it > 0 }))
+            val current = QueuedTrack(
+                playing.trackUri,
+                playing.title,
+                playing.artist,
+                playing.durationMs.takeIf { it > 0 },
+            )
             coroutineScope {
                 // Ler a fila da sessão é de graça: lê de novo a cada mudança, e de tempos em tempos por segurança.
                 launch { queue.changes.collect { guarded("leitura da fila") { read(current) } } }
@@ -123,10 +128,12 @@ class QueuePrefetcher(
     }
 
     /** Lê a fila; sem sessão agora, tenta na próxima leitura. */
-    private suspend fun read(current: String) {
+    private suspend fun read(current: QueuedTrack) {
+        // A atual a cada leitura: depois de uma falha de rede, é tentada de novo (já decidida, sai na hora).
+        enqueue(current)
         val read = queue.next(WINDOW) as? QueueRead.Tracks ?: return
         // Só com a fila lida dá para saber o que passou ou saiu dela.
-        cleaner.keepOnly(current, read.tracks.map { it.uri }).forEach(handled::forget)
+        cleaner.keepOnly(current.uri, read.tracks.map { it.uri }).forEach(handled::forget)
         read.tracks.forEach { enqueue(it) }
     }
 
@@ -178,8 +185,11 @@ class QueuePrefetcher(
         } catch (e: ChartDownloadException) {
             Log.w(TAG, "${track.label()}: mapa da fila não baixado: ${e.reason}")
             misses.record(track.uri, QueueMiss.DOWNLOAD_FAILED)
-            // Rede caiu ou o Encore falhou agora: tenta de novo na próxima leitura (arquivo quebrado não melhora).
-            if (e.reason == ChartDownloadException.Reason.NETWORK) handled.remove(track)
+            // Rede caiu ou o Encore falhou agora: tenta de novo na próxima leitura (arquivo quebrado não melhora), até
+            // MAX_NETWORK_ATTEMPTS vezes por música (um mapa que sempre falha não vira pesquisa a cada leitura).
+            val attempts = networkAttempts.merge(track.uri, 1, Int::plus) ?: 1
+            val retry = e.reason == ChartDownloadException.Reason.NETWORK && attempts < MAX_NETWORK_ATTEMPTS
+            if (retry) handled.remove(track)
             return
         }
         misses.clear(track.uri)
@@ -220,6 +230,7 @@ class QueuePrefetcher(
         const val TAG = "RiffQueue"
         const val WINDOW = 2
         const val MAX_QUEUE_MAPS = 3
+        const val MAX_NETWORK_ATTEMPTS = 3
         const val READ_INTERVAL_MS = 60_000L
     }
 }
