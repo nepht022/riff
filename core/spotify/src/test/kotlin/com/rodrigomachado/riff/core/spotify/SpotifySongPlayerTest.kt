@@ -610,6 +610,18 @@ class SpotifySongPlayerTest {
         assertNull(player.notice) // tenta de novo
     }
 
+    /** Saiu da partida (ou foi para a próxima) com o ⏮ do "Jogar de novo" ainda esperando: ele para. */
+    @Test
+    fun leavingTheMatchCancelsWhatSpotifyStillWaitedFor() = runTest {
+        val player = prepared()
+        player.play()
+
+        player.release()
+        assertEquals(1, remote.cancels)
+        prepared().releaseKeepingMusic()
+        assertEquals(2, remote.cancels)
+    }
+
     @Test
     fun ourTrackNeverStartingPausesTheGame() = runTest {
         val player = prepared()

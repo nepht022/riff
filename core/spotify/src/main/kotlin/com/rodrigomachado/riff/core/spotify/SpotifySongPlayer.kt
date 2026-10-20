@@ -238,6 +238,7 @@ class SpotifySongPlayer(
         released = true
         listening?.cancel()
         listening = null
+        remote.cancelPendingCommands()
         if (started && !completed && isPlaying) remote.pause()
     }
 
@@ -245,6 +246,7 @@ class SpotifySongPlayer(
         released = true
         listening?.cancel()
         listening = null
+        remote.cancelPendingCommands()
     }
 
     override val positionMs: Long

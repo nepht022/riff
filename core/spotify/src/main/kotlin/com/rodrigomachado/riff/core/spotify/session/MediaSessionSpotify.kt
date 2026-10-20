@@ -67,8 +67,8 @@ class MediaSessionSpotify(
 
     /**
      * Toca [trackUri] do começo. A atual recomeça; outra só pode ser a anterior ("Jogar de novo" depois que o Spotify
-     * passou para a seguinte): volta com ⏮, que mantém a playlist e a fila (tocar por endereço trocaria a playlist).
-     * Se ela não chegar, nada mais é feito: a partida percebe pelo prazo de começo.
+     * passou para a seguinte): volta com ⏮, que mantém a playlist e a fila (tocar por endereço trocaria a playlist), e
+     * a recomeça do zero ao chegar. Se ela não chegar, nada mais é feito: a partida percebe pelo prazo de começo.
      */
     override fun play(trackUri: String) {
         goingBack?.cancel()
@@ -78,14 +78,25 @@ class MediaSessionSpotify(
             return
         }
         goingBack = scope.launch {
-            repeat(MAX_PREVIOUS) {
-                session.skipToPrevious()
-                val arrived = withTimeoutOrNull(PREVIOUS_WAIT_MS) {
-                    session.snapshot.first { it?.mediaId == trackUri }
+            // Passados os primeiros segundos, o primeiro ⏮ do Spotify só reinicia a atual; aí vai um segundo.
+            val restartsFirst = (session.snapshot.value?.positionMs ?: 0) > RESTARTS_AFTER_MS
+            session.skipToPrevious()
+            if (restartsFirst) {
+                val moved = withTimeoutOrNull(PREVIOUS_WAIT_MS) {
+                    session.snapshot.first { it?.mediaId == trackUri || (it?.positionMs ?: 0) < RESTARTS_AFTER_MS }
                 }
-                if (arrived != null) return@launch
+                if (moved?.mediaId != trackUri) session.skipToPrevious()
             }
+            withTimeoutOrNull(ARRIVAL_WAIT_MS) { session.snapshot.first { it?.mediaId == trackUri } } ?: return@launch
+            // Chegou: do começo e tocando (o Spotify pode ter ficado pausado no ⏮).
+            session.seekTo(0)
+            session.play()
         }
+    }
+
+    override fun cancelPendingCommands() {
+        goingBack?.cancel()
+        goingBack = null
     }
 
     override fun pause() = session.pause()
@@ -99,8 +110,9 @@ class MediaSessionSpotify(
     override fun skipPrevious() = session.skipToPrevious()
 
     private companion object {
-        /** Passados os primeiros segundos, o primeiro ⏮ só reinicia a atual; o segundo chega à anterior. */
-        const val MAX_PREVIOUS = 2
+        /** Até aqui o ⏮ do Spotify vai para a anterior; depois, reinicia a atual. */
+        const val RESTARTS_AFTER_MS = 3_000L
         const val PREVIOUS_WAIT_MS = 1_500L
+        const val ARRIVAL_WAIT_MS = 3_000L
     }
 }

@@ -98,7 +98,7 @@ class MediaSessionSpotifyTest {
 
     /** "Jogar de novo": o Spotify já passou para a seguinte; o ⏮ volta mantendo a playlist e a fila. */
     @Test
-    fun playingThePreviousTrackGoesBackWithPrevious() = runTest {
+    fun playingThePreviousTrackGoesBackWithPreviousAndStartsItOver() = runTest {
         val remote = remote()
         remote.connect()
         session.snapshot.value = playing("spotify:track:2", positionMs = 8_000)
@@ -108,11 +108,26 @@ class MediaSessionSpotifyTest {
         assertEquals(listOf("previous"), session.commands)
         // Passados os primeiros segundos, o primeiro ⏮ só reinicia a atual: vai um segundo.
         session.snapshot.value = playing("spotify:track:2", positionMs = 0)
-        advanceTimeBy(1_600)
+        runCurrent()
         assertEquals(listOf("previous", "previous"), session.commands)
-        session.snapshot.value = playing("spotify:track:1", positionMs = 0)
+        session.snapshot.value = playing("spotify:track:1", positionMs = 200)
         advanceTimeBy(5_000)
-        assertEquals(listOf("previous", "previous"), session.commands)
+        assertEquals(listOf("previous", "previous", "seekTo:0", "play"), session.commands)
+    }
+
+    /** No começo da seguinte, um ⏮ já chega à anterior (um segundo voltaria duas). */
+    @Test
+    fun nearTheStartOnePreviousIsEnough() = runTest {
+        val remote = remote()
+        remote.connect()
+        session.snapshot.value = playing("spotify:track:2", positionMs = 1_000)
+        runCurrent()
+        remote.play("spotify:track:1")
+        advanceTimeBy(2_000) // a anterior demora a aparecer
+        session.snapshot.value = playing("spotify:track:1", positionMs = 100)
+        advanceTimeBy(5_000)
+
+        assertEquals(listOf("previous", "seekTo:0", "play"), session.commands)
     }
 
     @Test
@@ -123,7 +138,24 @@ class MediaSessionSpotifyTest {
         runCurrent()
         remote.play("spotify:track:1")
         advanceTimeBy(10_000)
-        assertEquals(2, session.commands.count { it == "previous" })
+        assertEquals(listOf("previous", "previous"), session.commands)
+    }
+
+    /** Saiu da partida enquanto o ⏮ esperava: nada mais é mandado ao Spotify. */
+    @Test
+    fun leavingStopsGoingBack() = runTest {
+        val remote = remote()
+        remote.connect()
+        session.snapshot.value = playing("spotify:track:2", positionMs = 8_000)
+        runCurrent()
+        remote.play("spotify:track:1")
+        runCurrent()
+
+        remote.cancelPendingCommands()
+        session.snapshot.value = playing("spotify:track:1", positionMs = 0)
+        advanceTimeBy(5_000)
+
+        assertEquals(listOf("previous"), session.commands)
     }
 
     @Test

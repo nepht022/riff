@@ -46,4 +46,10 @@ class FakeSpotifyRemote : SpotifyRemote {
     override fun skipPrevious() {
         commands += "previous"
     }
+
+    var cancels = 0
+
+    override fun cancelPendingCommands() {
+        cancels++
+    }
 }

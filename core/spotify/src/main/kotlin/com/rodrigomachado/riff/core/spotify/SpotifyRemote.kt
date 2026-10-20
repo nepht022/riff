@@ -35,6 +35,9 @@ interface SpotifyRemote {
 
     /** Faixa anterior; como no Spotify, passados os primeiros segundos volta ao começo da atual. */
     fun skipPrevious()
+
+    /** A partida saiu: o que ainda esperava (o ⏮ do "Jogar de novo") não manda mais nada. */
+    fun cancelPendingCommands() = Unit
 }
 
 private val NO_AD: StateFlow<Boolean> = MutableStateFlow(false)
