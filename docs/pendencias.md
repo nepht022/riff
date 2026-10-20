@@ -98,7 +98,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Pontos menores dos controles do Spotify (revisão de 2026-10-17)
 
-- **Sem conexão com o Spotify:** na pausa, ⏮/⏭ encerram a partida mesmo sem conseguir trocar a música (o comando se perde); esconder ou desligar os botões sem conexão. Uma recusa do Spotify (por exemplo, ⏮ em conta Free) também não é registrada.
 - **Continuar e trocar no mesmo instante:** ⏯ seguido de ⏭ antes de o menu sumir pode deixar a música nova pausada (janela de um quadro).
 - **Sons:** ⏮/⏭ na pausa tocam "navegar" e, ao voltar, a tela toca "voltar" (dois sons seguidos); ⏯ na pausa toca "navegar" enquanto Continuar toca "confirmar".
 - **Leitor de tela e visual:** na pausa, "Próxima música" não avisa que encerra a partida; o efeito de toque do botão vermelho redondo sai quadrado.
@@ -113,8 +112,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Pontos menores dos mapas da fila do Spotify (revisão de 2026-10-17)
 
-- **Falha de rede conta como "tentada":** uma falha momentânea do Encore ou do Wi-Fi deixa a música sem mapa até reabrir o Riff (só resultado vazio ou arquivo quebrado deveriam contar).
-- **Mapa apagado não volta:** a música continua "tentada"; com ⏮ ou uma playlist que repete, não baixa de novo nesta abertura.
 - **Retry-After:** `0` vira espera de zero; trocar de música lê a fila na hora, ignorando o Retry-After pendente.
 - **Mesmo mapa já na biblioteca com outros dados:** a fila poderia baixar de novo e marcar como apagável o mapa que já era seu (improvável; conferir `EncoreDownloads.chartIdOf(md5)` antes).
 - **Rede conferida só antes de baixar:** trocar de Wi-Fi para dados móveis durante o download não é percebido.
@@ -160,7 +157,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Spotify pela sessão de mídia (revisão final, 2026-10-19)
 
-- "Jogar de novo": se a metadata da faixa anterior demorar mais de 1,5 s, um segundo ⏮ volta duas faixas; ao chegar não há `seekTo(0)` + `play()` (Spotify pausado faz a faixa ser recusada); o job do ⏮ não é cancelado ao sair da partida.
 - `AndroidSpotifySession`: se `addOnActiveSessionsChangedListener` der certo e `getActiveSessions` falhar, o listener é registrado de novo na próxima conferência; nada força chamar só na thread principal; `publish()` lê a fila (binder) a cada aviso de estado.
 - `playback` e `adPlaying` são dois `stateIn` do mesmo estado: o filtro de anúncio no `NowPlayingViewModel` (init) pode ver um antes do outro (impacto baixo; a espera da próxima usa `combine`).
 - "Não deu para reconhecer a música no Spotify" (risco 4 da spec) não existe: `MEDIA_ID` ausente aparece como "Nada tocando". As Configurações não avisam quando a fila está ligada sem a permissão.
