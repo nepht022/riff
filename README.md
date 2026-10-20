@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icone.png" width="160" alt="Ícone do Riff"></p>
+
 # Riff
 
 Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não é publicado na Play Store; veja a seção 3 da especificação). As notas vêm de mapas do Clone Hero que você mesmo importa. Há dois jeitos de jogar:
@@ -8,6 +10,9 @@ Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não �
 - Especificação: `docs/superpowers/specs/2026-10-05-riff-design.md` (e as especificações de cada etapa na mesma pasta)
 - Planos: `docs/superpowers/plans/`
 - Pendências conhecidas: `docs/pendencias.md`
+
+
+**Instalar:** baixe o `Riff-<versão>.apk` em **Releases** (à direita na página do repositório), abra no celular Android (8 ou mais novo) e permita "instalar apps desconhecidos". Para o modo Spotify, ligue o Riff em "Acesso às notificações" quando o Tocando agora pedir.
 
 ## Instalar e configurar
 
