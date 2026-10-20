@@ -126,6 +126,56 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 - **Imagem do mapa** (ligada de fábrica): mostra atrás da pista, escurecida, a imagem de fundo do mapa (`background.jpg`/`.png`) ou, sem ela, a capa (`album.jpg`/`.png`).
 - **Sons do menu:** os botões fora da partida tocam guitarra, no volume geral: abrir ou escolher algo dá um toque abafado, começar ou salvar dá um power chord (cada um sorteia entre duas gravações) e voltar, pelo botão ou pelo gesto do celular, arrasta a palheta na corda. Durante a partida os botões ficam em silêncio.
 
+## Qualidade e testes (QA)
+
+O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo motivo certo, depois vem o código mínimo que o faz passar, e no fim roda a suíte inteira. Números de 2026-10-20: **~1.100 testes** em 163 arquivos, **55 screenshots** de referência e 26 testes do script do ranking.
+
+### Camadas de teste
+
+| Camada | O que cobre | Onde |
+|---|---|---|
+| Unidade (JVM) | motor do jogo (julgamento, combo, pontuação, relógio), leitura de mapas (`.chart`, `.mid`, `.sng`, `song.ini`), casamento faixa × mapa, fila do Spotify, ranking | `core/*/src/test` |
+| Robolectric | ViewModels, repositórios, players de áudio, sessão de mídia do Spotify (com uma sessão falsa), Room | `core/*/src/test`, `feature/*/src/test` |
+| Interface (Compose) | cada tela e cada estado (sem permissão, sem mapa, anúncio, pausa, erros), cliques, sons do menu, textos em pt e en | `feature/*/src/test/*ContentTest.kt` |
+| Screenshots (Roborazzi) | o visual de cada tela comparado pixel a pixel com a referência | `*/src/test/screenshots` |
+| Migração do banco | cada versão do esquema do Room migra sem perder dados (casamentos, ajustes, recordes) | `core/database/src/test/.../MigrationTest.kt` |
+| Golden da IA | a separação da guitarra (Demucs em ONNX) reproduz a saída de referência | `core/separation/src/test` |
+| Script do ranking | o Apps Script roda em Node com uma planilha falsa que imita as conversões do Google Planilhas | `node scripts/ranking_apps_script.test.js` |
+| Aparelho | medição de sincronia (registro temporário `RiffSync` no `adb logcat`), quadros atrasados e abertura (Macrobenchmark + Baseline Profile) | `scripts/desempenho.sh`, `scripts/quadros_travados.py` |
+
+### Portões de qualidade
+
+- **Detekt + ktlint** (`config/detekt/detekt.yml`): limites de tamanho de função (60 linhas), de funções por classe e arquivo (11), de complexidade (14) e de linha (120 colunas).
+- **Android Lint** com erros quebrando o build.
+- **Kover:** cobertura mínima de **70%** em `:core:chart`, `:core:game` e `:core:data` (`koverVerify`).
+- **Suíte completa antes de cada merge:**
+
+  ```bash
+  ./scripts/gw test testDebugUnitTest detekt lint verifyRoborazziDebug :app:assembleDebug :app:assembleRelease --continue
+  node scripts/ranking_apps_script.test.js
+  ```
+
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os screenshots não são comparados no CI (fontes desenhadas de outro jeito no Linux; veja [Screenshots](#screenshots)).
+
+### Processo de cada mudança
+
+1. **Especificação e plano** para mudanças grandes (`docs/superpowers/specs` e `docs/superpowers/plans`). As mudanças pequenas são combinadas na conversa.
+2. **TDD** tarefa a tarefa, com um registro das decisões tomadas no caminho.
+3. **Revisão final** da branch inteira por um revisor independente (outro modelo, sem o contexto de quem implementou). Problemas críticos e importantes são corrigidos com um teste que falha primeiro; os menores vão para `docs/pendencias.md`.
+4. **Aceite no aparelho** (Galaxy S25) antes do merge, com registro temporário quando o problema é de tempo (sincronia, fila).
+5. O **README** e o **Baseline Profile** são atualizados junto com a mudança.
+
+### Testes instáveis conhecidos
+
+Passam ao rodar de novo sozinhos (efeito de carga ou do Windows):
+
+- `lintAnalyzeDebugUnitTest` (crash do analisador do lint);
+- `ResamplingPcmSourceTest` (tempo, sob carga);
+- `SettingsContentTest` (espera ociosa do Compose, sob carga);
+- `MigrationTest` (FileNotFound no esquema JSON recém-gerado na primeira compilação).
+
+Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
+
 ## Desenvolvimento
 
 ### Comandos
