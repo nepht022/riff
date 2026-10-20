@@ -126,7 +126,7 @@ class QueuePrefetcher(
     private suspend fun read(current: String) {
         val read = queue.next(WINDOW) as? QueueRead.Tracks ?: return
         // Só com a fila lida dá para saber o que passou ou saiu dela.
-        cleaner.keepOnly(current, read.tracks.map { it.uri })
+        cleaner.keepOnly(current, read.tracks.map { it.uri }).forEach(handled::forget)
         read.tracks.forEach { enqueue(it) }
     }
 
@@ -279,8 +279,11 @@ private class HandledTracks {
         if (track.durationMs == null) withoutDuration += track.uri else withDuration += track.uri
     }
 
-    fun remove(track: QueuedTrack) {
-        withDuration -= track.uri
-        withoutDuration -= track.uri
+    fun remove(track: QueuedTrack) = forget(track.uri)
+
+    /** O mapa dela foi apagado (passou sem ser jogada): se a música voltar, baixa de novo. */
+    fun forget(uri: String) {
+        withDuration -= uri
+        withoutDuration -= uri
     }
 }

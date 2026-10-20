@@ -606,4 +606,21 @@ class QueuePrefetcherTest {
         runCurrent()
         assertEquals(listOf("md5-a" to "a"), downloader.downloaded)
     }
+
+    /** O mapa da fila saiu quando a música passou sem ser jogada; ela voltou (⏮, playlist repetindo): baixa de novo. */
+    @Test
+    fun aDeletedQueueMapComesBackWhenTheSongReturns() = runTest {
+        queue.next = queued("a")
+        encoreHas("a")
+        start()
+        nowPlaying("now")
+        assertEquals(1, downloader.downloaded.size)
+
+        queue.next = QueueRead.Tracks(emptyList())
+        nowPlaying("now2") // "a" saiu da fila sem ser jogada: o mapa é apagado
+        assertTrue(rows.rows.isEmpty())
+
+        nowPlaying("a") // voltou
+        assertEquals(listOf("md5-a" to "a", "md5-a" to "a"), downloader.downloaded)
+    }
 }

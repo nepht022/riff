@@ -17,10 +17,10 @@ class QueueCleaner @Inject constructor(
     private val settings: SettingsRepository,
     private val matches: MatchActivity,
 ) {
-    /** Depois de cada leitura da fila. */
-    suspend fun keepOnly(currentTrackUri: String?, window: List<String>) {
+    /** Depois de cada leitura da fila; devolve as músicas cujos mapas foram apagados (se voltarem, baixam de novo). */
+    suspend fun keepOnly(currentTrackUri: String?, window: List<String>): List<String> {
         val keep = window.toSet() + listOfNotNull(currentTrackUri)
-        delete { it.trackUri !in keep }
+        return delete { it.trackUri !in keep }
     }
 
     /** Na abertura do app: com a fila desligada, as sobras saem já; ligada, a primeira leitura decide. */
@@ -28,14 +28,15 @@ class QueueCleaner @Inject constructor(
         if (!settings.settings.first().queuePrefetch) delete { true }
     }
 
-    private suspend fun delete(which: (QueueDownload) -> Boolean) {
+    private suspend fun delete(which: (QueueDownload) -> Boolean): List<String> {
         // Com partida aberta, nada sai (nem o mapa sendo carregado, nem disco ocupado durante a pista).
-        if (!settings.settings.first().queueDeleteUnplayed || matches.inMatch.value) return
-        val ids = downloads.unplayed().filter { which(it) && !matches.isOpen(it.chartId) }.map { it.chartId }
-        if (ids.isEmpty()) return
-        val result = deleter.delete(ids)
+        if (!settings.settings.first().queueDeleteUnplayed || matches.inMatch.value) return emptyList()
+        val gone = downloads.unplayed().filter { which(it) && !matches.isOpen(it.chartId) }
+        if (gone.isEmpty()) return emptyList()
+        val result = deleter.delete(gone.map { it.chartId })
         // Só sai do registro o que foi apagado de fato (no banco, a linha some junto com o mapa).
         Log.i(TAG, "mapas da fila apagados: ${result.deleted} (falhas: ${result.failed})")
+        return gone.map { it.trackUri }
     }
 
     private companion object {
