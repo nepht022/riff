@@ -10,6 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # O modelo da guitarra por IA (130 MB) fica no Git LFS e os testes da separação o leem. A cota gratuita de download
+      # do LFS é pequena: o modelo fica em cache e só é baixado de novo quando muda.
+      - name: Lista dos arquivos do LFS
+        run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-assets-id
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+      - name: Modelo da IA (LFS)
+        run: git lfs pull
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
