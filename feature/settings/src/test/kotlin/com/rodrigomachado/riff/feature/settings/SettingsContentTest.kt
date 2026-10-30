@@ -80,7 +80,7 @@ class SettingsContentTest {
                         onDeleteSeparations = { events += "delete" },
                         onAskAlways = { events += "askAlways:$it" },
                         onSeparateOnlyCharging = { events += "onlyCharging:$it" },
-                        onTrackLook = { looks += it },
+                        onTrackLook = { looks += it(TrackLook.DEFAULT) },
                         onShowChartImage = { events += "image:$it" },
                         onLanguage = { languages += it },
                         queue = queueState,

@@ -10,16 +10,24 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 
-/** A imagem do mapa (fundo, senão capa), em bytes, para mostrar atrás da pista. */
+/** A imagem do mapa (fundo, senão capa) para mostrar atrás da pista. */
 interface ChartArtLoader {
-    suspend fun load(chartId: String): ByteArray?
+    /** A primeira imagem que [decode] aceita: um fundo grande demais ou corrompido dá lugar à capa. */
+    suspend fun <T : Any> load(chartId: String, decode: (ByteArray) -> T?): T?
+
+    suspend fun load(chartId: String): ByteArray? = load(chartId) { it }
 }
 
 /** `background.*` antes de `album.*`; só jpg, jpeg e png, sem diferenciar maiúsculas. */
 object ChartArtFinder {
     private val EXTENSIONS = setOf("jpg", "jpeg", "png")
 
-    fun find(files: List<FolderEntry>): FolderEntry? = named(files, "background") ?: named(files, "album")
+    fun find(files: List<FolderEntry>): FolderEntry? = candidates(files).firstOrNull()
+
+    fun candidates(files: List<FolderEntry>): List<FolderEntry> = listOfNotNull(
+        named(files, "background"),
+        named(files, "album"),
+    )
 
     private fun named(files: List<FolderEntry>, base: String) = files.firstOrNull {
         !it.isDirectory &&
@@ -35,14 +43,21 @@ class FolderChartArtLoader @Inject constructor(
 ) : ChartArtLoader {
     // Sem imagem (grande demais, ilegível, pasta perdida), a pista fica só com o fundo escolhido.
     @Suppress("SwallowedException")
-    override suspend fun load(chartId: String): ByteArray? = withContext(io) {
+    override suspend fun <T : Any> load(chartId: String, decode: (ByteArray) -> T?): T? = withContext(io) {
         val chart = charts.getChart(chartId) ?: return@withContext null
-        try {
-            ChartArtFinder.find(source.listChildren(chart.folderUri))?.let { source.read(it, MAX_BYTES) }
-        } catch (e: IOException) {
-            null
+        val candidates = try {
+            ChartArtFinder.candidates(source.listChildren(chart.folderUri))
         } catch (e: FolderAccessLostException) {
-            null
+            return@withContext null
+        }
+        candidates.firstNotNullOfOrNull { entry ->
+            try {
+                decode(source.read(entry, MAX_BYTES))
+            } catch (e: IOException) {
+                null
+            } catch (e: FolderAccessLostException) {
+                null
+            }
         }
     }
 

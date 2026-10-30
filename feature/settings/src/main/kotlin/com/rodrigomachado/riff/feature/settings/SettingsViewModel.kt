@@ -100,7 +100,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setMenuSounds(enabled: Boolean) = save { it.copy(menuSounds = enabled) }
 
-    fun setTrackLook(look: TrackLook) = save {
+    /** Aplica a escolha sobre o valor gravado agora, não sobre o que a tela mostrava. */
+    fun setTrackLook(change: (TrackLook) -> TrackLook) = save {
+        val look = change(it.trackLook)
         it.copy(
             highwayBackground = look.background,
             highwayArt = look.art,

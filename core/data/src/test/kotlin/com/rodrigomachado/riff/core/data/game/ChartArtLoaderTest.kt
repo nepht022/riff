@@ -59,6 +59,26 @@ class ChartArtLoaderTest {
     }
 
     @Test
+    fun aBackgroundTooLargeFallsBackToTheAlbumCover() = runTest {
+        source.file("raiz/M/background.jpg", ByteArray(9 * 1024 * 1024))
+        source.file("raiz/M/album.png", "capa")
+        chart("raiz/M")
+
+        assertEquals("capa", loader().load("id")?.decodeToString())
+    }
+
+    @Test
+    fun aBackgroundThatDoesNotDecodeFallsBackToTheAlbumCover() = runTest {
+        source.file("raiz/M/background.jpg", "corrompido")
+        source.file("raiz/M/album.png", "capa")
+        chart("raiz/M")
+
+        val decoded = loader().load("id") { bytes -> bytes.decodeToString().takeIf { it != "corrompido" } }
+
+        assertEquals("capa", decoded)
+    }
+
+    @Test
     fun aFolderThatCannotBeReadGivesNothing() = runTest {
         source.file("raiz/M/background.jpg", "fundo")
         source.revoked += "raiz/M"

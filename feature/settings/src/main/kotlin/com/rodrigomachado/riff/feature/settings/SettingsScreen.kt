@@ -20,6 +20,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -38,13 +39,15 @@ import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
-import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import kotlin.math.roundToInt
 
@@ -126,7 +129,7 @@ fun SettingsContent(
     onDeleteSeparations: () -> Unit = {},
     onAskAlways: (Boolean) -> Unit = {},
     onSeparateOnlyCharging: (Boolean) -> Unit = {},
-    onTrackLook: (TrackLook) -> Unit = {},
+    onTrackLook: (TrackLookChange) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
     queue: QueueUiState = QueueUiState(canWriteToLibrary = true),
@@ -245,7 +248,13 @@ private fun GameTab(
 }
 
 @Composable
-private fun TrackLookTab(settings: Settings, onTrackLook: (TrackLook) -> Unit, onShowChartImage: (Boolean) -> Unit) {
+private fun TrackLookTab(
+    settings: Settings,
+    onTrackLook: (TrackLookChange) -> Unit,
+    onShowChartImage: (Boolean) -> Unit,
+) {
+    // As miniaturas das listas, geradas fora da thread da tela antes de a lista abrir.
+    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { HighwayTexture.prepareAll() } }
     TrackLookSection(settings.trackLook, onTrackLook)
     SwitchRow(
         title = stringResource(R.string.settings_chart_image),

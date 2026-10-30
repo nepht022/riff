@@ -11,6 +11,7 @@ import android.graphics.PorterDuffXfermode
 import androidx.compose.ui.graphics.Color
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import kotlin.random.Random
 
@@ -52,6 +53,26 @@ object HighwayTexture {
 
     private fun remembered(kind: Enum<*>, make: () -> Bitmap): Bitmap = synchronized(made) { made.getOrPut(kind, make) }
 
+    /**
+     * Gera os ladrilhos de [look] (chamar fora da thread da tela): o primeiro quadro da partida só pega o pronto, sem
+     * o engasgo de gerar.
+     */
+    fun prepare(look: TrackLook) {
+        background(look.background)
+        art(look.art)
+    }
+
+    /** Todos os ladrilhos: as listas das Configurações mostram as miniaturas de cada um. */
+    fun prepareAll() {
+        HighwayBackground.entries.forEach(::background)
+        HighwayArt.entries.forEach(::art)
+    }
+
+    fun isPrepared(look: TrackLook): Boolean = synchronized(made) {
+        (look.background == HighwayBackground.STAGE || look.background in made) &&
+            (look.art == HighwayArt.NONE || look.art in made)
+    }
+
     private fun makeArt(kind: HighwayArt): Bitmap {
         val bitmap = Bitmap.createBitmap(WIDTH, DEPTH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -60,12 +81,14 @@ object HighwayTexture {
         HighwayStamps.draw(kind, canvas, ink, holes)
         // Desenhadas opacas e clareadas de uma vez: partes sobrepostas não ficam mais fortes.
         canvas.drawColor(STAMP_ALPHA, PorterDuff.Mode.DST_IN)
+        bitmap.setHasMipMap(true) // perto do horizonte encolhe ~4×: sem mipmap, cintila
         return bitmap
     }
 
     private fun makeBackground(kind: HighwayBackground): Bitmap {
         val bitmap = Bitmap.createBitmap(WIDTH, DEPTH, Bitmap.Config.ARGB_8888)
         HighwayBackgrounds.draw(kind, Canvas(bitmap), Random(SEED))
+        bitmap.setHasMipMap(true) // perto do horizonte encolhe ~4×: sem mipmap, as linhas finas cintilam
         return bitmap
     }
 }
@@ -215,7 +238,8 @@ internal object HighwayBackgrounds {
                 path.lineTo(x, y)
             }
             glow.color = if (k % 2 == 0) 0xFFFF28C8.toInt() else 0xFF28DCFF.toInt()
-            for (dy in intArrayOf(-DEPTH, 0)) {
+            // Uma altura para cima e para baixo: o brilho que passa de qualquer borda reaparece do outro lado.
+            for (dy in intArrayOf(-DEPTH, 0, DEPTH)) {
                 val shifted = Path(path).apply { offset(0f, dy.toFloat()) }
                 canvas.drawPath(shifted, glow)
                 canvas.drawPath(shifted, core)

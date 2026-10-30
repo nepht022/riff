@@ -151,7 +151,7 @@ class SettingsViewModelTest {
         val vm = viewModel()
         val look = TrackLook(HighwayBackground.FLAMES, HighwayArt.STARS, NoteStyle.PICKS, FretStyle.PEDALS)
 
-        vm.setTrackLook(look)
+        vm.setTrackLook { look }
         vm.setShowChartImage(false)
         advanceUntilIdle()
 
@@ -209,5 +209,18 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(false, vm.canWriteToLibrary.value)
+    }
+
+    /** A tela ainda mostrava o visual antigo: a segunda escolha não desfaz a primeira. */
+    @Test
+    fun aQuickSecondChoiceKeepsTheFirst() = runTest {
+        val vm = viewModel()
+
+        vm.setTrackLook { it.copy(background = HighwayBackground.NEON) }
+        vm.setTrackLook { it.copy(art = HighwayArt.STARS) }
+        advanceUntilIdle()
+
+        assertEquals(HighwayBackground.NEON, repository.settings.value.highwayBackground)
+        assertEquals(HighwayArt.STARS, repository.settings.value.highwayArt)
     }
 }
