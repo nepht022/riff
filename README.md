@@ -2,17 +2,16 @@
 
 # Riff
 
-Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não é publicado na Play Store; veja a seção 3 da especificação). As notas vêm de mapas do Clone Hero que você mesmo importa. Há dois jeitos de jogar:
+Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não é publicado na Play Store; veja a seção 3 da especificação). As notas vêm de mapas do Clone Hero que você mesmo importa ou baixa do Encore, e a música vem da pasta do mapa. Se a pasta traz a guitarra separada (ou a IA do Riff a separou), ela some quando você erra e volta quando acerta, como no Guitar Hero; sem ela, a música toca inteira e o acerto fica em silêncio. Ao continuar depois de uma pausa, a pista volta 0,5 s, como uma fita, para você retomar no ritmo.
 
-- **Biblioteca, para jogar:** a música vem da pasta do mapa. Se a pasta traz a guitarra separada, ela some quando você erra e volta quando acerta, como no Guitar Hero. Sem ela, a música toca inteira e o acerto fica em silêncio, como no Spotify. Ao continuar depois de uma pausa, a pista volta 0,5 s, como uma fita, para você retomar no ritmo.
-- **Tocando agora (Spotify), para ouvir e tocar junto:** o Riff acompanha a faixa que está tocando no Spotify e procura o mapa dela na biblioteca. A sincronia é ajustada automaticamente na primeira vez: pelo começo da música no áudio do mapa, sem passar da sobra de duração do áudio do mapa em relação ao Spotify (numa mesma gravação, como os mapas oficiais, dá 0) nem da primeira nota. Você refina na pausa, e o valor fica salvo para a música. Aqui a música segue de onde parou ao continuar e o acerto não faz som. Os botões **⏮ ⏯ ⏭** comandam o próprio Spotify (anterior, tocar/pausar, próxima), antes e depois de escolher o mapa e também na pausa da partida; ali, trocar de música encerra a partida sem salvar o placar; se a música nova tiver **mapa encontrado**, a próxima partida começa direto, na mesma dificuldade (ou pede a dificuldade, se o mapa não tiver a mesma); com **sugestão**, a partida dela abre pausada com **Confirmar mapa e jogar · Escolher outro · Voltar ao menu** (o Spotify segue tocando; se ele passar de música antes, o Riff segue para a nova); sem mapa, volta ao Tocando agora. **Configurações → Spotify → Ao acabar a música:** **Ir direto para a próxima** (padrão) salva o placar sem mostrar o Resultado e segue para a próxima música do mesmo jeito (se as notas acabarem antes da música, espera o Spotify trocar até o fim dela + 10 s); **Mostrar o resultado** vai para o Resultado, como antes. O Tocando agora mostra também a barra de tempo da música, com os botões ⏮ ⏯ ⏭ logo abaixo, e o mapa com Jogar no pé da tela.
+A tela inicial tem **Sozinho** (a Biblioteca), **Sala** (o multiplayer com amigos, em breve) e o **Ranking**, com **Reportar** e **Configurações** nos cantos do topo. Até a versão 0.4.0 havia também um modo que tocava junto com o Spotify; ele saiu na 0.5.0, que prepara o Riff para o Windows e o multiplayer (a 0.4.0 continua nos Releases).
 
 - Especificação: `docs/superpowers/specs/2026-10-05-riff-design.md` (e as especificações de cada etapa na mesma pasta)
 - Planos: `docs/superpowers/plans/`
 - Pendências conhecidas: `docs/pendencias.md`
 
 
-**Instalar:** baixe o `Riff-<versão>.apk` em **Releases** (à direita na página do repositório), abra no celular Android (8 ou mais novo) e permita "instalar apps desconhecidos". Para o modo Spotify, ligue o Riff em "Acesso às notificações" quando o Tocando agora pedir.
+**Instalar:** baixe o `Riff-<versão>.apk` em **Releases** (à direita na página do repositório), abra no celular Android (8 ou mais novo) e permita "instalar apps desconhecidos".
 
 ## Instalar e configurar
 
@@ -21,16 +20,6 @@ Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não �
 - Android Studio (o JBR 21 é usado como JDK) e Android SDK com a plataforma 37
 - Um celular com Android 8 ou mais novo (o desempenho foi medido num Galaxy S25)
 - No WSL, o Gradle roda pelo `./scripts/gw`, que chama o `gradlew.bat` do Windows; no Linux e no macOS, use `./gradlew`
-
-### Spotify: permitir o acesso a notificações
-
-O Riff acompanha o Spotify pela **sessão de mídia do Android** (o mesmo controle de música da tela de bloqueio): nada de SDK, login, Client ID ou cadastro no Dashboard do Spotify, e funciona com conta grátis.
-
-1. Instale o app do Spotify no celular.
-2. No **Tocando agora**, toque em **Permitir** e ligue o **Riff** em "Acesso às notificações". O Riff usa a permissão só para ver a música, a posição e a fila do Spotify e mandar tocar, pausar e pular; ele não lê as notificações.
-3. Dê play numa música no Spotify: ela aparece no Tocando agora.
-
-Sem a permissão, o Tocando agora explica e oferece o modo Biblioteca. Numa conta grátis, um anúncio pausa a partida (ou adia a próxima, no modo contínuo) até acabar; ⏮, ⏭ e "Jogar de novo" seguem os limites do Spotify grátis. Até a versão 0.2.0 o Riff usava o App Remote SDK; os mapas escolhidos e os ajustes por música continuam valendo (a música é reconhecida pelo mesmo `spotify:track:…`).
 
 ### Chave de release
 
@@ -48,7 +37,6 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 1. Suba `versionCode` e `versionName` em `app/build.gradle.kts` (a versão nova só instala por cima de uma mais antiga).
 2. `./scripts/gw :app:assembleRelease` e envie `app/build/outputs/apk/release/app-release.apk` (~190 MB, só celulares ARM, Android 8+). A pessoa precisa permitir "instalar apps desconhecidos" para o app que abrir o arquivo.
 3. Funciona sem nada além do APK: biblioteca, pesquisa no Encore, guitarra separada por IA, ranking e Reportar (os endereços dos scripts vão dentro do APK).
-4. **Spotify:** basta a pessoa ter o app do Spotify (Premium ou grátis) e ligar o Riff em "Acesso às notificações" quando o Tocando agora pedir. Ninguém precisa ser cadastrado.
 
 
 ## Importar mapas
@@ -66,18 +54,8 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 - **Biblioteca → Pesquisar:** digite a música ou o artista. A lista mostra os mapas do Encore (enchor.us), inclusive os oficiais de Rock Band e Guitar Hero, com as dificuldades da guitarra e a marca **Guitarra separada** quando o pacote traz a guitarra à parte. **Baixar** grava o `.sng` em "Baixados pelo Riff", dentro da pasta da biblioteca, e o mapa já entra na lista (**Jogar**). Os que você já tem aparecem como "Já na biblioteca".
 - **Originais | Versões** escolhe entre as gravações originais e covers, remixes, ao vivo e medleys (pelo título). **Só com guitarra separada** procura nas páginas seguintes sozinho até achar 10 mapas ou conferir 100 resultados; **Procurar mais** confere outros 100.
-- **Tocando agora → Pesquisar no Encore** (faixa sem mapa ou só com sugestão): a pesquisa já vem com o artista e o título, os mais parecidos primeiro; o mapa baixado fica casado com a faixa e você volta com **Jogar**.
 - Na primeira vez, o Riff pede para escolher a pasta de novo, agora com permissão de gravar nela (**Permitir**).
 - O pacote vem com o áudio da música (uso pessoal). A API do Encore não é oficial: se ela mudar, a pesquisa avisa que o Riff precisa ser atualizado.
-
-## Mapas da fila do Spotify
-
-- **Configurações → Spotify → Baixar mapas da fila** (desligada de fábrica): enquanto você ouve, o Riff lê a fila do Spotify (pela sessão de mídia, relida a cada mudança) e baixa do Encore os mapas das **duas próximas músicas** e, se faltar, o da **música que está tocando** (inclusive aberta direto no Spotify). A fila da sessão não traz a duração: o mapa baixado vira **MAPA ENCONTRADO** quando a música começa e a duração bate (ou **CONFIRMAR MAPA**, se for outra). A fila baixa também **durante a partida**, um mapa por vez. Ao passar de música, ela chega como **MAPA ENCONTRADO** e a partida dela começa direto; se o mapa ainda estiver baixando, o Tocando agora mostra "Baixando o mapa desta música…" e espera.
-- **Escolha do mapa:** só resultados com semelhança alta (a mesma do "mapa encontrado" automático) e com guitarra; originais antes de covers, remixes e ao vivo; desempate pela guitarra separada e por mais dificuldades. Sem resultado confiável, não baixa nada.
-- **Apagar os que eu não joguei** (ligada): o mapa baixado pela fila some quando a música passa (ou sai da fila) sem você jogar. Jogado, ou baixado na mão, nunca é apagado.
-- **Usar dados móveis** (desligada): sem ela, só baixa no Wi-Fi. **Músicas com mapas já baixados** (quando o mapa da biblioteca é só sugestão): **Baixar nova sugestão** (padrão) ou **Manter o que já tenho**. **Sem mapa com a mesma duração** (o Encore só tem mapas com duração diferente da faixa do Spotify): **Baixar o de duração mais próxima** (padrão; até 1 minuto de diferença ou, sem nenhum assim, um mapa sem duração no Encore; o mapa chega como sugestão, com **CONFIRMAR MAPA**, e substitui uma sugestão da biblioteca menos confiável) ou **Não baixar nenhum**. Quando a fila não consegue um mapa, o **Tocando agora** conta o motivo embaixo de "Nenhum mapa da biblioteca…": não achou no Encore, só com outra duração, a pesquisa falhou ou o download falhou. O motivo também vai para o registro do Android (`adb logcat -s RiffQueue`).
-- Funciona com o Riff à vista e com o "Acesso às notificações" ligado (qualquer tela; em segundo plano, a fila para). **Sem a duração** (a fila não traz), a opção **Baixar o de duração mais próxima** só vale quando a duração já é conhecida. Em rádio ou aleatório, o Spotify pode não mostrar a fila: aí nada é adiantado. Falhas aparecem no logcat com a tag `RiffQueue`.
-- **Privacidade:** o Riff lê a fila do Spotify só para isso; nada é enviado a outro lugar além das pesquisas no Encore.
 
 ## Guitarra separada por IA
 
@@ -100,8 +78,8 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 ## Ranking online
 
 - **Nome de jogador:** na primeira vez que o Riff abre, ele pede o seu nome no ranking (3 a 20 letras, números, espaço, `_` ou `-`), avisando que o nome e as melhores pontuações ficam visíveis para todos. O nome fica com este celular: ninguém mais pode usar ("Rodrigo" e "rodrigo" contam como o mesmo). **Agora não** adia até a próxima abertura. Para trocar: **Configurações → Geral → Nome no ranking** (o antigo fica livre; as suas pontuações acompanham o nome novo).
-- **Envio automático:** ao acabar uma partida que seja a sua melhor naquele mapa e dificuldade em algum número, ela vai sozinha para o ranking — também quando o Resultado é pulado ("Ir direto para a próxima"). O Resultado mostra "Ranking: 3º de 27" e **Ver ranking**. Sem internet, a partida fica na fila e vai quando a conexão voltar. No primeiro nome, os seus melhores já guardados no celular vão uma vez, em lotes de até 50 por pedido.
-- **Tela Ranking** (no topo do Tocando agora e da Biblioteca): as músicas com pontuação (busca por música ou artista) e o placar de cada uma, por dificuldade, ordenado por **Pontos**, **Precisão**, **Combo**, **Perfeitos** ou **Tempo sem errar** (a maior sequência sem erro, em m:ss), do maior para o menor ou ao contrário, com busca por nome e a sua linha em destaque.
+- **Envio automático:** ao acabar uma partida que seja a sua melhor naquele mapa e dificuldade em algum número, ela vai sozinha para o ranking. O Resultado mostra "Ranking: 3º de 27" e **Ver ranking**. Sem internet, a partida fica na fila e vai quando a conexão voltar. No primeiro nome, os seus melhores já guardados no celular vão uma vez, em lotes de até 50 por pedido.
+- **Tela Ranking** (o cartaz da tela inicial): as músicas com pontuação (busca por música ou artista) e o placar de cada uma, por dificuldade, ordenado por **Pontos**, **Precisão**, **Combo**, **Perfeitos** ou **Tempo sem errar** (a maior sequência sem erro, em m:ss), do maior para o menor ou ao contrário, com busca por nome e a sua linha em destaque.
 - **"Mesma música" = mesmo mapa** (as mesmas notas): mapas diferentes da mesma música têm rankings separados.
 - **Onde fica:** um Google Apps Script com uma planilha na conta do dono do app (`scripts/ranking_apps_script.gs`; o passo a passo de publicar está no começo do arquivo). O endereço vai no `local.properties` como `ranking.url=…/exec`; sem ele, o ranking fica desligado. Só o apelido e as pontuações ficam guardados; a chave do celular vai como hash. Para tirar alguém do ranking (pedido pelo Reportar, nome ofensivo), rode `removerJogador("Nome")` no editor do script: apaga o jogador e as pontuações, e o celular dele esquece o nome e não volta sozinho. Apagar só a linha do jogador à mão faz o celular reservar o mesmo nome de novo no próximo envio. Testes do script sem o Google: `node scripts/ranking_apps_script.test.js`.
 - **Jogador apagado da planilha:** no próximo envio, o celular reserva o mesmo nome de novo e manda a partida; se outra pessoa já tiver pego o nome, o app pede um nome novo (a partida espera na fila).
@@ -109,13 +87,13 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 ## Licenças e privacidade
 
-**Configurações → Geral → Licenças e privacidade**: o que o app guarda e envia (ranking, Reportar, Spotify, Encore), como pedir para sair do ranking e as licenças de tudo que vem de fora. A lista das bibliotecas é gerada no build pelo plugin AboutLibraries (`app/build.gradle.kts`); o que não vem do Gradle (modelo Demucs, demucs.onnx, SDK do Spotify, fontes, sons do Freesound, mapas do Encore) está em `feature/licenses/.../AndroidLicenseSource.kt`, com os textos em `feature/licenses/src/main/assets/licencas/`. Ao adicionar algo de fora do Gradle, acrescente nessa lista.
+**Configurações → Geral → Licenças e privacidade**: o que o app guarda e envia (ranking, Reportar, Encore), como pedir para sair do ranking e as licenças de tudo que vem de fora. A lista das bibliotecas é gerada no build pelo plugin AboutLibraries (`app/build.gradle.kts`); o que não vem do Gradle (modelo Demucs, demucs.onnx, fontes, sons do Freesound, mapas do Encore) está em `feature/licenses/.../AndroidLicenseSource.kt`, com os textos em `feature/licenses/src/main/assets/licencas/`. Ao adicionar algo de fora do Gradle, acrescente nessa lista.
 
 ## Jogar
 
-- **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
-- **Barra de progresso:** a linha fina no topo da partida mostra quanto da música já passou (até a última nota mais a folga do fim, quando vem o resultado), na Biblioteca e no Spotify.
-- **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha); continuar com a ligação ainda em andamento pausa de novo e a pausa explica que o áudio está ocupado. No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
+- **Começar:** na tela inicial, **Sozinho** abre a Biblioteca; toque numa música e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
+- **Barra de progresso:** a linha fina no topo da partida mostra quanto da música já passou (até a última nota mais a folga do fim, quando vem o resultado).
+- **Pausar:** botão **Pausar** ou o gesto de voltar. A partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado; continuar com a ligação ainda em andamento pausa de novo e a pausa explica que o áudio está ocupado. No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquele mapa.
 - **Calibração** (Configurações → Jogo → Calibrar atraso do áudio): toque junto com as batidas para medir o atraso do seu fone ou alto-falante. Útil com fone Bluetooth; com o alto-falante do celular costuma ser melhor deixar em 0 (**Zerar**).
 - **Configurações**, em abas (abre sempre em **Geral**):
   - **Geral:** **Idioma** (Português, o padrão, ou English: troca na hora; no Android 13 ou mais novo também fica em Configurações do celular → Apps → Riff → Idioma) e sons do menu (liga e desliga).
@@ -135,9 +113,9 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 
 | Camada | O que cobre | Onde |
 |---|---|---|
-| Unidade (JVM) | motor do jogo (julgamento, combo, pontuação, relógio), leitura de mapas (`.chart`, `.mid`, `.sng`, `song.ini`), casamento faixa × mapa, fila do Spotify, ranking | `core/*/src/test` |
-| Robolectric | ViewModels, repositórios, players de áudio, sessão de mídia do Spotify (com uma sessão falsa), Room | `core/*/src/test`, `feature/*/src/test` |
-| Interface (Compose) | cada tela e cada estado (sem permissão, sem mapa, anúncio, pausa, erros), cliques, sons do menu, textos em pt e en | `feature/*/src/test/*ContentTest.kt` |
+| Unidade (JVM) | motor do jogo (julgamento, combo, pontuação, relógio), leitura de mapas (`.chart`, `.mid`, `.sng`, `song.ini`), fila de separações, ranking | `core/*/src/test` |
+| Robolectric | ViewModels, repositórios, players de áudio, WorkManager da separação, Room | `core/*/src/test`, `feature/*/src/test` |
+| Interface (Compose) | cada tela e cada estado (sem pasta, sem mapa, separando, pausa, áudio ocupado, erros), cliques, sons do menu, textos em pt e en | `feature/*/src/test/*ContentTest.kt` |
 | Screenshots (Roborazzi) | o visual de cada tela comparado pixel a pixel com a referência | `*/src/test/screenshots` |
 | Migração do banco | cada versão do esquema do Room migra sem perder dados (casamentos, ajustes, recordes) | `core/database/src/test/.../MigrationTest.kt` |
 | Golden da IA | a separação da guitarra (Demucs em ONNX) reproduz a saída de referência | `core/separation/src/test` |
@@ -195,15 +173,14 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 
 | Módulo | Conteúdo |
 |---|---|
-| `:app` | Activity, Application com Hilt e navegação Tocando agora → Jogo → Resultado (e a Biblioteca); Baseline Profile em `src/release/generated/baselineProfiles` |
+| `:app` | Activity, Application com Hilt e navegação tela inicial → Biblioteca → Jogo → Resultado; Baseline Profile em `src/release/generated/baselineProfiles` |
 | `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista (com `StageCache`, sem alocar por quadro), com screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
-| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`), e o casamento entre faixa do Spotify e mapa |
+| `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`) |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
-| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), detecção do começo da música e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
-| `:core:database` | Room: mapas, dificuldades, casamentos com faixas do Spotify, ajustes de sincronia e recordes (esquemas em `schemas/`) |
+| `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
+| `:core:database` | Room: mapas, dificuldades, ajustes de sincronia, recordes, separações e filas (esquemas em `schemas/`) |
 | `:core:datastore` | Preferências do jogador e pasta da biblioteca |
-| `:core:spotify` | Spotify pela sessão de mídia do Android ("Acesso às notificações"): estado do player, comandos, fila e o player da partida sobre o Spotify |
 | `:core:data` | Repositório de mapas, acesso a pastas por SAF (leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
 | `:core:encore` | Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
 | `:core:separation` | Guitarra separada por IA: o modelo htdemucs_6s em ONNX (`scripts/exportar_modelo_ia.sh`), a STFT e a separação por trechos portadas do demucs.onnx, a decodificação, a gravação em `.m4a` e o trabalho em segundo plano (WorkManager) |
@@ -212,11 +189,11 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
 | `:feature:calibration` | Calibração do atraso do áudio: metrônomo, toques, resultado e Zerar |
-| `:feature:settings` | Configurações em abas: idioma, nome no ranking, sons, jogo, visual da pista, guitarra IA e Spotify |
+| `:feature:settings` | Configurações em abas: idioma, nome no ranking, sons, jogo, visual da pista e guitarra IA |
 | `:feature:ranking` | Pedido do nome, músicas com pontuação e placar do ranking online |
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
-| `:feature:nowplaying` | Tela inicial "Tocando agora": faixa atual, mapa casado, confirmar ou escolher o mapa e jogar |
+| `:feature:home` | Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots
@@ -272,8 +249,8 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 
 ## Status
 
-O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify, guitarra separada, configurações, calibração e polimento.
+O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify (até a 0.4.0), guitarra separada, configurações, calibração e polimento. A 0.5.0 tira o Spotify e abre na tela inicial nova; os próximos passos são o Riff no Windows (teclado e controle) e o multiplayer por código de sala.
 
-Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: o Riff para Windows.
+Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. As ideias para depois também estão lá.
 
 Cada mudança no uso do app atualiza a seção correspondente deste README.

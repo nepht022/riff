@@ -4,7 +4,7 @@ Decisões adiadas de propósito, com o motivo e quando retomar.
 
 ## Ideias para depois
 
-- **Riff para Windows (PC):** app nativo com Compose Multiplatform Desktop, reaproveitando o motor do jogo, a leitura dos mapas, o desenho da pista, o ranking e a pesquisa no Encore (o projeto vira Kotlin Multiplatform: código comum + Android + Windows). **Controles:** teclado (como o Clone Hero, F1 a F5 e a palheta) e guitarra USB/controle (mapeamento de botões nas Configurações). **Spotify:** pelos controles de mídia do Windows (`GlobalSystemMediaTransportControlsSessionManager`), sem cadastro, como a sessão de mídia no Android; sem o `spotify:track:`, a música é reconhecida por título, artista e duração. Refazer: áudio (decodificação e saída sem MediaCodec), acesso a pastas e a ligação das peças (Hilt só existe no Android). **Primeiro passo:** um teste rápido que lê o Spotify para PC e mede a precisão da posição, antes de investir no porte. No PC já existe o Clone Hero (gratuito): o diferencial seria o modo Spotify.
+- **Riff para Windows (PC):** é o projeto 2, decidido em 2026-10-30 (depois da 0.5.0 sem o Spotify, e antes do multiplayer por código de sala): app nativo com Compose Multiplatform Desktop, reaproveitando o motor do jogo, a leitura dos mapas, o desenho da pista, o ranking e a pesquisa no Encore (o projeto vira Kotlin Multiplatform). **Controles:** teclado (F1 a F5 e a palheta, teclas configuráveis) e controle de videogame, com a opção "Tocar sem palheta". Refazer: áudio (decodificação e saída sem MediaCodec), acesso a pastas e a ligação das peças (Hilt só existe no Android).
 
 ## Pontos menores em aberto (revisões de 2026-10-09 a 2026-10-13)
 
@@ -54,38 +54,12 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
   - O script registra em Execuções o assunto do email, que traz o começo do texto do relato; registrar só tipo e categoria (minimização de dados, LGPD).
   - O logcat do app guarda o começo da resposta do servidor; melhor só o `motivo` (ou "resposta não é do script"). Uma falha que não seja de rede passa sem linha no log.
   - Permissão `script.scriptapp` no manifesto do script provavelmente sobra (o script não usa `ScriptApp`); tirar, rodar `testarEnvio` e publicar de novo.
-  - Campo de categoria no leitor de tela: escolhido, lê só o nome ("Spotify, lista"), sem "Categoria" nem que é obrigatório; a seta "▾" é lida; nada diz por que o Enviar está desligado.
+  - Campo de categoria no leitor de tela: escolhido, lê só o nome ("Encore, lista"), sem "Categoria" nem que é obrigatório; a seta "▾" é lida; nada diz por que o Enviar está desligado.
   - O auxiliar dos testes do ViewModel escolhe uma categoria sempre (esconde a exigência); preferir parâmetro explícito.
 
 ## Pontos menores da barra de progresso (revisão de 2026-10-17)
 
-- **Áudio que acaba antes da última nota:** a partida também termina quando a música acaba (`player.isCompleted`); se o áudio for mais curto que o mapa (outra edição da música no Spotify), o resultado vem com a barra incompleta. Em músicas normais a diferença é de 1–2%. Corrigir exige a duração no `SongPlayer`.
 - **Idiomas da direita para a esquerda:** a barra sempre enche da esquerda (irrelevante em pt/en).
-
-## Pontos menores dos controles do Spotify (revisão de 2026-10-17)
-
-- **Continuar e trocar no mesmo instante:** ⏯ seguido de ⏭ antes de o menu sumir pode deixar a música nova pausada (janela de um quadro).
-- **Sem confirmação:** um toque sem querer em ⏭ na pausa perde a partida (combinado assim; avaliar se incomodar).
-- **Testes:** falta o caso sem conexão.
-- **Revisão do layout e do começo automático (2026-10-17):**
-  - Se o Android fechar o app nos ~6 s de espera pela música nova, o pedido se perde (fica no Tocando agora, sem partida).
-  - O tempo da música avança de 500 em 500 ms, então os segundos às vezes atrasam até meio segundo; os screenshots usam a música tocando e dependem do relógio do Robolectric (usar pausada).
-  - Faltam testes da espera pela tela voltar à frente e da navegação que deixa o pedido no Tocando agora.
-  - O começo automático e o ⏮ da partida foram conferidos no celular pelo usuário (2026-10-17).
-
-## Pontos menores dos mapas da fila do Spotify (revisão de 2026-10-17)
-
-- **Mesmo mapa já na biblioteca com outros dados:** a fila poderia baixar de novo e marcar como apagável o mapa que já era seu (improvável; conferir `EncoreDownloads.chartIdOf(md5)` antes).
-- **Rede conferida só antes de baixar:** trocar de Wi-Fi para dados móveis durante o download não é percebido.
-- **App fechado logo depois de importar:** o registro da fila vem depois da importação; nesse intervalo o mapa vira normal para sempre.
-
-## Spotify contínuo (revisão final, 2026-10-17)
-
-- Confirmar do painel não reconfere a faixa tocando no instante do toque (depende do vigia, que normalmente já reagiu).
-- Confirmar do painel grava `confidence = 1`, `isManual = true`; o do Tocando agora grava a confiança da sugestão e `isManual = false` (o `matchFor` não lê `isManual`).
-- Corrida estreita: o preparo termina entre a emissão "sem mapa" e a checagem do preparo, e a decisão usa o casamento antigo.
-- Prazo do fim da música superestimado (não soma o tempo desde o último estado do Spotify); só deixa a espera mais longa.
-- Abrir a partida de uma sugestão já marca o mapa da fila como jogado: Voltar/Escolher outro deixam esse mapa fora da limpeza automática.
 
 ## Ranking online (revisão final, 2026-10-17)
 
@@ -104,28 +78,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Quem foi tirado do ranking vê de novo o pedido do nome (como numa instalação nova; "Agora não" vale até reabrir o app).
 - Leitura do ranking (`musicas`, `placar`) continua aberta e sem limite, e o script não confere se uma pontuação é plausível (vale para quem forjar pedidos).
 
-## Spotify pela sessão de mídia (revisão final, 2026-10-19)
-
-- `playback` e `adPlaying` são dois `stateIn` do mesmo estado: o filtro de anúncio no `NowPlayingViewModel` (init) pode ver um antes do outro (impacto baixo; a espera da próxima usa `combine`).
-- "Não deu para reconhecer a música no Spotify" (risco 4 da spec) não existe: `MEDIA_ID` ausente aparece como "Nada tocando". As Configurações não avisam quando a fila está ligada sem a permissão.
-- A sincronia depois de um avanço (seek) não foi medida contra o SDK (o adb não manda seek).
-
-## Ajuste inicial de sincronia (revisão final, 2026-10-19)
-
-- Mapa oficial com silêncio no fim além de 300 ms: o ajuste cai para a sobra (ex.: 900 ms em vez de 0), melhor que os 3,6 s de antes mas não zero. Medir onde a música termina no áudio do mapa (últimos 10–15 s) resolveria; falta conferir com arquivos reais.
-- O teto da primeira nota usa a dificuldade jogada, mas o ajuste salvo vale para todas: a primeira dificuldade jogada decide o valor.
-- A ligação no `GameplayViewModel` (duração do Spotify só se a faixa for a mesma) não tem teste; a duração é lida depois da análise (se o Spotify trocar de música durante ela, vale a regra antiga).
-- `PcmSource.durationMs` em mp3 VBR sem cabeçalho é estimativa do Android, não metadado.
-- Ajustes já salvos (ex.: +3,6 s de mapas oficiais) não mudam: zerar na pausa uma vez.
-
-## Fila e Spotify (revisão final, 2026-10-19)
-
-- `cancelPendingCommands()` é global no remote: soltar qualquer player cancela o ⏮ pendente (hoje a ordem de soltar e começar não causa problema).
-- A limpeza devolve também as músicas cujo mapa não conseguiu apagar (só esquece a decisão; não baixa de novo, porque o mapa continua lá).
-- Uma música que entra e sai da fila várias vezes (edições, aleatório, playlist curta repetindo) é apagada e baixada a cada vez.
-- Na pausa, ⏮/⏭ continuam escondidos depois de o Spotify voltar na mesma música até tocar Continuar; um episódio de podcast também conta como "Spotify perdido".
-- "Rede" (NETWORK) no download inclui falha ao gravar na pasta e erro HTTP do Encore; esses também são tentados (até 3 vezes).
-
 ## Fila de separações (revisão final, 2026-10-30)
 
 - **`REPLACE` com estado atrasado:** trocar "Separar só carregando" no instante em que o trabalho passa de esperando para rodando cancela o que começou e começa outro (dois modelos na memória por alguns segundos). Raro.
@@ -142,7 +94,6 @@ Os pontos menores restantes foram revistos. Os resolvidos saíram da lista; os q
 
 - `tools:targetApi` na tag `<application>` inteira; nomes completos no `Fakes.kt` de settings.
 - Área de toque das abas das Configurações perto de 47 dp (a aba "Guitarra IA" com texto curto é a mais estreita).
-- `AndroidSpotifySession`: nada força os avisos só na thread principal; `publish()` lê a fila pelo binder a cada aviso.
 - Teste da música atual × limite de 3 mapas da fila.
 - "Espere alguns minutos" (Reportar) continua na tela depois dos 5 minutos se nada for editado.
 
@@ -153,6 +104,5 @@ Os que ficam de propósito:
 - **Exigem publicar o Apps Script de novo** (ação do usuário): o assunto do email e a chave no log de erro do script, a permissão `script.scriptapp`, leitura aberta do ranking, plausibilidade das pontuações.
 - **Escolhas combinadas:** debug assinado com a chave do release, ⏭ na pausa sem confirmação, "Padrão do sistema" voltando a Português.
 - **Logs da partida indisponível:** os testes do ViewModel da partida rodam sem Android; registrar no logcat exigiria trocá-los por Robolectric (custo maior que o ganho).
-- **Configurações sem o aviso de "Acesso às notificações" para a fila:** o Tocando agora já pede a permissão sempre que o modo Spotify é usado.
-- **Sincronia de mapa oficial com silêncio no fim** (ajuste que cai para a sobra, ex. 900 ms): a medir com mapas oficiais reais no celular antes de mudar; detectar o fim da música no áudio do mapa pode piorar os casos em que o Spotify tem o mesmo silêncio.
 
+As pendências que eram só do modo Spotify (controles, fila de mapas, Spotify contínuo, sessão de mídia, ajuste inicial de sincronia) saíram junto com ele na 0.5.0.

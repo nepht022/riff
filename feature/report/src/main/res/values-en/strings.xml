@@ -26,7 +26,6 @@
     <string name="report_category_slow">Game slow or stuttering</string>
     <string name="report_category_sync">Sound or notes out of sync</string>
     <string name="report_category_chart">Wrong map or notes</string>
-    <string name="report_category_spotify">Spotify</string>
     <string name="report_category_library">Library and importing maps</string>
     <string name="report_category_encore">Encore search and download</string>
     <string name="report_category_ai">AI separated guitar</string>

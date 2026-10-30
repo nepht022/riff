@@ -19,7 +19,6 @@ enum class ReportCategory(val kind: ReportKind, val label: String, @StringRes va
     SLOW(ReportKind.PROBLEM, "Jogo lento ou engasgando", R.string.report_category_slow),
     SYNC(ReportKind.PROBLEM, "Som ou notas fora de sincronia", R.string.report_category_sync),
     CHART(ReportKind.PROBLEM, "Mapa ou notas erradas", R.string.report_category_chart),
-    SPOTIFY(ReportKind.PROBLEM, "Spotify", R.string.report_category_spotify),
     LIBRARY(ReportKind.PROBLEM, "Biblioteca e importar mapas", R.string.report_category_library),
     ENCORE(ReportKind.PROBLEM, "Pesquisa e download do Encore", R.string.report_category_encore),
     AI(ReportKind.PROBLEM, "Guitarra separada por IA", R.string.report_category_ai),
