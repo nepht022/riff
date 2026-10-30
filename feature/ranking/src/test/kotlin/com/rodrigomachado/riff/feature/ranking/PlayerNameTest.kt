@@ -147,4 +147,18 @@ class PlayerNameTest {
 
         composeRule.onNodeWithText("Agora não").assertDoesNotExist()
     }
+
+    /** Tocar fora cancela a troca: a próxima abertura começa do nome gravado, sem o erro de antes. */
+    @Test
+    fun cancellingTheRenameForgetsWhatWasTypedAndTheError() = runTest {
+        ranking.player.value = Player("Rodrigo", "k")
+        val vm = PlayerNameViewModel(ranking)
+        vm.onName("ab")
+        vm.save()
+
+        vm.cancel()
+
+        assertEquals("Rodrigo", vm.state.value.name)
+        assertEquals(null, vm.state.value.error)
+    }
 }
