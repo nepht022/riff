@@ -155,7 +155,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   node scripts/ranking_apps_script.test.js
   ```
 
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os screenshots não são comparados no CI (fontes desenhadas de outro jeito no Linux; veja [Screenshots](#screenshots)).
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots, Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.
 
 ### Processo de cada mudança
 
@@ -225,7 +225,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 ./scripts/gw verifyRoborazziDebug   # compara com as referências
 ```
 
-A comparação de screenshots é local: rode o `verifyRoborazziDebug` antes de commitar mudanças de UI. O CI não compara as imagens, porque o Robolectric desenha as fontes de forma diferente no Linux e no Windows (veja `docs/pendencias.md`).
+Rode o `verifyRoborazziDebug` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
 
 ### Desempenho
 

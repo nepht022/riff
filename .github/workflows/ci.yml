@@ -25,5 +25,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v5
-      - name: Lint, testes e build
-        run: ./gradlew detekt lintDebug test koverVerify assembleDebug
+      # Os screenshots são comparados exatos: no Linux o Robolectric desenha as 55 telas iguais às referências
+      # gravadas no Windows (conferido em 2026-10-30).
+      - name: Lint, testes, screenshots e build
+        run: ./gradlew detekt lintDebug test verifyRoborazziDebug koverVerify assembleDebug
