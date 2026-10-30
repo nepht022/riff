@@ -9,7 +9,7 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
 
 ## 2. Decisões do usuário
 
-- **Pergunta + seleção:** com uma separação em andamento, a pergunta troca "Separar" por **"Pôr na fila"**; e a seleção da Biblioteca (a mesma do Excluir) ganha **"Separar (n)"** para pôr várias de uma vez.
+- **Pergunta + seleção:** com uma separação em andamento, a pergunta troca "Separar" por **"+ Fila"**; e a seleção da Biblioteca (a mesma do Excluir) ganha **"Separar (n)"** para pôr várias de uma vez.
 - **"Separar só carregando"** nas Configurações, desligado de fábrica. Ligado, a fila espera o carregador.
 - **Painel com a lista:** a atual com o progresso e "Cancelar"; as da fila embaixo, cada uma com ✕; "Cancelar todas". O ícone mostra quantas faltam.
 
@@ -34,7 +34,7 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
 
 ### 4.1 Pergunta "Separar a guitarra com IA?"
 - Sem separação em andamento: como hoje ("Sem separar" / "Separar").
-- Com separação em andamento (ou fila não vazia): o texto diz **"Já tem uma separando: esta entra na fila."** e os botões são "Sem separar" / **"Pôr na fila"**. "Sem separar" continua não guardando a recusa nesse caso (a pergunta volta da próxima vez).
+- Com separação em andamento (ou fila não vazia): o texto diz **"Já tem uma separando: esta entra na fila."** e os botões são "Sem separar" / **"+ Fila"**. "Sem separar" continua não guardando a recusa nesse caso (a pergunta volta da próxima vez).
 - A música já na fila não é perguntada de novo (como a que está separando hoje).
 
 ### 4.2 Seleção da Biblioteca
@@ -95,7 +95,7 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
 - `MigrationTest`: 11 → 12.
 - Laço do trabalho: separa em ordem, tira da fila ao terminar, falha não para a fila, cancelar a atual segue a fila, fila vazia termina.
 - Scheduler: `APPEND_OR_REPLACE`, restrição de carregador pela opção, `REPLACE` ao mudar a opção com a fila parada.
-- Biblioteca: "Pôr na fila" com uma em andamento; "Separar (n)" conta só as elegíveis e põe na ordem; música na fila não é perguntada.
+- Biblioteca: "+ Fila" com uma em andamento; "Separar (n)" conta só as elegíveis e põe na ordem; música na fila não é perguntada.
 - Painel e ícone: número, lista com ✕, Cancelar, Cancelar todas, "Esperando o carregador" (testes de tela e screenshot).
 - Configurações: o interruptor grava a opção.
 - Aceite no celular: pôr 3 músicas pela seleção, tirar uma, cancelar a atual, "Separar só carregando" com o celular fora e dentro da tomada.

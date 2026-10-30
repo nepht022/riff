@@ -29,7 +29,7 @@ Spec: `docs/superpowers/specs/2026-10-29-fila-separacoes-design.md`. TDD em cada
 - `Settings.separateOnlyCharging` (falso), `RiffPreferences`, `SettingsViewModel`, interruptor na seção da IA (pt e en).
 
 ## Tarefa 7 — Biblioteca
-- Pergunta: ocupado = separando **ou** fila não vazia → texto "Já tem uma separando: esta entra na fila." e botão "Pôr na fila"; música na fila não é perguntada.
+- Pergunta: ocupado = separando **ou** fila não vazia → texto "Já tem uma separando: esta entra na fila." e botão "+ Fila"; música na fila não é perguntada.
 - Seleção: "Separar (n)" conta as elegíveis (sem `separateGuitar`, fora de `aiSeparated`, fora da fila e da atual); põe na ordem da lista, sai da seleção, pede a permissão de notificação.
 - Excluir o mapa que separa: `cancelCurrent()`.
 

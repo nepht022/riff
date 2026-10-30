@@ -378,12 +378,12 @@ class LibraryContentTest {
 
         composeRule.onNodeWithText("Já tem uma separando: esta entra na fila.").assertExists()
         composeRule.onNodeWithText("Separar").assertDoesNotExist()
-        composeRule.onNodeWithText("Pôr na fila").performClick()
+        composeRule.onNodeWithText("+ Fila").performClick()
 
         assertEquals(listOf("separate"), events)
     }
 
-    /** No celular o diálogo é estreito: "Pôr na fila" saía cortado ("Pôr na"). Os botões quebram linha inteiros. */
+    /** No celular o diálogo é estreito: o terceiro botão saía cortado ("Pôr na"). Nenhum texto de botão é cortado. */
     @Test
     @org.robolectric.annotation.Config(qualifiers = "pt-rBR-w300dp-h640dp-xhdpi")
     // Com os gráficos nativos, o texto é medido de verdade.
@@ -398,7 +398,7 @@ class LibraryContentTest {
             ),
         )
 
-        for (label in listOf("Sem separar", "Pôr na fila", "Voltar")) {
+        for (label in listOf("Sem separar", "+ Fila", "Voltar")) {
             val node = composeRule.onAllNodesWithText(label).onLast().fetchSemanticsNode()
             val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
             node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
@@ -428,7 +428,7 @@ class LibraryContentTest {
         )
 
         composeRule.onNodeWithText("A fila de separação está esperando: esta entra no fim.").assertExists()
-        composeRule.onNodeWithText("Pôr na fila").assertExists()
+        composeRule.onNodeWithText("+ Fila").assertExists()
     }
 
     @Test

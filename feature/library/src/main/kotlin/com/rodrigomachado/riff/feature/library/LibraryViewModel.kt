@@ -74,7 +74,7 @@ data class SeparationAsk(
     val title: String,
     val difficulty: Difficulty,
     val lowMemory: Boolean,
-    /** Já há separação: "Separar" vira "Pôr na fila". */
+    /** Já há separação: "Separar" vira "+ Fila". */
     val busy: Boolean = false,
     /** Ocupado só pela fila esperando (o carregador, por exemplo), sem nenhuma separando agora. */
     val queueWaiting: Boolean = false,
@@ -206,7 +206,7 @@ class LibraryViewModel @Inject constructor(
         return audio != null && audio !is ChartAudio.Stems
     }
 
-    /** "Separar" ou, com outra separando, "Pôr na fila": as duas põem a música na fila. */
+    /** "Separar" ou, com outra separando, "+ Fila": as duas põem a música na fila. */
     fun onSeparate() {
         val ask = promptState.value.prompt ?: return
         scheduler.enqueue(listOf(QueuedSeparation(ask.chartId, ask.title)))
