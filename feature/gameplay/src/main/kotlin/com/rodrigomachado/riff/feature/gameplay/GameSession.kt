@@ -38,6 +38,7 @@ class GameSession(
     private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
     private val lastNoteEndMs = engine.notes.maxOfOrNull { it.timeMs + it.sustainMs } ?: 0L
+    private val endMs = lastNoteEndMs + END_GRACE_MS
     private var lastSyncAt = NEVER
     private var missesHeard = 0
     private var lastJudgmentAt = NEVER
@@ -70,8 +71,6 @@ class GameSession(
 
     /** Quanto da partida já passou, de 0 a 1: enche quando vem o resultado (nas duas origens de música). */
     val progress: Float get() = (songTimeMs.toFloat() / endMs).coerceIn(0f, 1f)
-
-    private val endMs = lastNoteEndMs + END_GRACE_MS
 
     fun start() {
         player.play()

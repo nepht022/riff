@@ -327,6 +327,7 @@ private fun PauseOverlay(
                 onPrevious = { onChangeSong(false) },
                 onPlayPause = onResume,
                 onNext = { onChangeSong(true) },
+                inMatch = true,
             )
         }
         SyncAdjuster(state.songOffsetMs, onAdjustOffset)

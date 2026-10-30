@@ -84,6 +84,18 @@ class GameStageTest {
         assertTrue(session.isPressed(4))
     }
 
+    /** A barra de progresso fica no topo da pista, centrada, com a margem da tela dos lados. */
+    @Test
+    fun theProgressBarSpansTheTopOfTheStage() {
+        show()
+
+        val stage = composeRule.onNodeWithTag(GameplayTestTags.STAGE).fetchSemanticsNode().boundsInRoot
+        val bar = composeRule.onNodeWithTag(GameplayTestTags.PROGRESS).fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertEquals(stage.center.x, bar.center.x, 1f)
+        org.junit.Assert.assertTrue(bar.width > stage.width * 0.8f)
+        org.junit.Assert.assertTrue(bar.top < stage.top + 16f)
+    }
+
     @Test
     fun thePauseButtonStaysInTheCenterWhateverTheScoreWidth() {
         show()

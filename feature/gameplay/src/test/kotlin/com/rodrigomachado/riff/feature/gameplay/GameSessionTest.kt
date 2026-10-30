@@ -33,7 +33,27 @@ class GameSessionTest {
 
     @Test
     fun aMatchWithoutNotesHasNoProgressToShow() {
-        assertEquals(0f, session().progress, 0.001f)
+        val session = session()
+        assertEquals(0f, session.progress, 0.001f)
+
+        player.positionMs = 5_000
+        time.now = SYNC
+        session.tick()
+        assertEquals(1f, session.progress, 0.001f) // sem notas, o fim é só a folga: já passou
+    }
+
+    /** Uma edição mais curta da música (Spotify) acaba antes da última nota: a partida acaba junto. */
+    @Test
+    fun anAudioThatEndsEarlyEndsTheMatch() {
+        val session = session(note(1_000), note(60_000))
+        player.positionMs = 30_000
+        time.now = SYNC
+        session.tick()
+        assertFalse(session.isFinished)
+
+        player.isCompleted = true
+
+        assertTrue(session.isFinished)
     }
 
     @Test
@@ -243,11 +263,13 @@ class GameSessionTest {
         assertFalse(player.isPlaying) // a música espera a fita voltar
         assertFalse(session.isPaused) // e não é uma pausa (sem menu)
         assertEquals(30_000L, session.tick())
+        val before = session.progress
         time.now += GameSession.REWIND_ANIMATION_MS / 2
         val halfway = session.tick()
         assertTrue(halfway in 29_501L..29_999L) // volta aos poucos, sem pular
         time.now += GameSession.REWIND_ANIMATION_MS / 2
         assertEquals(29_500L, session.tick())
+        assertTrue(session.progress < before) // a barra recua junto com a pista
         assertTrue(player.isPlaying)
         time.now += 100
         assertEquals(29_600L, session.tick())
