@@ -371,12 +371,18 @@ internal fun SwitchRow(
             checked = checked,
             onCheckedChange = if (sound == null) onChange else withMenuSound(sound, onChange),
             enabled = enabled,
+            // Desligado, as cores ficam as mesmas: quem esmaece é a linha inteira (senão esmaecia duas vezes).
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,
                 uncheckedThumbColor = RiffColors.PaperDim,
                 uncheckedTrackColor = RiffColors.StageBlack,
                 uncheckedBorderColor = RiffColors.PaperDim,
+                disabledCheckedThumbColor = RiffColors.Paper,
+                disabledCheckedTrackColor = RiffColors.TourRed,
+                disabledUncheckedThumbColor = RiffColors.PaperDim,
+                disabledUncheckedTrackColor = RiffColors.StageBlack,
+                disabledUncheckedBorderColor = RiffColors.PaperDim,
             ),
             modifier = Modifier.testTag(tag),
         )
