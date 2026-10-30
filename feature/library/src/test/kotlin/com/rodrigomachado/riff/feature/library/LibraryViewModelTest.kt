@@ -9,6 +9,7 @@ import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -251,30 +252,58 @@ class LibraryViewModelTest {
         vm.onDifficultyChosen(song, Difficulty.EXPERT)
         advanceUntilIdle()
 
+        assertEquals(false, vm.uiState.value.prompt?.busy)
+
         vm.onSeparate()
 
-        assertEquals(listOf("m"), scheduler.started)
+        assertEquals(listOf("m"), scheduler.enqueued)
         assertNull(vm.uiState.value.prompt)
         assertNull(vm.uiState.value.play)
     }
 
     @Test
-    fun aSecondSeparationSaysOneIsRunning() = runTest {
+    fun withOneSeparatingThePromptPutsTheSongInTheQueue() = runTest {
         probe.audio["m"] = ChartAudio.Single("u/song.opus")
-        scheduler.start("outra", "Outra")
+        scheduler.running("outra")
         val vm = viewModel()
         vm.onDifficultyChosen(song, Difficulty.EXPERT)
         advanceUntilIdle()
 
+        assertEquals(true, vm.uiState.value.prompt?.busy)
         vm.onSeparate()
+
+        assertEquals(listOf("m"), scheduler.enqueued)
+        assertNull(vm.uiState.value.prompt)
+    }
+
+    @Test
+    fun withAQueueWaitingThePromptAlsoSaysItGoesToTheQueue() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.queue.value = listOf(QueuedSeparation("outra", "Outra"))
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
 
         assertEquals(true, vm.uiState.value.prompt?.busy)
     }
 
     @Test
+    fun aSongAlreadyInTheQueuePlaysWithoutAsking() = runTest {
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.queue.value = listOf(QueuedSeparation("m", "Música"))
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
     fun theSongBeingSeparatedPlaysWholeWithoutAsking() = runTest {
         probe.audio["m"] = ChartAudio.Single("u/song.opus")
-        scheduler.start("m", "Música")
+        scheduler.running("m")
         val vm = viewModel()
 
         vm.onDifficultyChosen(song, Difficulty.EXPERT)
@@ -316,11 +345,10 @@ class LibraryViewModelTest {
     @Test
     fun playingFromABusyPromptDoesNotRememberADecline() = runTest {
         probe.audio["m"] = ChartAudio.Single("u/song.opus")
-        scheduler.start("outra", "Outra")
+        scheduler.running("outra")
         val vm = viewModel()
         vm.onDifficultyChosen(song, Difficulty.EXPERT)
         advanceUntilIdle()
-        vm.onSeparate()
 
         vm.onPlayWithoutSeparating()
         advanceUntilIdle()
@@ -458,7 +486,7 @@ class LibraryViewModelTest {
     @Test
     fun deletingTheSongBeingSeparatedStopsTheSeparation() = runTest {
         libraryWith(at("a", "raiz/A"))
-        scheduler.start("a", "Música a")
+        scheduler.running("a")
         val vm = viewModel()
         vm.onDeleteRequested(listOf("a"))
         advanceUntilIdle()
@@ -467,5 +495,38 @@ class LibraryViewModelTest {
         advanceUntilIdle()
 
         assertTrue(scheduler.cancelled)
+    }
+
+    @Test
+    fun separatingTheSelectionQueuesOnlyTheSongsThatNeedItInListOrder() = runTest {
+        libraryWith(
+            at("a", "raiz/A"),
+            at("b", "raiz/B").copy(separateGuitar = true),
+            at("c", "raiz/C"),
+            at("d", "raiz/D"),
+            at("e", "raiz/E"),
+        )
+        separations.separatedIds.value = setOf("c")
+        scheduler.queue.value = listOf(QueuedSeparation("d", "Música d"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        listOf("e", "d", "c", "b", "a").forEach(vm::onToggleSelected)
+
+        assertEquals(2, vm.uiState.value.separableSelected)
+        vm.onSeparateSelected()
+
+        assertEquals(listOf("a", "e"), scheduler.enqueued)
+        assertFalse(vm.uiState.value.deletion.selecting)
+    }
+
+    @Test
+    fun theSongBeingSeparatedDoesNotCountForTheSelection() = runTest {
+        libraryWith(at("a", "raiz/A"))
+        scheduler.running("a")
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("a")
+
+        assertEquals(0, vm.uiState.value.separableSelected)
     }
 }

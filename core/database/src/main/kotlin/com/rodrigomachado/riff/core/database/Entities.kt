@@ -111,3 +111,10 @@ data class QueueDownloadEntity(
     val downloadedAtEpochMs: Long,
     val played: Boolean,
 )
+
+/** Música esperando a vez de ter a guitarra separada pela IA ([position] crescente); sai ao terminar ou com o mapa. */
+@Entity(
+    tableName = "separation_queue",
+    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
+)
+data class SeparationQueueEntity(@PrimaryKey val chartId: String, val title: String, val position: Long)

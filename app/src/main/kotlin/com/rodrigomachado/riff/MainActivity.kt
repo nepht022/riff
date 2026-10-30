@@ -91,8 +91,14 @@ class MainActivity : ComponentActivity() {
 
 private fun separationControls(scheduler: SeparationScheduler) = object : SeparationControls {
     override val status = scheduler.status
+    override val queue = scheduler.queue
+    override val waitingForCharger = scheduler.waitingForCharger
 
-    override fun cancel() = scheduler.cancel()
+    override fun cancel() = scheduler.cancelCurrent()
+
+    override fun remove(chartId: String) = scheduler.remove(chartId)
+
+    override fun cancelAll() = scheduler.cancelAll()
 
     override fun dismissFailure() = scheduler.dismissFailure()
 }

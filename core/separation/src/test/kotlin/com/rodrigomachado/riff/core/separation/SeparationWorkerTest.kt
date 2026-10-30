@@ -7,7 +7,6 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
-import androidx.work.workDataOf
 import com.google.common.util.concurrent.ListenableFuture
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.AiSeparationState
@@ -92,10 +91,11 @@ class SeparationWorkerTest {
         ): ListenableFuture<Void> = throw IllegalStateException("ForegroundServiceStartNotAllowedException")
     }
 
+    private val queue = FakeSeparationQueue("m", "n")
+
     @Test
-    fun withoutForegroundTheSeparationStillRuns() = runTest {
+    fun withoutForegroundTheWholeQueueStillRuns() = runTest {
         val worker = TestListenableWorkerBuilder<SeparationWorker>(context)
-            .setInputData(workDataOf(SeparationWorker.KEY_CHART_ID to "m", SeparationWorker.KEY_TITLE to "Música"))
             .setForegroundUpdater(RefusingForeground)
             .setWorkerFactory(
                 object : WorkerFactory() {
@@ -103,12 +103,20 @@ class SeparationWorkerTest {
                         context: Context,
                         name: String,
                         params: WorkerParameters,
-                    ): ListenableWorker = SeparationWorker(context, params, runner, progress)
+                    ): ListenableWorker = SeparationWorker(
+                        context,
+                        params,
+                        runner,
+                        progress,
+                        queue,
+                        SeparationQueueControl(),
+                    )
                 },
             )
             .build()
 
         assertEquals(ListenableWorker.Result.success(), worker.doWork())
-        assertEquals(listOf("m"), repo.committed)
+        assertEquals(listOf("m", "n"), repo.committed)
+        assertEquals(emptyList<Any>(), queue.items.value)
     }
 }

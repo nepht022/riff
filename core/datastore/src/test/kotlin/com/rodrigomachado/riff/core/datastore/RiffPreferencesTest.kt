@@ -193,4 +193,14 @@ class RiffPreferencesTest {
         assertEquals(false, settings.queueClosestDuration)
         assertEquals(false, settings.spotifyNextSongDirect)
     }
+
+    @Test
+    fun separatingOnlyWhileChargingIsSavedAndStartsOff() = runTest {
+        val preferences = RiffPreferences(InMemoryPreferencesStore())
+        assertEquals(false, preferences.settings.first().separateOnlyCharging)
+
+        preferences.updateSettings { it.copy(separateOnlyCharging = true) }
+
+        assertEquals(true, preferences.settings.first().separateOnlyCharging)
+    }
 }

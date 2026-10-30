@@ -23,6 +23,8 @@
     <string name="settings_ai_delete_confirm">Apagar as guitarras separadas pela IA? Dá para separar de novo depois.</string>
     <string name="settings_ai_delete_yes">Apagar</string>
     <string name="settings_ai_delete_no">Cancelar</string>
+    <string name="settings_ai_only_charging">Separar só carregando</string>
+    <string name="settings_ai_only_charging_hint">A fila espera o celular estar na tomada.</string>
     <string name="settings_ai_ask_again">Perguntar sempre se separa</string>
     <string name="settings_ai_ask_again_hint">Ligado: pergunta em toda música sem guitarra separada, mesmo nas que você jogou \"Sem separar\".</string>
     <string name="settings_highway_background">Fundo da pista</string>

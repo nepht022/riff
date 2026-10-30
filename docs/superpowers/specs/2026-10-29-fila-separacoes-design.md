@@ -49,14 +49,14 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
   - **Esperando:** sem nenhuma separando e com fila: "Esperando o carregador" (opção ligada e celular fora da tomada) ou "Começando…".
   - **Na fila (n):** uma linha por música com ✕ para tirar.
   - **Cancelar todas** (com fila): cancela a atual e esvazia a fila.
-- Falha: a notificação avisa como hoje e a fila segue. Se a **última** da fila falhar, o ícone fica com o tom de erro e o painel mostra a falha, como hoje.
+- Falha: a notificação avisa como hoje e a fila segue. **Sem espaço** no celular, as próximas falhariam do mesmo jeito: a fila é esvaziada (decidido na implementação). Se a **última** da fila falhar, o ícone fica com o tom de erro e o painel mostra a falha, como hoje.
 
 ### 4.4 Notificação
 - Durante a separação: "42%" vira **"42% · mais 2 na fila"** quando há fila.
 
 ### 4.5 Configurações
 - Na mesma seção da guitarra por IA: **"Separar só carregando"** (interruptor), com a explicação "A fila espera o celular estar na tomada.".
-- Mudar a opção vale para o que ainda não começou; uma separação em andamento termina mesmo se o celular sair da tomada? **Não:** com a opção ligada, tirar da tomada interrompe a atual (o WorkManager para o trabalho) e ela recomeça do início quando voltar à tomada. É o comportamento natural da restrição e evita esquentar fora da tomada.
+- Mudar a opção com a fila parada esperando refaz o pedido na hora; com a fila já separando, vale na próxima vez que a fila começar (o trabalho que roda esvazia a fila inteira). Com a opção ligada, tirar da tomada interrompe a atual (o WorkManager para o trabalho) e ela recomeça do início quando voltar à tomada.
 
 ## 5. Como funciona (técnico)
 
@@ -67,7 +67,7 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
 
 ### 5.2 Um trabalho que esvazia a fila
 - O `SeparationWorker` passa a ser um laço: pega a primeira da fila, separa (o `GuitarSeparationRunner` de hoje), tira da fila e segue até a fila acabar. A música só sai da fila depois de terminar (com sucesso ou falha), então um trabalho interrompido (Android fechou o app, saiu da tomada, limite de tempo do WorkManager) recomeça pela mesma música.
-- `SeparationScheduler.enqueue(itens)` grava na fila e chama `enqueueUniqueWork(UNIQUE_WORK, APPEND_OR_REPLACE, pedido)`. Com um trabalho rodando, o novo entra depois dele e encontra a fila vazia ou com o que sobrou: não existe a corrida "o laço acabou de ver a fila vazia e o pedido novo foi ignorado".
+- `SeparationScheduler.enqueue(itens)` só grava na fila. O scheduler acompanha a fila e os trabalhos: fila não vazia sem trabalho vivo → pede um (`APPEND_OR_REPLACE`); com um vivo, o laço pega as novas sozinho. A música que entra no instante em que o laço termina é vista quando o trabalho acaba (sem trabalho vivo → pede de novo). Isso também cobre o processo morto entre gravar a fila e pedir o trabalho (decidido na implementação, no lugar de pedir a cada `enqueue`).
 - "Separar só carregando" vira `Constraints.setRequiresCharging(true)` no pedido. Mudar a opção com a fila esperando (nada rodando) refaz o pedido com `REPLACE`.
 - Sem conseguir virar primeiro plano (app em segundo plano, Android 12+), a separação segue sem a notificação de progresso, como hoje; o limite de 10 minutos de um trabalho comum é o motivo do recomeço acima ser importante.
 

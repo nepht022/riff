@@ -79,6 +79,7 @@ class SettingsContentTest {
                         separationUsage = separationUsage,
                         onDeleteSeparations = { events += "delete" },
                         onAskAlways = { events += "askAlways:$it" },
+                        onSeparateOnlyCharging = { events += "onlyCharging:$it" },
                         onTrackLook = { looks += it },
                         onShowChartImage = { events += "image:$it" },
                         onLanguage = { languages += it },
@@ -229,8 +230,10 @@ class SettingsContentTest {
         composeRule.onNodeWithText("Apagar separações").performScrollTo().performClick()
         composeRule.onNodeWithText("Apagar").performClick() // confirmação
         composeRule.onNodeWithTag(SettingsTestTags.ASK_ALWAYS).performScrollTo().performClick()
+        composeRule.onNodeWithText("A fila espera o celular estar na tomada.").performScrollTo().assertExists()
+        composeRule.onNodeWithTag(SettingsTestTags.ONLY_CHARGING).performScrollTo().performClick()
 
-        assertEquals(listOf("delete", "askAlways:false"), events)
+        assertEquals(listOf("delete", "askAlways:false", "onlyCharging:true"), events)
     }
 
     @Test

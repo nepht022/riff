@@ -16,6 +16,8 @@ data class Settings(
     val menuSounds: Boolean = true,
     /** Perguntar se quer separar a guitarra com IA mesmo nas músicas em que já escolheu "Sem separar". */
     val askSeparationAlways: Boolean = true,
+    /** A fila de separações da guitarra por IA espera o celular estar na tomada. */
+    val separateOnlyCharging: Boolean = false,
     val highwayBackground: HighwayBackground = HighwayBackground.STAGE,
     val highwayArt: HighwayArt = HighwayArt.NONE,
     val noteStyle: NoteStyle = NoteStyle.DISCS,

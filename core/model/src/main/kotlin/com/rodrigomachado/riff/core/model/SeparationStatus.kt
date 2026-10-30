@@ -20,3 +20,6 @@ enum class SeparationFailure { NO_SPACE, NO_AUDIO, ERROR }
 
 /** Músicas separadas pela IA e o espaço que ocupam. */
 data class SeparationUsage(val songs: Int, val bytes: Long)
+
+/** Uma música na fila de separação da guitarra por IA. */
+data class QueuedSeparation(val chartId: String, val title: String)

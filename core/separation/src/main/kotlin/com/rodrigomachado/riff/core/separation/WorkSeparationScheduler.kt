@@ -1,86 +1,121 @@
 package com.rodrigomachado.riff.core.separation
 
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import androidx.work.workDataOf
+import com.rodrigomachado.riff.core.data.SeparationQueue
 import com.rodrigomachado.riff.core.data.SeparationScheduler
+import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-/** Escopo que vive com o app: acompanha o WorkManager para o estado sobreviver à morte do processo. */
+/** Escopo que vive com o app: acompanha o WorkManager e a fila. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class SeparationScope
 
+/**
+ * A fila fica no banco e um trabalho único do WorkManager a esvazia ([SeparationQueueLoop]). Sempre que há fila sem
+ * trabalho vivo (pedido novo, processo morto antes de pedir, música que entrou quando o laço acabava), um trabalho é
+ * pedido; com um vivo, o laço pega as novas sozinho.
+ */
 @Singleton
+@Suppress("LongParameterList") // a fila, o trabalho e a opção do carregador
 class WorkSeparationScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val progress: SeparationProgress,
     device: DeviceInfo,
-    @SeparationScope scope: CoroutineScope,
+    private val separationQueue: SeparationQueue,
+    private val control: SeparationQueueControl,
+    settings: SettingsRepository,
+    @SeparationScope private val scope: CoroutineScope,
 ) : SeparationScheduler {
     override val status: StateFlow<SeparationStatus> = progress.status
     override val lowMemoryDevice = device.totalRamBytes < LOW_RAM_BYTES
     private val workManager get() = WorkManager.getInstance(context)
+    private val waiting = MutableStateFlow(false)
+    override val waitingForCharger: StateFlow<Boolean> = waiting.asStateFlow()
+
+    override val queue: StateFlow<List<QueuedSeparation>> = combine(
+        separationQueue.items,
+        progress.status,
+    ) { items, s ->
+        val current = (s as? SeparationStatus.Running)?.chartId
+        items.filterNot { it.chartId == current }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     init {
-        scope.launch { workManager.getWorkInfosForUniqueWorkFlow(UNIQUE_WORK).collect(::reconcile) }
+        val onlyCharging = settings.settings.map { it.separateOnlyCharging }.distinctUntilChanged()
+        scope.launch {
+            combine(workManager.getWorkInfosForUniqueWorkFlow(UNIQUE_WORK), separationQueue.items, onlyCharging) {
+                    infos,
+                    items,
+                    charging,
+                ->
+                Triple(infos, items, charging)
+            }.collect { (infos, items, charging) -> reconcile(infos, items, charging) }
+        }
     }
 
-    /**
-     * O estado em memória some com o processo; o trabalho do WorkManager não. Um trabalho vivo volta a aparecer
-     * (com a música das etiquetas) e um trabalho que acabou sem o runner avisar (cancelado antes de começar) some.
-     */
-    private fun reconcile(infos: List<WorkInfo>) {
-        val live = infos.firstOrNull { !it.state.isFinished }
-        val current = progress.status.value
+    private fun reconcile(infos: List<WorkInfo>, items: List<QueuedSeparation>, onlyCharging: Boolean) {
+        val live = infos.filterNot { it.state.isFinished }
+        val parked = live.singleOrNull()?.takeIf { it.state == WorkInfo.State.ENQUEUED }
         when {
-            live != null && current !is SeparationStatus.Running -> progress.set(runningFrom(live) ?: return)
+            items.isEmpty() -> Unit
 
-            live == null && infos.isNotEmpty() && current is SeparationStatus.Running -> progress.set(
-                SeparationStatus.Idle,
-            )
+            live.isEmpty() -> request(onlyCharging, ExistingWorkPolicy.APPEND_OR_REPLACE)
+
+            // Mudou a opção com a fila parada: o pedido parado é refeito com a opção nova.
+            parked != null && parked.constraints.requiresCharging() != onlyCharging ->
+                request(onlyCharging, ExistingWorkPolicy.REPLACE)
+        }
+        waiting.value = items.isNotEmpty() && onlyCharging && parked != null
+        // Um trabalho que acabou sem o runner avisar (cancelado antes de começar) não deixa o "separando" preso.
+        if (live.isEmpty() && infos.isNotEmpty() && progress.status.value is SeparationStatus.Running) {
+            progress.set(SeparationStatus.Idle)
         }
     }
 
-    private fun runningFrom(info: WorkInfo): SeparationStatus.Running? {
-        val chartId = info.tags.firstNotNullOfOrNull {
-            it.removePrefix(
-                TAG_CHART,
-            ).takeIf { _ -> it.startsWith(TAG_CHART) }
-        }
-        val title = info.tags.firstNotNullOfOrNull {
-            it.removePrefix(
-                TAG_TITLE,
-            ).takeIf { _ -> it.startsWith(TAG_TITLE) }
-        }
-        return chartId?.let { SeparationStatus.Running(it, title.orEmpty(), progress = 0f, remainingMs = null) }
-    }
-
-    override fun start(chartId: String, title: String): Boolean {
-        if (progress.status.value is SeparationStatus.Running) return false
+    private fun request(onlyCharging: Boolean, policy: ExistingWorkPolicy) {
         val request = OneTimeWorkRequestBuilder<SeparationWorker>()
-            .setInputData(workDataOf(SeparationWorker.KEY_CHART_ID to chartId, SeparationWorker.KEY_TITLE to title))
-            .addTag(TAG_CHART + chartId)
-            .addTag(TAG_TITLE + title)
+            .setConstraints(Constraints.Builder().setRequiresCharging(onlyCharging).build())
             .build()
-        // O ícone aparece na hora, antes de o WorkManager começar.
-        progress.set(SeparationStatus.Running(chartId, title, progress = 0f, remainingMs = null))
-        workManager.enqueueUniqueWork(UNIQUE_WORK, ExistingWorkPolicy.KEEP, request)
-        return true
+        workManager.enqueueUniqueWork(UNIQUE_WORK, policy, request)
     }
 
-    override fun cancel() {
-        workManager.cancelUniqueWork(UNIQUE_WORK)
+    override fun enqueue(songs: List<QueuedSeparation>) {
+        scope.launch { separationQueue.add(songs) }
+    }
+
+    override fun cancelCurrent() = control.cancelCurrent()
+
+    override fun remove(chartId: String) {
+        scope.launch { separationQueue.remove(chartId) }
+    }
+
+    override fun cancelAll() {
+        scope.launch {
+            separationQueue.clear()
+            workManager.cancelUniqueWork(UNIQUE_WORK)
+        }
+        control.cancelCurrent()
         // Cancelado antes de o runner começar, ninguém mais tiraria o "separando".
         progress.set(SeparationStatus.Idle)
     }
@@ -91,7 +126,5 @@ class WorkSeparationScheduler @Inject constructor(
 
     private companion object {
         const val LOW_RAM_BYTES = 4L shl 30
-        const val TAG_CHART = "separacao.chart="
-        const val TAG_TITLE = "separacao.title="
     }
 }

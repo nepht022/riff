@@ -138,10 +138,12 @@ class SettingsViewModelTest {
         assertEquals(SeparationUsage(12, 96_000_000), vm.separationUsage.value)
         vm.deleteSeparations()
         vm.setAskSeparationAlways(true)
+        vm.setSeparateOnlyCharging(true)
         advanceUntilIdle()
 
         assertEquals(listOf("deleteAll"), separations.calls)
         assertEquals(true, repository.settings.value.askSeparationAlways)
+        assertEquals(true, repository.settings.value.separateOnlyCharging)
     }
 
     @Test

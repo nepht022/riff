@@ -16,13 +16,15 @@ import kotlin.math.roundToInt
 class SeparationNotifications(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
-    fun foregroundInfo(status: SeparationStatus.Running): ForegroundInfo {
+    /** [queued]: quantas esperam depois desta. */
+    fun foregroundInfo(status: SeparationStatus.Running, queued: Int = 0): ForegroundInfo {
         val percent = (status.progress * PERCENT).roundToInt()
-        val text = if (status.pausedForHeat) {
+        val state = if (status.pausedForHeat) {
             context.getString(R.string.separation_paused)
         } else {
             context.getString(R.string.separation_running, percent)
         }
+        val text = if (queued > 0) context.getString(R.string.separation_queued, state, queued) else state
         val notification = builder().setContentTitle(status.title).setContentText(text).setOngoing(true)
             .setProgress(PERCENT, percent, false).build()
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {

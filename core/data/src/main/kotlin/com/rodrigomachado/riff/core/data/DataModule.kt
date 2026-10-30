@@ -125,3 +125,10 @@ object DataProvidesModule {
         System::currentTimeMillis,
     )
 }
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class SeparationQueueModule {
+    @Binds
+    abstract fun separationQueue(impl: RoomSeparationQueue): SeparationQueue
+}

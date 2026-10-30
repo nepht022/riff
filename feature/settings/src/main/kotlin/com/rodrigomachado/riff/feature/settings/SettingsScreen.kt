@@ -53,6 +53,7 @@ object SettingsTestTags {
     const val LEFT_HANDED = "settings_left_handed"
     const val MENU_SOUNDS = "settings_menu_sounds"
     const val ASK_ALWAYS = "settings_ask_separation_always"
+    const val ONLY_CHARGING = "settings_separate_only_charging"
     const val CHART_IMAGE = "settings_chart_image"
     const val QUEUE_PREFETCH = "settings_queue_prefetch"
     const val QUEUE_DELETE = "settings_queue_delete"
@@ -93,6 +94,7 @@ fun SettingsScreen(
         separationUsage = usage,
         onDeleteSeparations = viewModel::deleteSeparations,
         onAskAlways = viewModel::setAskSeparationAlways,
+        onSeparateOnlyCharging = viewModel::setSeparateOnlyCharging,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
         queue = QueueUiState(canWriteToLibrary),
@@ -123,6 +125,7 @@ fun SettingsContent(
     separationUsage: SeparationUsage = SeparationUsage(0, 0),
     onDeleteSeparations: () -> Unit = {},
     onAskAlways: (Boolean) -> Unit = {},
+    onSeparateOnlyCharging: (Boolean) -> Unit = {},
     onTrackLook: (TrackLook) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
@@ -178,8 +181,9 @@ fun SettingsContent(
                     SettingsTab.AI -> AiSeparationSection(
                         separationUsage,
                         onDeleteSeparations,
-                        settings.askSeparationAlways,
+                        settings,
                         onAskAlways,
+                        onSeparateOnlyCharging,
                     )
                 }
             }

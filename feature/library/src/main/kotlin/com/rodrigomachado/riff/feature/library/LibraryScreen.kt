@@ -84,6 +84,10 @@ fun LibraryScreen(
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         viewModel.onSeparate()
     }
+    val askNotificationsForSelection =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            viewModel.onSeparateSelected()
+        }
     LibraryContent(
         state = state,
         onPickFolder = { pickFolder.launch(null) },
@@ -112,6 +116,13 @@ fun LibraryScreen(
             onCancelSelecting = viewModel::onCancelSelecting,
             onToggleAll = viewModel::onToggleAll,
             onDeleteSelected = viewModel::onDeleteSelected,
+            onSeparateSelected = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    askNotificationsForSelection.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    viewModel.onSeparateSelected()
+                }
+            },
             onConfirm = viewModel::onDeleteConfirmed,
             onDismiss = viewModel::onDeleteDismissed,
             onFailureShown = viewModel::onDeletionFailureShown,
@@ -264,7 +275,7 @@ private fun ChartList(
             if (state.deletion.selecting) {
                 val deletable = state.charts.filter { it.id !in state.protectedIds }
                 val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
-                SelectionActions(state.deletion.selected.size, allSelected, deletion)
+                SelectionActions(state.deletion.selected.size, state.separableSelected, allSelected, deletion)
             } else {
                 ListActions(onRescan, onPickFolder, deletion.onStartSelecting)
             }

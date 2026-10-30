@@ -47,14 +47,32 @@ class DeletionCallbacks(
     val onCancelSelecting: () -> Unit = {},
     val onToggleAll: () -> Unit = {},
     val onDeleteSelected: () -> Unit = {},
+    /** "Separar (n)": põe na fila de separação as selecionadas que precisam da IA. */
+    val onSeparateSelected: () -> Unit = {},
     val onConfirm: () -> Unit = {},
     val onDismiss: () -> Unit = {},
     val onFailureShown: () -> Unit = {},
 )
 
-/** Na linha do Reimportar, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos. */
+/**
+ * Na linha do Reimportar, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos; embaixo, Separar (n)
+ * põe na fila da IA as selecionadas que precisam.
+ */
 @Composable
-internal fun SelectionActions(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
+internal fun SelectionActions(selected: Int, separable: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        DeleteRow(selected, allSelected, callbacks)
+        PosterButton(
+            stringResource(R.string.library_separate_selected, separable),
+            onClick = callbacks.onSeparateSelected,
+            enabled = separable > 0,
+            sound = MenuSound.CONFIRM,
+        )
+    }
+}
+
+@Composable
+private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),

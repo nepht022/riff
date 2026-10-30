@@ -40,7 +40,7 @@ internal fun SeparationPrompt(
                 Text(
                     stringResource(if (ask.busy) R.string.library_separate_busy else R.string.library_separate_message),
                 )
-                if (ask.lowMemory && !ask.busy) Text(stringResource(R.string.library_separate_low_memory))
+                if (ask.lowMemory) Text(stringResource(R.string.library_separate_low_memory))
             }
         },
         confirmButton = {
@@ -54,7 +54,10 @@ internal fun SeparationPrompt(
                 }
                 Spacer(Modifier.weight(1f))
                 HighlightButton(stringResource(R.string.library_play_without_separating), onPlayWithout)
-                if (!ask.busy) HighlightButton(stringResource(R.string.library_separate), onSeparate)
+                HighlightButton(
+                    stringResource(if (ask.busy) R.string.library_separate_queue else R.string.library_separate),
+                    onSeparate,
+                )
             }
         },
     )

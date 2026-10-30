@@ -1,13 +1,18 @@
 package com.rodrigomachado.riff.core.ui.component
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,12 +29,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import com.rodrigomachado.riff.core.ui.R
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
+import com.rodrigomachado.riff.core.ui.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -38,10 +47,28 @@ import kotlin.math.roundToInt
 interface SeparationControls {
     val status: StateFlow<SeparationStatus>
 
+    /** As que esperam a vez, sem a atual. */
+    val queue: StateFlow<List<QueuedSeparation>>
+
+    val waitingForCharger: StateFlow<Boolean>
+
+    /** Cancela só a atual; a fila segue. */
     fun cancel()
+
+    fun remove(chartId: String)
+
+    fun cancelAll()
 
     fun dismissFailure()
 }
+
+/** A fila no painel do ícone: as que esperam, se esperam o carregador e as ações de tirar. */
+data class SeparationQueueView(
+    val items: List<QueuedSeparation> = emptyList(),
+    val waitingForCharger: Boolean = false,
+    val onRemove: (String) -> Unit = {},
+    val onCancelAll: () -> Unit = {},
+)
 
 val LocalSeparation = staticCompositionLocalOf<SeparationControls?> { null }
 
@@ -54,7 +81,15 @@ object SeparationIndicatorTags {
 fun SeparationIndicator(modifier: Modifier = Modifier) {
     val controls = LocalSeparation.current ?: return
     val status by controls.status.collectAsState()
-    SeparationIndicatorContent(status, controls::cancel, controls::dismissFailure, modifier)
+    val queued by controls.queue.collectAsState()
+    val waitingForCharger by controls.waitingForCharger.collectAsState()
+    SeparationIndicatorContent(
+        status,
+        controls::cancel,
+        controls::dismissFailure,
+        modifier,
+        SeparationQueueView(queued, waitingForCharger, controls::remove, controls::cancelAll),
+    )
 }
 
 @Composable
@@ -63,65 +98,145 @@ fun SeparationIndicatorContent(
     onCancel: () -> Unit,
     onDismissFailure: () -> Unit,
     modifier: Modifier = Modifier,
+    queue: SeparationQueueView = SeparationQueueView(),
 ) {
-    if (status == SeparationStatus.Idle) return
+    if (status == SeparationStatus.Idle && queue.items.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     val description = stringResource(R.string.ui_separation_open)
-    IconButton(
-        onClick = withMenuSound(MenuSound.NAVIGATE) { open = true },
-        modifier = modifier.testTag(SeparationIndicatorTags.ICON).semantics { contentDescription = description },
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (status is SeparationStatus.Running) {
-                CircularProgressIndicator(
-                    progress = { status.progress },
-                    modifier = Modifier.size(RING),
-                    color = RiffColors.Paper,
-                    trackColor = RiffColors.PaperDim,
-                )
+    // Com fila, a falha da última já foi avisada pela notificação: o ícone segue a fila.
+    val failure = (status as? SeparationStatus.Failed)?.takeIf { queue.items.isEmpty() }
+    val total = queue.items.size + if (status is SeparationStatus.Running) 1 else 0
+    // O número fica fora do botão, que recorta o conteúdo no círculo do toque.
+    Box(modifier) {
+        IconButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE) { open = true },
+            modifier = Modifier.testTag(SeparationIndicatorTags.ICON).semantics { contentDescription = description },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (status is SeparationStatus.Running) {
+                    CircularProgressIndicator(
+                        progress = { status.progress },
+                        modifier = Modifier.size(RING),
+                        color = RiffColors.Paper,
+                        trackColor = RiffColors.PaperDim,
+                    )
+                }
+                Pick(failed = failure != null)
             }
-            Pick(failed = status is SeparationStatus.Failed)
+        }
+        if (total > 1) Count(total, Modifier.align(Alignment.TopEnd))
+    }
+    if (open) {
+        val close = { open = false }
+        if (failure != null) {
+            FailurePanel(failure, onDismissFailure, close)
+        } else {
+            QueuePanel(status, onCancel, queue, close)
         }
     }
-    if (open) SeparationPanel(status, onCancel, onDismissFailure) { open = false }
+}
+
+/** Quantas faltam (a atual + a fila), no canto do ícone. */
+@Composable
+private fun Count(total: Int, modifier: Modifier) {
+    Box(
+        modifier.size(COUNT).background(RiffColors.TourRed, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            total.toString(),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = COUNT_TEXT, lineHeight = COUNT_TEXT),
+            color = RiffColors.Paper,
+        )
+    }
 }
 
 @Composable
-private fun SeparationPanel(
+private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -> Unit, onClose: () -> Unit) =
+    AlertDialog(
+        onDismissRequest = onClose,
+        text = { Text(failedText(status)) },
+        confirmButton = {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM) {
+                    onClose()
+                    onDismissFailure()
+                },
+            ) { Text(stringResource(R.string.ui_separation_ok)) }
+        },
+    )
+
+/** A atual (com o progresso) ou a espera, e embaixo as da fila com o X de cada uma. */
+@Composable
+private fun QueuePanel(
     status: SeparationStatus,
     onCancel: () -> Unit,
-    onDismissFailure: () -> Unit,
+    queue: SeparationQueueView,
     onClose: () -> Unit,
 ) {
-    when (status) {
-        is SeparationStatus.Running -> AlertDialog(
-            onDismissRequest = onClose,
-            title = { Text(status.title) },
-            text = { Column { runningText(status).forEach { Text(it) } } },
-            confirmButton = {
+    val running = status as? SeparationStatus.Running
+    val hasQueue = queue.items.isNotEmpty()
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = {
+            val waiting = if (queue.waitingForCharger) {
+                R.string.ui_separation_waiting_charger
+            } else {
+                R.string.ui_separation_starting
+            }
+            Text(running?.title ?: stringResource(waiting))
+        },
+        text = {
+            Column {
+                running?.let { runningText(it).forEach { line -> Text(line) } }
+                if (hasQueue) QueueList(queue)
+            }
+        },
+        confirmButton = {
+            if (running != null) {
                 TextButton(
                     onClick = withMenuSound(MenuSound.BACK) {
                         onClose()
                         onCancel()
                     },
-                ) { Text(stringResource(R.string.ui_separation_cancel)) }
-            },
-        )
-
-        is SeparationStatus.Failed -> AlertDialog(
-            onDismissRequest = onClose,
-            text = { Text(failedText(status)) },
-            confirmButton = {
+                ) {
+                    Text(
+                        stringResource(
+                            if (hasQueue) R.string.ui_separation_cancel_this else R.string.ui_separation_cancel,
+                        ),
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            if (hasQueue) {
                 TextButton(
-                    onClick = withMenuSound(MenuSound.CONFIRM) {
+                    onClick = withMenuSound(MenuSound.BACK) {
                         onClose()
-                        onDismissFailure()
+                        queue.onCancelAll()
                     },
-                ) { Text(stringResource(R.string.ui_separation_ok)) }
-            },
-        )
+                ) { Text(stringResource(R.string.ui_separation_cancel_all)) }
+            }
+        },
+    )
+}
 
-        SeparationStatus.Idle -> onClose()
+@Composable
+private fun QueueList(queue: SeparationQueueView) {
+    Text(
+        stringResource(R.string.ui_separation_queue, queue.items.size),
+        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.padding(top = Spacing.md),
+    )
+    queue.items.forEach { song ->
+        val remove = stringResource(R.string.ui_separation_remove, song.title)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(song.title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            IconButton(
+                onClick = withMenuSound(MenuSound.BACK) { queue.onRemove(song.chartId) },
+                modifier = Modifier.semantics { contentDescription = remove },
+            ) { Text("✕", color = RiffColors.PaperDim) }
+        }
     }
 }
 
@@ -159,6 +274,8 @@ private fun Pick(failed: Boolean) {
 }
 
 private val RING = 34.dp
+private val COUNT = 18.dp
+private val COUNT_TEXT = 11.sp
 private val PICK = 18.dp
 private val PICK_NUDGE = 1.5.dp
 private const val PERCENT = 100

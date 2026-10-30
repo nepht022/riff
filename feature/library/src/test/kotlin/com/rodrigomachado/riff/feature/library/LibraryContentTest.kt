@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -365,7 +366,7 @@ class LibraryContentTest {
     }
 
     @Test
-    fun aBusyPromptOnlyOffersToPlay() {
+    fun aBusyPromptOffersToPutTheSongInTheQueue() {
         showWithPrompt(
             LibraryUiState(
                 isLoading = false,
@@ -375,8 +376,11 @@ class LibraryContentTest {
             ),
         )
 
-        composeRule.onNodeWithText("Já tem uma separação em andamento").assertExists()
+        composeRule.onNodeWithText("Já tem uma separando: esta entra na fila.").assertExists()
         composeRule.onNodeWithText("Separar").assertDoesNotExist()
+        composeRule.onNodeWithText("Pôr na fila").performClick()
+
+        assertEquals(listOf("separate"), events)
     }
 
     @Test
@@ -422,6 +426,7 @@ class LibraryContentTest {
                         onCancelSelecting = { events += "cancelSelect" },
                         onToggleAll = { events += "toggleAll" },
                         onDeleteSelected = { events += "deleteSelected" },
+                        onSeparateSelected = { events += "separateSelected" },
                         onConfirm = { events += "confirm" },
                         onDismiss = { events += "dismiss" },
                         onFailureShown = { events += "failureShown" },
@@ -460,6 +465,37 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Cancelar").performClick()
 
         assertEquals(listOf("toggle:b", "deleteSelected", "cancelSelect"), events)
+    }
+
+    @Test
+    fun theSelectionSeparatesOnlyWhatNeedsIt() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a", "b")),
+                separableSelected = 1,
+            ),
+        )
+
+        composeRule.onNodeWithText("Separar (1)").performClick()
+
+        assertEquals(listOf("separateSelected"), events)
+    }
+
+    @Test
+    fun withNothingToSeparateTheButtonIsOff() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        composeRule.onNodeWithText("Separar (0)").assertIsNotEnabled()
     }
 
     @Test

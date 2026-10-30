@@ -86,6 +86,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setAskSeparationAlways(always: Boolean) = save { it.copy(askSeparationAlways = always) }
 
+    fun setSeparateOnlyCharging(onlyCharging: Boolean) = save { it.copy(separateOnlyCharging = onlyCharging) }
+
     fun setMasterVolume(volume: Float) = save { it.copy(masterVolume = volume.coerceIn(0f, 1f)) }
 
     fun setMissVolume(volume: Float) = save { it.copy(missVolume = volume.coerceIn(0f, 1f)) }

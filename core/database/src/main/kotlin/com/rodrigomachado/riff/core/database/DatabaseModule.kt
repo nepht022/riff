@@ -40,4 +40,7 @@ object DatabaseModule {
 
     @Provides
     fun rankingPendingDao(database: RiffDatabase): RankingPendingDao = database.rankingPendingDao()
+
+    @Provides
+    fun separationQueueDao(database: RiffDatabase): SeparationQueueDao = database.separationQueueDao()
 }
