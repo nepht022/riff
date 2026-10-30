@@ -56,7 +56,9 @@ class RiffApplication :
         // O login do Spotify (até a versão 0.2.0) guardava um token aqui, cifrado com uma chave do Keystore de mesmo
         // nome; agora o Spotify vem pela sessão de mídia: os dois saem.
         deleteSharedPreferences(OLD_SPOTIFY_TOKEN)
-        runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(OLD_SPOTIFY_TOKEN) }
+        appScope.launch(Dispatchers.IO) {
+            runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(OLD_SPOTIFY_TOKEN) }
+        }
         // Sem escolha guardada, Português (decisão do usuário, mesmo num celular em outro idioma). Escolher
         // "Padrão do sistema" nas configurações do celular também volta a Português na próxima abertura.
         language.applyDefault()

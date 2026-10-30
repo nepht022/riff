@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -80,7 +81,7 @@ private fun LazyListScope.entries(
         val text = entry.text
         if (open && text != null) {
             // Por parágrafo: o aviso do ONNX Runtime tem ~330 KB e travaria a tela num Text só.
-            val paragraphs = text.split("\n\n")
+            val paragraphs = text.split(PARAGRAPH_BREAK)
             items(paragraphs.size, key = { "$key/$it" }) { LicenseParagraph(paragraphs[it]) }
         }
     }
@@ -90,7 +91,9 @@ private fun LazyListScope.entries(
 private fun LicenseParagraph(text: String) {
     Text(
         text,
-        Modifier.fillMaxWidth().background(RiffColors.Paper).padding(horizontal = Spacing.md),
+        // Puxado para cima, sobre o vão da lista: os parágrafos formam um bloco de papel só, abaixo do cartão.
+        Modifier.fillMaxWidth().offset(y = -Spacing.md).background(RiffColors.Paper)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
         color = RiffColors.Ink,
     )
@@ -125,3 +128,6 @@ private fun Entry(entry: LicenseEntry, onToggle: () -> Unit) {
 }
 
 private const val SECONDARY_ALPHA = 0.7f
+
+/** Linha em branco entre parágrafos, também com o fim de linha do Windows. */
+private val PARAGRAPH_BREAK = Regex("\r?\n\r?\n")

@@ -22,8 +22,6 @@ interface PlaybackInterruptions {
      */
     fun start(onInterrupted: () -> Unit, onBusy: () -> Unit)
 
-    fun start(onInterrupted: () -> Unit) = start(onInterrupted, onInterrupted)
-
     fun stop()
 }
 

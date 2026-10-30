@@ -26,7 +26,8 @@ suspend fun ChartArtImages.loadOrNull(chartId: String): ImageBitmap? = try {
 
 class DecodedChartArtImages @Inject constructor(private val loader: ChartArtLoader) : ChartArtImages {
     override suspend fun load(chartId: String): ImageBitmap? =
-        withContext(Dispatchers.Default) { loader.load(chartId) { ChartArtDecoder.decode(it) } }
+        // A leitura no IO (dentro do loader); a decodificação, trabalho de CPU, no Default.
+        loader.load(chartId) { bytes -> withContext(Dispatchers.Default) { ChartArtDecoder.decode(bytes) } }
 }
 
 /** Decodifica já reduzida (lado maior entre [maxSide] e o dobro dele): é fundo da pista, não foto. */

@@ -145,7 +145,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Triagem de 2026-10-30: o que fica de propósito
 
-Os pontos menores restantes foram revistos. Os resolvidos saíram da lista; os que ficam acima, ficam por um destes motivos:
+Os pontos menores restantes foram revistos. Os resolvidos saíram da lista; os que ficam acima, ficam por um destes motivos. Ainda abertos, sem motivo especial (pequenos, para quando mexer perto):
+
+- `tools:targetApi` na tag `<application>` inteira; nomes completos no `Fakes.kt` de settings.
+- Área de toque das abas das Configurações perto de 47 dp (a aba "Guitarra IA" com texto curto é a mais estreita).
+- `AndroidSpotifySession`: nada força os avisos só na thread principal; `publish()` lê a fila pelo binder a cada aviso.
+- Teste da música atual × limite de 3 mapas da fila.
+- "Espere alguns minutos" (Reportar) continua na tela depois dos 5 minutos se nada for editado.
+
+Os que ficam de propósito:
 
 - **Sem efeito medido ou raros:** alocação do `MediaCodec`, soltar o dedo marcando erro um pouco antes, decodificador que trava, troca de canais no meio da faixa, saída de áudio que não abre ao continuar, corridas estreitas da fila e do ranking, imagem do mapa grande na memória e o véu redesenhado (a partida mede 120 fps com 0 a 1 quadro atrasado).
 - **Fora do controle do Riff:** a API do Encore não documentada e o servidor que respeita o Range; o Android 15 e o limite de primeiro plano.

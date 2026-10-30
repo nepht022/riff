@@ -168,7 +168,9 @@ class GameplayViewModel @Inject constructor(
         )
         if (!pauseRequested && !confirmFirst) session.start()
         if (spotifyTrackUri == null) {
-            interruptions = interruptionsFactory.create().also { if (!pauseRequested) it.start { pause() } }
+            interruptions = interruptionsFactory.create().also {
+                if (!pauseRequested) it.start(onInterrupted = ::pause, onBusy = ::pauseAudioBusy)
+            }
         }
         GameplayUiState.Ready(
             playable.chart.title,

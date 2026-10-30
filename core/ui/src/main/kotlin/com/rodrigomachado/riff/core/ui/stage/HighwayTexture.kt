@@ -51,7 +51,12 @@ object HighwayTexture {
 
     fun art(kind: HighwayArt): Bitmap? = if (kind == HighwayArt.NONE) null else remembered(kind) { makeArt(kind) }
 
-    private fun remembered(kind: Enum<*>, make: () -> Bitmap): Bitmap = synchronized(made) { made.getOrPut(kind, make) }
+    // Gerado fora da trava: quem pede um ladrilho pronto não espera outro que está sendo gerado ao mesmo tempo.
+    private fun remembered(kind: Enum<*>, make: () -> Bitmap): Bitmap {
+        synchronized(made) { made[kind] }?.let { return it }
+        val fresh = make()
+        return synchronized(made) { made.getOrPut(kind) { fresh } }
+    }
 
     /**
      * Gera os ladrilhos de [look] (chamar fora da thread da tela): o primeiro quadro da partida só pega o pronto, sem

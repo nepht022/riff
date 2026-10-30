@@ -32,7 +32,7 @@ class GameSessionTest {
     }
 
     @Test
-    fun aMatchWithoutNotesHasNoProgressToShow() {
+    fun aMatchWithoutNotesStartsEmptyAndFillsAfterTheGrace() {
         val session = session()
         assertEquals(0f, session.progress, 0.001f)
 

@@ -41,8 +41,8 @@ class GuitarSeparationRunner(
     /** Verdadeiro se a separação terminou e foi guardada. */
     @Suppress("TooGenericExceptionCaught") // falha do modelo, do decodificador ou de memória: a música fica como estava
     suspend fun run(chartId: String, title: String): Boolean {
+        deleteLeftoverDecodes() // antes de medir o espaço: o que ele ocupa volta a ser livre
         if (device.freeBytes() < MIN_FREE_BYTES) return failed(title, SeparationFailure.NO_SPACE)
-        deleteLeftoverDecodes()
         var work: File? = null
         return try {
             // Tudo dentro do try: nenhuma falha deixa o ícone preso em "separando".

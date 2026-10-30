@@ -13,7 +13,7 @@ import javax.inject.Inject
 /** A imagem do mapa (fundo, senão capa) para mostrar atrás da pista. */
 interface ChartArtLoader {
     /** A primeira imagem que [decode] aceita: um fundo grande demais ou corrompido dá lugar à capa. */
-    suspend fun <T : Any> load(chartId: String, decode: (ByteArray) -> T?): T?
+    suspend fun <T : Any> load(chartId: String, decode: suspend (ByteArray) -> T?): T?
 
     suspend fun load(chartId: String): ByteArray? = load(chartId) { it }
 }
@@ -43,10 +43,12 @@ class FolderChartArtLoader @Inject constructor(
 ) : ChartArtLoader {
     // Sem imagem (grande demais, ilegível, pasta perdida), a pista fica só com o fundo escolhido.
     @Suppress("SwallowedException")
-    override suspend fun <T : Any> load(chartId: String, decode: (ByteArray) -> T?): T? = withContext(io) {
+    override suspend fun <T : Any> load(chartId: String, decode: suspend (ByteArray) -> T?): T? = withContext(io) {
         val chart = charts.getChart(chartId) ?: return@withContext null
         val candidates = try {
             ChartArtFinder.candidates(source.listChildren(chart.folderUri))
+        } catch (e: IOException) {
+            return@withContext null
         } catch (e: FolderAccessLostException) {
             return@withContext null
         }

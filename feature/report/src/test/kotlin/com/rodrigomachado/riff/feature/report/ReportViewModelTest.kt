@@ -231,6 +231,22 @@ class ReportViewModelTest {
     }
 
     @Test
+    fun editingAlsoClearsTheWait() = runTest {
+        viewModel().apply {
+            setText("Primeiro")
+            send()
+        }
+        val vm = viewModel()
+        vm.setText("Segundo")
+        vm.send()
+        assertEquals(ReportStatus.WAIT, vm.uiState.value.status)
+
+        vm.setContact("eu@exemplo.com")
+
+        assertEquals(ReportStatus.EDITING, vm.uiState.value.status)
+    }
+
+    @Test
     fun eachKindHasItsOwnCategories() {
         assertEquals(9, ReportCategory.forKind(ReportKind.PROBLEM).size)
         assertEquals(6, ReportCategory.forKind(ReportKind.SUGGESTION).size)

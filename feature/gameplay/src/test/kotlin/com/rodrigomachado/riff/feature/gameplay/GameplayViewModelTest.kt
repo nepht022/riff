@@ -441,6 +441,18 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
     }
 
     @Test
+    fun openingDuringACallPausesSayingTheAudioIsBusy() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        interruptions.deny()
+
+        val paused = viewModel.uiState.value as GameplayUiState.Ready
+        assertTrue(paused.isPaused)
+        assertTrue(paused.audioBusy)
+    }
+
+    @Test
     fun spotifyHandlesItsOwnInterruptions() = runTest {
         loader.result = { playable(audio = null) }
 
