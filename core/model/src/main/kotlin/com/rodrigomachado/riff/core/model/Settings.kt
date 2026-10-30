@@ -3,7 +3,7 @@ package com.rodrigomachado.riff.core.model
 /**
  * Preferências do jogador. [audioOffsetMs] negativo compensa atraso de áudio (fone Bluetooth).
  * Volumes vão de 0 (desligado) a 1: [masterVolume] multiplica todos os sons do app (não o Spotify, cujo
- * volume o SDK não controla); [hitVolume] e [missVolume] são os sons de acerto e de erro. [menuSounds] liga os sons
+ * volume o app não controla); [hitVolume] e [missVolume] são os sons de acerto e de erro. [menuSounds] liga os sons
  * de guitarra dos botões do menu (no volume geral).
  */
 data class Settings(

@@ -8,7 +8,8 @@ import javax.inject.Singleton
 
 /**
  * Partidas abertas, da criação da tela até ela sair de vez (inclusive depois de trocar de música na pausa): a fila
- * do Spotify não baixa nem apaga nada enquanto houver uma, e o mapa aberto vira "jogado" (nunca é apagado).
+ * do Spotify não apaga nada enquanto houver uma (os downloads continuam, numa thread de prioridade baixa), e o mapa
+ * aberto vira "jogado" (nunca é apagado).
  */
 interface MatchActivity {
     val inMatch: StateFlow<Boolean>

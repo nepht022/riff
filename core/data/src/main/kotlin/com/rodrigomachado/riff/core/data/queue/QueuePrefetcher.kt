@@ -272,7 +272,10 @@ internal fun whyNoMap(pick: QueuePick, status: MatchStatus) = when {
 /** Na fila de preparo, a mesma música sem e com a duração são dois pedidos (a conferência com duração decide). */
 private val QueuedTrack.waitingKey: String get() = if (durationMs == null) "$uri?" else uri
 
-private fun QueuedTrack.label() = "$artist – $title"
+/** No registro, a música aparece pelo id do Spotify, sem título nem artista (o logcat não guarda o que se ouve). */
+private fun QueuedTrack.label() = "faixa ${uri.substringAfterLast(':').take(LABEL_ID_CHARS)}"
+
+private const val LABEL_ID_CHARS = 6
 
 /**
  * As músicas já decididas (com mapa, baixado ou sem mapa confiável). As decididas sem a duração (a fila da sessão

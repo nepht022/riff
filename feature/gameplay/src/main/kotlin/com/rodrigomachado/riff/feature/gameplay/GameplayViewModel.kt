@@ -127,7 +127,7 @@ class GameplayViewModel @Inject constructor(
     private var pauseRequested = false
 
     init {
-        // Da abertura até a tela sair de vez, a fila do Spotify não baixa nem apaga (e este mapa vira "jogado").
+        // Da abertura até a tela sair de vez, a fila do Spotify não apaga mapas (e este mapa vira "jogado").
         addCloseable { matchActivity.leave(chartId) }
         viewModelScope.launch {
             matchActivity.enter(chartId)
