@@ -1,0 +1,10 @@
+<resources>
+    <string name="home_title">Riff</string>
+    <string name="home_solo">Solo</string>
+    <string name="home_room">Room</string>
+    <string name="home_coming_soon">coming soon</string>
+    <string name="home_room_coming_soon">Room, coming soon</string>
+    <string name="home_ranking">★ Ranking</string>
+    <string name="home_report">Report a problem</string>
+    <string name="home_settings">Settings</string>
+</resources>

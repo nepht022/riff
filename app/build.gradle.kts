@@ -89,6 +89,7 @@ dependencies {
     implementation(project(":feature:report"))
     implementation(project(":feature:ranking"))
     implementation(project(":feature:licenses"))
+    implementation(project(":feature:home"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

@@ -21,6 +21,8 @@ import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
+import com.rodrigomachado.riff.feature.home.HomeRoute
+import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.library.TrackToMatch
@@ -58,11 +60,12 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
     var renamingPlayer by rememberSaveable { mutableStateOf(false) }
     NavHost(
         navController,
-        startDestination = NowPlayingRoute,
+        startDestination = HomeRoute,
         modifier = modifier,
         predictivePopEnterTransition = { RiffNavTransitions.backEnter },
         predictivePopExitTransition = { RiffNavTransitions.backExit },
     ) {
+        homeDestination(navController)
         composable<NowPlayingRoute> { entry ->
             NowPlayingScreen(
                 autoPlayRequests = entry.savedStateHandle,
@@ -125,6 +128,18 @@ private fun NavigationEffects(
             navController.navigate(LibraryRoute()) { launchSingleTop = true }
             onLibraryOpened()
         }
+    }
+}
+
+/** A tela inicial: Sozinho abre a Biblioteca; Ranking, Configurações e Reportar. */
+private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
+    composable<HomeRoute> {
+        HomeScreen(
+            onSolo = dropUnlessResumed { navController.navigate(LibraryRoute()) },
+            onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
+            onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
+            onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+        )
     }
 }
 
