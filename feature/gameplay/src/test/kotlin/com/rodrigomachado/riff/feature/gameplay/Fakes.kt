@@ -154,28 +154,6 @@ class FakeChartOffsetRepository : com.rodrigomachado.riff.core.data.ChartOffsetR
     }
 }
 
-class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
-    val offsets = mutableMapOf<Pair<String, String>, Int>()
-    override val changes = kotlinx.coroutines.flow.MutableStateFlow(0)
-
-    override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
-        com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
-
-    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
-
-    val saved = mutableListOf<String>()
-
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
-        saved += "$spotifyTrackUri $chartId $confidence manual=$isManual"
-    }
-
-    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = offsets[spotifyTrackUri to chartId]
-
-    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) {
-        offsets[spotifyTrackUri to chartId] = offsetMs
-    }
-}
-
 class FakePlaybackInterruptions : com.rodrigomachado.riff.core.audio.PlaybackInterruptions {
     var starts = 0
     var stopped = false

@@ -8,7 +8,6 @@ import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.SettingsRepository
-import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
@@ -42,7 +41,6 @@ data class LibraryUiState(
     val report: ImportReport? = null,
     val folderAccessLost: Boolean = false,
     val importFailed: Boolean = false,
-    val matchSaved: Boolean = false,
     /** Músicas com a guitarra separada pela IA (a marca na lista). */
     val aiSeparated: Set<String> = emptySet(),
     /** "Separar a guitarra com IA?" aberta. */
@@ -104,13 +102,12 @@ private data class ImportState(
 )
 
 @HiltViewModel
-@Suppress("TooManyFunctions") // importação, casamento com o Spotify e a pergunta da separação dividem o mesmo estado
+@Suppress("TooManyFunctions") // importação, exclusão e a pergunta da separação dividem o mesmo estado
 class LibraryViewModel @Inject constructor(
     chartRepository: ChartRepository,
     private val folderStore: LibraryFolderStore,
     private val importer: ChartImporter,
     private val folderAccess: FolderAccess,
-    private val matches: TrackMatchRepository,
     private val separations: AiSeparationRepository,
     private val scheduler: SeparationScheduler,
     private val probe: ChartAudioProbe,
@@ -118,7 +115,6 @@ class LibraryViewModel @Inject constructor(
     private val deleter: ChartDeleter,
 ) : ViewModel() {
     private val importState = MutableStateFlow(ImportState())
-    private val matchSaved = MutableStateFlow(false)
     private val promptState = MutableStateFlow(PromptState())
     private val deletionState = MutableStateFlow(DeletionState())
 
@@ -133,9 +129,8 @@ class LibraryViewModel @Inject constructor(
             chartRepository.observeCharts(),
             folderStore.rootUri,
             importState,
-            matchSaved,
             extras,
-        ) { charts, rootUri, import, saved, extras ->
+        ) { charts, rootUri, import, extras ->
             val (prompt, separated, deletion) = extras
             LibraryUiState(
                 isLoading = false,
@@ -146,7 +141,6 @@ class LibraryViewModel @Inject constructor(
                 report = import.report,
                 folderAccessLost = import.folderAccessLost,
                 importFailed = import.importFailed,
-                matchSaved = saved,
                 aiSeparated = separated,
                 prompt = prompt.prompt,
                 play = prompt.play,
@@ -155,14 +149,6 @@ class LibraryViewModel @Inject constructor(
                 separableSelected = separable(charts, deletion.selected, separated, extras.separationBusy).size,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
-
-    /** Escolha manual do mapa da música do Spotify (spec §5: salva e tem prioridade). */
-    fun chooseChartFor(trackUri: String, chartId: String) {
-        viewModelScope.launch {
-            matches.save(trackUri, chartId, confidence = 1f, isManual = true)
-            matchSaved.value = true
-        }
-    }
 
     /** Depois da dificuldade: pergunta se a música não tem guitarra separada (nem da IA, nem recusa guardada). */
     fun onDifficultyChosen(chart: Chart, difficulty: Difficulty) {

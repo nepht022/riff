@@ -23,7 +23,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,7 +31,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
 import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
@@ -63,17 +61,14 @@ fun LibraryScreen(
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    match: TrackToMatch? = null,
-    onMatched: () -> Unit = {},
-    /** Pesquisar no Encore; no modo de escolha, com a música do Spotify para casar o mapa baixado. */
-    onSearch: (TrackToMatch?) -> Unit = {},
+    /** Pesquisar no Encore. */
+    onSearch: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) viewModel.onFolderPicked(uri.toString()) else viewModel.onFolderPickCancelled()
     }
-    MatchSavedReturn(state.matchSaved, onMatched)
     LaunchedEffect(state.play) {
         state.play?.let {
             onPlay(it.chartId, it.difficulty)
@@ -96,9 +91,7 @@ fun LibraryScreen(
         onPlay = onPlay,
         onBack = onBack,
         modifier = modifier,
-        matchingTitle = match?.title,
-        onChartMatched = { chartId -> match?.let { viewModel.chooseChartFor(it.trackUri, chartId) } },
-        onSearch = { onSearch(match) },
+        onSearch = onSearch,
         onDifficultyChosen = viewModel::onDifficultyChosen,
         onSeparate = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -139,8 +132,6 @@ fun LibraryContent(
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    matchingTitle: String? = null,
-    onChartMatched: (String) -> Unit = {},
     onSearch: () -> Unit = {},
     onDifficultyChosen: (Chart, Difficulty) -> Unit = { chart, difficulty -> onPlay(chart.id, difficulty) },
     onSeparate: () -> Unit = {},
@@ -168,7 +159,6 @@ fun LibraryContent(
             }
         }
         if (filtering) FilterField(filter) { filter = it }
-        matchingTitle?.let { MatchHeader(it) }
         // Só a lista filtrada fica guardada; o resto do estado (seleção, importação, aviso) é sempre o atual.
         val charts = remember(state.charts, filter) { state.charts.matching(filter) }
         val shown = state.copy(charts = charts)
@@ -183,9 +173,8 @@ fun LibraryContent(
         }
         LibraryBody(shown, onPickFolder, onRescan) {
             ChartList(shown, onPickFolder, onRescan, onReportDismissed, deletion) { chart ->
-                // Escolher o mapa da música do Spotify conclui (confirma); senão, abre a escolha da dificuldade.
-                playMenuSound(if (matchingTitle != null) MenuSound.CONFIRM else MenuSound.NAVIGATE)
-                if (matchingTitle != null) onChartMatched(chart.id) else choosingId = chart.id
+                playMenuSound(MenuSound.NAVIGATE)
+                choosingId = chart.id
             }
         }
     }
@@ -359,18 +348,5 @@ private fun failureText(failure: ImportFailure): String {
         stringResource(R.string.library_failure_with_detail, failure.folderName, label, detail)
     } else {
         stringResource(R.string.library_failure, failure.folderName, label)
-    }
-}
-
-/**
- * Depois de salvar o casamento com o Spotify, volta para a tela anterior — só com a tela em primeiro plano. A
- * navegação em segundo plano é descartada; se o app saiu durante o salvamento, volta quando a tela reaparecer.
- */
-@Composable
-internal fun MatchSavedReturn(matchSaved: Boolean, onMatched: () -> Unit) {
-    val currentOnMatched by rememberUpdatedState(onMatched)
-    LifecycleResumeEffect(matchSaved) {
-        if (matchSaved) currentOnMatched()
-        onPauseOrDispose {}
     }
 }

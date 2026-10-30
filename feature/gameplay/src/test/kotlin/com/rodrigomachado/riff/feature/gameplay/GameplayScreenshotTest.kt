@@ -162,40 +162,9 @@ class GameplayScreenshotTest {
         }
     }
 
-    /** Música nova com mapa só sugerido: a partida abre pausada pedindo confirmação. */
+    /** A pausa: Continuar, a sincronia desta música e Sair. */
     @Test
-    fun confirmSuggestion() {
-        val session = GameSession(listOf(Note(60_000, 2, 0, false)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), 0)
-        val state = GameplayUiState.Ready(
-            "Raining Blood",
-            "Slayer",
-            Difficulty.EXPERT,
-            session,
-            Settings.DEFAULT,
-            isPaused = true,
-            spotifyTrackUri = "spotify:track:x",
-            awaitingConfirmation = true,
-        )
-        captureRoboImage("src/test/screenshots/Gameplay_confirm_suggestion.png") {
-            RiffTheme {
-                StageBackground(Modifier.fillMaxSize()) {
-                    GameStage(
-                        state,
-                        reducedMotion = true,
-                        onPause = {},
-                        onResume = {},
-                        onExit = {},
-                        onSessionFinished = {},
-                        animate = false,
-                    )
-                }
-            }
-        }
-    }
-
-    /** Pausa no modo Spotify: anterior, tocar e próxima entre Continuar e a sincronia. */
-    @Test
-    fun pausedInSpotifyMode() {
+    fun paused() {
         val session = GameSession(listOf(Note(60_000, 2, 0, false)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), 0)
         val state = GameplayUiState.Ready(
             "Música",
@@ -204,9 +173,8 @@ class GameplayScreenshotTest {
             session,
             Settings.DEFAULT,
             isPaused = true,
-            spotifyTrackUri = "spotify:track:x",
         )
-        captureRoboImage("src/test/screenshots/Gameplay_paused_spotify.png") {
+        captureRoboImage("src/test/screenshots/Gameplay_paused.png") {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
                     GameStage(

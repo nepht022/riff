@@ -4,8 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rodrigomachado.riff.core.chart.match.TrackMatcher
-import com.rodrigomachado.riff.core.chart.match.TrackQuery
 import com.rodrigomachado.riff.core.data.EncoreDownloads
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.download.ChartDownloadException
@@ -16,8 +14,6 @@ import com.rodrigomachado.riff.core.encore.EncoreClient
 import com.rodrigomachado.riff.core.encore.EncoreFormatException
 import com.rodrigomachado.riff.core.encore.EncoreUnavailableException
 import com.rodrigomachado.riff.core.encore.VersionTitles
-import com.rodrigomachado.riff.core.model.Chart
-import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -40,7 +36,6 @@ data class SearchUiState(
     val error: SearchError? = null,
     val canWrite: Boolean = true,
     val folderUri: String? = null,
-    val matched: Boolean = false,
     /** Falso: as gravações originais; verdadeiro: covers, remixes, ao vivo, medleys. */
     val versions: Boolean = false,
     val onlySeparateGuitar: Boolean = false,
@@ -82,10 +77,6 @@ class SearchViewModel @Inject constructor(
     private val folderAccess: FolderAccess,
     private val folders: LibraryFolderStore,
 ) : ViewModel() {
-    private val matchTrackUri: String? = savedStateHandle["matchTrackUri"]
-    private val track: TrackQuery? = savedStateHandle.get<String>("matchTrackTitle")?.let { title ->
-        TrackQuery(title, savedStateHandle["matchTrackArtist"] ?: "", savedStateHandle["matchTrackDurationMs"])
-    }
     private val state = MutableStateFlow(SearchUiState(query = savedStateHandle["query"] ?: ""))
     val uiState: StateFlow<SearchUiState> = state.asStateFlow()
 
@@ -220,7 +211,7 @@ class SearchViewModel @Inject constructor(
             val owned = downloads.md5s.first()
             val shown = loaded.map { it.chart.md5 }.toSet()
             // A página seguinte pode repetir mapas (a ordem do Encore muda): a lista não repete a chave.
-            val fresh = ordered(result.charts, track).filter { it.md5 !in shown }
+            val fresh = result.charts.filter { it.md5 !in shown }
                 .map { ResultItem(it, readyState(it, owned), separateGuitar = null) }
             // Só avança depois de ler tudo: interrompida antes, a página é pedida de novo.
             page = result.page
@@ -299,12 +290,8 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             setItem(chart.md5, ItemState.Downloading(0f))
             try {
-                val imported = downloader.download(
-                    chart,
-                    matchTrackUri,
-                ) { setItem(chart.md5, ItemState.Downloading(it)) }
+                val imported = downloader.download(chart, null) { setItem(chart.md5, ItemState.Downloading(it)) }
                 setItem(chart.md5, ItemState.Ready(imported.id, imported.difficulties))
-                if (matchTrackUri != null) state.update { it.copy(matched = true) }
             } catch (e: ChartDownloadException) {
                 Log.w(TAG, "Download falhou: ${e.reason}", e)
                 setItem(chart.md5, ItemState.Failed(e.reason))
@@ -340,12 +327,3 @@ class SearchViewModel @Inject constructor(
         const val MAX_AUTO_PAGES = 5
     }
 }
-
-/** Vindo do Spotify, os mais parecidos com a faixa primeiro (a mesma nota do casamento automático). */
-private fun ordered(charts: List<EncoreChart>, track: TrackQuery?): List<EncoreChart> {
-    val query = track ?: return charts
-    return charts.sortedByDescending { TrackMatcher.score(query, it.asChart()) }
-}
-
-private fun EncoreChart.asChart() =
-    Chart(md5, name, artist, null, charter, durationMs, "", ChartFormat.CHART, guitarDifficulties)

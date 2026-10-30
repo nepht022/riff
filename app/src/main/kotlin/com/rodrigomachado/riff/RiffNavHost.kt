@@ -13,7 +13,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
@@ -25,12 +24,8 @@ import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
-import com.rodrigomachado.riff.feature.library.TrackToMatch
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
 import com.rodrigomachado.riff.feature.licenses.LicensesScreen
-import com.rodrigomachado.riff.feature.nowplaying.NowPlayingAutoPlay
-import com.rodrigomachado.riff.feature.nowplaying.NowPlayingRoute
-import com.rodrigomachado.riff.feature.nowplaying.NowPlayingScreen
 import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
 import com.rodrigomachado.riff.feature.ranking.RankingBoardRoute
 import com.rodrigomachado.riff.feature.ranking.RankingBoardScreen
@@ -66,47 +61,13 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         predictivePopExitTransition = { RiffNavTransitions.backExit },
     ) {
         homeDestination(navController)
-        composable<NowPlayingRoute> { entry ->
-            NowPlayingScreen(
-                autoPlayRequests = entry.savedStateHandle,
-                onPlay = dropUnlessResumed { request ->
-                    navController.navigate(
-                        GameplayRoute(
-                            request.chartId,
-                            request.difficulty.name,
-                            request.trackUri,
-                            request.trackOffsetMs,
-                            request.confirmFirst,
-                        ),
-                    )
-                },
-                onChooseChart = dropUnlessResumed { trackUri, title ->
-                    navController.navigate(LibraryRoute(matchTrackUri = trackUri, matchTrackTitle = title))
-                },
-                onOpenLibrary = dropUnlessResumed { navController.navigate(LibraryRoute()) },
-                onOpenSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
-                onOpenReport = dropUnlessResumed { navController.navigate(ReportRoute) },
-                onOpenRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
-                onSearch = dropUnlessResumed { track ->
-                    navController.navigate(
-                        SearchRoute(
-                            "${track.artist} ${track.title}",
-                            track.trackUri,
-                            track.title,
-                            track.artist,
-                            track.durationMs,
-                        ),
-                    )
-                },
-            )
-        }
         settingsDestinations(navController, back) { renamingPlayer = true }
-        libraryDestinations(navController, back)
+        libraryDestinations(navController)
         rankingDestinations(navController)
-        searchDestinations(navController, back)
+        searchDestinations(navController)
         matchDestinations(navController) { renamingPlayer = true }
     }
-    // O nome do ranking na primeira abertura, por cima do Tocando agora ou da Biblioteca.
+    // O nome do ranking na primeira abertura, por cima da tela inicial ou da Biblioteca.
     PlayerNameGate(renaming = renamingPlayer, onRenameClosed = { renamingPlayer = false })
 }
 
@@ -125,7 +86,7 @@ private fun NavigationEffects(
     }
     LaunchedEffect(openLibrary) {
         if (openLibrary) {
-            navController.navigate(LibraryRoute()) { launchSingleTop = true }
+            navController.navigate(LibraryRoute) { launchSingleTop = true }
             onLibraryOpened()
         }
     }
@@ -135,7 +96,7 @@ private fun NavigationEffects(
 private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
     composable<HomeRoute> {
         HomeScreen(
-            onSolo = dropUnlessResumed { navController.navigate(LibraryRoute()) },
+            onSolo = dropUnlessResumed { navController.navigate(LibraryRoute) },
             onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
             onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
@@ -158,37 +119,22 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
 
 /** A partida e o resultado. */
 private fun NavGraphBuilder.matchDestinations(navController: NavHostController, onChooseName: () -> Unit) {
-    composable<GameplayRoute> { entry ->
-        val route = entry.toRoute<GameplayRoute>()
+    composable<GameplayRoute> {
         GameplayScreen(
             onFinished = { scoreId ->
-                navController.navigate(ResultsRoute(scoreId, route.spotifyTrackUri, route.trackOffsetMs)) {
+                navController.navigate(ResultsRoute(scoreId)) {
                     popUpTo<GameplayRoute> { inclusive = true }
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
-            // Segue para a próxima música: volta ao Tocando agora, que começa a próxima se ela tiver mapa.
-            onNextSong = dropUnlessResumed { difficulty, fromTrackUri, waitMs ->
-                navController.previousBackStackEntry?.savedStateHandle?.let {
-                    NowPlayingAutoPlay.request(it, difficulty, fromTrackUri, waitMs)
-                }
-                navController.popBackStack()
-            },
-            // Painel de confirmação: a escolha de mapa da biblioteca para esta faixa, no lugar da partida.
-            onChooseOther = dropUnlessResumed { trackUri, title ->
-                navController.navigate(LibraryRoute(matchTrackUri = trackUri, matchTrackTitle = title)) {
-                    popUpTo<GameplayRoute> { inclusive = true }
-                }
-            },
         )
     }
-    composable<ResultsRoute> { entry ->
-        val route = entry.toRoute<ResultsRoute>()
+    composable<ResultsRoute> {
         ResultsScreen(
             onPlayAgain = dropUnlessResumed { chartId, difficulty ->
-                navController.navigate(
-                    GameplayRoute(chartId, difficulty.name, route.spotifyTrackUri, route.trackOffsetMs),
-                ) { popUpTo<ResultsRoute> { inclusive = true } }
+                navController.navigate(GameplayRoute(chartId, difficulty.name)) {
+                    popUpTo<ResultsRoute> { inclusive = true }
+                }
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
             onChooseName = onChooseName,
@@ -199,46 +145,32 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
     }
 }
 
-/** A Biblioteca: jogar com o áudio da pasta ou escolher o mapa de uma música do Spotify. */
-private fun NavGraphBuilder.libraryDestinations(navController: NavHostController, back: BackNavigation) {
-    composable<LibraryRoute> { entry ->
-        val route = entry.toRoute<LibraryRoute>()
+/** A Biblioteca: jogar com o áudio da pasta. */
+private fun NavGraphBuilder.libraryDestinations(navController: NavHostController) {
+    composable<LibraryRoute> {
         LibraryScreen(
             onPlay = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name))
             },
             onBack = dropUnlessResumed { navController.popBackStack() },
-            match = route.matchTrackUri?.let { TrackToMatch(it, route.matchTrackTitle.orEmpty()) },
-            // Escolher o mapa já soou como confirmação: a volta automática fica em silêncio.
-            onMatched = dropUnlessResumed {
-                back.silenceNextReturn()
-                navController.popBackStack()
-            },
-            onSearch = dropUnlessResumed { match ->
-                navController.navigate(SearchRoute(matchTrackUri = match?.trackUri, matchTrackTitle = match?.title))
-            },
+            onSearch = dropUnlessResumed { navController.navigate(SearchRoute()) },
         )
     }
 }
 
-/** Pesquisa no Encore, aberta pela Biblioteca ou pelo Tocando agora. */
-private fun NavGraphBuilder.searchDestinations(navController: NavHostController, back: BackNavigation) {
+/** Pesquisa no Encore, aberta pela Biblioteca. */
+private fun NavGraphBuilder.searchDestinations(navController: NavHostController) {
     composable<SearchRoute> {
         SearchScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
             onPlay = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name))
             },
-            // Baixar já soou como confirmação: a volta automática ao Tocando agora fica em silêncio.
-            onMatched = dropUnlessResumed {
-                back.silenceNextReturn()
-                navController.popBackStack(NowPlayingRoute, inclusive = false)
-            },
         )
     }
 }
 
-/** Configurações e calibração, abertas a partir de "Tocando agora". */
+/** Configurações, licenças, Reportar e calibração, abertas a partir da tela inicial. */
 private fun NavGraphBuilder.settingsDestinations(
     navController: NavHostController,
     back: BackNavigation,

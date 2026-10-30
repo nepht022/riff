@@ -1,28 +1,25 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A partida da música nova com mapa só sugerido: abre pausada pedindo confirmação (spec Spotify contínuo §4). */
+/** A pausa da partida: Continuar, a sincronia, Sair e o motivo quando o áudio está ocupado. */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
-class GameConfirmPanelTest {
+class GamePauseTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val events = mutableListOf<String>()
-
-    private fun showConfirm() {
+    private fun showPaused(audioBusy: Boolean = false) {
         val session = GameSession(
             listOf(note(60_000)),
             FakeSongPlayer(),
@@ -31,14 +28,13 @@ class GameConfirmPanelTest {
             audioOffsetMs = 0,
         )
         val state = GameplayUiState.Ready(
-            "Título",
+            "Música",
             "Banda",
             Difficulty.EXPERT,
             session,
             Settings.DEFAULT,
             isPaused = true,
-            spotifyTrackUri = "spotify:track:x",
-            awaitingConfirmation = true,
+            audioBusy = audioBusy,
         )
         composeRule.setContent {
             RiffTheme {
@@ -46,28 +42,31 @@ class GameConfirmPanelTest {
                     state,
                     reducedMotion = true,
                     onPause = {},
-                    onResume = { events += "resume" },
-                    onExit = { events += "exit" },
+                    onResume = {},
+                    onExit = {},
                     onSessionFinished = {},
-                    onConfirm = { events += "confirm" },
-                    onChooseOther = { events += "choose" },
                     animate = false,
                 )
             }
         }
     }
 
+    /** Sem o Spotify, a pausa não tem anterior/tocar/próxima. */
     @Test
-    fun theConfirmPanelOffersConfirmChooseAndBack() {
-        showConfirm()
+    fun thePauseHasNoSongControls() {
+        showPaused()
 
-        composeRule.onNodeWithText("Mapa sugerido").assertExists()
-        composeRule.onNodeWithText("Este mapa parece ser desta música: Título — Banda").assertExists()
-        composeRule.onNodeWithText("Continuar").assertDoesNotExist()
-        composeRule.onNodeWithText("Confirmar mapa e jogar").performClick()
-        composeRule.onNodeWithText("Escolher outro").performClick()
-        composeRule.onNodeWithText("Voltar ao menu").performClick()
+        composeRule.onNodeWithText("Continuar").assertExists()
+        composeRule.onNodeWithContentDescription("Próxima música", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Música anterior", substring = true).assertDoesNotExist()
+    }
 
-        assertEquals(listOf("confirm", "choose", "exit"), events)
+    /** Continuar no meio de uma ligação pausa de novo: a pausa explica por quê. */
+    @Test
+    fun aBusyAudioIsExplainedInThePause() {
+        showPaused(audioBusy = true)
+
+        composeRule.onNodeWithText("O áudio do celular está ocupado (uma ligação?). Continue quando ele liberar.")
+            .assertExists()
     }
 }
