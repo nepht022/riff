@@ -41,6 +41,9 @@ fun LicensesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel:
 fun LicensesContent(state: LicensesUiState, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val contentTitle = stringResource(R.string.licenses_content)
     val librariesTitle = stringResource(R.string.licenses_libraries)
+    // Os abertos ficam aqui: o texto de cada um vira itens da lista, desenhados só quando aparecem.
+    var opened by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val toggle = { key: String -> opened = if (key in opened) opened - key else opened + key }
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(Spacing.md),
@@ -57,15 +60,40 @@ fun LicensesContent(state: LicensesUiState, onBack: () -> Unit, modifier: Modifi
                 color = RiffColors.Paper,
             )
         }
-        entries(contentTitle, state.content)
-        entries(librariesTitle, state.libraries)
+        entries(contentTitle, state.content, opened, toggle)
+        entries(librariesTitle, state.libraries, opened, toggle)
     }
 }
 
-private fun LazyListScope.entries(title: String, list: List<LicenseEntry>) {
+private fun LazyListScope.entries(
+    title: String,
+    list: List<LicenseEntry>,
+    opened: List<String>,
+    toggle: (String) -> Unit,
+) {
     if (list.isEmpty()) return
     item { Heading(title) }
-    items(list, key = { "$title/${it.name}" }) { Entry(it) }
+    for (entry in list) {
+        val key = "$title/${entry.name}"
+        val open = key in opened
+        item(key = key) { Entry(entry) { toggle(key) } }
+        val text = entry.text
+        if (open && text != null) {
+            // Por parágrafo: o aviso do ONNX Runtime tem ~330 KB e travaria a tela num Text só.
+            val paragraphs = text.split("\n\n")
+            items(paragraphs.size, key = { "$key/$it" }) { LicenseParagraph(paragraphs[it]) }
+        }
+    }
+}
+
+@Composable
+private fun LicenseParagraph(text: String) {
+    Text(
+        text,
+        Modifier.fillMaxWidth().background(RiffColors.Paper).padding(horizontal = Spacing.md),
+        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        color = RiffColors.Ink,
+    )
 }
 
 @Composable
@@ -74,8 +102,7 @@ private fun Heading(text: String) {
 }
 
 @Composable
-private fun Entry(entry: LicenseEntry) {
-    var open by rememberSaveable(entry.name) { mutableStateOf(false) }
+private fun Entry(entry: LicenseEntry, onToggle: () -> Unit) {
     val text = entry.text
     Column(
         Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small)
@@ -83,7 +110,7 @@ private fun Entry(entry: LicenseEntry) {
                 if (text == null) {
                     Modifier
                 } else {
-                    Modifier.clickable(onClick = withMenuSound(MenuSound.NAVIGATE) { open = !open })
+                    Modifier.clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onToggle))
                 },
             )
             .padding(Spacing.md),
@@ -94,14 +121,6 @@ private fun Entry(entry: LicenseEntry) {
             style = MaterialTheme.typography.bodyMedium,
             color = RiffColors.Ink.copy(alpha = SECONDARY_ALPHA),
         )
-        if (open && text != null) {
-            Text(
-                text,
-                Modifier.padding(top = Spacing.sm),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                color = RiffColors.Ink,
-            )
-        }
     }
 }
 
