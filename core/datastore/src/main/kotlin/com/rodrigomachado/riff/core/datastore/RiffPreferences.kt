@@ -43,6 +43,8 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[SHOW_CHART_IMAGE] = updated.showChartImage
             prefs[SEPARATE_ONLY_CHARGING] = updated.separateOnlyCharging
             prefs.remove(LEGACY_ASK_SEPARATION_ALWAYS)
+            // As opções do Spotify (até a 0.4.0): o Spotify saiu do app.
+            SPOTIFY_KEYS.forEach { prefs.remove(it) }
             prefs.remove(LEGACY_SFX_VOLUME)
             prefs.remove(LEGACY_DEFAULT_DIFFICULTY)
         }
@@ -134,6 +136,14 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val PLAYER_NAME = stringPreferencesKey("player_name")
         val PLAYER_KEY = stringPreferencesKey("player_key")
         val SPOTIFY_NEXT_SONG_DIRECT = booleanPreferencesKey("spotify_next_song_direct")
+        val SPOTIFY_KEYS = listOf(
+            QUEUE_PREFETCH,
+            QUEUE_DELETE_UNPLAYED,
+            QUEUE_USE_MOBILE_DATA,
+            QUEUE_REPLACE_SUGGESTED,
+            QUEUE_CLOSEST_DURATION,
+            SPOTIFY_NEXT_SONG_DIRECT,
+        )
         val SEPARATE_ONLY_CHARGING = booleanPreferencesKey("separate_only_charging")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")

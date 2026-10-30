@@ -38,23 +38,6 @@ data class ChartWithDifficulties(
 )
 
 @Entity(
-    tableName = "track_matches",
-    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("chartId")],
-)
-data class TrackMatchEntity(
-    @PrimaryKey val spotifyTrackUri: String,
-    val chartId: String,
-    val confidence: Float,
-    val isManual: Boolean,
-    val trackOffsetMs: Int,
-    /** O jogador (ou a detecção automática) já escolheu o ajuste; 0 escolhido vale, 0 não escolhido não. */
-    @ColumnInfo(defaultValue = "0") val offsetChosen: Boolean = false,
-    /** Mapa baixado pela fila com outra duração: aparece como sugestão até o jogador confirmar. */
-    @ColumnInfo(defaultValue = "0") val suggested: Boolean = false,
-)
-
-@Entity(
     tableName = "scores",
     foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("chartId", "difficulty")],
@@ -98,18 +81,6 @@ data class AiSeparationEntity(
     val state: String,
     val bytes: Long,
     val createdAtEpochMs: Long,
-)
-
-/** Mapa baixado sozinho pela fila do Spotify; sai quando a música passa sem ser jogada (se a opção estiver ligada). */
-@Entity(
-    tableName = "queue_downloads",
-    foreignKeys = [ForeignKey(ChartEntity::class, ["id"], ["chartId"], onDelete = ForeignKey.CASCADE)],
-)
-data class QueueDownloadEntity(
-    @PrimaryKey val chartId: String,
-    val trackUri: String,
-    val downloadedAtEpochMs: Long,
-    val played: Boolean,
 )
 
 /**

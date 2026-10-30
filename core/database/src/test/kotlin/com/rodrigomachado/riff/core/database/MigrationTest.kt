@@ -249,4 +249,58 @@ class MigrationTest {
             close()
         }
     }
+
+    /** Sem o Spotify: as duas tabelas dele saem, e nada das outras se perde. */
+    @Test
+    fun version12BecomesVersion13WithoutTheSpotifyTables() {
+        helper.createDatabase(12).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId, separateGuitar) VALUES ('a', 'T', 'B', NULL, NULL, NULL, 'u', 'CHART', 1, 0)",
+            )
+            execSQL(
+                "INSERT INTO scores (chartId, difficulty, score, accuracy, maxCombo, perfect, good, miss, " +
+                    "playedAtEpochMs, cleanStreakMs) VALUES ('a', 'HARD', 100, 1.0, 1, 1, 0, 0, 1, NULL)",
+            )
+            execSQL("INSERT INTO chart_offsets (chartId, offsetMs) VALUES ('a', 30)")
+            execSQL(
+                "INSERT INTO ai_separations (chartId, state, bytes, createdAtEpochMs) VALUES ('a', 'SEPARATED', 1, 1)",
+            )
+            execSQL("INSERT INTO separation_queue (chartId, title, position, attempts) VALUES ('a', 'T', 1, 0)")
+            execSQL(
+                "INSERT INTO ranking_pending (scoreId, chartId, difficulty, title, artist, points, accuracy, combo, " +
+                    "perfect, cleanMs, createdAtEpochMs, notes) " +
+                    "VALUES (1, 'a', 'HARD', 'T', 'A', 100, 0.9, 5, 4, NULL, 1, 9)",
+            )
+            execSQL(
+                "INSERT INTO track_matches (spotifyTrackUri, chartId, confidence, isManual, trackOffsetMs, " +
+                    "offsetChosen, suggested) VALUES ('spotify:track:x', 'a', 1.0, 1, 0, 0, 0)",
+            )
+            execSQL(
+                "INSERT INTO queue_downloads (chartId, trackUri, downloadedAtEpochMs, played) VALUES ('a', 'x', 1, 0)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(13).apply {
+            for (table in listOf(
+                "charts",
+                "scores",
+                "chart_offsets",
+                "ai_separations",
+                "separation_queue",
+                "ranking_pending",
+            )) {
+                prepare("SELECT COUNT(*) FROM $table").use {
+                    it.step()
+                    assertEquals(table, 1L, it.getLong(0))
+                }
+            }
+            prepare("SELECT COUNT(*) FROM sqlite_master WHERE name IN ('track_matches', 'queue_downloads')").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

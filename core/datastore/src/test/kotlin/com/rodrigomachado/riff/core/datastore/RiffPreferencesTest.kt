@@ -179,4 +179,29 @@ class RiffPreferencesTest {
 
         assertEquals(true, preferences.settings.first().separateOnlyCharging)
     }
+
+    /** A 0.4.0 gravou as opções do Spotify: a leitura não quebra e a próxima gravação as esquece. */
+    @Test
+    fun theSpotifyKeysAreForgotten() = runTest {
+        val store = InMemoryPreferencesStore()
+        val queuePrefetch = androidx.datastore.preferences.core.booleanPreferencesKey("queue_prefetch")
+        val nextSongDirect = androidx.datastore.preferences.core.booleanPreferencesKey("spotify_next_song_direct")
+        val leftHanded = androidx.datastore.preferences.core.booleanPreferencesKey("left_handed")
+        store.updateData {
+            it.toMutablePreferences().apply {
+                this[queuePrefetch] = true
+                this[nextSongDirect] = false
+                this[leftHanded] = true
+            }
+        }
+        val preferences = RiffPreferences(store)
+
+        assertEquals(true, preferences.settings.first().leftHanded)
+        preferences.updateSettings { it }
+
+        val saved = store.data.first()
+        assertEquals(null, saved[queuePrefetch])
+        assertEquals(null, saved[nextSongDirect])
+        assertEquals(true, saved[leftHanded])
+    }
 }

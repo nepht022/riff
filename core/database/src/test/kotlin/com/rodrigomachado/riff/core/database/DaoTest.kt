@@ -64,13 +64,11 @@ class DaoTest {
     fun deleteNotSeenInRemovesOldChartsAndTheirDependents() = runTest {
         db.chartDao().replace(chart("velho", scanId = 1), listOf(ChartDifficultyEntity("velho", "EASY")))
         db.chartDao().replace(chart("novo", scanId = 2), emptyList())
-        db.trackMatchDao().upsert(TrackMatchEntity("spotify:track:1", "velho", 1f, false, 0))
         db.scoreDao().insert(score("velho", "EASY", 100))
 
         db.chartDao().deleteNotSeenIn(scanId = 2)
 
         assertEquals(listOf("novo"), db.chartDao().observeAll().first().map { it.chart.id })
-        assertNull(db.trackMatchDao().get("spotify:track:1"))
         assertNull(db.scoreDao().best("velho", "EASY"))
     }
 
@@ -82,16 +80,6 @@ class DaoTest {
         db.chartDao().deleteNotSeenIn(scanId = 2)
 
         assertEquals(listOf("kept"), db.chartDao().observeAll().first().map { it.chart.id })
-    }
-
-    @Test
-    fun trackMatchUpsertReplacesPreviousMatch() = runTest {
-        db.chartDao().replace(chart("a"), emptyList())
-        db.chartDao().replace(chart("b"), emptyList())
-        db.trackMatchDao().upsert(TrackMatchEntity("spotify:track:1", "a", 0.8f, false, 0))
-        db.trackMatchDao().upsert(TrackMatchEntity("spotify:track:1", "b", 1f, true, -40))
-
-        assertEquals(TrackMatchEntity("spotify:track:1", "b", 1f, true, -40), db.trackMatchDao().get("spotify:track:1"))
     }
 
     @Test

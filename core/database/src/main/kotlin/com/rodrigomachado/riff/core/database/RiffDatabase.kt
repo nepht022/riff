@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.database
 
 import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.DeleteTable
 import androidx.room.RoomDatabase
 import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.SQLiteConnection
@@ -11,16 +12,14 @@ import androidx.sqlite.execSQL
     entities = [
         ChartEntity::class,
         ChartDifficultyEntity::class,
-        TrackMatchEntity::class,
         ScoreEntity::class,
         ChartOffsetEntity::class,
         EncoreChartEntity::class,
         AiSeparationEntity::class,
-        QueueDownloadEntity::class,
         RankingPendingEntity::class,
         SeparationQueueEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -34,20 +33,17 @@ import androidx.sqlite.execSQL
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
+        AutoMigration(from = 12, to = 13, spec = DropSpotifyTables::class),
     ],
 )
 abstract class RiffDatabase : RoomDatabase() {
     abstract fun chartDao(): ChartDao
-
-    abstract fun trackMatchDao(): TrackMatchDao
 
     abstract fun scoreDao(): ScoreDao
 
     abstract fun chartOffsetDao(): ChartOffsetDao
 
     abstract fun encoreChartDao(): EncoreChartDao
-
-    abstract fun queueDownloadDao(): QueueDownloadDao
 
     abstract fun aiSeparationDao(): AiSeparationDao
 
@@ -62,3 +58,8 @@ class MarkChosenOffsets : AutoMigrationSpec {
         connection.execSQL("UPDATE track_matches SET offsetChosen = 1 WHERE trackOffsetMs != 0")
     }
 }
+
+/** Na versão 13 o Spotify saiu do app: os casamentos com as faixas e o registro da fila de mapas vão junto. */
+@DeleteTable(tableName = "track_matches")
+@DeleteTable(tableName = "queue_downloads")
+class DropSpotifyTables : AutoMigrationSpec
