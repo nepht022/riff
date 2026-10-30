@@ -13,7 +13,7 @@ const val PACKAGE = "com.rodrigomachado.riff"
 const val TAG = "RiffDesempenho"
 
 // Etiquetas das telas (testTag com testTagsAsResourceId); as classes ficam nos módulos do app.
-private const val OPEN_LIBRARY = "nowplaying_open_library"
+private const val OPEN_LIBRARY = "home_solo"
 private const val LIBRARY_LIST = "library_list"
 private const val DIFFICULTY_OPTION = "difficulty_option"
 private const val STAGE = "gameplay_stage"
@@ -35,7 +35,7 @@ private const val STRIKE_WIDTH_FRACTION = 0.92f
 /** Música do percurso da partida: argumento de instrumentação `riff.song`. */
 fun songTitle(): String = InstrumentationRegistry.getArguments().getString("riff.song") ?: "Smells Like Teen Spirit"
 
-/** Abertura: espera a tela inicial ("Tocando agora"). */
+/** Abertura: espera a tela inicial (o quadro Sozinho). */
 fun MacrobenchmarkScope.waitForHome() {
     checkNotNull(device.wait(Until.findObject(By.res(OPEN_LIBRARY)), TIMEOUT_MS)) { "a tela inicial não apareceu" }
 }
