@@ -5,7 +5,6 @@ import com.rodrigomachado.riff.core.chart.sng.SngPackage
 import com.rodrigomachado.riff.core.data.EncoreDownloads
 import com.rodrigomachado.riff.core.data.IoDispatcher
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
-import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.download.ChartDownloadException.Reason
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderWriter
@@ -29,12 +28,12 @@ class ChartDownloadException(val reason: Reason, cause: Throwable?) : Exception(
 
 interface ChartDownloader {
     /**
-     * Baixa [chart] para "Baixados pelo Riff" e o põe na biblioteca; com [matchTrackUri], casa com a faixa do Spotify.
+     * Baixa [chart] para "Baixados pelo Riff" e o põe na biblioteca.
      * Qualquer falha (e sair no meio) apaga o arquivo provisório.
      *
      * @throws ChartDownloadException com o motivo para a tela.
      */
-    suspend fun download(chart: EncoreChart, matchTrackUri: String?, onProgress: (Float) -> Unit): Chart
+    suspend fun download(chart: EncoreChart, onProgress: (Float) -> Unit): Chart
 }
 
 class EncoreChartDownloader @Inject constructor(
@@ -44,12 +43,11 @@ class EncoreChartDownloader @Inject constructor(
     private val writer: FolderWriter,
     private val importer: ChartImporter,
     private val downloads: EncoreDownloads,
-    private val matches: TrackMatchRepository,
     @IoDispatcher private val dispatcher: CoroutineDispatcher,
     private val opener: RandomReadOpener,
 ) : ChartDownloader {
     @Suppress("TooGenericExceptionCaught") // qualquer saída (erro ou cancelamento) apaga o provisório
-    override suspend fun download(chart: EncoreChart, matchTrackUri: String?, onProgress: (Float) -> Unit): Chart =
+    override suspend fun download(chart: EncoreChart, onProgress: (Float) -> Unit): Chart =
         withContext(dispatcher) {
             val root = folders.rootUri.first() ?: throw ChartDownloadException(Reason.NO_FOLDER, null)
             if (!access.canWrite(root)) throw ChartDownloadException(Reason.NO_WRITE_ACCESS, null)
@@ -61,7 +59,6 @@ class EncoreChartDownloader @Inject constructor(
                 current = failing(Reason.STORAGE) { writer.rename(current, name) }
                 val imported = failing(Reason.BROKEN_FILE) { importer.importPackage(current, name) }
                 downloads.remember(imported.id, chart.md5)
-                matchTrackUri?.let { matches.save(it, imported.id, confidence = 1f, isManual = true) }
                 imported
             } catch (e: Throwable) {
                 withContext(NonCancellable) { writer.delete(current) }

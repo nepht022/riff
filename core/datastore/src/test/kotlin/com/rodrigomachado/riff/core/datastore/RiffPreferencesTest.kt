@@ -171,30 +171,6 @@ class RiffPreferencesTest {
     }
 
     @Test
-    fun queueOptionsAreSaved() = runTest {
-        val preferences = RiffPreferences(InMemoryPreferencesStore())
-
-        preferences.updateSettings {
-            it.copy(
-                queuePrefetch = true,
-                queueDeleteUnplayed = false,
-                queueUseMobileData = true,
-                queueReplaceSuggested = false,
-                queueClosestDuration = false,
-                spotifyNextSongDirect = false,
-            )
-        }
-
-        val settings = preferences.settings.first()
-        assertEquals(true, settings.queuePrefetch)
-        assertEquals(false, settings.queueDeleteUnplayed)
-        assertEquals(true, settings.queueUseMobileData)
-        assertEquals(false, settings.queueReplaceSuggested)
-        assertEquals(false, settings.queueClosestDuration)
-        assertEquals(false, settings.spotifyNextSongDirect)
-    }
-
-    @Test
     fun separatingOnlyWhileChargingIsSavedAndStartsOff() = runTest {
         val preferences = RiffPreferences(InMemoryPreferencesStore())
         assertEquals(false, preferences.settings.first().separateOnlyCharging)

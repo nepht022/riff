@@ -36,10 +36,6 @@ object AudioModule {
         }
 
     @Provides
-    fun musicStarts(@ApplicationContext context: Context, opener: RandomReadOpener): MusicStartFinder =
-        PcmMusicStartFinder { uri -> MediaCodecPcmSource.open(context, uri, opener) }
-
-    @Provides
     fun playbackInterruptions(@ApplicationContext context: Context): PlaybackInterruptionsFactory =
         PlaybackInterruptionsFactory { AndroidPlaybackInterruptions(context) }
 

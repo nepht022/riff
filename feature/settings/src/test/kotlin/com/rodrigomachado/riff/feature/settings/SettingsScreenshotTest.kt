@@ -43,9 +43,6 @@ class SettingsScreenshotTest {
     fun aiTab() = tab("Settings_ai", SettingsTab.AI)
 
     @Test
-    fun spotifyTab() = tab("Settings_spotify", SettingsTab.SPOTIFY)
-
-    @Test
     @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
     fun settingsInEnglish() = tab("Settings_en", SettingsTab.GENERAL)
 
@@ -54,7 +51,7 @@ class SettingsScreenshotTest {
             RiffTheme {
                 StageBackground(Modifier.fillMaxSize()) {
                     SettingsContent(
-                        settings = Settings.DEFAULT.copy(hitVolume = 0.3f, leftHanded = true, queuePrefetch = true),
+                        settings = Settings.DEFAULT.copy(hitVolume = 0.3f, leftHanded = true),
                         onMasterVolume = {},
                         onMissVolume = {},
                         onNoteSpeed = {},

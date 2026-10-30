@@ -290,7 +290,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             setItem(chart.md5, ItemState.Downloading(0f))
             try {
-                val imported = downloader.download(chart, null) { setItem(chart.md5, ItemState.Downloading(it)) }
+                val imported = downloader.download(chart) { setItem(chart.md5, ItemState.Downloading(it)) }
                 setItem(chart.md5, ItemState.Ready(imported.id, imported.difficulties))
             } catch (e: ChartDownloadException) {
                 Log.w(TAG, "Download falhou: ${e.reason}", e)

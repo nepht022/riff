@@ -18,7 +18,6 @@ class FakeSongPlayer : SongPlayer {
     var released = false
     override var isCompleted: Boolean = false
     override var isStarting: Boolean = false
-    override var notice: com.rodrigomachado.riff.core.audio.PlayerNotice? = null
     val seeks = mutableListOf<Long>()
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
@@ -56,14 +55,6 @@ class FakeSongPlayer : SongPlayer {
 
     override fun release() {
         released = true
-    }
-
-    /** A música continua (Spotify, seguindo para a próxima). */
-    var keptMusic = false
-
-    override fun releaseKeepingMusic() {
-        keptMusic = true
-        release()
     }
 }
 

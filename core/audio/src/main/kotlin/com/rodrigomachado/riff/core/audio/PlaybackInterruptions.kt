@@ -13,7 +13,7 @@ import android.os.Looper
 
 /**
  * Avisa quando a música da partida deve parar por fora do jogo: perda do foco de áudio (ligação, outro app tocando)
- * ou fone desconectado (o som iria para o alto-falante). Usado no modo biblioteca; no Spotify, o próprio Spotify cuida.
+ * ou fone desconectado (o som iria para o alto-falante).
  */
 interface PlaybackInterruptions {
     /**

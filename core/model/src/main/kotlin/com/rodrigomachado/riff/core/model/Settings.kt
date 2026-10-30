@@ -2,9 +2,8 @@ package com.rodrigomachado.riff.core.model
 
 /**
  * Preferências do jogador. [audioOffsetMs] negativo compensa atraso de áudio (fone Bluetooth).
- * Volumes vão de 0 (desligado) a 1: [masterVolume] multiplica todos os sons do app (não o Spotify, cujo
- * volume o app não controla); [hitVolume] e [missVolume] são os sons de acerto e de erro. [menuSounds] liga os sons
- * de guitarra dos botões do menu (no volume geral).
+ * Volumes vão de 0 (desligado) a 1: [masterVolume] multiplica todos os sons do app; [hitVolume] e [missVolume]
+ * são os sons de acerto e de erro. [menuSounds] liga os sons de guitarra dos botões do menu (no volume geral).
  */
 data class Settings(
     val audioOffsetMs: Int,
@@ -24,18 +23,6 @@ data class Settings(
     val fretStyle: FretStyle = FretStyle.DISCS,
     /** Mostrar a capa ou a imagem de fundo do mapa atrás da pista. */
     val showChartImage: Boolean = true,
-    /** Baixar do Encore os mapas das duas próximas músicas da fila do Spotify. */
-    val queuePrefetch: Boolean = false,
-    /** Apagar os mapas baixados pela fila quando a música passa sem ser jogada. */
-    val queueDeleteUnplayed: Boolean = true,
-    /** Baixar pela fila também em rede com cobrança (dados móveis); desligado, só no Wi-Fi. */
-    val queueUseMobileData: Boolean = false,
-    /** Música da fila com mapa só sugerido: baixar uma nova sugestão (verdadeiro) ou manter o sugerido. */
-    val queueReplaceSuggested: Boolean = true,
-    /** Nenhum mapa do Encore com a duração da faixa: baixar o de duração mais próxima, como sugestão (verdadeiro). */
-    val queueClosestDuration: Boolean = true,
-    /** Spotify, fim da música: seguir direto para a próxima, salvando o resultado sem mostrar (verdadeiro). */
-    val spotifyNextSongDirect: Boolean = true,
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }

@@ -65,7 +65,7 @@ class SettingsViewModelTest {
     }
 
     private fun TestScope.viewModel(): SettingsViewModel {
-        val viewModel = SettingsViewModel(repository, separations, language, folder, folder, ranking) { sfx }
+        val viewModel = SettingsViewModel(repository, separations, language, ranking) { sfx }
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
     }
@@ -166,49 +166,6 @@ class SettingsViewModelTest {
         vm.setLanguage(AppLanguage.ENGLISH)
 
         assertEquals(AppLanguage.ENGLISH, language.current)
-    }
-
-    /** A fila vem da sessão de mídia: ligar não abre login nenhum. */
-    @Test
-    fun turningOnQueueMapsOnlySavesTheOption() = runTest {
-        val vm = viewModel()
-
-        vm.onQueue(QueueAction.Prefetch(true))
-        advanceUntilIdle()
-        assertEquals(true, repository.settings.value.queuePrefetch)
-
-        vm.onQueue(QueueAction.Prefetch(false))
-        advanceUntilIdle()
-        assertEquals(false, repository.settings.value.queuePrefetch)
-    }
-
-    @Test
-    fun theOtherQueueOptionsAreSaved() = runTest {
-        val vm = viewModel()
-
-        vm.setQueueDeleteUnplayed(false)
-        vm.setQueueUseMobileData(true)
-        vm.setQueueReplaceSuggested(false)
-        vm.onQueue(QueueAction.ClosestDuration(false))
-        vm.onQueue(QueueAction.NextSongDirect(false))
-        advanceUntilIdle()
-
-        val saved = repository.settings.value
-        assertEquals(false, saved.queueDeleteUnplayed)
-        assertEquals(true, saved.queueUseMobileData)
-        assertEquals(false, saved.queueReplaceSuggested)
-        assertEquals(false, saved.queueClosestDuration)
-        assertEquals(false, saved.spotifyNextSongDirect)
-    }
-
-    @Test
-    fun theFolderPermissionIsReported() = runTest {
-        folder.writable = false
-        val vm = viewModel()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.canWriteToLibrary.collect {} }
-        advanceUntilIdle()
-
-        assertEquals(false, vm.canWriteToLibrary.value)
     }
 
     /** A tela ainda mostrava o visual antigo: a segunda escolha não desfaz a primeira. */

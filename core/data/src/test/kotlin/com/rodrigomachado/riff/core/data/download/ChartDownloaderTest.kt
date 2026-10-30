@@ -4,7 +4,6 @@ import com.rodrigomachado.riff.core.chart.sng.ByteArrayRandomRead
 import com.rodrigomachado.riff.core.chart.sng.SngWriter
 import com.rodrigomachado.riff.core.data.EncoreDownloads
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
-import com.rodrigomachado.riff.core.data.TrackMatchRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.folder.FolderWriter
 import com.rodrigomachado.riff.core.data.folder.SngFolderSource
@@ -17,8 +16,6 @@ import com.rodrigomachado.riff.core.encore.EncoreClient
 import com.rodrigomachado.riff.core.encore.HttpResponse
 import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.model.Difficulty
-import com.rodrigomachado.riff.core.model.MatchStatus
-import com.rodrigomachado.riff.core.model.PlaybackState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
@@ -44,7 +41,6 @@ class ChartDownloaderTest {
     private val repository = FakeChartRepository()
     private val writer = TreeWriter(tree)
     private val downloads = MemoryDownloads()
-    private val matches = SavedMatches()
     private val access = object : FolderAccess {
         var writable = true
 
@@ -85,14 +81,13 @@ class ChartDownloaderTest {
             writer,
             FolderChartImporter(source, repository, StandardTestDispatcher(testScheduler), 1L shl 24) { 1L },
             downloads,
-            matches,
             Dispatchers.IO,
         ) { ByteArrayRandomRead(tree.bytes(it)) }
     }
 
     @Test
     fun aDownloadedPackageEntersTheLibraryAndIsRemembered() = runTest {
-        val chart = downloader(validSng("Teen")).download(encoreChart("m5"), matchTrackUri = null) {}
+        val chart = downloader(validSng("Teen")).download(encoreChart("m5")) {}
 
         assertEquals("Teen", chart.title)
         assertEquals(listOf("raiz/Baixados pelo Riff/Nirvana - Teen.sng"), writer.created())
@@ -100,16 +95,9 @@ class ChartDownloaderTest {
     }
 
     @Test
-    fun aDownloadFromTheSpotifyScreenIsMatchedWithTheTrack() = runTest {
-        val chart = downloader(validSng("Teen")).download(encoreChart("m5"), matchTrackUri = "spotify:track:x") {}
-
-        assertEquals(Triple("spotify:track:x", chart.id, true), matches.saved.single())
-    }
-
-    @Test
     fun aBrokenDownloadLeavesNothingBehind() = runTest {
         val error = assertThrows(ChartDownloadException::class.java) {
-            runBlocking { downloader("lixo".toByteArray()).download(encoreChart("m5"), null) {} }
+            runBlocking { downloader("lixo".toByteArray()).download(encoreChart("m5")) {} }
         }
 
         assertEquals(ChartDownloadException.Reason.BROKEN_FILE, error.reason)
@@ -118,7 +106,7 @@ class ChartDownloaderTest {
 
     @Test
     fun leavingDuringTheDownloadDeletesThePartialFile() = runTest {
-        val job = launch { downloader(validSng("Teen"), hang = true).download(encoreChart("m5"), null) {} }
+        val job = launch { downloader(validSng("Teen"), hang = true).download(encoreChart("m5")) {} }
         runCurrent()
         job.cancelAndJoin()
 
@@ -130,7 +118,7 @@ class ChartDownloaderTest {
         access.writable = false
 
         val error = assertThrows(ChartDownloadException::class.java) {
-            runBlocking { downloader(validSng("Teen")).download(encoreChart("m5"), null) {} }
+            runBlocking { downloader(validSng("Teen")).download(encoreChart("m5")) {} }
         }
 
         assertEquals(ChartDownloadException.Reason.NO_WRITE_ACCESS, error.reason)
@@ -200,21 +188,4 @@ private class MemoryDownloads : EncoreDownloads {
     }
 
     override suspend fun chartIdOf(md5: String) = owned.value[md5]
-}
-
-private class SavedMatches : TrackMatchRepository {
-    val saved = mutableListOf<Triple<String, String, Boolean>>()
-    override val changes = MutableStateFlow(0)
-
-    override suspend fun matchFor(track: PlaybackState): MatchStatus = MatchStatus.NoMatch
-
-    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
-
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
-        saved += Triple(spotifyTrackUri, chartId, isManual)
-    }
-
-    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null
-
-    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) = Unit
 }

@@ -6,8 +6,3 @@ import javax.inject.Qualifier
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class LocalSong
-
-/** Música tocando no Spotify. */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class SpotifySong

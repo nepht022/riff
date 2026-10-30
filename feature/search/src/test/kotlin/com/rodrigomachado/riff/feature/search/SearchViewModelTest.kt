@@ -104,11 +104,8 @@ class FakeDownloader : ChartDownloader {
     var progressSteps = emptyList<Float>()
     var gate: CompletableDeferred<Unit>? = null
     var calls = 0
-    var lastMatchTrackUri: String? = null
-
-    override suspend fun download(chart: EncoreChart, matchTrackUri: String?, onProgress: (Float) -> Unit): Chart {
+    override suspend fun download(chart: EncoreChart, onProgress: (Float) -> Unit): Chart {
         calls++
-        lastMatchTrackUri = matchTrackUri
         progressSteps.forEach(onProgress)
         gate?.await()
         val id = "baixado-${chart.md5}"

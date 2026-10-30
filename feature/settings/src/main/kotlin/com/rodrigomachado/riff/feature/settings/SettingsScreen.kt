@@ -76,7 +76,6 @@ fun SettingsScreen(
     val rankingName by viewModel.rankingName.collectAsStateWithLifecycle()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
-    val canWriteToLibrary by viewModel.canWriteToLibrary.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
     val current = settings
     if (current == null) {
@@ -100,8 +99,6 @@ fun SettingsScreen(
         onSeparateOnlyCharging = viewModel::setSeparateOnlyCharging,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
-        queue = QueueUiState(canWriteToLibrary),
-        onQueue = viewModel::onQueue,
         rankingName = rankingName,
         onRankingName = onRankingName,
         onLicenses = onLicenses,
@@ -132,8 +129,6 @@ fun SettingsContent(
     onTrackLook: (TrackLookChange) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
-    queue: QueueUiState = QueueUiState(canWriteToLibrary = true),
-    onQueue: (QueueAction) -> Unit = {},
     initialTab: SettingsTab = SettingsTab.GENERAL,
     rankingName: RankingName? = null,
     onRankingName: () -> Unit = {},
@@ -178,8 +173,6 @@ fun SettingsContent(
                     SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
 
                     SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
-
-                    SettingsTab.SPOTIFY -> SpotifyTab(settings, queue, onQueue)
 
                     SettingsTab.AI -> AiSeparationSection(
                         separationUsage,
