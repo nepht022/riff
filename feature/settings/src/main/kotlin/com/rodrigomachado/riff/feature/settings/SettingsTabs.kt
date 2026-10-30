@@ -1,7 +1,6 @@
 package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -20,12 +22,16 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -42,14 +48,22 @@ enum class SettingsTab { GENERAL, SOUNDS, GAME, TRACK_LOOK, AI, SPOTIFY }
 /** Barra de abas que rola de lado se não couber; a escolhida fica clara e sublinhada de vermelho. */
 @Composable
 internal fun SettingsTabBar(selected: SettingsTab, onSelect: (SettingsTab) -> Unit) {
+    val scroll = rememberScrollState()
+    // Refeita numa aba fora da tela (celular estreito), a barra rola o mínimo para ela aparecer.
+    val requesters = remember { SettingsTab.entries.associateWith { BringIntoViewRequester() } }
+    LaunchedEffect(selected) {
+        withFrameNanos {} // depois da primeira medida: antes dela não há onde rolar
+        requesters.getValue(selected).bringIntoView()
+    }
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = Spacing.sm),
+        // selectableGroup: o TalkBack diz "aba 2 de 6".
+        Modifier.fillMaxWidth().horizontalScroll(scroll).selectableGroup().padding(top = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         for (tab in SettingsTab.entries) {
             val isSelected = tab == selected
             Column(
-                Modifier.selectable(
+                Modifier.bringIntoViewRequester(requesters.getValue(tab)).selectable(
                     selected = isSelected,
                     role = Role.Tab,
                     onClick = withMenuSound(MenuSound.NAVIGATE) { onSelect(tab) },
@@ -64,7 +78,7 @@ internal fun SettingsTabBar(selected: SettingsTab, onSelect: (SettingsTab) -> Un
                 )
                 Box(
                     Modifier.padding(top = Spacing.xs).width(TAB_UNDERLINE_WIDTH).height(TAB_UNDERLINE_HEIGHT)
-                        .background(if (isSelected) RiffColors.TourRed else RiffColors.StageBlack.copy(alpha = 0f)),
+                        .background(if (isSelected) RiffColors.TourRed else Color.Transparent),
                 )
             }
         }
@@ -117,10 +131,13 @@ internal fun GeneralTab(
             onDismissRequest = { choosing = false },
             title = { Text(stringResource(R.string.settings_language)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     for (option in AppLanguage.entries) {
                         Row(
-                            Modifier.fillMaxWidth().clickable(
+                            // Cada idioma é uma opção marcada ou não para o TalkBack, como o botão de rádio.
+                            Modifier.fillMaxWidth().selectable(
+                                selected = option == language,
+                                role = Role.RadioButton,
                                 onClick = withMenuSound(MenuSound.NAVIGATE) {
                                     choosing = false
                                     if (option != language) onLanguage(option)

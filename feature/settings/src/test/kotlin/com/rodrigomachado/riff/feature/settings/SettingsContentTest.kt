@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
@@ -13,6 +14,8 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -62,36 +65,40 @@ class SettingsContentTest {
 
     private var rankingName: RankingName? = null
 
-    private fun show(settings: Settings = Settings.DEFAULT, separationUsage: SeparationUsage = SeparationUsage(0, 0)) =
-        composeRule.setContent {
-            CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
-                RiffTheme {
-                    SettingsContent(
-                        settings = settings,
-                        onMasterVolume = {},
-                        onMissVolume = {},
-                        onNoteSpeed = {},
-                        onLeftHanded = { leftHanded = it },
-                        onMenuSounds = { menuSounds = it },
-                        onPreviewMiss = {},
-                        onCalibrate = {},
-                        onBack = { back = true },
-                        separationUsage = separationUsage,
-                        onDeleteSeparations = { events += "delete" },
-                        onAskAlways = { events += "askAlways:$it" },
-                        onSeparateOnlyCharging = { events += "onlyCharging:$it" },
-                        onTrackLook = { looks += it(TrackLook.DEFAULT) },
-                        onShowChartImage = { events += "image:$it" },
-                        onLanguage = { languages += it },
-                        queue = queueState,
-                        onQueue = { events += it.toString() },
-                        rankingName = rankingName,
-                        onRankingName = { events += "rankingName" },
-                        onLicenses = { events += "licenses" },
-                    )
-                }
+    private fun show(
+        settings: Settings = Settings.DEFAULT,
+        separationUsage: SeparationUsage = SeparationUsage(0, 0),
+        initialTab: SettingsTab = SettingsTab.GENERAL,
+    ) = composeRule.setContent {
+        CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
+            RiffTheme {
+                SettingsContent(
+                    settings = settings,
+                    onMasterVolume = {},
+                    onMissVolume = {},
+                    onNoteSpeed = {},
+                    onLeftHanded = { leftHanded = it },
+                    onMenuSounds = { menuSounds = it },
+                    onPreviewMiss = {},
+                    onCalibrate = {},
+                    onBack = { back = true },
+                    separationUsage = separationUsage,
+                    onDeleteSeparations = { events += "delete" },
+                    onAskAlways = { events += "askAlways:$it" },
+                    onSeparateOnlyCharging = { events += "onlyCharging:$it" },
+                    onTrackLook = { looks += it(TrackLook.DEFAULT) },
+                    onShowChartImage = { events += "image:$it" },
+                    onLanguage = { languages += it },
+                    queue = queueState,
+                    onQueue = { events += it.toString() },
+                    rankingName = rankingName,
+                    onRankingName = { events += "rankingName" },
+                    onLicenses = { events += "licenses" },
+                    initialTab = initialTab,
+                )
             }
         }
+    }
 
     @Test
     fun generalShowsTheRankingNameAndOpensTheRename() {
@@ -339,7 +346,7 @@ class SettingsContentTest {
             "Geral" to "Idioma",
         )
         for ((tab, setting) in firstOfEach) {
-            composeRule.onNodeWithText(tab).performClick().assertIsSelected()
+            composeRule.onNodeWithText(tab).performScrollTo().performClick().assertIsSelected()
             composeRule.onNodeWithText(setting).assertExists()
         }
         assertEquals(List(firstOfEach.size) { MenuSound.NAVIGATE }, sounds)
@@ -354,6 +361,34 @@ class SettingsContentTest {
 
         assertEquals(listOf(AppLanguage.ENGLISH), languages)
         composeRule.onNodeWithText("English").assertDoesNotExist() // a lista fecha
+    }
+
+    /** O TalkBack diz "aba 2 de 6" e lê cada idioma como opção marcada ou não. */
+    @Test
+    fun tabsAndLanguagesAreGroupedForTalkBack() {
+        show()
+
+        composeRule.onNode(
+            androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(
+                androidx.compose.ui.semantics.SemanticsProperties.SelectableGroup,
+            ).and(androidx.compose.ui.test.hasAnyDescendant(androidx.compose.ui.test.hasText("Sons"))),
+        ).assertExists()
+        composeRule.onNodeWithText("Idioma").performClick()
+        composeRule.onNode(
+            androidx.compose.ui.test.hasText("Português").and(androidx.compose.ui.test.isSelected()),
+        ).assertExists()
+        composeRule.onNode(
+            androidx.compose.ui.test.hasText("English").and(androidx.compose.ui.test.isNotSelected()),
+        ).assertExists()
+    }
+
+    /** Refeita numa aba fora da barra (celular estreito), a barra rola até ela. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w240dp-h640dp")
+    fun theChosenTabIsScrolledIntoView() {
+        show(initialTab = SettingsTab.SPOTIFY)
+
+        composeRule.onAllNodesWithText("Spotify").onFirst().assertIsDisplayed()
     }
 
     /** O idioma vem da própria tela: trocado pelas configurações do celular, a linha acompanha e dá para voltar. */
