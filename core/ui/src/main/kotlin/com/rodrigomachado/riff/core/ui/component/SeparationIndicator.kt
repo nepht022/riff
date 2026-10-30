@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
@@ -27,7 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,8 +57,8 @@ interface SeparationControls {
 
     val waitingForCharger: StateFlow<Boolean>
 
-    /** Cancela só a atual; a fila segue. */
-    fun cancel()
+    /** Cancela [chartId] se ainda for a atual; a fila segue. */
+    fun cancel(chartId: String)
 
     fun remove(chartId: String)
 
@@ -85,7 +90,7 @@ fun SeparationIndicator(modifier: Modifier = Modifier) {
     val waitingForCharger by controls.waitingForCharger.collectAsState()
     SeparationIndicatorContent(
         status,
-        controls::cancel,
+        { (status as? SeparationStatus.Running)?.let { controls.cancel(it.chartId) } },
         controls::dismissFailure,
         modifier,
         SeparationQueueView(queued, waitingForCharger, controls::remove, controls::cancelAll),
@@ -102,10 +107,14 @@ fun SeparationIndicatorContent(
 ) {
     if (status == SeparationStatus.Idle && queue.items.isEmpty()) return
     var open by remember { mutableStateOf(false) }
-    val description = stringResource(R.string.ui_separation_open)
+    val total = queue.items.size + if (status is SeparationStatus.Running) 1 else 0
+    val description = if (total > 1) {
+        stringResource(R.string.ui_separation_open_count, total)
+    } else {
+        stringResource(R.string.ui_separation_open)
+    }
     // Com fila, a falha da última já foi avisada pela notificação: o ícone segue a fila.
     val failure = (status as? SeparationStatus.Failed)?.takeIf { queue.items.isEmpty() }
-    val total = queue.items.size + if (status is SeparationStatus.Running) 1 else 0
     // O número fica fora do botão, que recorta o conteúdo no círculo do toque.
     Box(modifier) {
         IconButton(
@@ -140,7 +149,8 @@ fun SeparationIndicatorContent(
 @Composable
 private fun Count(total: Int, modifier: Modifier) {
     Box(
-        modifier.size(COUNT).background(RiffColors.TourRed, CircleShape),
+        // O número já está na descrição do ícone.
+        modifier.size(COUNT).background(RiffColors.TourRed, CircleShape).clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -187,7 +197,8 @@ private fun QueuePanel(
             Text(running?.title ?: stringResource(waiting))
         },
         text = {
-            Column {
+            // Uma fila longa rola dentro do diálogo: o X de cada música continua alcançável.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 running?.let { runningText(it).forEach { line -> Text(line) } }
                 if (hasQueue) QueueList(queue)
             }
@@ -205,6 +216,10 @@ private fun QueuePanel(
                             if (hasQueue) R.string.ui_separation_cancel_this else R.string.ui_separation_cancel,
                         ),
                     )
+                }
+            } else {
+                TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
+                    Text(stringResource(R.string.ui_separation_close))
                 }
             }
         },
@@ -234,7 +249,11 @@ private fun QueueList(queue: SeparationQueueView) {
             Text(song.title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             IconButton(
                 onClick = withMenuSound(MenuSound.BACK) { queue.onRemove(song.chartId) },
-                modifier = Modifier.semantics { contentDescription = remove },
+                // Só a descrição: o "✕" desenhado não é lido.
+                modifier = Modifier.clearAndSetSemantics {
+                    contentDescription = remove
+                    role = Role.Button
+                },
             ) { Text("✕", color = RiffColors.PaperDim) }
         }
     }

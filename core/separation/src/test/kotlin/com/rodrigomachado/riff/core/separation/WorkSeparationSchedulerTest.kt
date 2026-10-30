@@ -103,6 +103,7 @@ class WorkSeparationSchedulerTest {
         scheduler.enqueue(songs("b"))
 
         await(scheduler.queue) { it == songs("a", "b") }
+        Thread.sleep(300) // tempo para um pedido a mais aparecer, se o scheduler pedisse outro
         assertEquals(1, work().size)
     }
 

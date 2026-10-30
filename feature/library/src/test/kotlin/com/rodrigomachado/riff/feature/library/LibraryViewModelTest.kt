@@ -286,6 +286,7 @@ class LibraryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(true, vm.uiState.value.prompt?.busy)
+        assertEquals(true, vm.uiState.value.prompt?.queueWaiting)
     }
 
     @Test

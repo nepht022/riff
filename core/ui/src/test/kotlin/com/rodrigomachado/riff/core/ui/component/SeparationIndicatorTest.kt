@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
@@ -85,14 +86,14 @@ class SeparationIndicatorTest {
     fun theIconCountsTheSongsLeft() {
         show(SeparationStatus.Running("m", "M", 0.2f, null), queued = listOf("B", "C"))
 
-        composeRule.onNodeWithText("3").assertExists()
+        composeRule.onNodeWithContentDescription("Separação da guitarra: faltam 3").assertExists()
     }
 
     @Test
     fun aSingleSongHasNoCount() {
         show(SeparationStatus.Running("m", "M", 0.2f, null))
 
-        composeRule.onNodeWithText("1").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Separação da guitarra").assertExists()
     }
 
     @Test
@@ -116,6 +117,18 @@ class SeparationIndicatorTest {
 
         composeRule.onNodeWithText("Esperando o carregador").assertExists()
         composeRule.onNodeWithText("Bê").assertExists()
+        composeRule.onNodeWithText("Fechar").performClick()
+        composeRule.onNodeWithText("Esperando o carregador").assertDoesNotExist()
+    }
+
+    @Test
+    fun aLongQueueScrollsToTheLastSong() {
+        show(SeparationStatus.Running("m", "Atual", 0.1f, null), queued = (1..30).map { "Música $it" })
+        openPanel()
+
+        composeRule.onNodeWithContentDescription("Tirar Música 30 da fila").performScrollTo().performClick()
+
+        assertEquals(listOf("remove Música 30"), events)
     }
 
     @Test

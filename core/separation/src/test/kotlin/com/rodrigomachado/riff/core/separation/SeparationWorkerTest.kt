@@ -92,31 +92,40 @@ class SeparationWorkerTest {
     }
 
     private val queue = FakeSeparationQueue("m", "n")
+    private var workQueue: com.rodrigomachado.riff.core.data.SeparationQueue = queue
 
-    @Test
-    fun withoutForegroundTheWholeQueueStillRuns() = runTest {
-        val worker = TestListenableWorkerBuilder<SeparationWorker>(context)
-            .setForegroundUpdater(RefusingForeground)
-            .setWorkerFactory(
-                object : WorkerFactory() {
-                    override fun createWorker(
-                        context: Context,
-                        name: String,
-                        params: WorkerParameters,
-                    ): ListenableWorker = SeparationWorker(
+    private fun worker() = TestListenableWorkerBuilder<SeparationWorker>(context)
+        .setForegroundUpdater(RefusingForeground)
+        .setWorkerFactory(
+            object : WorkerFactory() {
+                override fun createWorker(context: Context, name: String, params: WorkerParameters): ListenableWorker =
+                    SeparationWorker(
                         context,
                         params,
                         runner,
                         progress,
-                        queue,
+                        workQueue,
                         SeparationQueueControl(),
+                        repo,
                     )
-                },
-            )
-            .build()
+            },
+        )
+        .build()
 
-        assertEquals(ListenableWorker.Result.success(), worker.doWork())
+    @Test
+    fun withoutForegroundTheWholeQueueStillRuns() = runTest {
+        assertEquals(ListenableWorker.Result.success(), worker().doWork())
         assertEquals(listOf("m", "n"), repo.committed)
         assertEquals(emptyList<Any>(), queue.items.value)
+    }
+
+    /** Uma falha do banco fora da separação tenta de novo com espera, em vez de um trabalho novo na hora. */
+    @Test
+    fun aDatabaseFailureRetriesLater() = runTest {
+        workQueue = object : com.rodrigomachado.riff.core.data.SeparationQueue by queue {
+            override suspend fun remove(chartId: String) = throw android.database.sqlite.SQLiteFullException("cheio")
+        }
+
+        assertEquals(ListenableWorker.Result.retry(), worker().doWork())
     }
 }

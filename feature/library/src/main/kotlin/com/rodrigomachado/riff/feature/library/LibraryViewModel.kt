@@ -74,7 +74,10 @@ data class SeparationAsk(
     val title: String,
     val difficulty: Difficulty,
     val lowMemory: Boolean,
+    /** Já há separação: "Separar" vira "Pôr na fila". */
     val busy: Boolean = false,
+    /** Ocupado só pela fila esperando (o carregador, por exemplo), sem nenhuma separando agora. */
+    val queueWaiting: Boolean = false,
 )
 
 data class PlayRequestLibrary(val chartId: String, val difficulty: Difficulty)
@@ -165,8 +168,18 @@ class LibraryViewModel @Inject constructor(
     fun onDifficultyChosen(chart: Chart, difficulty: Difficulty) {
         viewModelScope.launch {
             promptState.value = if (needsAsking(chart.id)) {
-                val busy = scheduler.status.value is SeparationStatus.Running || scheduler.queue.value.isNotEmpty()
-                PromptState(prompt = SeparationAsk(chart.id, chart.title, difficulty, scheduler.lowMemoryDevice, busy))
+                val separating = scheduler.status.value is SeparationStatus.Running
+                val queued = scheduler.queue.value.isNotEmpty()
+                PromptState(
+                    prompt = SeparationAsk(
+                        chart.id,
+                        chart.title,
+                        difficulty,
+                        scheduler.lowMemoryDevice,
+                        busy = separating || queued,
+                        queueWaiting = queued && !separating,
+                    ),
+                )
             } else {
                 PromptState(play = PlayRequestLibrary(chart.id, difficulty))
             }
@@ -262,7 +275,9 @@ class LibraryViewModel @Inject constructor(
         deletionState.update { it.copy(ask = null) }
         viewModelScope.launch {
             val running = scheduler.status.value
-            if (running is SeparationStatus.Running && running.chartId in ask.ids) scheduler.cancelCurrent()
+            if (running is SeparationStatus.Running && running.chartId in ask.ids) {
+                scheduler.cancelCurrent(running.chartId)
+            }
             val result = deleter.delete(ask.ids)
             deletionState.value = DeletionState(failed = result.failed)
         }

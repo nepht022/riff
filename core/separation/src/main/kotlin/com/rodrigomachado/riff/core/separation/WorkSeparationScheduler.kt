@@ -80,7 +80,7 @@ class WorkSeparationScheduler @Inject constructor(
         when {
             items.isEmpty() -> Unit
 
-            live.isEmpty() -> request(onlyCharging, ExistingWorkPolicy.APPEND_OR_REPLACE)
+            live.isEmpty() -> request(onlyCharging, ExistingWorkPolicy.KEEP)
 
             // Mudou a opção com a fila parada: o pedido parado é refeito com a opção nova.
             parked != null && parked.constraints.requiresCharging() != onlyCharging ->
@@ -104,7 +104,7 @@ class WorkSeparationScheduler @Inject constructor(
         scope.launch { separationQueue.add(songs) }
     }
 
-    override fun cancelCurrent() = control.cancelCurrent()
+    override fun cancelCurrent(chartId: String) = control.cancelCurrent(chartId)
 
     override fun remove(chartId: String) {
         scope.launch { separationQueue.remove(chartId) }
@@ -112,10 +112,11 @@ class WorkSeparationScheduler @Inject constructor(
 
     override fun cancelAll() {
         scope.launch {
+            // Nesta ordem: com a fila vazia, o laço não começa a próxima ao ver a atual cancelada.
             separationQueue.clear()
             workManager.cancelUniqueWork(UNIQUE_WORK)
+            control.cancelAny()
         }
-        control.cancelCurrent()
         // Cancelado antes de o runner começar, ninguém mais tiraria o "separando".
         progress.set(SeparationStatus.Idle)
     }

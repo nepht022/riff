@@ -19,7 +19,7 @@ class SeparationNotificationsTest {
     /** O ícone de download do Android (seta animada) fazia parecer que ainda estava baixando depois de pronto. */
     @Test
     fun theDoneNotificationUsesTheRiffIconNotADownloadArrow() {
-        SeparationNotifications(context).done("Música")
+        SeparationNotifications(context).done("m", "Música")
 
         val notification = shadowOf(context.getSystemService(NotificationManager::class.java)).allNotifications.single()
         assertEquals(R.drawable.ic_stat_separation, notification.smallIcon.resId)
@@ -35,5 +35,20 @@ class SeparationNotificationsTest {
 
         assertEquals("Separando a guitarra… 42%", text(0))
         assertEquals("Separando a guitarra… 42% · mais 2 na fila", text(2))
+    }
+
+    /** Na fila, a falha de uma não pode sumir debaixo do "pronta" da seguinte. */
+    @Test
+    fun eachSongHasItsOwnNotice() {
+        val notifications = SeparationNotifications(context)
+
+        notifications.failed(
+            "a",
+            SeparationStatus.Failed("A", com.rodrigomachado.riff.core.model.SeparationFailure.ERROR),
+        )
+        notifications.done("b", "B")
+
+        val shown = shadowOf(context.getSystemService(NotificationManager::class.java)).allNotifications
+        assertEquals(2, shown.size)
     }
 }

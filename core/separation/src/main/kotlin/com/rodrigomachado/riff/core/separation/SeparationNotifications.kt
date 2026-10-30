@@ -35,9 +35,11 @@ class SeparationNotifications(private val context: Context) {
         return ForegroundInfo(PROGRESS_ID, notification, type)
     }
 
-    fun done(title: String) = notify(context.getString(R.string.separation_done, title))
+    /** Um aviso por música: na fila, o "pronta" da seguinte não apaga a falha desta. */
+    fun done(chartId: String, title: String) = notify(chartId, context.getString(R.string.separation_done, title))
 
-    fun failed(failure: SeparationStatus.Failed) = notify(
+    fun failed(chartId: String, failure: SeparationStatus.Failed) = notify(
+        chartId,
         if (failure.reason == SeparationFailure.NO_SPACE) {
             context.getString(R.string.separation_no_space)
         } else {
@@ -45,8 +47,8 @@ class SeparationNotifications(private val context: Context) {
         },
     )
 
-    private fun notify(text: String) =
-        manager.notify(RESULT_ID, builder().setContentTitle(text).setAutoCancel(true).build())
+    private fun notify(chartId: String, text: String) =
+        manager.notify(RESULT_TAG + chartId, RESULT_ID, builder().setContentTitle(text).setAutoCancel(true).build())
 
     private fun builder(): NotificationCompat.Builder {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -74,6 +76,7 @@ class SeparationNotifications(private val context: Context) {
         private const val CHANNEL = "separacao"
         private const val PROGRESS_ID = 41
         private const val RESULT_ID = 42
+        private const val RESULT_TAG = "separacao:"
         private const val PERCENT = 100
     }
 }

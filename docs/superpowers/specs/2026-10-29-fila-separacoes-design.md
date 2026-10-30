@@ -61,13 +61,13 @@ Hoje a separação da guitarra é uma por vez: com uma em andamento, a pergunta 
 ## 5. Como funciona (técnico)
 
 ### 5.1 A fila no banco
-- Tabela nova `separation_queue(chartId PK → charts.id ON DELETE CASCADE, title, addedAt)`, banco versão 12 (migração automática, coberta pelo `MigrationTest`).
+- Tabela nova `separation_queue(chartId PK → charts.id ON DELETE CASCADE, title, position, attempts)`, banco versão 12 (migração automática, coberta pelo `MigrationTest`).
 - O mapa sair da biblioteca (Excluir, Reimportar sem ele) tira a música da fila pelo cascade.
-- Ordem: `addedAt`, depois `chartId`.
+- Ordem: `position` (o fim da fila + a ordem dada). `attempts` conta as vezes que a música começou: passando de 3 (o trabalho sempre morre nela), a fila desiste dela; uma música já separada (processo morto entre guardar e tirar da fila) é pulada. Uma falha fora da separação (o banco) faz o trabalho tentar de novo com a espera do WorkManager (revisão final).
 
 ### 5.2 Um trabalho que esvazia a fila
 - O `SeparationWorker` passa a ser um laço: pega a primeira da fila, separa (o `GuitarSeparationRunner` de hoje), tira da fila e segue até a fila acabar. A música só sai da fila depois de terminar (com sucesso ou falha), então um trabalho interrompido (Android fechou o app, saiu da tomada, limite de tempo do WorkManager) recomeça pela mesma música.
-- `SeparationScheduler.enqueue(itens)` só grava na fila. O scheduler acompanha a fila e os trabalhos: fila não vazia sem trabalho vivo → pede um (`APPEND_OR_REPLACE`); com um vivo, o laço pega as novas sozinho. A música que entra no instante em que o laço termina é vista quando o trabalho acaba (sem trabalho vivo → pede de novo). Isso também cobre o processo morto entre gravar a fila e pedir o trabalho (decidido na implementação, no lugar de pedir a cada `enqueue`).
+- `SeparationScheduler.enqueue(itens)` só grava na fila. O scheduler acompanha a fila e os trabalhos: fila não vazia sem trabalho vivo → pede um (`KEEP`); com um vivo, o laço pega as novas sozinho. A música que entra no instante em que o laço termina é vista quando o trabalho acaba (sem trabalho vivo → pede de novo). Isso também cobre o processo morto entre gravar a fila e pedir o trabalho (decidido na implementação, no lugar de pedir a cada `enqueue`).
 - "Separar só carregando" vira `Constraints.setRequiresCharging(true)` no pedido. Mudar a opção com a fila esperando (nada rodando) refaz o pedido com `REPLACE`.
 - Sem conseguir virar primeiro plano (app em segundo plano, Android 12+), a separação segue sem a notificação de progresso, como hoje; o limite de 10 minutos de um trabalho comum é o motivo do recomeço acima ser importante.
 

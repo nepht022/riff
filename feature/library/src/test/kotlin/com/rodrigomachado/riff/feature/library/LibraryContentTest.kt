@@ -384,6 +384,28 @@ class LibraryContentTest {
     }
 
     @Test
+    fun withOnlyTheQueueWaitingThePromptSaysSo() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música")),
+                prompt = SeparationAsk(
+                    "a",
+                    "Música",
+                    Difficulty.EXPERT,
+                    lowMemory = false,
+                    busy = true,
+                    queueWaiting = true,
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText("A fila de separação está esperando: esta entra no fim.").assertExists()
+        composeRule.onNodeWithText("Pôr na fila").assertExists()
+    }
+
+    @Test
     fun choosingADifficultyGoesThroughTheViewModel() {
         showWithPrompt(
             LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))),

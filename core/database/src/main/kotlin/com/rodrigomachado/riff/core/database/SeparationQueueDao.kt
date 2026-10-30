@@ -15,12 +15,35 @@ abstract class SeparationQueueDao {
     @Query("SELECT * FROM separation_queue ORDER BY position LIMIT 1")
     abstract suspend fun first(): SeparationQueueEntity?
 
-    /** Põe no fim da fila, na ordem dada; a música que já está na fila mantém o lugar. */
+    /**
+     * Põe no fim da fila, na ordem dada; a música que já está na fila mantém o lugar e a que saiu da biblioteca é
+     * deixada de fora (o IGNORE do SQLite não vale para a chave estrangeira).
+     */
     @Transaction
     open suspend fun append(items: List<Pair<String, String>>) {
+        val existing = existingCharts(items.map { it.first }).toSet()
         val last = lastPosition() ?: 0
-        insertIgnore(items.mapIndexed { i, (chartId, title) -> SeparationQueueEntity(chartId, title, last + 1 + i) })
+        insertIgnore(
+            items.filter { it.first in existing }
+                .mapIndexed { i, (chartId, title) -> SeparationQueueEntity(chartId, title, last + 1 + i) },
+        )
     }
+
+    @Query("SELECT id FROM charts WHERE id IN (:ids)")
+    protected abstract suspend fun existingCharts(ids: List<String>): List<String>
+
+    /** Conta mais uma tentativa de [chartId] e devolve quantas já são. */
+    @Transaction
+    open suspend fun startAttempt(chartId: String): Int {
+        incrementAttempts(chartId)
+        return attemptsOf(chartId) ?: 0
+    }
+
+    @Query("UPDATE separation_queue SET attempts = attempts + 1 WHERE chartId = :chartId")
+    protected abstract suspend fun incrementAttempts(chartId: String)
+
+    @Query("SELECT attempts FROM separation_queue WHERE chartId = :chartId")
+    protected abstract suspend fun attemptsOf(chartId: String): Int?
 
     @Query("SELECT MAX(position) FROM separation_queue")
     protected abstract suspend fun lastPosition(): Long?

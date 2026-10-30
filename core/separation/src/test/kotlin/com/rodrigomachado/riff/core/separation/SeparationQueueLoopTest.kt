@@ -31,6 +31,13 @@ class FakeSeparationQueue(vararg ids: String) : SeparationQueue {
     override suspend fun clear() {
         items.value = emptyList()
     }
+
+    val attempts = mutableMapOf<String, Int>()
+
+    override suspend fun startAttempt(chartId: String): Int {
+        attempts[chartId] = (attempts[chartId] ?: 0) + 1
+        return attempts.getValue(chartId)
+    }
 }
 
 class SeparationQueueLoopTest {
@@ -39,12 +46,15 @@ class SeparationQueueLoopTest {
     private val separated = mutableListOf<String>()
     private val finished = mutableListOf<Pair<String, Boolean>>()
 
+    private val alreadySeparated = mutableSetOf<String>()
+
     private fun loop(queue: SeparationQueue, run: suspend (String) -> Boolean) = SeparationQueueLoop(
         queue = queue,
         separate = { chartId, _ ->
             separated += chartId
             run(chartId)
         },
+        isSeparated = { it in alreadySeparated },
         progress = progress,
         control = control,
         onFinished = { song, ok -> finished += song.chartId to ok },
@@ -102,7 +112,8 @@ class SeparationQueueLoopTest {
         }
         started.await()
 
-        control.cancelCurrent()
+        control.cancelCurrent("b") // já não é a atual: nada acontece
+        control.cancelCurrent("a")
         job.join()
 
         assertEquals(listOf("a", "b"), separated)
@@ -133,5 +144,28 @@ class SeparationQueueLoopTest {
         }.run()
 
         assertEquals(listOf("a", "b"), separated)
+    }
+
+    @Test
+    fun aSongThatKeepsInterruptingTheWorkIsGivenUpAfterThreeTries() = runTest {
+        val queue = FakeSeparationQueue("a", "b")
+        queue.attempts["a"] = 3 // três trabalhos morreram no meio dela
+
+        loop(queue) { true }.run()
+
+        assertEquals(listOf("b"), separated)
+        assertEquals(listOf("a" to false, "b" to true), finished)
+        assertTrue(queue.items.value.isEmpty())
+    }
+
+    @Test
+    fun aSongAlreadySeparatedIsNotSeparatedAgain() = runTest {
+        val queue = FakeSeparationQueue("a", "b")
+        alreadySeparated += "a" // o processo morreu entre guardar e tirar da fila
+
+        loop(queue) { true }.run()
+
+        assertEquals(listOf("b"), separated)
+        assertTrue(queue.items.value.isEmpty())
     }
 }

@@ -170,3 +170,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Na pausa, ⏮/⏭ continuam escondidos depois de o Spotify voltar na mesma música até tocar Continuar; um episódio de podcast também conta como "Spotify perdido".
 - "Rede" (NETWORK) no download inclui falha ao gravar na pasta e erro HTTP do Encore; esses também são tentados (até 3 vezes).
 
+## Fila de separações (revisão final, 2026-10-30)
+
+- **`REPLACE` com estado atrasado:** trocar "Separar só carregando" no instante em que o trabalho passa de esperando para rodando cancela o que começou e começa outro (dois modelos na memória por alguns segundos). Raro.
+- **Janela de "Começando…":** entre sair da fila e marcar "separando", a música ainda aparece na fila com ✕ e Excluir não a cancela (termina numa falha "não deu para separar").
+- **"Esperando o carregador"** pode aparecer por instantes com o celular na tomada (o trabalho fica esperando também logo depois do pedido ou na espera de nova tentativa).
+- **Painel:** "Cancelar todas" não pede confirmação; o número do ícone tem 18 dp fixos (três dígitos ou fonte grande vazam do círculo).
+- **Atualização:** uma separação em andamento da versão anterior (sem fila) some na atualização (uso pessoal; aceito).
+- **Limite do Android 15:** o serviço em primeiro plano de processamento de mídia tem 6 h por dia; uma fila muito longa à noite pode chegar nele (não medido).
+- **Testes:** falta o caso do trabalho que acaba com a fila ainda cheia (o scheduler pede de novo) e o de uma exceção comum dentro de `runCurrent`.
+

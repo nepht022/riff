@@ -37,9 +37,12 @@ internal fun SeparationPrompt(
         title = { Text(stringResource(R.string.library_separate_title)) },
         text = {
             Column {
-                Text(
-                    stringResource(if (ask.busy) R.string.library_separate_busy else R.string.library_separate_message),
-                )
+                val message = when {
+                    ask.queueWaiting -> R.string.library_separate_queue_waiting
+                    ask.busy -> R.string.library_separate_busy
+                    else -> R.string.library_separate_message
+                }
+                Text(stringResource(message))
                 if (ask.lowMemory) Text(stringResource(R.string.library_separate_low_memory))
             }
         },

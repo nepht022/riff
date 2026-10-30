@@ -17,34 +17,45 @@ import javax.inject.Singleton
 /** Cancela só a separação em andamento (o trabalho roda no mesmo processo); a fila segue. */
 @Singleton
 class SeparationQueueControl @Inject constructor() {
-    private val current = AtomicReference<Job?>()
+    private class Current(val chartId: String, val job: Job)
 
-    fun cancelCurrent() {
-        current.get()?.cancel()
+    private val current = AtomicReference<Current?>()
+
+    /** Cancela [chartId] se ainda for a atual (a tela pode estar mostrando a anterior, que acabou de terminar). */
+    fun cancelCurrent(chartId: String) {
+        current.get()?.takeIf { it.chartId == chartId }?.job?.cancel()
     }
 
-    /** Roda [block] como a separação atual; nulo se ela foi cancelada sozinha (o trabalho continua). */
-    internal suspend fun <T> runCurrent(block: suspend () -> T): T? = coroutineScope {
+    fun cancelAny() {
+        current.get()?.job?.cancel()
+    }
+
+    /** Roda [block] como a separação de [chartId]; nulo se ela foi cancelada sozinha (o trabalho continua). */
+    internal suspend fun <T> runCurrent(chartId: String, block: suspend () -> T): T? = coroutineScope {
         val job = async { block() }
-        current.set(job)
+        val entry = Current(chartId, job)
+        current.set(entry)
         try {
             job.await()
         } catch (@Suppress("SwallowedException") e: CancellationException) {
             currentCoroutineContext().ensureActive() // o trabalho inteiro foi cancelado: propaga
             null
         } finally {
-            current.compareAndSet(job, null)
+            current.compareAndSet(entry, null)
         }
     }
 }
 
 /**
  * Separa a fila até acabar, uma música por vez. A música só sai da fila depois de terminar (com sucesso, falha ou
- * cancelada sozinha): um trabalho interrompido (Android fechou o app, saiu da tomada) recomeça por ela.
+ * cancelada sozinha): um trabalho interrompido (Android fechou o app, saiu da tomada) recomeça por ela, até
+ * [MAX_ATTEMPTS] vezes.
  */
+@Suppress("LongParameterList") // a fila, a separação e os avisos
 class SeparationQueueLoop(
     private val queue: SeparationQueue,
     private val separate: suspend (chartId: String, title: String) -> Boolean,
+    private val isSeparated: suspend (chartId: String) -> Boolean,
     private val progress: SeparationProgress,
     private val control: SeparationQueueControl,
     private val onFinished: (QueuedSeparation, ok: Boolean) -> Unit,
@@ -52,13 +63,32 @@ class SeparationQueueLoop(
     suspend fun run() {
         while (true) {
             val song = queue.next() ?: return
-            val ok = control.runCurrent { separate(song.chartId, song.title) }
+            val ok = separateOnce(song)
             queue.remove(song.chartId)
-            if (ok == null) continue
-            onFinished(song, ok)
-            val status = progress.status.value
-            // Sem espaço, as próximas falhariam do mesmo jeito.
-            if (!ok && status is SeparationStatus.Failed && status.reason == SeparationFailure.NO_SPACE) queue.clear()
+            if (ok != null) finished(song, ok)
         }
     }
+
+    /** Nulo quando não há o que avisar: já estava separada ou foi cancelada sozinha. */
+    private suspend fun separateOnce(song: QueuedSeparation): Boolean? = when {
+        // O processo morreu entre guardar a separação e tirar da fila.
+        isSeparated(song.chartId) -> null
+
+        // Sempre interrompe o trabalho (falta de memória, limite de tempo): desiste para a fila andar.
+        queue.startAttempt(song.chartId) > MAX_ATTEMPTS -> {
+            progress.set(SeparationStatus.Failed(song.title, SeparationFailure.ERROR))
+            false
+        }
+
+        else -> control.runCurrent(song.chartId) { separate(song.chartId, song.title) }
+    }
+
+    private suspend fun finished(song: QueuedSeparation, ok: Boolean) {
+        onFinished(song, ok)
+        val status = progress.status.value
+        // Sem espaço, as próximas falhariam do mesmo jeito.
+        if (!ok && status is SeparationStatus.Failed && status.reason == SeparationFailure.NO_SPACE) queue.clear()
+    }
 }
+
+private const val MAX_ATTEMPTS = 3

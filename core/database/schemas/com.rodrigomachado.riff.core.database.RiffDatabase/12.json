@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "c4d8cf4e2597dc4e0f3f566e8a6ca3a7",
+    "identityHash": "9880ab230b41151ccce782481bcdc819",
     "entities": [
       {
         "tableName": "charts",
@@ -566,7 +566,7 @@
       },
       {
         "tableName": "separation_queue",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chartId` TEXT NOT NULL, `title` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`chartId`), FOREIGN KEY(`chartId`) REFERENCES `charts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chartId` TEXT NOT NULL, `title` TEXT NOT NULL, `position` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, PRIMARY KEY(`chartId`), FOREIGN KEY(`chartId`) REFERENCES `charts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "chartId",
@@ -583,6 +583,12 @@
           {
             "fieldPath": "position",
             "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attempts",
+            "columnName": "attempts",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -610,7 +616,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c4d8cf4e2597dc4e0f3f566e8a6ca3a7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9880ab230b41151ccce782481bcdc819')"
     ]
   }
 }

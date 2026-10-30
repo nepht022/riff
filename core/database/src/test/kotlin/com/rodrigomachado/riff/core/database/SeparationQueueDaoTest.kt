@@ -77,4 +77,22 @@ class SeparationQueueDaoTest {
         dao.clear()
         assertNull(dao.first())
     }
+
+    @Test
+    fun aChartThatLeftTheLibraryIsNotQueued() = runTest {
+        charts("a")
+
+        dao.append(items("sumiu", "a"))
+
+        assertEquals(listOf("a"), dao.observe().first().map { it.chartId })
+    }
+
+    @Test
+    fun eachAttemptIsCountedBeforeSeparating() = runTest {
+        charts("a")
+        dao.append(items("a"))
+
+        assertEquals(1, dao.startAttempt("a"))
+        assertEquals(2, dao.startAttempt("a"))
+    }
 }

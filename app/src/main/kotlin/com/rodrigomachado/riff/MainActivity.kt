@@ -94,7 +94,7 @@ private fun separationControls(scheduler: SeparationScheduler) = object : Separa
     override val queue = scheduler.queue
     override val waitingForCharger = scheduler.waitingForCharger
 
-    override fun cancel() = scheduler.cancelCurrent()
+    override fun cancel(chartId: String) = scheduler.cancelCurrent(chartId)
 
     override fun remove(chartId: String) = scheduler.remove(chartId)
 

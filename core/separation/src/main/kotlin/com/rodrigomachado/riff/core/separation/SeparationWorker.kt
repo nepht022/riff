@@ -1,14 +1,18 @@
 package com.rodrigomachado.riff.core.separation
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.SeparationQueue
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -25,6 +29,7 @@ class SeparationWorker @AssistedInject constructor(
     private val progress: SeparationProgress,
     private val queue: SeparationQueue,
     private val control: SeparationQueueControl,
+    private val repo: AiSeparationRepository,
 ) : CoroutineWorker(context, params) {
     private val notifications = SeparationNotifications(context)
 
@@ -51,16 +56,33 @@ class SeparationWorker @AssistedInject constructor(
                 }
             }
         }
-        SeparationQueueLoop(queue, runner::run, progress, control) { song, ok ->
+        val loop = SeparationQueueLoop(
+            queue = queue,
+            separate = runner::run,
+            isSeparated = { repo.stateOf(it) == AiSeparationState.SEPARATED },
+            progress = progress,
+            control = control,
+        ) { song, ok ->
             val status = progress.status.value
             if (ok) {
-                notifications.done(song.title)
+                notifications.done(song.chartId, song.title)
             } else if (status is SeparationStatus.Failed) {
-                notifications.failed(status)
+                notifications.failed(song.chartId, status)
             }
-        }.run()
-        updates.cancel()
-        Result.success()
+        }
+        try {
+            loop.run()
+            Result.success()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // Fora da separação (o banco, cheio por exemplo): de novo mais tarde, com a espera do WorkManager, em vez
+            // de um trabalho novo na hora pedido pelo scheduler.
+            Log.w(TAG, "a fila de separações parou", e)
+            Result.retry()
+        } finally {
+            updates.cancel()
+        }
     }
 
     private suspend fun tryForeground(info: ForegroundInfo): Boolean = try {
@@ -70,3 +92,5 @@ class SeparationWorker @AssistedInject constructor(
         false
     }
 }
+
+private const val TAG = "SeparationWorker"

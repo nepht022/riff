@@ -73,8 +73,8 @@ interface SeparationScheduler {
     /** No fim da fila, na ordem dada. */
     fun enqueue(songs: List<QueuedSeparation>)
 
-    /** Cancela só a que está separando; a fila segue. */
-    fun cancelCurrent()
+    /** Cancela [chartId] se for a que está separando; a fila segue. */
+    fun cancelCurrent(chartId: String)
 
     fun remove(chartId: String)
 
@@ -158,6 +158,9 @@ interface SeparationQueue {
     suspend fun remove(chartId: String)
 
     suspend fun clear()
+
+    /** Conta mais uma tentativa de separar [chartId] (antes de começar) e devolve quantas já são. */
+    suspend fun startAttempt(chartId: String): Int
 }
 
 class RoomSeparationQueue @Inject constructor(private val dao: SeparationQueueDao) : SeparationQueue {
@@ -170,4 +173,6 @@ class RoomSeparationQueue @Inject constructor(private val dao: SeparationQueueDa
     override suspend fun remove(chartId: String) = dao.delete(chartId)
 
     override suspend fun clear() = dao.clear()
+
+    override suspend fun startAttempt(chartId: String) = dao.startAttempt(chartId)
 }

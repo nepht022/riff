@@ -149,7 +149,7 @@ class FakeScheduler : SeparationScheduler {
     }
 
     var cancelled = false
-    override fun cancelCurrent() {
+    override fun cancelCurrent(chartId: String) {
         cancelled = true
     }
     override fun remove(chartId: String) = Unit
