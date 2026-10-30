@@ -136,6 +136,9 @@ class SearchViewModel @Inject constructor(
 
     fun showVersions(versions: Boolean) {
         state.update { it.copy(versions = versions) }
+        // Cada modo tem os seus conferidos: o limite do outro (já aumentado) não vale aqui.
+        guitarTarget = GUITAR_TARGET
+        guitarLimit = maxOf(GUITAR_LIMIT, guitarChecked())
         publish()
         restart { fill() }
     }
@@ -190,6 +193,7 @@ class SearchViewModel @Inject constructor(
     private suspend fun fillWithGuitar() {
         guitarRunning = true
         publish()
+        var pages = 0
         try {
             while (visible().size < guitarTarget && guitarChecked() < guitarLimit) {
                 val pending = candidates().filter { it.chart.md5 !in separate }.take(guitarLimit - guitarChecked())
@@ -197,7 +201,8 @@ class SearchViewModel @Inject constructor(
                     peekAll(pending)
                     true
                 } else {
-                    hasMore && loadNextPage()
+                    // Quando quase nada é candidato (Versões), as páginas não acabariam: um limite por procura.
+                    hasMore && pages++ < MAX_AUTO_PAGES && loadNextPage()
                 }
                 if (!progressed) break
             }

@@ -3,6 +3,8 @@ package com.rodrigomachado.riff.core.data
 import android.database.SQLException
 import com.rodrigomachado.riff.core.database.AiSeparationDao
 import com.rodrigomachado.riff.core.database.AiSeparationEntity
+import com.rodrigomachado.riff.core.database.SeparationQueueDao
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,17 +56,30 @@ interface AiSeparationRepository {
     suspend fun pruneOrphans()
 }
 
-/** Começa, cancela e acompanha a separação, uma por vez. */
+/** Põe músicas na fila de separação, cancela e acompanha; separa uma por vez. */
 interface SeparationScheduler {
+    /** A música que está separando (ou a falha da última). */
     val status: StateFlow<SeparationStatus>
+
+    /** As que esperam a vez, sem a que está separando. */
+    val queue: StateFlow<List<QueuedSeparation>>
+
+    /** Fila parada esperando o celular ir para a tomada ("Separar só carregando"). */
+    val waitingForCharger: StateFlow<Boolean>
 
     /** Menos de 4 GB de RAM: a pergunta avisa que pode não funcionar. */
     val lowMemoryDevice: Boolean
 
-    /** Falso se já há uma separação em andamento. */
-    fun start(chartId: String, title: String): Boolean
+    /** No fim da fila, na ordem dada. */
+    fun enqueue(songs: List<QueuedSeparation>)
 
-    fun cancel()
+    /** Cancela [chartId] se for a que está separando; a fila segue. */
+    fun cancelCurrent(chartId: String)
+
+    fun remove(chartId: String)
+
+    /** Cancela a atual e esvazia a fila. */
+    fun cancelAll()
 
     /** Some com o aviso de falha. */
     fun dismissFailure()
@@ -129,4 +144,35 @@ class RoomAiSeparationRepository @Inject constructor(
         fun dirName(chartId: String): String =
             MessageDigest.getInstance("SHA-1").digest(chartId.toByteArray()).joinToString("") { "%02x".format(it) }
     }
+}
+
+/** As músicas esperando a vez de separar, na ordem de chegada (a que está separando continua até terminar). */
+interface SeparationQueue {
+    val items: Flow<List<QueuedSeparation>>
+
+    /** No fim da fila, na ordem dada; a que já está na fila mantém o lugar. */
+    suspend fun add(songs: List<QueuedSeparation>)
+
+    suspend fun next(): QueuedSeparation?
+
+    suspend fun remove(chartId: String)
+
+    suspend fun clear()
+
+    /** Conta mais uma tentativa de separar [chartId] (antes de começar) e devolve quantas já são. */
+    suspend fun startAttempt(chartId: String): Int
+}
+
+class RoomSeparationQueue @Inject constructor(private val dao: SeparationQueueDao) : SeparationQueue {
+    override val items = dao.observe().map { rows -> rows.map { QueuedSeparation(it.chartId, it.title) } }
+
+    override suspend fun add(songs: List<QueuedSeparation>) = dao.append(songs.map { it.chartId to it.title })
+
+    override suspend fun next() = dao.first()?.let { QueuedSeparation(it.chartId, it.title) }
+
+    override suspend fun remove(chartId: String) = dao.delete(chartId)
+
+    override suspend fun clear() = dao.clear()
+
+    override suspend fun startAttempt(chartId: String) = dao.startAttempt(chartId)
 }

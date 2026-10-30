@@ -42,7 +42,10 @@
     <string name="library_separate_title">Separate the guitar with AI?</string>
     <string name="library_separate_message">Separating the guitar makes its sound drop out when you miss notes and come back only when you hit them, for more immersion. It takes around 3 minutes and can warm the phone up. Separated songs stay stored on the device.</string>
     <string name="library_separate_low_memory">It may not work on this phone.</string>
-    <string name="library_separate_busy">A separation is already running</string>
+    <string name="library_separate_busy">One is already separating: this one joins the queue.</string>
+    <string name="library_separate_queue_waiting">The separation queue is waiting: this one joins the end.</string>
+    <string name="library_separate_queue">+ Queue</string>
+    <string name="library_separate_selected">Separate (%1$d)</string>
     <string name="library_separate">Separate</string>
     <string name="library_play_without_separating">Without separating</string>
     <string name="library_separate_guitar">Separate guitar</string>

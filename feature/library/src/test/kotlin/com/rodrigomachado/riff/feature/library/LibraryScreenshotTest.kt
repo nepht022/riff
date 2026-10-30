@@ -84,6 +84,23 @@ class LibraryScreenshotTest {
     }
 
     @Test
+    fun thePromptWithOneAlreadySeparating() = snapshot("Library_ai_queue") {
+        LibraryContent(
+            state = LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("2", "Enter Sandman", "Metallica", setOf(Difficulty.HARD, Difficulty.EXPERT))),
+                prompt = SeparationAsk("2", "Enter Sandman", Difficulty.EXPERT, lowMemory = false, busy = true),
+            ),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+            onBack = {},
+        )
+    }
+
+    @Test
     fun aiSeparatedBadge() = snapshot("Library_ai_badge") {
         LibraryContent(
             state = LibraryUiState(
@@ -112,6 +129,7 @@ class LibraryScreenshotTest {
                     chart("3", "Smells Like Teen Spirit", "Nirvana", setOf(Difficulty.EXPERT)),
                 ),
                 deletion = DeletionState(selecting = true, selected = setOf("1", "3")),
+                separableSelected = 2,
             ),
             onPickFolder = {},
             onRescan = {},

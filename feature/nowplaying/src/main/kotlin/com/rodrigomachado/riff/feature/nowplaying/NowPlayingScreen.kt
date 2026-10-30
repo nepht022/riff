@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -279,7 +279,7 @@ private fun ActionRow(content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.width(LINK_WIDTH)) {
+private fun SearchEncore(onClick: () -> Unit, modifier: Modifier = Modifier.widthIn(min = LINK_WIDTH)) {
     TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = modifier) {
         Text(stringResource(R.string.nowplaying_search), color = RiffColors.Paper, textAlign = TextAlign.Center)
     }

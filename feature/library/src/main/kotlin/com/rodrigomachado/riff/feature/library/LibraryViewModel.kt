@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.core.data.library.ChartDeleter
 import com.rodrigomachado.riff.core.data.library.LibraryFolders
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -52,6 +53,8 @@ data class LibraryUiState(
     val deletion: DeletionState = DeletionState(),
     /** Mapas soltos na raiz da biblioteca: apagar a pasta deles apagaria a biblioteca inteira. */
     val protectedIds: Set<String> = emptySet(),
+    /** Das selecionadas, quantas dá para pôr na fila de separação ("Separar (n)"). */
+    val separableSelected: Int = 0,
 )
 
 data class DeletionState(
@@ -71,12 +74,26 @@ data class SeparationAsk(
     val title: String,
     val difficulty: Difficulty,
     val lowMemory: Boolean,
+    /** Já há separação: "Separar" vira "+ Fila". */
     val busy: Boolean = false,
+    /** Ocupado só pela fila esperando (o carregador, por exemplo), sem nenhuma separando agora. */
+    val queueWaiting: Boolean = false,
 )
 
 data class PlayRequestLibrary(val chartId: String, val difficulty: Difficulty)
 
 private data class PromptState(val prompt: SeparationAsk? = null, val play: PlayRequestLibrary? = null)
+
+private data class Extras(
+    val prompt: PromptState,
+    val separated: Set<String>,
+    val deletion: DeletionState,
+    val separationBusy: Set<String>,
+)
+
+/** As selecionadas que precisam da IA, na ordem da lista: sem guitarra do mapa, sem separação, fora da fila. */
+private fun separable(charts: List<Chart>, selected: Set<String>, separated: Set<String>, busy: Set<String>) =
+    charts.filter { it.id in selected && !it.separateGuitar && it.id !in separated && it.id !in busy }
 
 private data class ImportState(
     val isImporting: Boolean = false,
@@ -104,7 +121,12 @@ class LibraryViewModel @Inject constructor(
     private val matchSaved = MutableStateFlow(false)
     private val promptState = MutableStateFlow(PromptState())
     private val deletionState = MutableStateFlow(DeletionState())
-    private val extras = combine(promptState, separations.separatedIds, deletionState, ::Triple)
+
+    /** A que está separando e as da fila: não são perguntadas nem entram de novo. */
+    private val separationBusyIds = combine(scheduler.status, scheduler.queue) { status, queue ->
+        queue.map { it.chartId }.toSet() + listOfNotNull((status as? SeparationStatus.Running)?.chartId)
+    }
+    private val extras = combine(promptState, separations.separatedIds, deletionState, separationBusyIds, ::Extras)
 
     val uiState: StateFlow<LibraryUiState> =
         combine(
@@ -113,7 +135,8 @@ class LibraryViewModel @Inject constructor(
             importState,
             matchSaved,
             extras,
-        ) { charts, rootUri, import, saved, (prompt, separated, deletion) ->
+        ) { charts, rootUri, import, saved, extras ->
+            val (prompt, separated, deletion) = extras
             LibraryUiState(
                 isLoading = false,
                 hasFolder = rootUri != null,
@@ -129,6 +152,7 @@ class LibraryViewModel @Inject constructor(
                 play = prompt.play,
                 deletion = deletion,
                 protectedIds = charts.filter { LibraryFolders.isRoot(it.folderUri, rootUri) }.map { it.id }.toSet(),
+                separableSelected = separable(charts, deletion.selected, separated, extras.separationBusy).size,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
@@ -144,7 +168,18 @@ class LibraryViewModel @Inject constructor(
     fun onDifficultyChosen(chart: Chart, difficulty: Difficulty) {
         viewModelScope.launch {
             promptState.value = if (needsAsking(chart.id)) {
-                PromptState(prompt = SeparationAsk(chart.id, chart.title, difficulty, scheduler.lowMemoryDevice))
+                val separating = scheduler.status.value is SeparationStatus.Running
+                val queued = scheduler.queue.value.isNotEmpty()
+                PromptState(
+                    prompt = SeparationAsk(
+                        chart.id,
+                        chart.title,
+                        difficulty,
+                        scheduler.lowMemoryDevice,
+                        busy = separating || queued,
+                        queueWaiting = queued && !separating,
+                    ),
+                )
             } else {
                 PromptState(play = PlayRequestLibrary(chart.id, difficulty))
             }
@@ -153,7 +188,8 @@ class LibraryViewModel @Inject constructor(
 
     private suspend fun needsAsking(chartId: String): Boolean {
         val running = scheduler.status.value
-        if (running is SeparationStatus.Running && running.chartId == chartId) return false
+        val separating = running is SeparationStatus.Running && running.chartId == chartId
+        if (separating || scheduler.queue.value.any { it.chartId == chartId }) return false
         when (separations.stateOf(chartId)) {
             AiSeparationState.SEPARATED -> return false
             AiSeparationState.DECLINED -> if (!settings.settings.first().askSeparationAlways) return false
@@ -170,13 +206,21 @@ class LibraryViewModel @Inject constructor(
         return audio != null && audio !is ChartAudio.Stems
     }
 
+    /** "Separar" ou, com outra separando, "+ Fila": as duas põem a música na fila. */
     fun onSeparate() {
         val ask = promptState.value.prompt ?: return
-        promptState.value = if (scheduler.start(ask.chartId, ask.title)) {
-            PromptState()
-        } else {
-            PromptState(ask.copy(busy = true))
-        }
+        scheduler.enqueue(listOf(QueuedSeparation(ask.chartId, ask.title)))
+        promptState.value = PromptState()
+    }
+
+    /** "Separar (n)" na seleção: põe na fila as que precisam, na ordem da lista, e sai da seleção. */
+    fun onSeparateSelected() {
+        val state = uiState.value
+        val busy = scheduler.queue.value.map { it.chartId }.toSet() +
+            listOfNotNull((scheduler.status.value as? SeparationStatus.Running)?.chartId)
+        val songs = separable(state.charts, deletionState.value.selected, state.aiSeparated, busy)
+        if (songs.isNotEmpty()) scheduler.enqueue(songs.map { QueuedSeparation(it.id, it.title) })
+        deletionState.value = DeletionState()
     }
 
     fun onPlayWithoutSeparating() {
@@ -231,7 +275,9 @@ class LibraryViewModel @Inject constructor(
         deletionState.update { it.copy(ask = null) }
         viewModelScope.launch {
             val running = scheduler.status.value
-            if (running is SeparationStatus.Running && running.chartId in ask.ids) scheduler.cancel()
+            if (running is SeparationStatus.Running && running.chartId in ask.ids) {
+                scheduler.cancelCurrent(running.chartId)
+            }
             val result = deleter.delete(ask.ids)
             deletionState.value = DeletionState(failed = result.failed)
         }

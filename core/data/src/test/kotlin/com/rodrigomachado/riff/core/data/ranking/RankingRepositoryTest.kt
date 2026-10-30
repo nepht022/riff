@@ -271,6 +271,22 @@ class RankingRepositoryTest {
         assertEquals(1, server.submitted().size)
     }
 
+    /** Título e artista vêm do mapa (qualquer tamanho): cortados, a pontuação cabe no pedido do script. */
+    @Test
+    fun aHugeTitleIsCutBeforeSending() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        val ranking = repository()
+
+        val record = record(1, score = 100, combo = 50).also { history.records += it }
+        ranking.submitIfBest(record, "M".repeat(5_000), "B".repeat(5_000))
+        runCurrent()
+
+        val sent = server.submitted().single()
+        assertEquals(200, sent.getString("titulo").length)
+        assertEquals(200, sent.getString("artista").length)
+    }
+
     /** A fila sai ao terminar qualquer partida (spec §4), não só uma que seja recorde. */
     @Test
     fun aMatchThatIsNotABestStillSendsTheQueue() = runTest {

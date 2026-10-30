@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.lifecycle.lifecycleScope
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SeparationScheduler
@@ -31,8 +32,13 @@ import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalSeparation
 import com.rodrigomachado.riff.core.ui.component.SeparationControls
 import com.rodrigomachado.riff.core.ui.component.StageBackground
+import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -62,6 +68,10 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
+        // Os ladrilhos do visual escolhido, fora da thread da tela: o primeiro quadro da partida não engasga.
+        lifecycleScope.launch(Dispatchers.Default) {
+            settingsRepository.settings.map { it.trackLook }.distinctUntilChanged().collect(HighwayTexture::prepare)
+        }
         setContent {
             val settings = settingsRepository.settings.collectAsState(initial = null)
             // Criada uma vez e lendo a preferência na hora do toque: mudar as Configurações não recompõe o app.
@@ -91,8 +101,14 @@ class MainActivity : ComponentActivity() {
 
 private fun separationControls(scheduler: SeparationScheduler) = object : SeparationControls {
     override val status = scheduler.status
+    override val queue = scheduler.queue
+    override val waitingForCharger = scheduler.waitingForCharger
 
-    override fun cancel() = scheduler.cancel()
+    override fun cancel(chartId: String) = scheduler.cancelCurrent(chartId)
+
+    override fun remove(chartId: String) = scheduler.remove(chartId)
+
+    override fun cancelAll() = scheduler.cancelAll()
 
     override fun dismissFailure() = scheduler.dismissFailure()
 }

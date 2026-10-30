@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.report
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -87,6 +91,7 @@ fun ReportContent(
         if (state.status == ReportStatus.SENT) {
             Text(
                 stringResource(R.string.report_sent),
+                Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.titleLarge,
                 color = RiffColors.Paper,
             )
@@ -123,7 +128,8 @@ private class ReportInputs(
 
 @Composable
 private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    // Quebra a linha com a fonte grande do Android em vez de cortar o terceiro tipo.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         for (kind in ReportKind.entries) {
             FilterChip(
                 selected = kind == state.kind,
@@ -227,7 +233,13 @@ private fun StatusMessage(status: ReportStatus) {
         ReportStatus.NOT_CONFIGURED -> R.string.report_not_configured
         ReportStatus.EDITING, ReportStatus.SENDING, ReportStatus.SENT -> null
     } ?: return
-    Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, color = RiffColors.Paper)
+    // O leitor de tela anuncia sozinho (a mensagem aparece longe do botão Enviar).
+    Text(
+        stringResource(message),
+        Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        style = MaterialTheme.typography.bodyMedium,
+        color = RiffColors.Paper,
+    )
 }
 
 private fun textLabel(kind: ReportKind) = when (kind) {

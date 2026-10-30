@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.licenses
 
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -94,7 +95,20 @@ class LicensesTest {
 
         composeRule.onNodeWithText("MIT License\nCopyright (c) Meta").assertDoesNotExist()
         composeRule.onNodeWithText("Demucs v4").performScrollTo().performClick()
-        composeRule.onNodeWithText("MIT License\nCopyright (c) Meta").performScrollTo().assertExists()
+        list().performScrollToNode(hasText("MIT License\nCopyright (c) Meta"))
+    }
+
+    /** O aviso do ONNX Runtime tem ~330 KB: por parágrafos na lista, só o que aparece na tela é desenhado. */
+    @Test
+    fun aLongTextOpensParagraphByParagraph() {
+        val long = (1..400).joinToString("\n\n") { "Parágrafo $it da licença" }
+        val big = LicensesUiState(content = listOf(LicenseEntry("ONNX Runtime", "Microsoft", "MIT", long)))
+        composeRule.setContent { RiffTheme { LicensesContent(big, onBack = {}) } }
+
+        composeRule.onNodeWithText("ONNX Runtime").performScrollTo().performClick()
+
+        list().performScrollToNode(hasText("Parágrafo 1 da licença"))
+        composeRule.onNodeWithText("Parágrafo 400 da licença").assertDoesNotExist() // ainda fora da tela
     }
 
     @Test
@@ -106,4 +120,6 @@ class LicensesTest {
 
         assertEquals(listOf("back"), events)
     }
+
+    private fun list() = composeRule.onNode(hasScrollToNodeAction())
 }

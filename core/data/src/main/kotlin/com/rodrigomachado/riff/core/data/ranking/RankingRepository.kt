@@ -212,8 +212,21 @@ private fun List<ScoreRecord>.best(title: String, artist: String) = Submission(
     maxOf { it.notes },
 )
 
-private fun ScoreRecord.toSubmission(title: String, artist: String) =
-    Submission(chartId, difficulty, title, artist, score, accuracy, maxCombo, perfect, cleanStreakMs, notes)
+/** Título e artista vêm do mapa, de qualquer tamanho: cortados, a pontuação cabe no pedido do script (4000). */
+private fun ScoreRecord.toSubmission(title: String, artist: String) = Submission(
+    chartId,
+    difficulty,
+    title.take(MAX_NAME_CHARS),
+    artist.take(MAX_NAME_CHARS),
+    score,
+    accuracy,
+    maxCombo,
+    perfect,
+    cleanStreakMs,
+    notes,
+)
+
+private const val MAX_NAME_CHARS = 200
 
 /** Todas as notas da partida: no fim, cada uma foi perfeita, boa ou erro. */
 private val ScoreRecord.notes: Int get() = perfect + good + miss

@@ -177,4 +177,33 @@ class GuitarSeparationRunnerTest {
 
         assertFalse(sinks.single().aborted)
     }
+
+    /** O decodificado de uma música de 4 min tem ~85 MB: com menos de 200 MB livres, falta espaço no meio. */
+    @Test
+    fun lessThanTheDecodedSongFreeIsNoSpace() = runTest {
+        free = 120L shl 20
+
+        assertFalse(runner().run("m", "Música"))
+
+        assertEquals(SeparationStatus.Failed("Música", SeparationFailure.NO_SPACE), progress.status.value)
+    }
+
+    /** O Android fechou o app no meio da decodificação: o temporário daquela vez é apagado na próxima. */
+    @Test
+    fun aDecodedSongLeftByAKilledProcessIsDeleted() = runTest {
+        val leftover = File(tmp.root, "musica123.f32").apply { writeText("x") }
+        val other = File(tmp.root, "outra.txt").apply { writeText("x") }
+
+        runner().run("m", "Música")
+
+        assertFalse(leftover.exists())
+        assertTrue(other.exists())
+    }
+
+    @Test
+    fun aSongThatDecodesEmptyHasNoAudio() = runTest {
+        assertFalse(runner(frames = 0).run("m", "Música"))
+
+        assertEquals(SeparationStatus.Failed("Música", SeparationFailure.NO_AUDIO), progress.status.value)
+    }
 }

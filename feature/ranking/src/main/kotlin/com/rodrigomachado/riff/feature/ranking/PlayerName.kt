@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /** Pedir o nome: ranking configurado, ainda sem nome e sem "Agora não" nesta abertura do app. */
@@ -50,11 +49,18 @@ data class PlayerNameUiState(
 
 @HiltViewModel
 class PlayerNameViewModel @Inject constructor(private val ranking: RankingRepository) : ViewModel() {
-    // O nome atual já no campo (trocar o nome começa dele); a leitura é do DataStore, rápida.
-    private val ui = MutableStateFlow(
-        PlayerNameUiState(name = runBlocking { ranking.player.first().name.orEmpty() }),
-    )
+    private val ui = MutableStateFlow(PlayerNameUiState())
     val state: StateFlow<PlayerNameUiState> = ui
+
+    init {
+        // O nome atual no campo (trocar o nome começa dele), lido fora da thread da tela; o que já foi digitado vale.
+        viewModelScope.launch { fillWithSavedName(keepTyped = true) }
+    }
+
+    private suspend fun fillWithSavedName(keepTyped: Boolean) {
+        val saved = ranking.player.first().name.orEmpty()
+        ui.update { if (keepTyped && it.name.isNotEmpty()) it else PlayerNameUiState(name = saved) }
+    }
 
     /** Quando a porteira do app pede o nome (primeira abertura). */
     val askNow: StateFlow<Boolean> = combine(ranking.player, ranking.askedLater) { player, later ->
@@ -86,6 +92,11 @@ class PlayerNameViewModel @Inject constructor(private val ranking: RankingReposi
 
     /** O diálogo fechou: a próxima abertura começa de novo. */
     fun reset() = ui.update { PlayerNameUiState(name = it.name) }
+
+    /** Troca cancelada (tocar fora): volta ao nome gravado, sem o texto digitado nem o erro. */
+    fun cancel() {
+        viewModelScope.launch { fillWithSavedName(keepTyped = false) }
+    }
 }
 
 /**
@@ -108,7 +119,14 @@ fun PlayerNameGate(renaming: Boolean, onRenameClosed: () -> Unit, viewModel: Pla
         onName = viewModel::onName,
         onSave = viewModel::save,
         onLater = if (renaming) null else viewModel::later,
-        onDismiss = if (renaming) onRenameClosed else null,
+        onDismiss = if (renaming) {
+            {
+                viewModel.cancel()
+                onRenameClosed()
+            }
+        } else {
+            null
+        },
     )
 }
 

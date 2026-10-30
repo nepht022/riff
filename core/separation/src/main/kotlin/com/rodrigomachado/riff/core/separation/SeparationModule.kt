@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.separation
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
+import android.util.Log
 import com.rodrigomachado.riff.core.audio.MediaCodecPcmSource
 import com.rodrigomachado.riff.core.audio.PcmSourceOpener
 import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
@@ -16,6 +17,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,7 +48,12 @@ object SeparationModule {
     @Provides
     @Singleton
     @SeparationScope
-    fun scope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    fun scope(): CoroutineScope = CoroutineScope(
+        // Gravar na fila pode falhar (disco cheio): fica no log em vez de fechar o app.
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e ->
+            Log.w("SeparationScope", "a fila de separações falhou", e)
+        },
+    )
 
     @Provides
     @Singleton

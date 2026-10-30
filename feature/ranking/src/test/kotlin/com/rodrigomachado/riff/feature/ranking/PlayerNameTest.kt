@@ -147,4 +147,36 @@ class PlayerNameTest {
 
         composeRule.onNodeWithText("Agora não").assertDoesNotExist()
     }
+
+    /** Tocar fora cancela a troca: a próxima abertura começa do nome gravado, sem o erro de antes. */
+    @Test
+    fun cancellingTheRenameForgetsWhatWasTypedAndTheError() = runTest {
+        ranking.player.value = Player("Rodrigo", "k")
+        val vm = PlayerNameViewModel(ranking)
+        vm.onName("ab")
+        vm.save()
+
+        vm.cancel()
+
+        assertEquals("Rodrigo", vm.state.value.name)
+        assertEquals(null, vm.state.value.error)
+    }
+
+    /** O nome gravado chega depois de a pessoa começar a digitar: o que ela digitou fica. */
+    @Test
+    fun theSavedNameArrivingLateDoesNotOverwriteWhatWasTyped() = runTest {
+        val late = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val slow = object : com.rodrigomachado.riff.core.data.ranking.RankingRepository by ranking {
+            override val player = kotlinx.coroutines.flow.flow {
+                late.await()
+                emit(Player("Rodrigo", "k"))
+            }
+        }
+        val vm = PlayerNameViewModel(slow)
+        vm.onName("Ana")
+
+        late.complete(Unit)
+
+        assertEquals("Ana", vm.state.value.name)
+    }
 }

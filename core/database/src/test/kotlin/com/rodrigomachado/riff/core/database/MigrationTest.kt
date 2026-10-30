@@ -236,4 +236,17 @@ class MigrationTest {
             close()
         }
     }
+
+    @Test
+    fun version11BecomesVersion12WithTheSeparationQueue() {
+        helper.createDatabase(11).close()
+
+        helper.runMigrationsAndValidate(12).apply {
+            prepare("SELECT COUNT(*) FROM separation_queue").use {
+                it.step()
+                assertEquals(0L, it.getLong(0))
+            }
+            close()
+        }
+    }
 }

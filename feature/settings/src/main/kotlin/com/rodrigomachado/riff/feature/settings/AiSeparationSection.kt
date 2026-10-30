@@ -22,17 +22,22 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
+import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
-/** Guitarra separada por IA: o espaço usado, apagar as separações (com confirmação) e perguntar de novo. */
+/**
+ * Guitarra separada por IA: o espaço usado, apagar as separações (com confirmação), perguntar de novo e separar a
+ * fila só na tomada.
+ */
 @Composable
 internal fun AiSeparationSection(
     usage: SeparationUsage,
     onDelete: () -> Unit,
-    askAlways: Boolean,
+    settings: Settings,
     onAskAlways: (Boolean) -> Unit,
+    onOnlyCharging: (Boolean) -> Unit,
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     ActionRow(
@@ -43,9 +48,16 @@ internal fun AiSeparationSection(
     SwitchRow(
         title = stringResource(R.string.settings_ai_ask_again),
         hint = stringResource(R.string.settings_ai_ask_again_hint),
-        checked = askAlways,
+        checked = settings.askSeparationAlways,
         onChange = onAskAlways,
         tag = SettingsTestTags.ASK_ALWAYS,
+    )
+    SwitchRow(
+        title = stringResource(R.string.settings_ai_only_charging),
+        hint = stringResource(R.string.settings_ai_only_charging_hint),
+        checked = settings.separateOnlyCharging,
+        onChange = onOnlyCharging,
+        tag = SettingsTestTags.ONLY_CHARGING,
     )
     if (confirming) {
         AlertDialog(

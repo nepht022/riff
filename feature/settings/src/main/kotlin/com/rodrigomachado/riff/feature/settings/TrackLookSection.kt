@@ -40,9 +40,15 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 internal enum class LookChoice { BACKGROUND, ART, NOTES, FRETS }
 
+/**
+ * Uma escolha do visual: muda só o campo escolhido, aplicada sobre o valor gravado (duas escolhas rápidas, antes de
+ * a primeira voltar da gravação, não desfazem uma à outra).
+ */
+typealias TrackLookChange = (TrackLook) -> TrackLook
+
 /** As quatro escolhas do visual da pista; cada uma abre a lista com miniaturas desenhadas pelo app. */
 @Composable
-internal fun TrackLookSection(look: TrackLook, onLook: (TrackLook) -> Unit) {
+internal fun TrackLookSection(look: TrackLook, onLook: (TrackLookChange) -> Unit) {
     var open by rememberSaveable { mutableStateOf<LookChoice?>(null) }
     for (choice in LookChoice.entries) {
         ChoiceRow(choiceTitle(choice), currentName(choice, look)) { open = choice }
@@ -69,7 +75,7 @@ internal fun TrackLookSection(look: TrackLook, onLook: (TrackLook) -> Unit) {
 
 /** A lista de uma escolha: cada opção com a miniatura e o nome; tocar devolve o visual com ela. */
 @Composable
-internal fun TrackLookChoices(choice: LookChoice, look: TrackLook, onPick: (TrackLook) -> Unit) {
+internal fun TrackLookChoices(choice: LookChoice, look: TrackLook, onPick: (TrackLookChange) -> Unit) {
     val track = Modifier.size(TRACK_WIDTH, TRACK_HEIGHT)
     val row = Modifier.size(ROW_WIDTH, ROW_HEIGHT)
     when (choice) {
@@ -78,21 +84,31 @@ internal fun TrackLookChoices(choice: LookChoice, look: TrackLook, onPick: (Trac
             look.background,
             { backgroundName(it) },
             { HighwayPreview(look.copy(background = it), track) },
-        ) { onPick(look.copy(background = it)) }
+        ) { picked -> onPick { it.copy(background = picked) } }
 
         LookChoice.ART -> ChoiceList(
             HighwayArt.entries,
             look.art,
             { artName(it) },
             { HighwayPreview(look.copy(art = it), track) },
-        ) { onPick(look.copy(art = it)) }
+        ) { picked -> onPick { it.copy(art = picked) } }
 
-        LookChoice.NOTES -> ChoiceList(NoteStyle.entries, look.notes, { noteName(it) }, { NotesPreview(it, row) }) {
-            onPick(look.copy(notes = it))
+        LookChoice.NOTES -> ChoiceList(
+            NoteStyle.entries,
+            look.notes,
+            { noteName(it) },
+            { NotesPreview(it, row) },
+        ) { picked ->
+            onPick { it.copy(notes = picked) }
         }
 
-        LookChoice.FRETS -> ChoiceList(FretStyle.entries, look.frets, { fretName(it) }, { FretsPreview(it, row) }) {
-            onPick(look.copy(frets = it))
+        LookChoice.FRETS -> ChoiceList(
+            FretStyle.entries,
+            look.frets,
+            { fretName(it) },
+            { FretsPreview(it, row) },
+        ) { picked ->
+            onPick { it.copy(frets = picked) }
         }
     }
 }

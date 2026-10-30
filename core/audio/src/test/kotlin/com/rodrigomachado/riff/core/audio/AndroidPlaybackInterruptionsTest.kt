@@ -26,7 +26,7 @@ class AndroidPlaybackInterruptionsTest {
 
     @Test
     fun losingTheAudioFocusInterruptsTheGame() {
-        subject.start { interruptions++ }
+        subject.start(onInterrupted = { interruptions++ }, onBusy = { interruptions++ })
         val request = shadowOf(audio).lastAudioFocusRequest
         assertNotNull(request)
 
@@ -37,7 +37,7 @@ class AndroidPlaybackInterruptionsTest {
 
     @Test
     fun unpluggingTheHeadphonesInterruptsTheGame() {
-        subject.start { interruptions++ }
+        subject.start(onInterrupted = { interruptions++ }, onBusy = { interruptions++ })
 
         unplugHeadphones()
 
@@ -46,7 +46,7 @@ class AndroidPlaybackInterruptionsTest {
 
     @Test
     fun afterStoppingNothingInterrupts() {
-        subject.start { interruptions++ }
+        subject.start(onInterrupted = { interruptions++ }, onBusy = { interruptions++ })
 
         subject.stop()
         unplugHeadphones()
@@ -56,7 +56,7 @@ class AndroidPlaybackInterruptionsTest {
 
     @Test
     fun aNotificationThatOnlyLowersTheVolumeDoesNotPause() {
-        subject.start { interruptions++ }
+        subject.start(onInterrupted = { interruptions++ }, onBusy = { interruptions++ })
 
         shadowOf(audio).lastAudioFocusRequest.listener
             .onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)
@@ -68,10 +68,12 @@ class AndroidPlaybackInterruptionsTest {
     fun aDeniedFocusRequestPausesRightAfterInsteadOfPlayingOverACall() {
         shadowOf(audio).setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
 
-        subject.start { interruptions++ }
-        assertEquals(0, interruptions) // não pausa no meio do "continuar"...
+        var busy = 0
+        subject.start(onInterrupted = { interruptions++ }, onBusy = { busy++ })
+        assertEquals(0, busy) // não pausa no meio do "continuar"...
         shadowOf(Looper.getMainLooper()).idle()
 
-        assertEquals(1, interruptions) // ...mas logo em seguida
+        assertEquals(1, busy) // ...mas logo em seguida, como "áudio ocupado"
+        assertEquals(0, interruptions)
     }
 }

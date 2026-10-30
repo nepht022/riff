@@ -20,6 +20,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -38,13 +39,15 @@ import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
-import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import kotlin.math.roundToInt
 
@@ -53,6 +56,7 @@ object SettingsTestTags {
     const val LEFT_HANDED = "settings_left_handed"
     const val MENU_SOUNDS = "settings_menu_sounds"
     const val ASK_ALWAYS = "settings_ask_separation_always"
+    const val ONLY_CHARGING = "settings_separate_only_charging"
     const val CHART_IMAGE = "settings_chart_image"
     const val QUEUE_PREFETCH = "settings_queue_prefetch"
     const val QUEUE_DELETE = "settings_queue_delete"
@@ -93,6 +97,7 @@ fun SettingsScreen(
         separationUsage = usage,
         onDeleteSeparations = viewModel::deleteSeparations,
         onAskAlways = viewModel::setAskSeparationAlways,
+        onSeparateOnlyCharging = viewModel::setSeparateOnlyCharging,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
         queue = QueueUiState(canWriteToLibrary),
@@ -123,7 +128,8 @@ fun SettingsContent(
     separationUsage: SeparationUsage = SeparationUsage(0, 0),
     onDeleteSeparations: () -> Unit = {},
     onAskAlways: (Boolean) -> Unit = {},
-    onTrackLook: (TrackLook) -> Unit = {},
+    onSeparateOnlyCharging: (Boolean) -> Unit = {},
+    onTrackLook: (TrackLookChange) -> Unit = {},
     onShowChartImage: (Boolean) -> Unit = {},
     onLanguage: (AppLanguage) -> Unit = {},
     queue: QueueUiState = QueueUiState(canWriteToLibrary = true),
@@ -178,8 +184,9 @@ fun SettingsContent(
                     SettingsTab.AI -> AiSeparationSection(
                         separationUsage,
                         onDeleteSeparations,
-                        settings.askSeparationAlways,
+                        settings,
                         onAskAlways,
+                        onSeparateOnlyCharging,
                     )
                 }
             }
@@ -241,7 +248,13 @@ private fun GameTab(
 }
 
 @Composable
-private fun TrackLookTab(settings: Settings, onTrackLook: (TrackLook) -> Unit, onShowChartImage: (Boolean) -> Unit) {
+private fun TrackLookTab(
+    settings: Settings,
+    onTrackLook: (TrackLookChange) -> Unit,
+    onShowChartImage: (Boolean) -> Unit,
+) {
+    // As miniaturas das listas, geradas fora da thread da tela antes de a lista abrir.
+    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { HighwayTexture.prepareAll() } }
     TrackLookSection(settings.trackLook, onTrackLook)
     SwitchRow(
         title = stringResource(R.string.settings_chart_image),
@@ -358,12 +371,18 @@ internal fun SwitchRow(
             checked = checked,
             onCheckedChange = if (sound == null) onChange else withMenuSound(sound, onChange),
             enabled = enabled,
+            // Desligado, as cores ficam as mesmas: quem esmaece é a linha inteira (senão esmaecia duas vezes).
             colors = SwitchDefaults.colors(
                 checkedThumbColor = RiffColors.Paper,
                 checkedTrackColor = RiffColors.TourRed,
                 uncheckedThumbColor = RiffColors.PaperDim,
                 uncheckedTrackColor = RiffColors.StageBlack,
                 uncheckedBorderColor = RiffColors.PaperDim,
+                disabledCheckedThumbColor = RiffColors.Paper,
+                disabledCheckedTrackColor = RiffColors.TourRed,
+                disabledUncheckedThumbColor = RiffColors.PaperDim,
+                disabledUncheckedTrackColor = RiffColors.StageBlack,
+                disabledUncheckedBorderColor = RiffColors.PaperDim,
             ),
             modifier = Modifier.testTag(tag),
         )

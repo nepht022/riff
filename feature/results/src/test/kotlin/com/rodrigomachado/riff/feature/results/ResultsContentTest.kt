@@ -172,7 +172,7 @@ class ResultsContentTest {
         composeRule.onNode(
             SemanticsMatcher("resumo do resultado como título do painel") { node ->
                 val pane = node.config.getOrNull(SemanticsProperties.PaneTitle).orEmpty()
-                "48.300" in pane && "88%" in pane && "NOVO RECORDE" in pane
+                pane == "Resultado: 48.300 pontos, precisão de 88%. Novo recorde!"
             },
         ).assertExists()
     }
@@ -196,5 +196,24 @@ class ResultsContentTest {
 
         // O Voltar soa pela navegação (a tela sai da pilha), não pelo botão: assim o gesto também soa, uma vez só.
         assertEquals(listOf(MenuSound.CONFIRM), sounds)
+    }
+
+    @Test
+    fun oneSingularPointForTalkBack() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 1), "Música", "Banda", isNewBest = false),
+                    onPlayAgain = { _, _ -> },
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNode(
+            SemanticsMatcher("um ponto no singular") { node ->
+                node.config.getOrNull(SemanticsProperties.PaneTitle) == "Resultado: 1 ponto, precisão de 88%."
+            },
+        ).assertExists()
     }
 }

@@ -14,5 +14,9 @@
     <string name="results_play_again">Play again</string>
     <string name="results_back">Back</string>
     <string name="results_missing">This result no longer exists.</string>
-    <string name="results_summary">Result: %1$s points, %2$s accuracy.</string>
+    <plurals name="results_summary">
+        <item quantity="one">Result: %1$s point, %2$s accuracy.</item>
+        <item quantity="other">Result: %1$s points, %2$s accuracy.</item>
+    </plurals>
+    <string name="results_new_best_spoken">New best!</string>
 </resources>

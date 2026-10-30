@@ -130,9 +130,12 @@ private fun QueueChoice(
                         selected = option == chosen,
                         onClick = null,
                         enabled = enabled,
+                        // Quem esmaece desligado é a coluna inteira.
                         colors = RadioButtonDefaults.colors(
                             selectedColor = RiffColors.TourRed,
                             unselectedColor = RiffColors.PaperDim,
+                            disabledSelectedColor = RiffColors.TourRed,
+                            disabledUnselectedColor = RiffColors.PaperDim,
                         ),
                     )
                     Text(

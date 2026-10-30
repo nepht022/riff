@@ -86,6 +86,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setAskSeparationAlways(always: Boolean) = save { it.copy(askSeparationAlways = always) }
 
+    fun setSeparateOnlyCharging(onlyCharging: Boolean) = save { it.copy(separateOnlyCharging = onlyCharging) }
+
     fun setMasterVolume(volume: Float) = save { it.copy(masterVolume = volume.coerceIn(0f, 1f)) }
 
     fun setMissVolume(volume: Float) = save { it.copy(missVolume = volume.coerceIn(0f, 1f)) }
@@ -98,7 +100,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setMenuSounds(enabled: Boolean) = save { it.copy(menuSounds = enabled) }
 
-    fun setTrackLook(look: TrackLook) = save {
+    /** Aplica a escolha sobre o valor gravado agora, não sobre o que a tela mostrava. */
+    fun setTrackLook(change: (TrackLook) -> TrackLook) = save {
+        val look = change(it.trackLook)
         it.copy(
             highwayBackground = look.background,
             highwayArt = look.art,

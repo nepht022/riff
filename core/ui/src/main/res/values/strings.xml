@@ -9,7 +9,17 @@
     <string name="ui_separation_cancel">Cancelar</string>
     <string name="ui_separation_failed">Não deu para separar a guitarra de %1$s</string>
     <string name="ui_separation_no_space">Pouco espaço no celular</string>
+    <string name="ui_separation_cancel_this">Cancelar esta</string>
+    <string name="ui_separation_cancel_all">Cancelar todas</string>
+    <string name="ui_separation_queue">Na fila (%1$d)</string>
+    <string name="ui_separation_remove">Tirar %1$s da fila</string>
+    <string name="ui_separation_waiting_charger">Esperando o carregador</string>
+    <string name="ui_separation_starting">Começando…</string>
+    <string name="ui_separation_open_count">Separação da guitarra: faltam %1$d</string>
+    <string name="ui_separation_close">Fechar</string>
     <string name="ui_separation_ok">OK</string>
+    <string name="playback_previous_ends_match">Música anterior (encerra a partida)</string>
+    <string name="playback_next_ends_match">Próxima música (encerra a partida)</string>
     <string name="playback_previous">Música anterior</string>
     <string name="playback_pause">Pausar música</string>
     <string name="playback_play">Tocar música</string>

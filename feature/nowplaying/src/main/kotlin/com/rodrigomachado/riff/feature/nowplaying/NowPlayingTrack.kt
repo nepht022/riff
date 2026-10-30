@@ -41,7 +41,7 @@ import kotlinx.coroutines.delay
  */
 internal val MAIN_BUTTON_WIDTH = 172.dp
 
-/** Largura do Pesquisar no Encore quando fica sozinho na linha de baixo. */
+/** Largura mínima do Pesquisar no Encore quando fica sozinho na linha de baixo (cresce com a fonte grande). */
 internal val LINK_WIDTH = 140.dp
 
 private const val TICK_MS = 500L

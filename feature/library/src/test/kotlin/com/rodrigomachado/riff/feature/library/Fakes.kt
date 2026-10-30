@@ -17,6 +17,7 @@ import com.rodrigomachado.riff.core.data.library.DeletionResult
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
@@ -132,18 +133,27 @@ class FakeAiSeparations : AiSeparationRepository {
 
 class FakeScheduler : SeparationScheduler {
     override val status = MutableStateFlow<SeparationStatus>(SeparationStatus.Idle)
+    override val queue = MutableStateFlow(emptyList<QueuedSeparation>())
+    override val waitingForCharger = MutableStateFlow(false)
     override var lowMemoryDevice = false
-    val started = mutableListOf<String>()
-    override fun start(chartId: String, title: String): Boolean {
-        if (status.value is SeparationStatus.Running) return false
-        started += chartId
-        status.value = SeparationStatus.Running(chartId, title, 0f, null)
-        return true
+    val enqueued = mutableListOf<String>()
+
+    /** Uma música separando agora. */
+    fun running(chartId: String) {
+        status.value = SeparationStatus.Running(chartId, "Música $chartId", 0f, null)
     }
+
+    override fun enqueue(songs: List<QueuedSeparation>) {
+        enqueued += songs.map { it.chartId }
+        queue.value += songs
+    }
+
     var cancelled = false
-    override fun cancel() {
+    override fun cancelCurrent(chartId: String) {
         cancelled = true
     }
+    override fun remove(chartId: String) = Unit
+    override fun cancelAll() = Unit
     override fun dismissFailure() = Unit
 }
 

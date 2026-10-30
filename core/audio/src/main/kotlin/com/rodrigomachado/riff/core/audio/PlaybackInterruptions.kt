@@ -16,8 +16,11 @@ import android.os.Looper
  * ou fone desconectado (o som iria para o alto-falante). Usado no modo biblioteca; no Spotify, o próprio Spotify cuida.
  */
 interface PlaybackInterruptions {
-    /** Pede o foco de áudio e passa a avisar em [onInterrupted]. Chamar de novo ao continuar pede o foco outra vez. */
-    fun start(onInterrupted: () -> Unit)
+    /**
+     * Pede o foco de áudio e passa a avisar em [onInterrupted]; [onBusy] quando o Android nega o foco (no meio de uma
+     * ligação). Chamar de novo ao continuar pede o foco outra vez.
+     */
+    fun start(onInterrupted: () -> Unit, onBusy: () -> Unit)
 
     fun stop()
 }
@@ -39,7 +42,7 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
         }
     }
 
-    override fun start(onInterrupted: () -> Unit) {
+    override fun start(onInterrupted: () -> Unit, onBusy: () -> Unit) {
         this.onInterrupted = onInterrupted
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -58,7 +61,7 @@ class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInter
         focus = request
         if (audio.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
             // Negado (por exemplo, no meio de uma ligação): pausa logo depois, fora do "continuar" em andamento.
-            main.post { this.onInterrupted?.invoke() }
+            main.post { if (this.onInterrupted != null) onBusy() }
         }
         if (!listening) {
             val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)

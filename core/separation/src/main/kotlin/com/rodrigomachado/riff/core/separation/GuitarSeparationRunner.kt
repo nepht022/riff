@@ -41,6 +41,7 @@ class GuitarSeparationRunner(
     /** Verdadeiro se a separação terminou e foi guardada. */
     @Suppress("TooGenericExceptionCaught") // falha do modelo, do decodificador ou de memória: a música fica como estava
     suspend fun run(chartId: String, title: String): Boolean {
+        deleteLeftoverDecodes() // antes de medir o espaço: o que ele ocupa volta a ser livre
         if (device.freeBytes() < MIN_FREE_BYTES) return failed(title, SeparationFailure.NO_SPACE)
         var work: File? = null
         return try {
@@ -56,6 +57,8 @@ class GuitarSeparationRunner(
         } catch (e: CancellationException) {
             progress.set(SeparationStatus.Idle)
             throw e
+        } catch (@Suppress("SwallowedException") e: EmptySongException) {
+            failed(title, SeparationFailure.NO_AUDIO)
         } catch (e: Throwable) {
             Log.w(TAG, "não deu para separar $chartId", e)
             failed(title, SeparationFailure.ERROR)
@@ -67,6 +70,7 @@ class GuitarSeparationRunner(
     private suspend fun separate(uri: String, work: File, running: SeparationStatus.Running) {
         val context = currentCoroutineContext()
         loader.load(uri, scratch) { context.isActive }.use { song ->
+            if (song.frames == 0) throw EmptySongException()
             models.create(useArena = device.totalRamBytes >= ARENA_RAM_BYTES).use { model ->
                 val sink = sinks.create(work)
                 var finished = false
@@ -107,6 +111,12 @@ class GuitarSeparationRunner(
         )
     }
 
+    /** O Android fechou o app no meio de uma separação: o decodificado daquela vez (~85 MB) ficou no cache. */
+    private fun deleteLeftoverDecodes() {
+        scratch.listFiles { file -> file.name.startsWith(DECODED_PREFIX) && file.name.endsWith(DECODED_SUFFIX) }
+            ?.forEach { it.delete() }
+    }
+
     private fun failed(title: String, reason: SeparationFailure): Boolean {
         progress.set(SeparationStatus.Failed(title, reason))
         return false
@@ -114,8 +124,13 @@ class GuitarSeparationRunner(
 
     private companion object {
         const val TAG = "GuitarSeparation"
-        const val MIN_FREE_BYTES = 50L shl 20
+
+        // O decodificado de uma música de 4 min tem ~85 MB, mais a gravação: com menos, falta espaço no meio.
+        const val MIN_FREE_BYTES = 200L shl 20
         const val ARENA_RAM_BYTES = 7L shl 30 // "8 GB" de fábrica aparece como ~7,4 GB de totalMem
         const val NANOS_PER_MS = 1_000_000L
     }
 }
+
+/** A música decodificou vazia (arquivo truncado ou sem trilha de áudio de verdade). */
+private class EmptySongException : Exception("música vazia")

@@ -81,12 +81,13 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 ## Guitarra separada por IA
 
-- Na Biblioteca, ao jogar uma música sem a guitarra separada (a maioria dos mapas do Encore), o Riff pergunta **Separar a guitarra com IA?** depois da dificuldade. **Separar** começa a separação em segundo plano; **Sem separar** joga com a música inteira e fica guardado (só pergunta de novo com **Perguntar sempre se separa** ligado, o padrão); **Voltar** fecha sem jogar.
+- Na Biblioteca, ao jogar uma música sem a guitarra separada (a maioria dos mapas do Encore), o Riff pergunta **Separar a guitarra com IA?** depois da dificuldade. **Separar** começa a separação em segundo plano (com outra separando, vira **+ Fila**); **Sem separar** joga com a música inteira e fica guardado (só pergunta de novo com **Perguntar sempre se separa** ligado, o padrão); **Voltar** fecha sem jogar.
 - A separação roda no próprio celular, sem internet: o modelo Demucs (htdemucs_6s) com o ONNX Runtime na CPU. No Galaxy S25, uma música de 3:30 leva cerca de 2 minutos e usa até ~2,8 GB de RAM enquanto roda (celulares com menos de 8 GB usam um modo mais econômico e mais lento).
-- Enquanto separa, aparece um ícone (palheta com anel de progresso) no topo das telas; tocar nele mostra a porcentagem, o tempo restante e **Cancelar**. A notificação do Android acompanha e avisa no fim. Se o celular esquentar demais, a separação pausa e continua quando esfriar.
+- **Fila:** várias músicas são separadas uma depois da outra. Além do **+ Fila**, o **Selecionar** da Biblioteca tem **Separar (n)**, que põe na fila as marcadas que ainda não têm guitarra separada. A fila fica guardada: sobrevive ao Android fechar o app e ao celular reiniciar (uma separação interrompida recomeça do início).
+- Enquanto separa, aparece um ícone (palheta com anel de progresso e, com fila, quantas faltam) no topo das telas; tocar nele mostra a porcentagem, o tempo restante, **Cancelar esta**, a fila com um **✕** para tirar cada música e **Cancelar todas**. A notificação do Android acompanha ("42% · mais 2 na fila") e avisa no fim de cada uma. Se o celular esquentar demais, a separação pausa e continua quando esfriar. Uma falha não para a fila; sem espaço no celular, a fila é esvaziada.
 - Mapas que já vêm com a guitarra à parte mostram **GUITARRA SEPARADA** na Biblioteca e não perguntam nada (a marca é anotada na importação: para mapas antigos, toque em **Reimportar** uma vez).
 - Pronta, a música ganha a marca **GUITARRA SEPARADA IA** e passa a jogar como as que já vêm com a guitarra à parte: a guitarra some quando você erra.
-- Cada música separada ocupa ~7 MB (guitarra e resto em `.m4a`, no espaço do app). Nas **Configurações**, a aba **Guitarra IA** mostra o espaço em **Apagar separações** e tem o interruptor **Perguntar sempre se separa** (ligado de fábrica): ligado, toda música sem guitarra separada pergunta ao jogar, mesmo as em que você escolheu "Sem separar".
+- Cada música separada ocupa ~7 MB (guitarra e resto em `.m4a`, no espaço do app). Nas **Configurações**, a aba **Guitarra IA** mostra o espaço em **Apagar separações** e tem o interruptor **Perguntar sempre se separa** (ligado de fábrica): ligado, toda música sem guitarra separada pergunta ao jogar, mesmo as em que você escolheu "Sem separar". **Separar só carregando** (desligado de fábrica) faz a fila esperar o celular estar na tomada, para deixar separando à noite; tirar da tomada interrompe a atual, que recomeça quando voltar.
 
 ## Reportar problemas
 
@@ -114,16 +115,16 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 - **Começar:** toque numa música da Biblioteca (ou em **Jogar** no "Tocando agora") e escolha a dificuldade. Toque nas trilhas na linha de acerto, com vários dedos se precisar; segure as notas longas.
 - **Barra de progresso:** a linha fina no topo da partida mostra quanto da música já passou (até a última nota mais a folga do fim, quando vem o resultado), na Biblioteca e no Spotify.
-- **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha). No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
+- **Pausar:** botão **Pausar** ou o gesto de voltar. Na biblioteca, a partida também pausa sozinha numa ligação, quando outro app começa a tocar ou quando o fone é desconectado (no Spotify, o próprio Spotify pausa e o jogo acompanha); continuar com a ligação ainda em andamento pausa de novo e a pausa explica que o áudio está ocupado. No menu de pausa, **Sincronia desta música** ajusta quando as notas chegam: **−1 s / +1 s** para diferenças grandes (por exemplo, um mapa com contagem de entrada) e **−10 ms / +10 ms** para o fino. O valor vale ao continuar e fica salvo para aquela música.
 - **Calibração** (Configurações → Jogo → Calibrar atraso do áudio): toque junto com as batidas para medir o atraso do seu fone ou alto-falante. Útil com fone Bluetooth; com o alto-falante do celular costuma ser melhor deixar em 0 (**Zerar**).
 - **Configurações**, em abas (abre sempre em **Geral**):
   - **Geral:** **Idioma** (Português, o padrão, ou English: troca na hora; no Android 13 ou mais novo também fica em Configurações do celular → Apps → Riff → Idioma) e sons do menu (liga e desliga).
   - **Sons:** volume geral, do acerto e do erro.
   - **Jogo:** velocidade das notas (0,5× a 2×), modo canhoto (trilhas espelhadas) e calibração.
   - **Visual da pista:** os quatro designs e a imagem do mapa (abaixo).
-  - **Guitarra IA:** apagar separações e "Perguntar sempre se separa".
+  - **Guitarra IA:** apagar separações, "Perguntar sempre se separa" e "Separar só carregando".
 - **Visual da pista:** quatro escolhas nas Configurações, cada uma com miniaturas. **Fundo da pista**: Palco (o de sempre), Amplificador, Couro e rebites, Braço de guitarra, Chamas, Neon, Chapa de metal. **Design da pista** (desenho claro estampado na pista, rolando com a música): Sem desenho, Caveira alada, Raios, Estrelas, Guitarras, Palhetas, Tatuagem. **Design das notas**: Discos, Palhetas, Caveiras, Estrelas, Raios, Chamas. **Design dos botões**: Discos, Pedais de efeito, Knobs de amplificador, Alto-falantes, Palhetas. As cores das trilhas não mudam. Tudo é desenhado pelo app, em código.
-- **Imagem do mapa** (ligada de fábrica): mostra atrás da pista, escurecida, a imagem de fundo do mapa (`background.jpg`/`.png`) ou, sem ela, a capa (`album.jpg`/`.png`).
+- **Imagem do mapa** (ligada de fábrica): mostra atrás da pista, escurecida, a imagem de fundo do mapa (`background.jpg`/`.png`) ou, sem ela (ou grande demais, ou corrompida), a capa (`album.jpg`/`.png`).
 - **Sons do menu:** os botões fora da partida tocam guitarra, no volume geral: abrir ou escolher algo dá um toque abafado, começar ou salvar dá um power chord (cada um sorteia entre duas gravações) e voltar, pelo botão ou pelo gesto do celular, arrasta a palheta na corda. Durante a partida os botões ficam em silêncio.
 
 ## Qualidade e testes (QA)
@@ -273,6 +274,6 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 
 O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify, guitarra separada, configurações, calibração e polimento.
 
-Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: separar a guitarra dentro do app.
+Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. Ideias para depois: o Riff para Windows.
 
 Cada mudança no uso do app atualiza a seção correspondente deste README.

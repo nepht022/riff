@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
@@ -28,7 +29,8 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 /**
  * Anterior · tocar/pausar · próxima, comandando o Spotify. Ícones desenhados em código; o do meio, maior e vermelho,
- * mostra "tocar" quando [isPaused].
+ * mostra "tocar" quando [isPaused]. [inMatch] (a pausa da partida): tocar soa como o Continuar, trocar de música fica
+ * em silêncio (a volta ao Tocando agora já soa) e o leitor de tela avisa que trocar encerra a partida.
  */
 @Composable
 fun PlaybackControls(
@@ -37,20 +39,33 @@ fun PlaybackControls(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    inMatch: Boolean = false,
 ) {
+    val skipSound = MenuSound.NAVIGATE.takeUnless { inMatch }
     Row(
         modifier,
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ControlButton(stringResource(R.string.playback_previous), SIDE, onPrevious) { drawSkip(forward = false) }
+        ControlButton(
+            stringResource(if (inMatch) R.string.playback_previous_ends_match else R.string.playback_previous),
+            SIDE,
+            onPrevious,
+            skipSound,
+        ) { drawSkip(forward = false) }
         ControlButton(
             stringResource(if (isPaused) R.string.playback_play else R.string.playback_pause),
             MIDDLE,
             onPlayPause,
+            if (inMatch) MenuSound.CONFIRM else MenuSound.NAVIGATE,
             highlighted = true,
         ) { if (isPaused) drawPlay() else drawPause() }
-        ControlButton(stringResource(R.string.playback_next), SIDE, onNext) { drawSkip(forward = true) }
+        ControlButton(
+            stringResource(if (inMatch) R.string.playback_next_ends_match else R.string.playback_next),
+            SIDE,
+            onNext,
+            skipSound,
+        ) { drawSkip(forward = true) }
     }
 }
 
@@ -59,13 +74,16 @@ private fun ControlButton(
     description: String,
     size: Dp,
     onClick: () -> Unit,
+    sound: MenuSound?,
     highlighted: Boolean = false,
     icon: DrawScope.() -> Unit,
 ) {
     Box(
         Modifier.size(size)
             .then(if (highlighted) Modifier.background(RiffColors.TourRed, CircleShape) else Modifier)
-            .clickable(role = Role.Button, onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
+            // O efeito do toque fica redondo, como o botão.
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClick = sound?.let { withMenuSound(it, onClick) } ?: onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

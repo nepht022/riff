@@ -7,7 +7,6 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
-import androidx.work.workDataOf
 import com.google.common.util.concurrent.ListenableFuture
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.AiSeparationState
@@ -92,23 +91,41 @@ class SeparationWorkerTest {
         ): ListenableFuture<Void> = throw IllegalStateException("ForegroundServiceStartNotAllowedException")
     }
 
-    @Test
-    fun withoutForegroundTheSeparationStillRuns() = runTest {
-        val worker = TestListenableWorkerBuilder<SeparationWorker>(context)
-            .setInputData(workDataOf(SeparationWorker.KEY_CHART_ID to "m", SeparationWorker.KEY_TITLE to "Música"))
-            .setForegroundUpdater(RefusingForeground)
-            .setWorkerFactory(
-                object : WorkerFactory() {
-                    override fun createWorker(
-                        context: Context,
-                        name: String,
-                        params: WorkerParameters,
-                    ): ListenableWorker = SeparationWorker(context, params, runner, progress)
-                },
-            )
-            .build()
+    private val queue = FakeSeparationQueue("m", "n")
+    private var workQueue: com.rodrigomachado.riff.core.data.SeparationQueue = queue
 
-        assertEquals(ListenableWorker.Result.success(), worker.doWork())
-        assertEquals(listOf("m"), repo.committed)
+    private fun worker() = TestListenableWorkerBuilder<SeparationWorker>(context)
+        .setForegroundUpdater(RefusingForeground)
+        .setWorkerFactory(
+            object : WorkerFactory() {
+                override fun createWorker(context: Context, name: String, params: WorkerParameters): ListenableWorker =
+                    SeparationWorker(
+                        context,
+                        params,
+                        runner,
+                        progress,
+                        workQueue,
+                        SeparationQueueControl(),
+                        repo,
+                    )
+            },
+        )
+        .build()
+
+    @Test
+    fun withoutForegroundTheWholeQueueStillRuns() = runTest {
+        assertEquals(ListenableWorker.Result.success(), worker().doWork())
+        assertEquals(listOf("m", "n"), repo.committed)
+        assertEquals(emptyList<Any>(), queue.items.value)
+    }
+
+    /** Uma falha do banco fora da separação tenta de novo com espera, em vez de um trabalho novo na hora. */
+    @Test
+    fun aDatabaseFailureRetriesLater() = runTest {
+        workQueue = object : com.rodrigomachado.riff.core.data.SeparationQueue by queue {
+            override suspend fun remove(chartId: String) = throw android.database.sqlite.SQLiteFullException("cheio")
+        }
+
+        assertEquals(ListenableWorker.Result.retry(), worker().doWork())
     }
 }

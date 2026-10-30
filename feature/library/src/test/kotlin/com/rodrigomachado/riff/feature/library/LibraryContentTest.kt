@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -365,7 +366,7 @@ class LibraryContentTest {
     }
 
     @Test
-    fun aBusyPromptOnlyOffersToPlay() {
+    fun aBusyPromptOffersToPutTheSongInTheQueue() {
         showWithPrompt(
             LibraryUiState(
                 isLoading = false,
@@ -375,8 +376,59 @@ class LibraryContentTest {
             ),
         )
 
-        composeRule.onNodeWithText("Já tem uma separação em andamento").assertExists()
+        composeRule.onNodeWithText("Já tem uma separando: esta entra na fila.").assertExists()
         composeRule.onNodeWithText("Separar").assertDoesNotExist()
+        composeRule.onNodeWithText("+ Fila").performClick()
+
+        assertEquals(listOf("separate"), events)
+    }
+
+    /** No celular o diálogo é estreito: o terceiro botão saía cortado ("Pôr na"). Nenhum texto de botão é cortado. */
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "pt-rBR-w300dp-h640dp-xhdpi")
+    // Com os gráficos nativos, o texto é medido de verdade.
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun inANarrowDialogNoButtonTextIsCut() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música")),
+                prompt = SeparationAsk("a", "Música", Difficulty.EXPERT, lowMemory = false, busy = true),
+            ),
+        )
+
+        for (label in listOf("Sem separar", "+ Fila", "Voltar")) {
+            val node = composeRule.onAllNodesWithText(label).onLast().fetchSemanticsNode()
+            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            val text = layouts.single()
+            // Inteiro numa linha: a largura desenhada cobre o texto todo.
+            assertEquals(label, 1, text.lineCount)
+            org.junit.Assert.assertTrue(label, text.size.width >= text.multiParagraph.maxIntrinsicWidth.toInt())
+        }
+    }
+
+    @Test
+    fun withOnlyTheQueueWaitingThePromptSaysSo() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música")),
+                prompt = SeparationAsk(
+                    "a",
+                    "Música",
+                    Difficulty.EXPERT,
+                    lowMemory = false,
+                    busy = true,
+                    queueWaiting = true,
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText("A fila de separação está esperando: esta entra no fim.").assertExists()
+        composeRule.onNodeWithText("+ Fila").assertExists()
     }
 
     @Test
@@ -422,6 +474,7 @@ class LibraryContentTest {
                         onCancelSelecting = { events += "cancelSelect" },
                         onToggleAll = { events += "toggleAll" },
                         onDeleteSelected = { events += "deleteSelected" },
+                        onSeparateSelected = { events += "separateSelected" },
                         onConfirm = { events += "confirm" },
                         onDismiss = { events += "dismiss" },
                         onFailureShown = { events += "failureShown" },
@@ -460,6 +513,37 @@ class LibraryContentTest {
         composeRule.onNodeWithText("Cancelar").performClick()
 
         assertEquals(listOf("toggle:b", "deleteSelected", "cancelSelect"), events)
+    }
+
+    @Test
+    fun theSelectionSeparatesOnlyWhatNeedsIt() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a", "b")),
+                separableSelected = 1,
+            ),
+        )
+
+        composeRule.onNodeWithText("Separar (1)").performClick()
+
+        assertEquals(listOf("separateSelected"), events)
+    }
+
+    @Test
+    fun withNothingToSeparateTheButtonIsOff() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        composeRule.onNodeWithText("Separar (0)").assertIsNotEnabled()
     }
 
     @Test

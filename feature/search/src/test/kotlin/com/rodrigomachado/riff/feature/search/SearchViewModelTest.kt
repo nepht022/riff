@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -370,6 +371,53 @@ class SearchViewModelTest {
 
         assertEquals(true, vm.uiState.value.results.size >= 10)
         assertEquals(1, transport.searches) // achou na primeira página, sem buscar mais
+    }
+
+    /** Em Versões quase nada passa: sem limite de páginas, a procura buscaria a busca inteira atrás de candidatos. */
+    @Test
+    fun theGuitarFilterFetchesALimitedNumberOfPagesPerSearch() = runTest {
+        transport.pages = (0 until 30).map { p -> page(*Array(25) { i -> c("m$p-$i", "Música $p $i") }, found = 750) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        vm.showVersions(true) // nenhum título de versão: nada é candidato
+        advanceUntilIdle()
+        val before = transport.searches
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertTrue(transport.searches - before <= 5)
+        assertEquals(false, vm.uiState.value.guitarSearch?.running)
+    }
+
+    @Test
+    fun theGuitarFilterStopsCheckingSoonAfterTheTenth() = runTest {
+        transport.pages = listOf(page(*Array(25) { i -> c("m$i", "Música $i") }, found = 25))
+        transport.stems = (0 until 25).map { "m$it" }.toSet()
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        val before = transport.peeks
+
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+
+        assertTrue(transport.peeks - before < 25) // não confere o lote inteiro depois do 10º
+    }
+
+    @Test
+    fun switchingModesWithTheGuitarFilterCountsThatModeAgainstAFreshHundred() = runTest {
+        transport.pages = (0 until 8).map { p -> page(*Array(25) { i -> c("m$p-$i", "M $p $i") }, found = 200) }
+        val vm = viewModel(SearchRoute(query = "x"))
+        advanceUntilIdle()
+        vm.onlySeparateGuitar(true)
+        advanceUntilIdle()
+        vm.searchMoreWithGuitar() // 200 conferidos em Originais
+        advanceUntilIdle()
+
+        vm.showVersions(true)
+        advanceUntilIdle()
+
+        assertEquals(100, vm.uiState.value.guitarSearch?.limit)
     }
 
     @Test

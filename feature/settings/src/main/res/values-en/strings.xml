@@ -23,6 +23,8 @@
     <string name="settings_ai_delete_confirm">Delete the guitars separated by AI? You can separate them again later.</string>
     <string name="settings_ai_delete_yes">Delete</string>
     <string name="settings_ai_delete_no">Cancel</string>
+    <string name="settings_ai_only_charging">Separate only while charging</string>
+    <string name="settings_ai_only_charging_hint">The queue waits for the phone to be plugged in.</string>
     <string name="settings_ai_ask_again">Always ask to separate</string>
     <string name="settings_ai_ask_again_hint">On: asks for every song without a separate guitar, even the ones you played \"Without separating\".</string>
     <string name="settings_highway_background">Highway background</string>

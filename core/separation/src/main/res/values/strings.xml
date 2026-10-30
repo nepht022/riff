@@ -5,4 +5,5 @@
     <string name="separation_done">Guitarra separada: %1$s</string>
     <string name="separation_failed">Não deu para separar a guitarra de %1$s</string>
     <string name="separation_no_space">Pouco espaço no celular</string>
+    <string name="separation_queued">%1$s · mais %2$d na fila</string>
 </resources>

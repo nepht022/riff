@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
@@ -87,8 +88,9 @@ private fun ReadyResults(
     val locale = LocalConfiguration.current.locales[0]
     val score = remember(record.score, locale) { NumberFormat.getIntegerInstance(locale).format(record.score) }
     val accuracy = remember(record.accuracy, locale) { NumberFormat.getPercentInstance(locale).format(record.accuracy) }
-    val summary = stringResource(R.string.results_summary, score, accuracy) +
-        if (state.isNewBest) " " + stringResource(R.string.results_new_best) else ""
+    // Frase para o TalkBack: "1 ponto" no singular e o recorde como frase (o selo em maiúsculas seria soletrado).
+    val summary = pluralStringResource(R.plurals.results_summary, record.score.toPluralCount(), score, accuracy) +
+        if (state.isNewBest) " " + stringResource(R.string.results_new_best_spoken) else ""
     Column(
         modifier
             .fillMaxSize()
@@ -109,10 +111,7 @@ private fun ReadyResults(
             Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small).padding(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Stat(
-                stringResource(R.string.results_accuracy),
-                NumberFormat.getPercentInstance(locale).format(record.accuracy),
-            )
+            Stat(stringResource(R.string.results_accuracy), accuracy)
             Stat(stringResource(R.string.results_max_combo), record.maxCombo.toString())
             Stat(stringResource(R.string.results_perfect), record.perfect.toString())
             record.cleanStreakMs?.let { Stat(stringResource(R.string.results_clean_time), minutesSeconds(it)) }
@@ -153,3 +152,6 @@ private fun Stat(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.titleMedium, color = RiffColors.Ink)
     }
 }
+
+/** Só 1 é singular: no português o "one" vale também para 0, e "0 ponto" soa errado. */
+private fun Long.toPluralCount(): Int = if (this == 1L) 1 else 2

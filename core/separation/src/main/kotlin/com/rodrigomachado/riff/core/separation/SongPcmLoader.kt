@@ -36,7 +36,11 @@ class FileSong internal constructor(
         windowStart = frame
         windowFrames = minOf(WINDOW, frames - frame)
         bytes.clear().limit(windowFrames * BYTES_PER_FRAME)
-        access.channel.read(bytes, frame.toLong() * BYTES_PER_FRAME)
+        val start = frame.toLong() * BYTES_PER_FRAME
+        // Uma leitura pode trazer menos que o pedido: lê até encher a janela (ou o arquivo acabar).
+        while (bytes.hasRemaining()) {
+            if (access.channel.read(bytes, start + bytes.position()) < 0) break
+        }
         bytes.flip()
         bytes.asFloatBuffer().get(window, 0, windowFrames * 2)
     }
@@ -52,10 +56,14 @@ class FileSong internal constructor(
     }
 }
 
+/** O nome do decodificado no cache: o runner apaga os que um processo morto deixou para trás. */
+internal const val DECODED_PREFIX = "musica"
+internal const val DECODED_SUFFIX = ".f32"
+
 /** Decodifica a música inteira para 44,1 kHz estéreo e calcula a média e o desvio do mono (Welford). */
 class SongPcmLoader(private val opener: PcmSourceOpener) {
     fun load(uri: String, scratch: File, keepGoing: () -> Boolean = { true }): FileSong {
-        val file = File.createTempFile("musica", ".f32", scratch)
+        val file = File.createTempFile(DECODED_PREFIX, DECODED_SUFFIX, scratch)
         val stats = MonoStats()
         try {
             ResamplingPcmSource(opener.open(uri), Demucs.SAMPLE_RATE).use { source ->

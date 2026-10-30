@@ -76,7 +76,9 @@ class AndroidSpotifySession @Inject constructor(@ApplicationContext private val 
             }
             attach(spotifyIn(manager.getActiveSessions(listener)))
         } catch (_: SecurityException) {
-            // A permissão caiu entre a checagem e a leitura: fica sem sessão até a próxima.
+            // A permissão caiu entre a checagem e a leitura: fica sem sessão até a próxima, e o listener que deu certo
+            // sai (senão a próxima conferência o registraria de novo).
+            runCatching { stopListening() }
             listening = false
             attach(null)
         }

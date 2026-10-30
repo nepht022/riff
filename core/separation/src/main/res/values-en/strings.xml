@@ -5,4 +5,5 @@
     <string name="separation_done">Guitar separated: %1$s</string>
     <string name="separation_failed">Couldn\'t separate the guitar of %1$s</string>
     <string name="separation_no_space">Not enough space on the phone</string>
+    <string name="separation_queued">%1$s · %2$d more in the queue</string>
 </resources>

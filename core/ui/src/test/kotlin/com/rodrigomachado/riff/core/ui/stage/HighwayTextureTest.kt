@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.core.ui.stage
 
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
+import com.rodrigomachado.riff.core.model.TrackLook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -41,6 +42,25 @@ class HighwayTextureTest {
             assertTrue(kind.name, alphas.any { it in 1..120 }) // e estampa clara (não opaca)
             assertTrue(kind.name, alphas.none { it > 120 })
         }
+    }
+
+    /** Perto do horizonte o ladrilho encolhe ~4×: sem mipmap, padrões finos cintilam. */
+    @Test
+    fun tilesHaveMipmapsForTheFarEnd() {
+        for (kind in HighwayBackground.entries - HighwayBackground.STAGE) {
+            assertTrue(kind.name, HighwayTexture.background(kind)!!.hasMipMap())
+        }
+        for (kind in HighwayArt.entries - HighwayArt.NONE) {
+            assertTrue(kind.name, HighwayTexture.art(kind)!!.hasMipMap())
+        }
+    }
+
+    /** Gerado antes, fora da tela: o primeiro quadro (ou a lista das Configurações) só pega o pronto. */
+    @Test
+    fun preparingLeavesTheTilesReady() {
+        HighwayTexture.prepareAll()
+
+        assertTrue(HighwayTexture.isPrepared(TrackLook.DEFAULT.copy(background = HighwayBackground.NEON)))
     }
 
     @Test

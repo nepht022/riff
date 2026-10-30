@@ -24,7 +24,9 @@ class GamePauseSongControlsTest {
 
     private val events = mutableListOf<String>()
 
-    private fun showPaused(spotify: Boolean, notice: PlayerNotice? = null) {
+    private val sounds = mutableListOf<com.rodrigomachado.riff.core.model.MenuSound>()
+
+    private fun showPaused(spotify: Boolean, notice: PlayerNotice? = null, audioBusy: Boolean = false) {
         val session = GameSession(
             listOf(note(60_000)),
             FakeSongPlayer().apply { this.notice = notice },
@@ -40,19 +42,24 @@ class GamePauseSongControlsTest {
             Settings.DEFAULT,
             isPaused = true,
             spotifyTrackUri = if (spotify) "spotify:track:x" else null,
+            audioBusy = audioBusy,
         )
         composeRule.setContent {
-            RiffTheme {
-                GameStage(
-                    state,
-                    reducedMotion = true,
-                    onPause = {},
-                    onResume = { events += "resume" },
-                    onExit = { events += "exit" },
-                    onSessionFinished = {},
-                    onChangeSong = { forward -> events += if (forward) "next" else "previous" },
-                    animate = false,
-                )
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.rodrigomachado.riff.core.ui.component.LocalMenuSound provides { sounds += it },
+            ) {
+                RiffTheme {
+                    GameStage(
+                        state,
+                        reducedMotion = true,
+                        onPause = {},
+                        onResume = { events += "resume" },
+                        onExit = { events += "exit" },
+                        onSessionFinished = {},
+                        onChangeSong = { forward -> events += if (forward) "next" else "previous" },
+                        animate = false,
+                    )
+                }
             }
         }
     }
@@ -62,11 +69,13 @@ class GamePauseSongControlsTest {
         showPaused(spotify = true)
 
         composeRule.onNodeWithContentDescription("Tocar música").performClick()
-        composeRule.onNodeWithContentDescription("Próxima música").performClick()
-        composeRule.onNodeWithContentDescription("Música anterior").performClick()
+        composeRule.onNodeWithContentDescription("Próxima música (encerra a partida)").performClick()
+        composeRule.onNodeWithContentDescription("Música anterior (encerra a partida)").performClick()
 
         // Trocar de música encerra a partida: quem chama (a tela) sai e tenta começar a próxima.
         assertEquals(listOf("resume", "next", "previous"), events)
+        // Tocar soa como o Continuar; trocar fica em silêncio (a volta à tela já soa).
+        assertEquals(listOf(com.rodrigomachado.riff.core.model.MenuSound.CONFIRM), sounds)
     }
 
     /** "Jogar de novo" sem conseguir voltar a música no Spotify (conta grátis, outra faixa): a pausa explica. */
@@ -113,5 +122,14 @@ class GamePauseSongControlsTest {
         showPaused(spotify = false)
 
         composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
+    }
+
+    /** Continuar no meio de uma ligação pausa de novo: a pausa explica por quê. */
+    @Test
+    fun aBusyAudioIsExplainedInThePause() {
+        showPaused(spotify = false, audioBusy = true)
+
+        composeRule.onNodeWithText("O áudio do celular está ocupado (uma ligação?). Continue quando ele liberar.")
+            .assertExists()
     }
 }

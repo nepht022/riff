@@ -70,6 +70,8 @@ sealed interface GameplayUiState {
         val spotifyTrackUri: String? = null,
         /** Mapa só sugerido: no lugar da pausa, o painel de confirmação; a faixa só toca depois de confirmar. */
         val awaitingConfirmation: Boolean = false,
+        /** Pausada porque o Android negou o áudio ao continuar (no meio de uma ligação). */
+        val audioBusy: Boolean = false,
     ) : GameplayUiState {
         val spotifyControls: Boolean get() = spotifyTrackUri != null
     }
@@ -125,7 +127,7 @@ class GameplayViewModel @Inject constructor(
     private var pauseRequested = false
 
     init {
-        // Da abertura até a tela sair de vez, a fila do Spotify não baixa nem apaga (e este mapa vira "jogado").
+        // Da abertura até a tela sair de vez, a fila do Spotify não apaga mapas (e este mapa vira "jogado").
         addCloseable { matchActivity.leave(chartId) }
         viewModelScope.launch {
             matchActivity.enter(chartId)
@@ -166,7 +168,9 @@ class GameplayViewModel @Inject constructor(
         )
         if (!pauseRequested && !confirmFirst) session.start()
         if (spotifyTrackUri == null) {
-            interruptions = interruptionsFactory.create().also { if (!pauseRequested) it.start { pause() } }
+            interruptions = interruptionsFactory.create().also {
+                if (!pauseRequested) it.start(onInterrupted = ::pause, onBusy = ::pauseAudioBusy)
+            }
         }
         GameplayUiState.Ready(
             playable.chart.title,
@@ -230,13 +234,19 @@ class GameplayViewModel @Inject constructor(
         state.update { ready.copy(isPaused = true) }
     }
 
+    private fun pauseAudioBusy() {
+        pause()
+        state.update { (it as? GameplayUiState.Ready)?.copy(audioBusy = true) ?: it }
+    }
+
     fun resume() {
         if (state.value is GameplayUiState.Loading) pauseRequested = false
         if (player == null) return
         val ready = state.value as? GameplayUiState.Ready ?: return
         ready.session.resume()
-        interruptions?.start { pause() } // pede o foco de áudio de novo (uma ligação o tirou)
-        state.update { ready.copy(isPaused = false) }
+        // Pede o foco de áudio de novo (uma ligação o tirou); negado, a pausa explica.
+        interruptions?.start(onInterrupted = ::pause, onBusy = ::pauseAudioBusy)
+        state.update { ready.copy(isPaused = false, audioBusy = false) }
     }
 
     /** A música pausou ou voltou fora do jogo (notificação do Spotify, conexão caiu e voltou). */
