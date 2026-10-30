@@ -71,13 +71,18 @@ class ReportViewModel @Inject constructor(
     deviceInfo: DeviceInfoSource,
 ) : ViewModel() {
     // O que foi escrito fica no estado salvo: volta mesmo se o Android fechar o Riff em segundo plano.
+    private val restoredKind = saved.get<String>(
+        KIND,
+    )?.let { name -> ReportKind.entries.firstOrNull { it.name == name } }
+        ?: ReportKind.PROBLEM
+
     private val state = MutableStateFlow(
         ReportUiState(
-            kind = saved.get<String>(KIND)?.let { name -> ReportKind.entries.firstOrNull { it.name == name } }
-                ?: ReportKind.PROBLEM,
-            category = saved.get<String>(
-                CATEGORY,
-            )?.let { name -> ReportCategory.entries.firstOrNull { it.name == name } },
+            kind = restoredKind,
+            // Só uma categoria do tipo restaurado: a de outro tipo não serve.
+            category = saved.get<String>(CATEGORY)
+                ?.let { name -> ReportCategory.entries.firstOrNull { it.name == name } }
+                ?.takeIf { it.kind == restoredKind },
             customCategory = saved[CUSTOM_CATEGORY] ?: "",
             text = saved[TEXT] ?: "",
             contact = saved[CONTACT] ?: "",
@@ -92,35 +97,43 @@ class ReportViewModel @Inject constructor(
         saved[KIND] = kind.name
         // A categoria de um tipo não serve para outro.
         if (state.value.category?.kind != kind) saved[CATEGORY] = null
-        state.update { it.copy(kind = kind, category = it.category?.takeIf { category -> category.kind == kind }) }
+        edit { it.copy(kind = kind, category = it.category?.takeIf { category -> category.kind == kind }) }
     }
 
     fun setCategory(category: ReportCategory) {
         saved[CATEGORY] = category.name
-        state.update { it.copy(category = category, kind = category.kind) }
+        saved[KIND] = category.kind.name
+        edit { it.copy(category = category, kind = category.kind) }
+    }
+
+    /** Editar tira o "Não deu para enviar" e o "Espere": eles valiam para o que foi tentado. */
+    private fun edit(change: (ReportUiState) -> ReportUiState) = state.update { current ->
+        val status = current.status.takeUnless { it == ReportStatus.FAILED || it == ReportStatus.WAIT }
+            ?: ReportStatus.EDITING
+        change(current).copy(status = status)
     }
 
     fun setCustomCategory(category: String) {
         val cut = category.take(MAX_CUSTOM_CATEGORY)
         saved[CUSTOM_CATEGORY] = cut
-        state.update { it.copy(customCategory = cut) }
+        edit { it.copy(customCategory = cut) }
     }
 
     fun setText(text: String) {
         val cut = text.take(MAX_TEXT)
         saved[TEXT] = cut
-        state.update { it.copy(text = cut) }
+        edit { it.copy(text = cut) }
     }
 
     fun setContact(contact: String) {
         val cut = contact.take(MAX_CONTACT)
         saved[CONTACT] = cut
-        state.update { it.copy(contact = cut) }
+        edit { it.copy(contact = cut) }
     }
 
     fun setIncludeDevice(include: Boolean) {
         saved[INCLUDE_DEVICE] = include
-        state.update { it.copy(includeDevice = include) }
+        edit { it.copy(includeDevice = include) }
     }
 
     // Qualquer falha (sem internet, rede bloqueada pelo aparelho) vira a mensagem na tela; o texto fica.

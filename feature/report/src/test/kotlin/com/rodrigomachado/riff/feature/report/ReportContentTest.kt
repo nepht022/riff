@@ -151,6 +151,33 @@ class ReportContentTest {
             .assertExists()
     }
 
+    /** O leitor de tela anuncia a falha e o "Obrigado" sem a pessoa procurar. */
+    @Test
+    fun theMessagesAreAnnouncedByTalkBack() {
+        show(ReportUiState(text = "Trava", device = device, status = ReportStatus.FAILED))
+
+        composeRule.onNode(
+            androidx.compose.ui.test.hasText("Não deu para enviar", substring = true).and(
+                androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(
+                    androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+                ),
+            ),
+        ).assertExists()
+    }
+
+    @Test
+    fun theThanksIsAnnouncedByTalkBack() {
+        show(ReportUiState(text = "Trava", device = device, status = ReportStatus.SENT))
+
+        composeRule.onNode(
+            androidx.compose.ui.test.hasText("Obrigado", substring = true).and(
+                androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(
+                    androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+                ),
+            ),
+        ).assertExists()
+    }
+
     @Test
     fun rightAfterAReportItAsksToWait() {
         show(ReportUiState(text = "Trava", device = device, status = ReportStatus.WAIT))

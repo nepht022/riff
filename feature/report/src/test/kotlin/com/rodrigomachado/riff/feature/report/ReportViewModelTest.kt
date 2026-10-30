@@ -199,6 +199,38 @@ class ReportViewModelTest {
     }
 
     @Test
+    fun theKindOfTheCategoryIsSavedWithIt() = runTest {
+        val saved = SavedStateHandle()
+        viewModel(saved).setCategory(ReportCategory.GAMEPLAY) // uma sugestão, escolhida direto
+
+        val restored = ReportViewModel(saved, sender, cooldown) { device }.uiState.value
+        assertEquals(ReportKind.SUGGESTION, restored.kind)
+        assertEquals(ReportCategory.GAMEPLAY, restored.category)
+    }
+
+    @Test
+    fun aCategoryOfAnotherKindIsNotRestored() = runTest {
+        val saved = SavedStateHandle(
+            mapOf("kind" to ReportKind.PROBLEM.name, "category" to ReportCategory.GAMEPLAY.name),
+        )
+
+        assertNull(ReportViewModel(saved, sender, cooldown) { device }.uiState.value.category)
+    }
+
+    /** "Não deu para enviar" e "Espere" valiam para o que foi tentado: editando, somem. */
+    @Test
+    fun editingClearsTheFailureAndTheWait() = runTest {
+        sender.failure = ReportFailedException("sem internet")
+        val vm = viewModel()
+        vm.setText("Trava")
+        vm.send()
+
+        vm.setText("Trava ao abrir")
+
+        assertEquals(ReportStatus.EDITING, vm.uiState.value.status)
+    }
+
+    @Test
     fun eachKindHasItsOwnCategories() {
         assertEquals(9, ReportCategory.forKind(ReportKind.PROBLEM).size)
         assertEquals(6, ReportCategory.forKind(ReportKind.SUGGESTION).size)
