@@ -180,19 +180,25 @@ class FakePlaybackInterruptions : com.rodrigomachado.riff.core.audio.PlaybackInt
     var starts = 0
     var stopped = false
     private var onInterrupted: (() -> Unit)? = null
+    private var onBusy: (() -> Unit)? = null
 
-    override fun start(onInterrupted: () -> Unit) {
+    override fun start(onInterrupted: () -> Unit, onBusy: () -> Unit) {
         starts++
         this.onInterrupted = onInterrupted
+        this.onBusy = onBusy
     }
 
     override fun stop() {
         stopped = true
         onInterrupted = null
+        onBusy = null
     }
 
     /** Uma ligação, outro app tocando ou o fone desconectado. */
     fun interrupt() = onInterrupted?.invoke()
+
+    /** O Android negou o foco de áudio (no meio de uma ligação). */
+    fun deny() = onBusy?.invoke()
 }
 
 /** Imagem de mentira: o ViewModel só repassa a imagem do mapa para a tela. */

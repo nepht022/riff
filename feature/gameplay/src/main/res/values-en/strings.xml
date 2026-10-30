@@ -20,6 +20,7 @@
     <string name="gameplay_audio_failed">Couldn\'t play this folder\'s audio.</string>
     <string name="gameplay_spotify_go_back">Go back to the song on Spotify to play again</string>
     <string name="gameplay_spotify_lost">Riff lost Spotify. Check that it is open and that Riff has “Notification access”.</string>
+    <string name="gameplay_audio_busy">The phone\'s audio is busy (a call?). Resume when it frees up.</string>
     <string name="gameplay_spotify_ad">Ad on Spotify: the match continues when it ends.</string>
     <string name="gameplay_unavailable_spotify">Couldn\'t play through Spotify. Check that the Spotify app is open and connected.</string>
     <string name="gameplay_no_separate_guitar">Playing without the separate guitar</string>

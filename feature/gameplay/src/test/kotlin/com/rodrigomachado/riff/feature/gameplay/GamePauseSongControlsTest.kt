@@ -24,7 +24,7 @@ class GamePauseSongControlsTest {
 
     private val events = mutableListOf<String>()
 
-    private fun showPaused(spotify: Boolean, notice: PlayerNotice? = null) {
+    private fun showPaused(spotify: Boolean, notice: PlayerNotice? = null, audioBusy: Boolean = false) {
         val session = GameSession(
             listOf(note(60_000)),
             FakeSongPlayer().apply { this.notice = notice },
@@ -40,6 +40,7 @@ class GamePauseSongControlsTest {
             Settings.DEFAULT,
             isPaused = true,
             spotifyTrackUri = if (spotify) "spotify:track:x" else null,
+            audioBusy = audioBusy,
         )
         composeRule.setContent {
             RiffTheme {
@@ -113,5 +114,14 @@ class GamePauseSongControlsTest {
         showPaused(spotify = false)
 
         composeRule.onNodeWithContentDescription("Próxima música").assertDoesNotExist()
+    }
+
+    /** Continuar no meio de uma ligação pausa de novo: a pausa explica por quê. */
+    @Test
+    fun aBusyAudioIsExplainedInThePause() {
+        showPaused(spotify = false, audioBusy = true)
+
+        composeRule.onNodeWithText("O áudio do celular está ocupado (uma ligação?). Continue quando ele liberar.")
+            .assertExists()
     }
 }

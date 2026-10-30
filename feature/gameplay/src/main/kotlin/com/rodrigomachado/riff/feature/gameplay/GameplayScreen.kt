@@ -309,9 +309,10 @@ private fun PauseOverlay(
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
         val notice = state.session.notice?.takeIf { state.spotifyControls }
-        if (notice != null) {
+        val message = notice?.message() ?: R.string.gameplay_audio_busy.takeIf { state.audioBusy }
+        if (message != null) {
             Text(
-                stringResource(notice.message()),
+                stringResource(message),
                 style = MaterialTheme.typography.bodyLarge,
                 color = RiffColors.Paper,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
