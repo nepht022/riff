@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -71,5 +72,16 @@ class HomeContentTest {
         show()
 
         composeRule.onNodeWithTag(HomeTestTags.RANKING).assertIsDisplayed()
+    }
+
+    /** Deitado e com a fonte grande do Android, nada cabe: a tela rola até o Ranking. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w780dp-h360dp-land", fontScale = 2f)
+    fun inLandscapeWithALargeFontTheRankingIsReachedByScrolling() {
+        show()
+
+        composeRule.onNodeWithTag(HomeTestTags.RANKING).performScrollTo().assertIsDisplayed().performClick()
+
+        assertEquals(listOf("ranking"), events)
     }
 }

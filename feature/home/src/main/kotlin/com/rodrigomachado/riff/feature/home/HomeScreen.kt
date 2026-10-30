@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,56 +66,65 @@ fun HomeScreen(
     BoxWithConstraints(modifier.fillMaxSize().padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
         // Os quadros ficam com o que sobra do topo, do letreiro e do Ranking: num celular baixo, encolhem.
         val tileHeight = (maxHeight - RESERVED_HEIGHT).coerceIn(MIN_TILE_HEIGHT, TILE_HEIGHT)
-        HomeLayout(tileHeight, onSolo, onRanking, onSettings, onReport)
+        HomeLayout(tileHeight, maxHeight, onSolo, onRanking, onSettings, onReport)
     }
 }
 
 @Composable
 private fun HomeLayout(
     tileHeight: Dp,
+    screenHeight: Dp,
     onSolo: () -> Unit,
     onRanking: () -> Unit,
     onSettings: () -> Unit,
     onReport: () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        TopIcons(onReport, onSettings)
-        PosterTitle(
-            stringResource(R.string.home_title),
-            Modifier.align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.displayLarge,
-        )
-        Row(
-            Modifier.fillMaxWidth().padding(top = Spacing.xl),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            val tile = Modifier.weight(1f).height(tileHeight)
-            ModeTile(
-                stringResource(R.string.home_solo),
-                note = null,
-                icon = { drawNote(it) },
-                colors = RiffColors.TourRed to RiffColors.Paper,
-                onClick = onSolo,
-                modifier = tile.testTag(HomeTestTags.SOLO),
-            )
-            ModeTile(
-                stringResource(R.string.home_room),
-                note = stringResource(R.string.home_coming_soon),
-                icon = { drawFlag(it) },
-                colors = RoomBackground to RiffColors.PaperDim,
-                onClick = null,
-                modifier = tile.testTag(HomeTestTags.ROOM),
-                description = stringResource(R.string.home_room_coming_soon),
-            )
-        }
-        Spacer(Modifier.weight(1f))
+    // Rola quando nada cabe (deitado, fonte grande); quando cabe, ocupa a tela e o Ranking fica no pé.
+    Column(
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = screenHeight),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(Modifier.fillMaxWidth()) { HomeTop(tileHeight, onSolo, onSettings, onReport) }
         PosterButton(
             stringResource(R.string.home_ranking),
             onClick = onRanking,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = Spacing.md)
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.md, bottom = Spacing.md)
                 .testTag(HomeTestTags.RANKING),
             minWidth = RANKING_WIDTH,
             sound = MenuSound.NAVIGATE,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: () -> Unit, onReport: () -> Unit) {
+    TopIcons(onReport, onSettings)
+    PosterTitle(
+        stringResource(R.string.home_title),
+        Modifier.align(Alignment.CenterHorizontally),
+        style = MaterialTheme.typography.displayLarge,
+    )
+    Row(
+        Modifier.fillMaxWidth().padding(top = Spacing.xl),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        val tile = Modifier.weight(1f).height(tileHeight)
+        ModeTile(
+            stringResource(R.string.home_solo),
+            note = null,
+            icon = { drawNote(it) },
+            colors = RiffColors.TourRed to RiffColors.Paper,
+            onClick = onSolo,
+            modifier = tile.testTag(HomeTestTags.SOLO),
+        )
+        ModeTile(
+            stringResource(R.string.home_room),
+            note = stringResource(R.string.home_coming_soon),
+            icon = { drawFlag(it) },
+            colors = RoomBackground to RiffColors.PaperDim,
+            onClick = null,
+            modifier = tile.testTag(HomeTestTags.ROOM),
+            description = stringResource(R.string.home_room_coming_soon),
         )
     }
 }

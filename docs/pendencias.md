@@ -88,6 +88,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - **Limite do Android 15:** o serviço em primeiro plano de processamento de mídia tem 6 h por dia; uma fila muito longa à noite pode chegar nele (não medido).
 - **Testes:** falta o caso do trabalho que acaba com a fila ainda cheia (o scheduler pede de novo) e o de uma exceção comum dentro de `runCurrent`.
 
+## Sem o Spotify (revisão final, 2026-10-30)
+
+- O "★ Ranking" da tela inicial é lido pelo TalkBack com o nome da estrela; dar a ele uma descrição só "Ranking".
+- Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
+- O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
+- Baseline Profile ainda com classes do Spotify: refazer com o celular ligado (`scripts/desempenho.sh tudo`) antes de publicar a 0.5.0.
+
 ## Triagem de 2026-10-30: o que fica de propósito
 
 Os pontos menores restantes foram revistos. Os resolvidos saíram da lista; os que ficam acima, ficam por um destes motivos. Ainda abertos, sem motivo especial (pequenos, para quando mexer perto):

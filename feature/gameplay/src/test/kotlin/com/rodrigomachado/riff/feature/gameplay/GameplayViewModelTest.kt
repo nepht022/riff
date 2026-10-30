@@ -84,6 +84,10 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         assertEquals(100L, record.score)
         assertEquals(1, record.perfect)
         assertEquals(session.engine.longestCleanMs, record.cleanStreakMs) // "Tempo sem errar" vai para o ranking
+        // O recorde vai ao ranking com o id gravado e o nome da música, uma vez só.
+        val (sent, song) = ranking.submitted.single()
+        assertEquals(record.copy(id = 1L), sent)
+        assertEquals("Música — Banda", song)
         assertTrue(player.released)
         assertTrue(sfx.released)
     }
