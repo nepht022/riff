@@ -6,10 +6,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -241,17 +241,18 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
     ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
 }
 
-/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia. */
+/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia; a palheta da separação no meio. */
 @Composable
 private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.library_back), color = RiffColors.Paper) }
-        Spacer(Modifier.weight(1f))
-        SeparationIndicator()
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearch)) {
+    Box(Modifier.fillMaxWidth()) {
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+            Text(stringResource(R.string.library_back), color = RiffColors.Paper)
+        }
+        SeparationIndicator(Modifier.align(Alignment.Center))
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onSearch),
+            modifier = Modifier.align(Alignment.CenterEnd),
+        ) {
             Text(stringResource(R.string.library_search), color = RiffColors.Paper)
         }
     }

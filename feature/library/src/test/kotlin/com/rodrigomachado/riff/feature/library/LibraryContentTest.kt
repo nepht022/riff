@@ -383,6 +383,32 @@ class LibraryContentTest {
         assertEquals(listOf("separate"), events)
     }
 
+    /** No celular o diálogo é estreito: "Pôr na fila" saía cortado ("Pôr na"). Os botões quebram linha inteiros. */
+    @Test
+    @org.robolectric.annotation.Config(qualifiers = "pt-rBR-w300dp-h640dp-xhdpi")
+    // Com os gráficos nativos, o texto é medido de verdade.
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun inANarrowDialogNoButtonTextIsCut() {
+        showWithPrompt(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = listOf(chart("a", title = "Música")),
+                prompt = SeparationAsk("a", "Música", Difficulty.EXPERT, lowMemory = false, busy = true),
+            ),
+        )
+
+        for (label in listOf("Sem separar", "Pôr na fila", "Voltar")) {
+            val node = composeRule.onAllNodesWithText(label).onLast().fetchSemanticsNode()
+            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            val text = layouts.single()
+            // Inteiro numa linha: a largura desenhada cobre o texto todo.
+            assertEquals(label, 1, text.lineCount)
+            org.junit.Assert.assertTrue(label, text.size.width >= text.multiParagraph.maxIntrinsicWidth.toInt())
+        }
+    }
+
     @Test
     fun withOnlyTheQueueWaitingThePromptSaysSo() {
         showWithPrompt(
