@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -14,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
@@ -83,5 +85,21 @@ class HomeContentTest {
         composeRule.onNodeWithTag(HomeTestTags.RANKING).performScrollTo().assertIsDisplayed().performClick()
 
         assertEquals(listOf("ranking"), events)
+    }
+
+    /** Com o Riff em inglês (o Locale padrão do processo, como o app define), a tela inicial fica em inglês. */
+    @Test
+    @Config(qualifiers = "en")
+    fun inEnglishTheTilesAreInEnglish() {
+        val system = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+        try {
+            show()
+            composeRule.waitForIdle()
+        } finally {
+            Locale.setDefault(system)
+        }
+
+        composeRule.onNodeWithText("Solo").assertExists() // pt: "Sozinho"
     }
 }

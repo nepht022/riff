@@ -27,7 +27,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -44,6 +43,16 @@ import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import com.rodrigomachado.riff.feature.home.resources.Res
+import com.rodrigomachado.riff.feature.home.resources.home_coming_soon
+import com.rodrigomachado.riff.feature.home.resources.home_ranking
+import com.rodrigomachado.riff.feature.home.resources.home_report
+import com.rodrigomachado.riff.feature.home.resources.home_room
+import com.rodrigomachado.riff.feature.home.resources.home_room_coming_soon
+import com.rodrigomachado.riff.feature.home.resources.home_settings
+import com.rodrigomachado.riff.feature.home.resources.home_solo
+import com.rodrigomachado.riff.feature.home.resources.home_title
+import org.jetbrains.compose.resources.stringResource
 
 object HomeTestTags {
     const val SOLO = "home_solo"
@@ -86,7 +95,7 @@ private fun HomeLayout(
     ) {
         Column(Modifier.fillMaxWidth()) { HomeTop(tileHeight, onSolo, onSettings, onReport) }
         PosterButton(
-            stringResource(R.string.home_ranking),
+            stringResource(Res.string.home_ranking),
             onClick = onRanking,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.md, bottom = Spacing.md)
                 .testTag(HomeTestTags.RANKING),
@@ -100,7 +109,7 @@ private fun HomeLayout(
 private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: () -> Unit, onReport: () -> Unit) {
     TopIcons(onReport, onSettings)
     PosterTitle(
-        stringResource(R.string.home_title),
+        stringResource(Res.string.home_title),
         Modifier.align(Alignment.CenterHorizontally),
         style = MaterialTheme.typography.displayLarge,
     )
@@ -110,7 +119,7 @@ private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: 
     ) {
         val tile = Modifier.weight(1f).height(tileHeight)
         ModeTile(
-            stringResource(R.string.home_solo),
+            stringResource(Res.string.home_solo),
             note = null,
             icon = { drawNote(it) },
             colors = RiffColors.TourRed to RiffColors.Paper,
@@ -118,13 +127,13 @@ private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: 
             modifier = tile.testTag(HomeTestTags.SOLO),
         )
         ModeTile(
-            stringResource(R.string.home_room),
-            note = stringResource(R.string.home_coming_soon),
+            stringResource(Res.string.home_room),
+            note = stringResource(Res.string.home_coming_soon),
             icon = { drawFlag(it) },
             colors = RoomBackground to RiffColors.PaperDim,
             onClick = null,
             modifier = tile.testTag(HomeTestTags.ROOM),
-            description = stringResource(R.string.home_room_coming_soon),
+            description = stringResource(Res.string.home_room_coming_soon),
         )
     }
 }
@@ -132,11 +141,11 @@ private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: 
 @Composable
 private fun TopIcons(onReport: () -> Unit, onSettings: () -> Unit) {
     Box(Modifier.fillMaxWidth()) {
-        CornerIcon(stringResource(R.string.home_report), onReport, Modifier.align(Alignment.CenterStart)) {
+        CornerIcon(stringResource(Res.string.home_report), onReport, Modifier.align(Alignment.CenterStart)) {
             drawEnvelope(it)
         }
         SeparationIndicator(Modifier.align(Alignment.Center))
-        CornerIcon(stringResource(R.string.home_settings), onSettings, Modifier.align(Alignment.CenterEnd)) {
+        CornerIcon(stringResource(Res.string.home_settings), onSettings, Modifier.align(Alignment.CenterEnd)) {
             drawGear(it)
         }
     }
