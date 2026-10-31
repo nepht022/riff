@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -22,6 +23,7 @@ import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
+import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
@@ -154,6 +156,7 @@ private fun NavGraphBuilder.libraryDestinations(navController: NavHostController
             },
             onBack = dropUnlessResumed { navController.popBackStack() },
             onSearch = dropUnlessResumed { navController.navigate(SearchRoute()) },
+            viewModel = hiltViewModel<HiltLibraryViewModel>(),
         )
     }
 }

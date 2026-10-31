@@ -90,6 +90,9 @@ androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", 
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 # O mesmo lifecycle em versão multiplataforma (JetBrains), para o código comum ao celular e ao PC.
 jetbrains-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+jetbrains-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+# Navegação multiplataforma (JetBrains) para o PC; no celular o app segue com a do androidx.
+jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version = "2.10.0" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "androidxHilt" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -137,3 +140,4 @@ riff-kmp-library = { id = "riff.kmp.library" }
 riff-kmp-hilt = { id = "riff.kmp.hilt" }
 riff-kmp-room = { id = "riff.kmp.room" }
 riff-kmp-library-compose = { id = "riff.kmp.library.compose" }
+riff-kmp-feature = { id = "riff.kmp.feature" }

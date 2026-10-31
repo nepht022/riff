@@ -1,0 +1,76 @@
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_no_folder_title">No folder chosen</string>
+    <string name="library_no_folder_message">Choose the folder that holds your Clone Hero charts.</string>
+    <string name="library_choose_folder">Choose folder</string>
+    <string name="library_empty_title">No charts found</string>
+    <string name="library_empty_message">The folder has no subfolders with notes.chart or notes.mid.</string>
+    <string name="library_choose_another_folder">Choose another folder</string>
+    <string name="library_importing">Reading folders… %1$d</string>
+    <string name="library_access_lost">Lost access to the folder. Please choose it again.</string>
+    <string name="library_import_failed">Couldn't import the folder.</string>
+    <string name="library_rescan">Rescan</string>
+    <string name="library_change_folder">Change folder</string>
+    <plurals name="library_report_imported">
+        <item quantity="one">%1$d chart imported</item>
+        <item quantity="other">%1$d charts imported</item>
+    </plurals>
+    <plurals name="library_report_failed">
+        <item quantity="one">%1$d folder with errors</item>
+        <item quantity="other">%1$d folders with errors</item>
+    </plurals>
+    <string name="library_report_ok">OK</string>
+    <string name="library_unknown_artist">Unknown artist</string>
+    <string name="library_back">Back</string>
+    <string name="library_failure">%1$s: %2$s</string>
+    <string name="library_failure_with_detail">%1$s: %2$s (%3$s)</string>
+    <string name="library_failure_invalid_chart">invalid chart</string>
+    <string name="library_failure_too_large">file too large</string>
+    <string name="library_failure_unreadable">the files could not be read</string>
+    <string name="library_failure_no_access">no access to the folder</string>
+    <string name="library_failure_unexpected">unexpected error</string>
+    <string name="library_failure_duplicate">duplicate chart, same as %1$s</string>
+    <plurals name="library_report_more">
+        <item quantity="one">and %1$d more folder</item>
+        <item quantity="other">and %1$d more folders</item>
+    </plurals>
+    <string name="library_filter_open">Search the library</string>
+    <string name="library_filter_hint">Song or artist</string>
+    <string name="library_filter_none">No map with that name</string>
+    <string name="library_search">Search Maps</string>
+    <string name="library_separate_title">Separate the guitar with AI?</string>
+    <string name="library_separate_message">Separating the guitar makes its sound drop out when you miss notes and come back only when you hit them, for more immersion. It takes around 3 minutes and can warm the phone up. Separated songs stay stored on the device.</string>
+    <string name="library_separate_low_memory">It may not work on this phone.</string>
+    <string name="library_separate_busy">One is already separating: this one joins the queue.</string>
+    <string name="library_separate_queue_waiting">The separation queue is waiting: this one joins the end.</string>
+    <string name="library_separate_queue">+ Queue</string>
+    <string name="library_separate_selected">Separate (%1$d)</string>
+    <string name="library_separate">Separate</string>
+    <string name="library_play_without_separating">Without separating</string>
+    <string name="library_separate_guitar">Separate guitar</string>
+    <string name="library_ai_separated">AI separated guitar</string>
+    <string name="library_select">Select</string>
+    <string name="library_delete_selected">Delete (%1$d)</string>
+    <string name="library_select_all">Select all</string>
+    <string name="library_select_none">Clear all</string>
+    <string name="library_delete_cancel">Cancel</string>
+    <string name="library_delete_one">Delete %1$s</string>
+    <string name="library_delete">Delete</string>
+    <string name="library_delete_title_one">Delete “%1$s”?</string>
+    <plurals name="library_delete_title_many">
+        <item quantity="one">Delete %1$d chart?</item>
+        <item quantity="other">Delete %1$d charts?</item>
+    </plurals>
+    <string name="library_delete_message">Deletes the chart folder from the phone, with the AI separated guitar and the high score. This cannot be undone.</string>
+    <plurals name="library_delete_nested">
+        <item quantity="one">%1$d more chart inside the folder goes too.</item>
+        <item quantity="other">%1$d more charts inside the folder go too.</item>
+    </plurals>
+    <string name="library_delete_permission">To delete, Riff needs permission to change the library folder. Choose the same folder again.</string>
+    <string name="library_delete_allow">Allow</string>
+    <plurals name="library_delete_failed">
+        <item quantity="one">Could not delete %1$d chart.</item>
+        <item quantity="other">Could not delete %1$d charts.</item>
+    </plurals>
+    <string name="library_delete_ok">OK</string>
+</resources>
