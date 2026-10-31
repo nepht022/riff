@@ -60,6 +60,14 @@ gradlePlugin {
             id = "riff.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
         }
+        register("kmpLibrary") {
+            id = "riff.kmp.library"
+            implementationClass = "KmpLibraryConventionPlugin"
+        }
+        register("kmpHilt") {
+            id = "riff.kmp.hilt"
+            implementationClass = "KmpHiltConventionPlugin"
+        }
         register("kmpLibraryCompose") {
             id = "riff.kmp.library.compose"
             implementationClass = "KmpLibraryComposeConventionPlugin"

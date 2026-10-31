@@ -76,6 +76,8 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+# Só a anotação @Inject, para as classes comuns ao celular e ao PC (o Hilt só roda no celular).
+javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
@@ -127,4 +129,6 @@ riff-android-application-compose = { id = "riff.android.application.compose" }
 riff-android-library = { id = "riff.android.library" }
 riff-android-library-compose = { id = "riff.android.library.compose" }
 riff-jvm-library = { id = "riff.jvm.library" }
+riff-kmp-library = { id = "riff.kmp.library" }
+riff-kmp-hilt = { id = "riff.kmp.hilt" }
 riff-kmp-library-compose = { id = "riff.kmp.library.compose" }
