@@ -8,6 +8,7 @@ import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import java.util.regex.Pattern
 
 const val PACKAGE = "com.rodrigomachado.riff"
 const val TAG = "RiffDesempenho"
@@ -78,20 +79,37 @@ fun MacrobenchmarkScope.openSong(): Boolean {
     return true
 }
 
-/** A música pode estar mais abaixo na lista: rola para baixo até ela aparecer ou a lista acabar. */
+/**
+ * A música pode estar mais abaixo na lista: rola para baixo até ela aparecer ou a lista acabar. O fim é quando a
+ * rolagem não muda o que está à vista (o retorno do scroll do UiAutomator diz "acabou" numa LazyColumn que rolou).
+ */
 private fun MacrobenchmarkScope.findSong(): UiObject2? {
     repeat(MAX_SCROLLS) {
         device.wait(Until.findObject(By.text(songTitle())), FIND_MS)?.let { return it }
-        val list = device.findObject(By.res(LIBRARY_LIST)) ?: return null
-        val moved = try {
-            list.setGestureMargin(device.displayWidth / 5)
-            list.scroll(Direction.DOWN, SCROLL_PERCENT)
-        } catch (_: StaleObjectException) {
-            true // recomposta no meio do gesto: a rolagem já aconteceu
-        }
-        if (!moved) return device.findObject(By.text(songTitle()))
+        val before = visibleTexts() ?: return null
+        scrollListDown()
+        if (visibleTexts() == before) return device.findObject(By.text(songTitle()))
     }
     return null
+}
+
+private fun MacrobenchmarkScope.scrollListDown() {
+    try {
+        device.findObject(By.res(LIBRARY_LIST))?.run {
+            setGestureMargin(device.displayWidth / 5)
+            scroll(Direction.DOWN, SCROLL_PERCENT)
+        }
+    } catch (_: StaleObjectException) {
+        // Recomposta no meio do gesto: a rolagem já aconteceu.
+    }
+    device.waitForIdle()
+}
+
+/** Os textos da lista à vista agora; nulo se a lista não está na tela. */
+private fun MacrobenchmarkScope.visibleTexts(): List<String>? = try {
+    device.findObject(By.res(LIBRARY_LIST))?.findObjects(By.text(Pattern.compile(".+")))?.map { it.text }
+} catch (_: StaleObjectException) {
+    emptyList() // recomposta enquanto lia: conta como mudança
 }
 
 /** 20 s tocando numa trilha diferente a cada 250 ms (acertos, erros, chamas e cortes da guitarra). */
