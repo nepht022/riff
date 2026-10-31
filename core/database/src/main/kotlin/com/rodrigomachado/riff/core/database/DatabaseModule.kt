@@ -21,9 +21,6 @@ object DatabaseModule {
     fun chartDao(database: RiffDatabase): ChartDao = database.chartDao()
 
     @Provides
-    fun trackMatchDao(database: RiffDatabase): TrackMatchDao = database.trackMatchDao()
-
-    @Provides
     fun scoreDao(database: RiffDatabase): ScoreDao = database.scoreDao()
 
     @Provides
@@ -34,9 +31,6 @@ object DatabaseModule {
 
     @Provides
     fun aiSeparationDao(database: RiffDatabase): AiSeparationDao = database.aiSeparationDao()
-
-    @Provides
-    fun queueDownloadDao(database: RiffDatabase): QueueDownloadDao = database.queueDownloadDao()
 
     @Provides
     fun rankingPendingDao(database: RiffDatabase): RankingPendingDao = database.rankingPendingDao()

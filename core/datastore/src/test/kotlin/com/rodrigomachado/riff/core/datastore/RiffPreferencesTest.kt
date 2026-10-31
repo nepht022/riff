@@ -171,30 +171,6 @@ class RiffPreferencesTest {
     }
 
     @Test
-    fun queueOptionsAreSaved() = runTest {
-        val preferences = RiffPreferences(InMemoryPreferencesStore())
-
-        preferences.updateSettings {
-            it.copy(
-                queuePrefetch = true,
-                queueDeleteUnplayed = false,
-                queueUseMobileData = true,
-                queueReplaceSuggested = false,
-                queueClosestDuration = false,
-                spotifyNextSongDirect = false,
-            )
-        }
-
-        val settings = preferences.settings.first()
-        assertEquals(true, settings.queuePrefetch)
-        assertEquals(false, settings.queueDeleteUnplayed)
-        assertEquals(true, settings.queueUseMobileData)
-        assertEquals(false, settings.queueReplaceSuggested)
-        assertEquals(false, settings.queueClosestDuration)
-        assertEquals(false, settings.spotifyNextSongDirect)
-    }
-
-    @Test
     fun separatingOnlyWhileChargingIsSavedAndStartsOff() = runTest {
         val preferences = RiffPreferences(InMemoryPreferencesStore())
         assertEquals(false, preferences.settings.first().separateOnlyCharging)
@@ -202,5 +178,30 @@ class RiffPreferencesTest {
         preferences.updateSettings { it.copy(separateOnlyCharging = true) }
 
         assertEquals(true, preferences.settings.first().separateOnlyCharging)
+    }
+
+    /** A 0.4.0 gravou as opções do Spotify: a leitura não quebra e a próxima gravação as esquece. */
+    @Test
+    fun theSpotifyKeysAreForgotten() = runTest {
+        val store = InMemoryPreferencesStore()
+        val queuePrefetch = androidx.datastore.preferences.core.booleanPreferencesKey("queue_prefetch")
+        val nextSongDirect = androidx.datastore.preferences.core.booleanPreferencesKey("spotify_next_song_direct")
+        val leftHanded = androidx.datastore.preferences.core.booleanPreferencesKey("left_handed")
+        store.updateData {
+            it.toMutablePreferences().apply {
+                this[queuePrefetch] = true
+                this[nextSongDirect] = false
+                this[leftHanded] = true
+            }
+        }
+        val preferences = RiffPreferences(store)
+
+        assertEquals(true, preferences.settings.first().leftHanded)
+        preferences.updateSettings { it }
+
+        val saved = store.data.first()
+        assertEquals(null, saved[queuePrefetch])
+        assertEquals(null, saved[nextSongDirect])
+        assertEquals(true, saved[leftHanded])
     }
 }

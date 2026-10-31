@@ -94,24 +94,6 @@ class FakeChartImporter : ChartImporter {
     override suspend fun importPackage(fileUri: String, name: String) = error("não usado na biblioteca")
 }
 
-class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
-    val saved = mutableListOf<Triple<String, String, Boolean>>()
-    override val changes = MutableStateFlow(0)
-
-    override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
-        com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
-
-    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
-
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
-        saved += Triple(spotifyTrackUri, chartId, isManual)
-    }
-
-    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = null
-
-    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) = Unit
-}
-
 class FakeAiSeparations : AiSeparationRepository {
     val states = mutableMapOf<String, AiSeparationState>()
     var pruned = 0

@@ -47,13 +47,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rodrigomachado.riff.core.audio.PlayerNotice
-import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
-import com.rodrigomachado.riff.core.ui.component.PlaybackControls
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
@@ -87,14 +84,6 @@ fun GameplayScreen(
     onFinished: (scoreId: Long) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
-    /**
-     * Modo Spotify, a partida acabou e o Riff segue para a próxima música (troca na pausa, fim da partida ou o
-     * Spotify passou de música com o painel de confirmação aberto): quem chama volta e tenta começar a próxima,
-     * esperando o Spotify trocar até [waitMs].
-     */
-    onNextSong: (difficulty: Difficulty, fromTrackUri: String, waitMs: Long) -> Unit = { _, _, _ -> onExit() },
-    /** Painel de confirmação: escolher outro mapa da biblioteca para esta faixa. */
-    onChooseOther: (trackUri: String, title: String) -> Unit = { _, _ -> onExit() },
     viewModel: GameplayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,20 +107,11 @@ fun GameplayScreen(
             onResume = viewModel::resume,
             onExit = onExit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
-            onPlaybackChanged = viewModel::onPlaybackChanged,
             onAdjustOffset = viewModel::adjustSongOffset,
-            onChangeSong = { forward ->
-                val uri = current.spotifyTrackUri
-                if (viewModel.changeSong(forward) && uri != null) onNextSong(current.difficulty, uri, CHANGE_WAIT_MS)
-            },
-            onConfirm = viewModel::confirmAndPlay,
-            onChooseOther = { current.spotifyTrackUri?.let { onChooseOther(it, current.title) } },
             modifier = modifier,
         )
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
-
-        is GameplayUiState.NextSong -> NextSongEffect(current, onNextSong)
     }
 }
 
@@ -147,11 +127,7 @@ internal fun GameStage(
     onExit: () -> Unit,
     onSessionFinished: () -> Unit,
     modifier: Modifier = Modifier,
-    onPlaybackChanged: (Boolean) -> Unit = {},
     onAdjustOffset: (Int) -> Unit = {},
-    onChangeSong: (forward: Boolean) -> Unit = {},
-    onConfirm: () -> Unit = {},
-    onChooseOther: () -> Unit = {},
     animate: Boolean = true,
 ) {
     val session = state.session
@@ -165,8 +141,6 @@ internal fun GameStage(
     val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
     BackHandler(enabled = !state.isPaused, onBack = onPause)
-    val currentPaused by rememberUpdatedState(state.isPaused)
-    val playbackChanged by rememberUpdatedState(onPlaybackChanged)
     if (animate) {
         LaunchedEffect(session) {
             while (isActive) {
@@ -179,8 +153,6 @@ internal fun GameStage(
                     onSessionFinished()
                     break
                 }
-                // Pausa ou retomada fora do jogo (notificação do Spotify): a tela acompanha a música.
-                if (session.isPaused != currentPaused) playbackChanged(session.isPaused)
             }
         }
     }
@@ -205,10 +177,7 @@ internal fun GameStage(
                 .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
         )
         Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
-        when {
-            state.awaitingConfirmation -> ConfirmOverlay(state, onConfirm, onChooseOther, onExit)
-            state.isPaused -> PauseOverlay(state, onAdjustOffset, onResume, onExit, onChangeSong)
-        }
+        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit)
     }
 }
 
@@ -303,7 +272,6 @@ private fun PauseOverlay(
     onAdjustOffset: (Int) -> Unit,
     onResume: () -> Unit,
     onExit: () -> Unit,
-    onChangeSong: (forward: Boolean) -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA)),
@@ -311,11 +279,9 @@ private fun PauseOverlay(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         PosterTitle(stringResource(R.string.gameplay_paused))
-        val notice = state.session.notice?.takeIf { state.spotifyControls }
-        val message = notice?.message() ?: R.string.gameplay_audio_busy.takeIf { state.audioBusy }
-        if (message != null) {
+        if (state.audioBusy) {
             Text(
-                stringResource(message),
+                stringResource(R.string.gameplay_audio_busy),
                 style = MaterialTheme.typography.bodyLarge,
                 color = RiffColors.Paper,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -324,16 +290,6 @@ private fun PauseOverlay(
             )
         }
         PosterButton(stringResource(R.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
-        // Sem o Spotify, trocar de música encerraria a partida sem trocar nada.
-        if (state.spotifyControls && notice != PlayerNotice.SOURCE_LOST) {
-            PlaybackControls(
-                isPaused = true,
-                onPrevious = { onChangeSong(false) },
-                onPlayPause = onResume,
-                onNext = { onChangeSong(true) },
-                inMatch = true,
-            )
-        }
         SyncAdjuster(state.songOffsetMs, onAdjustOffset)
         TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
             Text(stringResource(R.string.gameplay_exit), color = RiffColors.Paper)
@@ -391,6 +347,5 @@ private fun UnavailableReason.message(): Int = when (this) {
     UnavailableReason.CHART_UNREADABLE -> R.string.gameplay_chart_unreadable
     UnavailableReason.FOLDER_ACCESS_LOST -> R.string.gameplay_folder_lost
     UnavailableReason.AUDIO_FAILED -> R.string.gameplay_audio_failed
-    UnavailableReason.SPOTIFY_UNAVAILABLE -> R.string.gameplay_unavailable_spotify
     UnavailableReason.UNEXPECTED -> R.string.gameplay_unexpected
 }

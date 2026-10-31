@@ -1,7 +1,6 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import com.rodrigomachado.riff.core.audio.GuitarTrackControl
-import com.rodrigomachado.riff.core.audio.PlayerNotice
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.GameEngine
@@ -24,7 +23,7 @@ class GameSession(
     private val sfx: SfxPlayer,
     private val timeSource: TimeSource,
     audioOffsetMs: Long,
-    /** Falso no modo Spotify: a música inteira já está tocando, então o acerto fica em silêncio. */
+    /** Falso quando a música inteira já está tocando (sem guitarra separada): o acerto fica em silêncio. */
     private val hitSounds: Boolean = true,
     /** Quanto voltar ao continuar depois de uma pausa (modo biblioteca: dá tempo de se preparar). */
     private val rewindOnResumeMs: Long = 0,
@@ -62,9 +61,6 @@ class GameSession(
         private set
 
     val isPaused: Boolean get() = !player.isPlaying && rewind == null
-
-    /** Por que a música parou por fora (Spotify); a pausa explica. */
-    val notice: PlayerNotice? get() = player.notice
 
     val isFinished: Boolean
         get() = player.isCompleted || (engine.isFinished && songTimeMs > endMs)
@@ -120,7 +116,7 @@ class GameSession(
     /** Avança a partida até o instante atual. Chamado a cada frame. */
     fun tick(): Long {
         rewind?.let { return rewindStep(it) }
-        // A música voltou por fora do jogo (notificação do Spotify, fone): o ajuste feito na pausa vale agora.
+        // A música voltou por fora do jogo: o ajuste feito na pausa vale agora.
         if (pendingOffsetMs != 0L && !isPaused) applyPendingOffset()
         // Começando (o som ainda não saiu), ou tocando/pausando por fora do jogo (o relógio discorda do player),
         // sincroniza neste quadro em vez de esperar a sincronização periódica.

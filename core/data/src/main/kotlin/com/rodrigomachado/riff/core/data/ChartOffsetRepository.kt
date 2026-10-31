@@ -10,7 +10,7 @@ const val MAX_SYNC_OFFSET_MS = 500
 
 /**
  * Limite do ajuste por música, em ms para cada lado. Segundos, não ms: o áudio de um mapa pode ter uma
- * contagem de entrada que a versão do Spotify não tem.
+ * contagem de entrada longa.
  */
 const val MAX_SONG_OFFSET_MS = 10_000
 

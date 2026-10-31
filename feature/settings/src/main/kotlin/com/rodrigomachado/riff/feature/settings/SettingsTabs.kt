@@ -43,7 +43,7 @@ import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 
 /** As abas das Configurações, na ordem da barra. */
-enum class SettingsTab { GENERAL, SOUNDS, GAME, TRACK_LOOK, AI, SPOTIFY }
+enum class SettingsTab { GENERAL, SOUNDS, GAME, TRACK_LOOK, AI }
 
 /** Barra de abas que rola de lado se não couber; a escolhida fica clara e sublinhada de vermelho. */
 @Composable
@@ -93,7 +93,6 @@ private fun tabTitle(tab: SettingsTab): String = stringResource(
         SettingsTab.GAME -> R.string.settings_game
         SettingsTab.TRACK_LOOK -> R.string.settings_tab_track_look
         SettingsTab.AI -> R.string.settings_tab_ai
-        SettingsTab.SPOTIFY -> R.string.settings_tab_spotify
     },
 )
 

@@ -21,7 +21,6 @@
     </plurals>
     <string name="library_report_ok">OK</string>
     <string name="library_unknown_artist">Unknown artist</string>
-    <string name="library_match_title">Which chart is this song?</string>
     <string name="library_back">Back</string>
     <string name="library_failure">%1$s: %2$s</string>
     <string name="library_failure_with_detail">%1$s: %2$s (%3$s)</string>

@@ -245,9 +245,9 @@ class ReportContentTest {
         show(ReportUiState(device = device))
 
         composeRule.onNodeWithText("Escolha uma categoria").performClick()
-        composeRule.onNodeWithText("Spotify").performScrollTo().performClick()
+        composeRule.onNodeWithText("Pesquisa e download do Encore").performScrollTo().performClick()
 
-        assertEquals(listOf("category:SPOTIFY"), events)
+        assertEquals(listOf("category:ENCORE"), events)
         composeRule.onNodeWithText("Guitarra separada por IA").assertDoesNotExist() // a lista fecha
     }
 
@@ -282,11 +282,11 @@ class ReportContentTest {
     /** O TalkBack diz qual categoria está marcada na lista. */
     @Test
     fun theListSaysWhichCategoryIsChosen() {
-        show(ReportUiState(category = ReportCategory.SPOTIFY, device = device))
+        show(ReportUiState(category = ReportCategory.ENCORE, device = device))
 
-        composeRule.onNodeWithText("Spotify").performClick()
+        composeRule.onNodeWithText("Pesquisa e download do Encore").performClick()
 
-        composeRule.onNode(hasText("Spotify") and isSelectable()).assertIsSelected()
+        composeRule.onNode(hasText("Pesquisa e download do Encore") and isSelectable()).assertIsSelected()
         composeRule.onNode(hasText("Outro problema") and isSelectable()).performScrollTo().assertIsNotSelected()
     }
 }

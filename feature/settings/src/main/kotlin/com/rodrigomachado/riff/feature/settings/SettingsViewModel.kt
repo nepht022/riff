@@ -6,9 +6,7 @@ import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.AppLanguageStore
-import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.SettingsRepository
-import com.rodrigomachado.riff.core.data.folder.FolderAccess
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.SeparationUsage
@@ -29,8 +27,6 @@ class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val separations: AiSeparationRepository,
     private val languages: AppLanguageStore,
-    folders: LibraryFolderStore,
-    folderAccess: FolderAccess,
     ranking: RankingRepository,
     sfxPlayers: SfxPlayerFactory,
 ) : ViewModel() {
@@ -53,29 +49,6 @@ class SettingsViewModel @Inject constructor(
     /** Quantas músicas a IA separou e o espaço que ocupam. */
     val separationUsage: StateFlow<SeparationUsage> = separations.usage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeparationUsage(0, 0))
-
-    /** A fila só baixa com permissão de gravar na pasta da biblioteca. */
-    val canWriteToLibrary: StateFlow<Boolean> = folders.rootUri
-        .map { root -> root != null && folderAccess.canWrite(root) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), true)
-
-    fun onQueue(action: QueueAction) = when (action) {
-        is QueueAction.Prefetch -> setQueuePrefetch(action.on)
-        is QueueAction.DeleteUnplayed -> setQueueDeleteUnplayed(action.on)
-        is QueueAction.UseMobileData -> setQueueUseMobileData(action.on)
-        is QueueAction.ReplaceSuggested -> setQueueReplaceSuggested(action.replace)
-        is QueueAction.ClosestDuration -> save { it.copy(queueClosestDuration = action.download) }
-        is QueueAction.NextSongDirect -> save { it.copy(spotifyNextSongDirect = action.direct) }
-    }
-
-    /** A fila vem da sessão de mídia (a mesma permissão do Tocando agora): ligar só grava a opção. */
-    fun setQueuePrefetch(on: Boolean) = save { it.copy(queuePrefetch = on) }
-
-    fun setQueueDeleteUnplayed(on: Boolean) = save { it.copy(queueDeleteUnplayed = on) }
-
-    fun setQueueUseMobileData(on: Boolean) = save { it.copy(queueUseMobileData = on) }
-
-    fun setQueueReplaceSuggested(replace: Boolean) = save { it.copy(queueReplaceSuggested = replace) }
 
     /** Troca o idioma do jogo; o Android refaz a tela já no idioma novo. */
     fun setLanguage(language: AppLanguage) = languages.set(language)

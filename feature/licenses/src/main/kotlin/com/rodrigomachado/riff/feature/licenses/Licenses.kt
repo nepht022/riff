@@ -12,7 +12,7 @@ import javax.inject.Inject
 /** Um item da tela: o que é, de quem, a licença e o texto dela (null quando não há texto para mostrar). */
 data class LicenseEntry(val name: String, val author: String, val license: String, val text: String?)
 
-/** [content]: o que não vem do Gradle (modelo, fontes, sons, SDK do Spotify); [libraries]: as dependências. */
+/** [content]: o que não vem do Gradle (modelo, fontes, sons); [libraries]: as dependências. */
 data class LicensesUiState(
     val content: List<LicenseEntry> = emptyList(),
     val libraries: List<LicenseEntry> = emptyList(),

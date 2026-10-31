@@ -18,10 +18,4 @@
     <string name="ui_separation_open_count">Guitar separation: %1$d left</string>
     <string name="ui_separation_close">Close</string>
     <string name="ui_separation_ok">OK</string>
-    <string name="playback_previous_ends_match">Previous song (ends the match)</string>
-    <string name="playback_next_ends_match">Next song (ends the match)</string>
-    <string name="playback_previous">Previous song</string>
-    <string name="playback_pause">Pause song</string>
-    <string name="playback_play">Play song</string>
-    <string name="playback_next">Next song</string>
 </resources>

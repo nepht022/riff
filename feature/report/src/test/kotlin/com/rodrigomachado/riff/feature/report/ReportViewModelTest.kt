@@ -177,7 +177,7 @@ class ReportViewModelTest {
         vm.setText("Trava")
         assertFalse(vm.uiState.value.canSend) // Problema sem categoria
 
-        vm.setCategory(ReportCategory.SPOTIFY)
+        vm.setCategory(ReportCategory.ENCORE)
         assertTrue(vm.uiState.value.canSend)
 
         vm.setKind(ReportKind.SUGGESTION) // a categoria do problema não serve para sugestão
@@ -248,7 +248,7 @@ class ReportViewModelTest {
 
     @Test
     fun eachKindHasItsOwnCategories() {
-        assertEquals(9, ReportCategory.forKind(ReportKind.PROBLEM).size)
+        assertEquals(8, ReportCategory.forKind(ReportKind.PROBLEM).size)
         assertEquals(6, ReportCategory.forKind(ReportKind.SUGGESTION).size)
         assertTrue(ReportCategory.forKind(ReportKind.OTHER).isEmpty())
     }
@@ -282,6 +282,19 @@ class ReportViewModelTest {
         viewModel(saved).setCustomCategory("Elogio")
 
         assertEquals("Elogio", ReportViewModel(saved, sender, cooldown) { device }.uiState.value.customCategory)
+    }
+
+    /** Um relato salvo pela 0.4.0 com a categoria "Spotify" volta sem categoria, sem quebrar. */
+    @Test
+    fun aSavedSpotifyCategoryIsDropped() = runTest {
+        val saved = SavedStateHandle(mapOf("kind" to "PROBLEM", "category" to "SPOTIFY"))
+
+        assertNull(ReportViewModel(saved, sender, cooldown) { device }.uiState.value.category)
+    }
+
+    @Test
+    fun noCategoryMentionsSpotify() {
+        assertTrue(ReportCategory.entries.none { "Spotify" in it.label })
     }
 }
 

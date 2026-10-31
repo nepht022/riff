@@ -24,14 +24,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.download.ChartDownloadException.Reason
 import com.rodrigomachado.riff.core.encore.EncoreChart
@@ -54,7 +52,6 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 fun SearchScreen(
     onBack: () -> Unit,
     onPlay: (chartId: String, difficulty: Difficulty) -> Unit,
-    onMatched: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
@@ -63,7 +60,6 @@ fun SearchScreen(
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let { viewModel.onWriteAccessGranted(it.toString()) }
     }
-    MatchedReturn(state.matched, onMatched)
     SearchContent(
         state = state,
         onQueryChange = viewModel::onQueryChange,
@@ -285,16 +281,6 @@ private fun Reason.message(): Int = when (this) {
 private fun duration(ms: Long): String {
     val seconds = ms / MS_PER_SECOND
     return "%d:%02d".format(seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE)
-}
-
-/** Baixado a partir do Spotify: volta ao Tocando agora, só com a tela em primeiro plano. */
-@Composable
-private fun MatchedReturn(matched: Boolean, onMatched: () -> Unit) {
-    val current by rememberUpdatedState(onMatched)
-    LifecycleResumeEffect(matched) {
-        if (matched) current()
-        onPauseOrDispose {}
-    }
 }
 
 private const val MS_PER_SECOND = 1_000

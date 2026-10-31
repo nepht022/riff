@@ -26,7 +26,6 @@
     <string name="report_category_slow">Jogo lento ou engasgando</string>
     <string name="report_category_sync">Som ou notas fora de sincronia</string>
     <string name="report_category_chart">Mapa ou notas erradas</string>
-    <string name="report_category_spotify">Spotify</string>
     <string name="report_category_library">Biblioteca e importar mapas</string>
     <string name="report_category_encore">Pesquisa e download do Encore</string>
     <string name="report_category_ai">Guitarra separada por IA</string>

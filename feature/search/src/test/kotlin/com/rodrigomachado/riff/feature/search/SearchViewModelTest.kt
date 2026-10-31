@@ -104,11 +104,8 @@ class FakeDownloader : ChartDownloader {
     var progressSteps = emptyList<Float>()
     var gate: CompletableDeferred<Unit>? = null
     var calls = 0
-    var lastMatchTrackUri: String? = null
-
-    override suspend fun download(chart: EncoreChart, matchTrackUri: String?, onProgress: (Float) -> Unit): Chart {
+    override suspend fun download(chart: EncoreChart, onProgress: (Float) -> Unit): Chart {
         calls++
-        lastMatchTrackUri = matchTrackUri
         progressSteps.forEach(onProgress)
         gate?.await()
         val id = "baixado-${chart.md5}"
@@ -166,10 +163,6 @@ class SearchViewModelTest {
         SavedStateHandle(
             buildMap {
                 route.query?.let { put("query", it) }
-                route.matchTrackUri?.let { put("matchTrackUri", it) }
-                route.matchTrackTitle?.let { put("matchTrackTitle", it) }
-                route.matchTrackArtist?.let { put("matchTrackArtist", it) }
-                route.matchTrackDurationMs?.let { put("matchTrackDurationMs", it) }
             },
         ),
         EncoreClient(transport, Dispatchers.Main),
@@ -178,24 +171,6 @@ class SearchViewModelTest {
         access,
         folders,
     )
-
-    @Test
-    fun fromTheSpotifyScreenItSearchesRightAwayAndPutsTheClosestFirst() = runTest {
-        val vm = viewModel(
-            SearchRoute(
-                query = "Nirvana Smells Like Teen Spirit",
-                matchTrackUri = "spotify:track:x",
-                matchTrackTitle = "Smells Like Teen Spirit",
-                matchTrackArtist = "Nirvana",
-                matchTrackDurationMs = 301_000,
-            ),
-        )
-        advanceUntilIdle()
-
-        assertEquals("Nirvana Smells Like Teen Spirit", vm.uiState.value.query)
-        assertEquals("Smells Like Teen Spirit", vm.uiState.value.results.first().chart.name)
-        assertEquals(4, vm.uiState.value.results.size) // com os oficiais
-    }
 
     @Test
     fun fromTheLibraryNothingIsSearchedUntilTheQueryIsConfirmed() = runTest {
@@ -238,18 +213,6 @@ class SearchViewModelTest {
 
         assertEquals("ja-tenho", (vm.uiState.value.results.first().state as ItemState.Ready).chartId)
         assertEquals(0, downloader.calls)
-    }
-
-    @Test
-    fun downloadingFromSpotifyMatchesAndReturns() = runTest {
-        val vm = viewModel(SearchRoute(query = "teen spirit", matchTrackUri = "spotify:track:x", matchTrackTitle = "x"))
-        advanceUntilIdle()
-
-        vm.download(vm.uiState.value.results.first().chart)
-        advanceUntilIdle()
-
-        assertEquals("spotify:track:x", downloader.lastMatchTrackUri)
-        assertEquals(true, vm.uiState.value.matched)
     }
 
     @Test

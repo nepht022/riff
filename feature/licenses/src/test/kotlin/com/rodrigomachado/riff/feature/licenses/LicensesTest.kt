@@ -74,14 +74,9 @@ class LicensesTest {
         )
             .performScrollTo().assertExists()
         composeRule.onNodeWithText(
-            "pelo controle de mídia do Android",
+            "as buscas que você faz na pesquisa vão para o Encore (enchor.us)",
             substring = true,
         ).performScrollTo().assertExists()
-        composeRule.onNodeWithText(
-            "o Riff pesquisa no Encore (enchor.us) o artista e o nome das músicas",
-            substring = true,
-        )
-            .performScrollTo().assertExists()
         composeRule.onNodeWithText("Demucs v4").performScrollTo().assertExists()
         composeRule.onNodeWithText("Meta Platforms · MIT").assertExists()
         // A lista é preguiçosa: rola até o item existir.
@@ -122,4 +117,13 @@ class LicensesTest {
     }
 
     private fun list() = composeRule.onNode(hasScrollToNodeAction())
+
+    /** Sem o Spotify, a privacidade não fala dele nem do "Acesso às notificações". */
+    @Test
+    fun thePrivacyTextHasNoSpotify() {
+        composeRule.setContent { RiffTheme { LicensesContent(state, onBack = {}) } }
+
+        composeRule.onNodeWithText("Spotify", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("Acesso às notificações", substring = true).assertDoesNotExist()
+    }
 }

@@ -18,7 +18,6 @@ class FakeSongPlayer : SongPlayer {
     var released = false
     override var isCompleted: Boolean = false
     override var isStarting: Boolean = false
-    override var notice: com.rodrigomachado.riff.core.audio.PlayerNotice? = null
     val seeks = mutableListOf<Long>()
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
@@ -56,14 +55,6 @@ class FakeSongPlayer : SongPlayer {
 
     override fun release() {
         released = true
-    }
-
-    /** A música continua (Spotify, seguindo para a próxima). */
-    var keptMusic = false
-
-    override fun releaseKeepingMusic() {
-        keptMusic = true
-        release()
     }
 }
 
@@ -151,28 +142,6 @@ class FakeChartOffsetRepository : com.rodrigomachado.riff.core.data.ChartOffsetR
 
     override suspend fun save(chartId: String, offsetMs: Int) {
         offsets[chartId] = offsetMs
-    }
-}
-
-class FakeTrackMatchRepository : com.rodrigomachado.riff.core.data.TrackMatchRepository {
-    val offsets = mutableMapOf<Pair<String, String>, Int>()
-    override val changes = kotlinx.coroutines.flow.MutableStateFlow(0)
-
-    override suspend fun matchFor(track: com.rodrigomachado.riff.core.model.PlaybackState) =
-        com.rodrigomachado.riff.core.model.MatchStatus.NoMatch
-
-    override suspend fun saveSuggestion(spotifyTrackUri: String, chartId: String, confidence: Float) = Unit
-
-    val saved = mutableListOf<String>()
-
-    override suspend fun save(spotifyTrackUri: String, chartId: String, confidence: Float, isManual: Boolean) {
-        saved += "$spotifyTrackUri $chartId $confidence manual=$isManual"
-    }
-
-    override suspend fun offsetFor(spotifyTrackUri: String, chartId: String): Int? = offsets[spotifyTrackUri to chartId]
-
-    override suspend fun saveOffset(spotifyTrackUri: String, chartId: String, offsetMs: Int) {
-        offsets[spotifyTrackUri to chartId] = offsetMs
     }
 }
 

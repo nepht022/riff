@@ -164,36 +164,6 @@ class LibraryContentTest {
     }
 
     @Test
-    fun inMatchModeTappingAChartPicksItWithoutAskingTheDifficulty() {
-        var picked: String? = null
-        composeRule.setContent {
-            RiffTheme {
-                LibraryContent(
-                    state = LibraryUiState(
-                        isLoading = false,
-                        hasFolder = true,
-                        charts = listOf(chart("a", title = "Música")),
-                    ),
-                    onPickFolder = {},
-                    onRescan = {},
-                    onReportDismissed = {},
-                    onPlay = { _, _ -> error("não deveria jogar") },
-                    onBack = {},
-                    matchingTitle = "Bohemian Rhapsody",
-                    onChartMatched = { picked = it },
-                )
-            }
-        }
-
-        composeRule.onNodeWithText("Qual mapa é esta música?").assertExists()
-        composeRule.onNodeWithText("Bohemian Rhapsody").assertExists()
-        composeRule.onNodeWithText("Música").performClick()
-
-        composeRule.onNodeWithText("Escolha a dificuldade").assertDoesNotExist()
-        assertEquals("a", picked)
-    }
-
-    @Test
     fun backLeavesTheLibrary() {
         var back = false
         composeRule.setContent {

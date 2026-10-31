@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,17 +23,6 @@ import com.rodrigomachado.riff.core.ui.component.difficultyLabel
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
-
-/** No modo de escolha: qual música do Spotify ganha o mapa. */
-@Composable
-internal fun MatchHeader(title: String) {
-    Text(
-        stringResource(R.string.library_match_title),
-        style = MaterialTheme.typography.titleMedium,
-        color = RiffColors.Paper,
-    )
-    Text(title, style = MaterialTheme.typography.bodyLarge, color = RiffColors.PaperDim)
-}
 
 @Composable
 internal fun DifficultyChoice(chart: Chart, onClose: () -> Unit, onChosen: (Chart, Difficulty) -> Unit) {

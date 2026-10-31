@@ -4,7 +4,7 @@
     <string name="settings_back">Back</string>
     <string name="settings_sounds">Sounds</string>
     <string name="settings_master_volume">App volume</string>
-    <string name="settings_master_volume_hint">Doesn\'t change Spotify\'s volume; use the phone volume.</string>
+    <string name="settings_master_volume_hint">All the game\'s sounds: the music, the miss and the menu.</string>
     <string name="settings_miss_volume">Miss sound</string>
     <string name="settings_game">Game</string>
     <string name="settings_note_speed">Note speed</string>
@@ -65,21 +65,4 @@
     <string name="settings_licenses">Licenses and privacy</string>
     <string name="settings_licenses_open">View</string>
     <string name="settings_language">Language</string>
-    <string name="settings_tab_spotify">Spotify</string>
-    <string name="settings_spotify_song_end">When the song ends</string>
-    <string name="settings_spotify_song_end_next">Go straight to the next one</string>
-    <string name="settings_spotify_song_end_result">Show the result</string>
-    <string name="settings_queue_prefetch">Download queue maps</string>
-    <string name="settings_queue_prefetch_hint">While you listen, Riff downloads from Encore the maps of the next two songs in your Spotify queue.</string>
-    <string name="settings_queue_delete">Delete the ones I didn\'t play</string>
-    <string name="settings_queue_delete_hint">When the song ends without you playing it, the map downloaded on its own is deleted from the phone.</string>
-    <string name="settings_queue_mobile_data">Use mobile data</string>
-    <string name="settings_queue_mobile_data_hint">Off, downloads only on Wi-Fi. Each map is tens of MB.</string>
-    <string name="settings_queue_suggested">Songs with maps already downloaded</string>
-    <string name="settings_queue_suggested_replace">Download a new suggestion</string>
-    <string name="settings_queue_suggested_keep">Keep the one I have</string>
-    <string name="settings_queue_closest">No map with the same length</string>
-    <string name="settings_queue_closest_download">Download the closest length</string>
-    <string name="settings_queue_closest_none">Download none</string>
-    <string name="settings_queue_no_folder">To download, Riff needs permission to write to the library folder (Library → Change folder).</string>
 </resources>

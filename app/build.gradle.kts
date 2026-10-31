@@ -30,8 +30,8 @@ android {
     namespace = "com.rodrigomachado.riff"
     defaultConfig {
         applicationId = "com.rodrigomachado.riff"
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
         // Só celulares (ARM): as bibliotecas x86 do ONNX Runtime (~80 MB) servem apenas a emuladores e PCs.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -75,7 +75,6 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:audio"))
     implementation(project(":core:data"))
-    implementation(project(":core:spotify"))
     implementation(project(":core:separation"))
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.hilt.work)
@@ -83,12 +82,12 @@ dependencies {
     implementation(project(":feature:search"))
     implementation(project(":feature:gameplay"))
     implementation(project(":feature:results"))
-    implementation(project(":feature:nowplaying"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:calibration"))
     implementation(project(":feature:report"))
     implementation(project(":feature:ranking"))
     implementation(project(":feature:licenses"))
+    implementation(project(":feature:home"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

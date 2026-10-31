@@ -84,6 +84,10 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         assertEquals(100L, record.score)
         assertEquals(1, record.perfect)
         assertEquals(session.engine.longestCleanMs, record.cleanStreakMs) // "Tempo sem errar" vai para o ranking
+        // O recorde vai ao ranking com o id gravado e o nome da música, uma vez só.
+        val (sent, song) = ranking.submitted.single()
+        assertEquals(record.copy(id = 1L), sent)
+        assertEquals("Música — Banda", song)
         assertTrue(player.released)
         assertTrue(sfx.released)
     }
@@ -138,51 +142,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         assertEquals(false, player.isPlaying)
         viewModel.resume()
         assertTrue(player.isPlaying)
-    }
-
-    @Test
-    fun spotifyModePlaysTheTrackWithItsOffsetAndNeedsNoAudioInTheFolder() = runTest {
-        loader.result = { playable(audio = null) }
-
-        val state = viewModel(
-            spotifyTrackUri = "spotify:track:x",
-            trackOffsetMs = 25,
-        ).uiState.value as GameplayUiState.Ready
-
-        assertEquals("spotify:track:x", spotifyPlayer.preparedUri)
-        assertEquals(0, playersCreated)
-        assertTrue(spotifyPlayer.isPlaying)
-        spotifyPlayer.positionMs = 1_000
-        time.now = GameSession.SYNC_INTERVAL_MS
-        assertEquals(985L, state.session.tick()) // 1000 − 40 (calibração global) + 25 (ajuste da música)
-    }
-
-    @Test
-    fun spotifyThatCannotPlayIsExplained() = runTest {
-        loader.result = { playable() }
-        spotifyPlayer.prepareFailure = java.io.IOException("Spotify indisponível")
-
-        assertEquals(
-            GameplayUiState.Unavailable(UnavailableReason.SPOTIFY_UNAVAILABLE),
-            viewModel(spotifyTrackUri = "spotify:track:x").uiState.value,
-        )
-        assertTrue(spotifyPlayer.released)
-    }
-
-    @Test
-    fun pausedOutsideTheGameShowsThePauseScreenAndReleasesTheLanes() = runTest {
-        loader.result = { playable() }
-        val viewModel = viewModel()
-        val session = (viewModel.uiState.value as GameplayUiState.Ready).session
-        session.press(0)
-
-        viewModel.onPlaybackChanged(paused = true)
-
-        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).isPaused)
-        assertEquals(false, session.isPressed(0))
-
-        viewModel.onPlaybackChanged(paused = false)
-        assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).isPaused)
     }
 
     private fun stems() = ChartAudio.Stems(
@@ -251,18 +210,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
     }
 
     @Test
-    fun spotifyOffsetIsReadFromTheSavedMatchNotFromTheRoute() = runTest {
-        trackMatches.offsets["spotify:track:x" to "a"] = -30
-        loader.result = { playable() }
-
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x", trackOffsetMs = 25)
-        viewModel.adjustSongOffset(-10)
-
-        assertEquals(-40, (viewModel.uiState.value as GameplayUiState.Ready).songOffsetMs)
-        assertEquals(-40, trackMatches.offsets["spotify:track:x" to "a"])
-    }
-
-    @Test
     fun songOffsetStopsAtTheLimits() = runTest {
         chartOffsets.offsets["a"] = 9_995
         loader.result = { playable() }
@@ -277,20 +224,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
 
         assertEquals(10_000, chartOffsets.offsets["a"])
         assertEquals(before + 5, ready.session.tick())
-    }
-
-    @Test
-    fun spotifyModeHasNoHitSoundBecauseTheWholeSongIsPlaying() = runTest {
-        loader.result = { playable(audio = null) }
-        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
-        spotifyPlayer.positionMs = 1_040
-        time.now = GameSession.SYNC_INTERVAL_MS
-        state.session.tick()
-
-        state.session.press(0)
-
-        assertTrue(state.session.lastJudgment != null)
-        assertEquals(0, sfx.hits)
     }
 
     /** Sem guitarra separada, a biblioteca é como o Spotify: a música toca inteira e o acerto fica em silêncio. */
@@ -309,42 +242,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
     }
 
     @Test
-    fun spotifyWithoutAnAdjustmentStartsAlignedWithWhereTheChartMusicBegins() = runTest {
-        musicStartMs = 3_900 // o áudio do mapa tem uma contagem de entrada antes da banda
-        // A guitarra entra depois da contagem (a primeira nota limita o ajuste).
-        loader.result = { playable().copy(notes = listOf(note(5_000), note(6_000))) }
-
-        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
-
-        assertEquals(listOf(listOf("raiz/a/song.ogg")), analyzed)
-        assertEquals(3_900, state.songOffsetMs)
-        assertEquals(3_900, trackMatches.offsets["spotify:track:x" to "a"])
-    }
-
-    @Test
-    fun aSavedSpotifyAdjustmentIsKeptWithoutAnalyzing() = runTest {
-        musicStartMs = 3_900
-        trackMatches.offsets["spotify:track:x" to "a"] = 3_870
-        loader.result = { playable() }
-
-        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
-
-        assertEquals(emptyList<List<String>>(), analyzed)
-        assertEquals(3_870, state.songOffsetMs)
-    }
-
-    @Test
-    fun theLibraryPlaysItsOwnAudioAndNeedsNoAnalysis() = runTest {
-        musicStartMs = 3_900
-        loader.result = { playable() }
-
-        val state = viewModel().uiState.value as GameplayUiState.Ready
-
-        assertEquals(emptyList<List<String>>(), analyzed)
-        assertEquals(0, state.songOffsetMs)
-    }
-
-    @Test
     fun theLibraryGoesBackHalfASecondWhenResuming() = runTest {
         loader.result = { playable() }
         val viewModel = viewModel()
@@ -354,40 +251,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
         viewModel.resume()
 
         assertEquals(listOf(29_500L), player.seeks)
-    }
-
-    @Test
-    fun spotifyResumesExactlyWhereItStopped() = runTest {
-        loader.result = { playable(audio = null) }
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
-        spotifyPlayer.positionMs = 30_000
-        viewModel.pause()
-
-        viewModel.resume()
-
-        assertEquals(emptyList<Long>(), spotifyPlayer.seeks)
-    }
-
-    @Test
-    fun aSavedSpotifyAdjustmentOfZeroIsKeptWithoutAnalyzing() = runTest {
-        musicStartMs = 3_900
-        trackMatches.offsets["spotify:track:x" to "a"] = 0 // o jogador corrigiu a detecção para 0
-        loader.result = { playable() }
-
-        val state = viewModel(spotifyTrackUri = "spotify:track:x").uiState.value as GameplayUiState.Ready
-
-        assertEquals(emptyList<List<String>>(), analyzed)
-        assertEquals(0, state.songOffsetMs)
-    }
-
-    @Test
-    fun anAnalysisThatFindsNoStartIsSavedSoItRunsOnlyOnce() = runTest {
-        musicStartMs = null
-        loader.result = { playable() }
-
-        viewModel(spotifyTrackUri = "spotify:track:x")
-
-        assertEquals(0, trackMatches.offsets["spotify:track:x" to "a"])
     }
 
     @Test
@@ -453,15 +316,6 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
     }
 
     @Test
-    fun spotifyHandlesItsOwnInterruptions() = runTest {
-        loader.result = { playable(audio = null) }
-
-        viewModel(spotifyTrackUri = "spotify:track:x")
-
-        assertEquals(0, interruptionsCreated)
-    }
-
-    @Test
     fun aCorruptedChartIsExplainedAsUnreadableNotAsMissing() = runTest {
         loader.result = { throw IllegalStateException("nota inválida na linha 42") } // o leitor do mapa falhou
 
@@ -520,72 +374,5 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
 
         val ready = vm.uiState.value as GameplayUiState.Ready
         assertNull(ready.art)
-    }
-
-    @Test
-    fun inSpotifyModeChangingTheSongLeavesTheMatchFirstAndSavesNoScore() = runTest {
-        loader.result = { playable(audio = null) }
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
-        viewModel.pause()
-
-        assertTrue(viewModel.changeSong(forward = true))
-
-        assertEquals(listOf("next released=true"), controls.commands)
-        assertTrue(scores.saved.isEmpty())
-        assertTrue((viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
-    }
-
-    @Test
-    fun inTheLibraryChangingTheSongDoesNothing() = runTest {
-        loader.result = { playable() }
-        val viewModel = viewModel()
-
-        assertEquals(false, viewModel.changeSong(forward = false))
-
-        assertTrue(controls.commands.isEmpty())
-        assertEquals(false, (viewModel.uiState.value as GameplayUiState.Ready).spotifyControls)
-    }
-
-    /** A tela ainda está saindo quando chega o segundo toque: o Spotify só pula uma vez. */
-    @Test
-    fun aDoubleTapChangesTheSongOnlyOnce() = runTest {
-        loader.result = { playable(audio = null) }
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
-        viewModel.pause()
-
-        assertTrue(viewModel.changeSong(forward = true))
-        assertEquals(false, viewModel.changeSong(forward = true))
-        assertEquals(false, viewModel.changeSong(forward = false))
-
-        assertEquals(listOf("next released=true"), controls.commands)
-    }
-
-    @Test
-    fun inTheMatchPreviousMeansTheSongBefore() = runTest {
-        loader.result = { playable(audio = null) }
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
-        viewModel.pause()
-
-        viewModel.changeSong(forward = false)
-
-        assertEquals(listOf("previousTrack released=true"), controls.commands)
-    }
-
-    /** A fila do Spotify não baixa nem apaga o mapa desde a abertura da partida até a tela sair de vez. */
-    @Test
-    fun theMatchIsHeldFromOpeningUntilTheScreenCloses() = runTest {
-        loader.result = { playable(audio = null) }
-        val gate = CompletableDeferred<Unit>()
-        loader.gate = gate
-        val viewModel = viewModel(spotifyTrackUri = "spotify:track:x")
-        assertEquals(listOf("a"), matchActivity.opened) // ainda carregando
-        gate.complete(Unit)
-
-        viewModel.pause()
-        viewModel.changeSong(forward = true)
-        assertTrue(matchActivity.inMatch.value) // a tela ainda está saindo
-
-        androidx.lifecycle.ViewModelStore().apply { put("partida", viewModel) }.clear()
-        assertEquals(false, matchActivity.inMatch.value)
     }
 }
