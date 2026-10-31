@@ -80,6 +80,8 @@ androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version =
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 # Só a anotação @Inject, para as classes comuns ao celular e ao PC (o Hilt só roda no celular).
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
+# JSON do Encore e do ranking: no Android vem com o sistema; no PC, a biblioteca original.
+org-json = { module = "org.json:json", version = "20250517" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
