@@ -1,9 +1,11 @@
 package com.rodrigomachado.riff.core.database
 
 import androidx.room.AutoMigration
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.DeleteTable
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
@@ -36,6 +38,7 @@ import androidx.sqlite.execSQL
         AutoMigration(from = 12, to = 13, spec = DropSpotifyTables::class),
     ],
 )
+@ConstructedBy(RiffDatabaseConstructor::class)
 abstract class RiffDatabase : RoomDatabase() {
     abstract fun chartDao(): ChartDao
 
@@ -50,6 +53,12 @@ abstract class RiffDatabase : RoomDatabase() {
     abstract fun rankingPendingDao(): RankingPendingDao
 
     abstract fun separationQueueDao(): SeparationQueueDao
+}
+
+/** O Room gera a implementação para cada plataforma (celular e PC). */
+@Suppress("KotlinNoActualForExpect")
+expect object RiffDatabaseConstructor : RoomDatabaseConstructor<RiffDatabase> {
+    override fun initialize(): RiffDatabase
 }
 
 /** Na versão 2, um ajuste diferente de 0 só existia se alguém o escolheu: continua valendo. */

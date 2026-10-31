@@ -75,6 +75,8 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+# SQLite embutido para o Room no PC (a mesma versão que o Room 2.8.5 usa).
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version = "2.6.2" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 # Só a anotação @Inject, para as classes comuns ao celular e ao PC (o Hilt só roda no celular).
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
@@ -131,4 +133,5 @@ riff-android-library-compose = { id = "riff.android.library.compose" }
 riff-jvm-library = { id = "riff.jvm.library" }
 riff-kmp-library = { id = "riff.kmp.library" }
 riff-kmp-hilt = { id = "riff.kmp.hilt" }
+riff-kmp-room = { id = "riff.kmp.room" }
 riff-kmp-library-compose = { id = "riff.kmp.library.compose" }

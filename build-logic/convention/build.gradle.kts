@@ -64,6 +64,10 @@ gradlePlugin {
             id = "riff.kmp.library"
             implementationClass = "KmpLibraryConventionPlugin"
         }
+        register("kmpRoom") {
+            id = "riff.kmp.room"
+            implementationClass = "KmpRoomConventionPlugin"
+        }
         register("kmpHilt") {
             id = "riff.kmp.hilt"
             implementationClass = "KmpHiltConventionPlugin"
