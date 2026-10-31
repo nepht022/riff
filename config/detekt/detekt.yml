@@ -9,5 +9,11 @@ naming:
   FunctionNaming:
     ignoreAnnotated: ['Composable']
 complexity:
+  # Testes dos módulos multiplataforma (androidHostTest, desktopTest) valem como os de src/test.
+  TooManyFunctions:
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidHostTest/**', '**/desktopTest/**']
   LongParameterList:
     ignoreAnnotated: ['Composable']
+performance:
+  ForEachOnRange:
+    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidHostTest/**', '**/desktopTest/**']

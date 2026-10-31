@@ -1,8 +1,15 @@
 plugins {
-    alias(libs.plugins.riff.android.feature)
+    alias(libs.plugins.riff.kmp.library.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.roborazzi)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.feature.home"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:ui"))
+            implementation(project(":core:model"))
+            implementation(libs.kotlinx.serialization.core)
+        }
+    }
 }

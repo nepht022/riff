@@ -32,7 +32,7 @@ import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
-import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.stage.ScoreText
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -103,7 +103,7 @@ private fun ReadyResults(
         PosterTitle(state.title, style = MaterialTheme.typography.headlineMedium)
         Text(state.artist, style = MaterialTheme.typography.titleMedium, color = RiffColors.PaperDim)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            StatusBadge(stringResource(difficultyLabel(record.difficulty.ordinal)), BadgeTone.NEUTRAL)
+            StatusBadge(difficultyName(record.difficulty.ordinal), BadgeTone.NEUTRAL)
             if (state.isNewBest) StatusBadge(stringResource(R.string.results_new_best), BadgeTone.SUCCESS)
         }
         ScoreText(record.score)

@@ -27,5 +27,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       # Os screenshots são comparados exatos: no Linux o Robolectric desenha as 55 telas iguais às referências
       # gravadas no Windows (conferido em 2026-10-30).
+      # Módulos multiplataforma (celular e PC): testes Android em testAndroidHostTest, do PC em desktopTest/test,
+      # screenshots em verifyRoborazziAndroidHostTest (Android) e verifyRoborazziJvm (PC); lint sem variante debug.
       - name: Lint, testes, screenshots e build
-        run: ./gradlew detekt lintDebug test verifyRoborazziDebug koverVerify assembleDebug
+        run: >-
+          ./gradlew detekt lintDebug :core:ui:lint :feature:home:lint
+          test testAndroidHostTest desktopTest
+          verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm
+          koverVerify assembleDebug

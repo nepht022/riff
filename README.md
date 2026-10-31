@@ -130,11 +130,11 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 - **Suíte completa antes de cada merge:**
 
   ```bash
-  ./scripts/gw test testDebugUnitTest detekt lint verifyRoborazziDebug :app:assembleDebug :app:assembleRelease --continue
+  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
   ```
 
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots, Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.
 
 ### Processo de cada mudança
 
@@ -157,6 +157,14 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ## Desenvolvimento
 
+### Riff no PC (em construção)
+
+O mesmo código do celular, com Compose Multiplatform: `:core:ui` e `:feature:home` são multiplataforma (Android e PC), e `:desktop` é o app do PC. Nesta etapa a janela só abre a tela inicial; jogar com teclado e controle vem nas próximas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+
+```bash
+./scripts/gw :desktop:run   # abre a janela do Riff no Windows
+```
+
 ### Comandos
 
 ```bash
@@ -174,7 +182,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | Módulo | Conteúdo |
 |---|---|
 | `:app` | Activity, Application com Hilt e navegação tela inicial → Biblioteca → Jogo → Resultado; Baseline Profile em `src/release/generated/baselineProfiles` |
-| `:core:ui` | Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`), componentes e peças de desenho da pista (com `StageCache`, sem alocar por quadro), com screenshots em `src/test/screenshots` |
+| `:core:ui` | Multiplataforma (celular e PC). Identidade "Pôster de turnê": tema escuro único, fontes New Rocker e Oswald (licenças OFL em `core/ui/licenses/`) e textos em `commonMain/composeResources`, componentes em `commonMain`; peças de desenho da pista (com `StageCache`, sem alocar por quadro) ainda só no Android (`androidMain`); screenshots em `src/test/screenshots` |
 | `:core:model` | Modelos de domínio |
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`) |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
@@ -193,7 +201,8 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:ranking` | Pedido do nome, músicas com pontuação e placar do ranking online |
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
-| `:feature:home` | Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
+| `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
+| `:desktop` | O Riff no PC (Windows), em construção: por enquanto abre a tela inicial (`./scripts/gw :desktop:run`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots
@@ -201,7 +210,11 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 ```bash
 ./scripts/gw recordRoborazziDebug   # regrava as referências (todos os módulos) depois de uma mudança visual intencional
 ./scripts/gw verifyRoborazziDebug   # compara com as referências
+# Módulos multiplataforma: recordRoborazziAndroidHostTest / verifyRoborazziAndroidHostTest (celular)
+# e recordRoborazziJvm / verifyRoborazziJvm (o app do PC)
 ```
+
+Os testes de tela só rodam de novo quando o código muda: depois de trocar só uma referência, use `--rerun` na tarefa de teste para comparar de verdade.
 
 Rode o `verifyRoborazziDebug` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
 
