@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.android.test) apply false
     alias(libs.plugins.baselineprofile) apply false
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.android.kmp.library) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.ksp) apply false
@@ -18,7 +21,9 @@ plugins {
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(files("config/detekt/detekt.yml"))
-    source.setFrom(subprojects.flatMap { listOf(it.file("src/main/kotlin"), it.file("src/test/kotlin")) })
+    // Módulos Android/JVM (main, test) e multiplataforma (commonMain, androidMain, desktopMain e os testes).
+    val sourceSets = listOf("main", "test", "commonMain", "androidMain", "desktopMain", "commonTest", "androidHostTest", "desktopTest")
+    source.setFrom(subprojects.flatMap { project -> sourceSets.map { project.file("src/$it/kotlin") } })
     autoCorrect = providers.gradleProperty("detektAutoCorrect").isPresent
 }
 

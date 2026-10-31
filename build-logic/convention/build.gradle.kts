@@ -23,6 +23,7 @@ dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.compose.gradlePlugin)
+    compileOnly(libs.composeMultiplatform.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.hilt.gradlePlugin)
     compileOnly(libs.room.gradlePlugin)
@@ -58,6 +59,10 @@ gradlePlugin {
         register("androidFeature") {
             id = "riff.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
+        }
+        register("kmpLibraryCompose") {
+            id = "riff.kmp.library.compose"
+            implementationClass = "KmpLibraryComposeConventionPlugin"
         }
         register("jvmLibrary") {
             id = "riff.jvm.library"

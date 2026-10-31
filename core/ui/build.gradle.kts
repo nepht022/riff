@@ -1,19 +1,23 @@
+import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget
+
 plugins {
-    alias(libs.plugins.riff.android.library.compose)
+    alias(libs.plugins.riff.kmp.library.compose)
     alias(libs.plugins.roborazzi)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.core.ui"
-}
-
-dependencies {
-    implementation(project(":core:model"))
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
-    testImplementation(libs.junit4)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.roborazzi)
-    testImplementation(libs.roborazzi.compose)
-    testImplementation(libs.androidx.compose.ui.test.junit4)
+kotlin {
+    (this as ExtensionAware).extensions.configure<KotlinMultiplatformAndroidLibraryTarget>("android") {
+        androidResources.enable = true
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:model"))
+        }
+        androidMain.dependencies {
+            implementation(project.dependencies.platform(libs.androidx.compose.bom))
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.compose.ui.tooling.preview)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+        }
+    }
 }
