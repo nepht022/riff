@@ -94,6 +94,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 1: base comum (revisão final, 2026-10-31)
+
+- O placar e o "PERFEITO!" da partida remontam a fonte (`newRocker()`) a cada mudança de pontos: só alocação, sem novo layout; montar a família uma vez no tema.
+- Baseline Profile anterior à base comum (cita `difficultyLabel`, não tem as classes de recursos do Compose Multiplatform): refazer com o celular ligado antes da próxima release.
+- Antes do Android 13, uma mudança de configuração que não recria a tela (multi-janela) pode voltar o `Locale` padrão ao do sistema, e os textos comuns sairiam no idioma do celular até a tela ser recriada (hipótese, sem reprodução).
+- O comentário do CI e o README ainda dizem que toda comparação de screenshot é exata (a do PC tem 1% de tolerância).
+- O teste da janela pequena do PC usa 800×500 de conteúdo; a janela mínima real tem ~800×470 de área útil.
+- `@Preview` do `:core:ui` pode não renderizar no Android Studio (saiu o `ui-tooling` de debug).
+
 ## Triagem de 2026-10-30: o que fica de propósito
 
 Os pontos menores restantes foram revistos. Os resolvidos saíram da lista; os que ficam acima, ficam por um destes motivos. Ainda abertos, sem motivo especial (pequenos, para quando mexer perto):

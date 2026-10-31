@@ -16,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
@@ -80,6 +81,23 @@ class SeparationIndicatorTest {
         composeRule.onNodeWithText("OK").performClick()
 
         assertEquals(listOf("ok"), events)
+    }
+
+    /** Em inglês, o apóstrofo aparece limpo ("Couldn't"), como os textos do Android mostravam antes. */
+    @Test
+    @Config(qualifiers = "en")
+    fun inEnglishTheFailureReadsWithAPlainApostrophe() {
+        val system = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH) // o idioma do app, como o app define
+        try {
+            show(SeparationStatus.Failed("M", SeparationFailure.ERROR))
+            composeRule.onNodeWithTag(SeparationIndicatorTags.ICON).performClick()
+            composeRule.waitForIdle()
+        } finally {
+            Locale.setDefault(system)
+        }
+
+        composeRule.onNodeWithText("Couldn't separate the guitar of M").assertExists()
     }
 
     @Test
