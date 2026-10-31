@@ -14,10 +14,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
-import com.rodrigomachado.riff.core.ui.theme.JudgmentTextStyle
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
-import com.rodrigomachado.riff.core.ui.theme.ScoreTextStyle
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import com.rodrigomachado.riff.core.ui.theme.judgmentTextStyle
+import com.rodrigomachado.riff.core.ui.theme.scoreTextStyle
 import java.text.NumberFormat
 
 private val JudgmentGlow = Color(0xFFFF6A00)
@@ -30,7 +30,7 @@ private val JudgmentGlowRadius = 12.dp
 fun ScoreText(score: Long, modifier: Modifier = Modifier) {
     val locale = LocalConfiguration.current.locales[0]
     val formatted = remember(score, locale) { NumberFormat.getIntegerInstance(locale).format(score) }
-    PosterTitle(formatted, modifier, style = ScoreTextStyle, heading = false)
+    PosterTitle(formatted, modifier, style = scoreTextStyle(), heading = false)
 }
 
 /** Multiplicador como carimbo vermelho inclinado. */
@@ -39,7 +39,7 @@ fun MultiplierStamp(multiplier: Int, modifier: Modifier = Modifier) {
     Text(
         text = "x$multiplier",
         color = RiffColors.Paper,
-        style = ScoreTextStyle.copy(fontSize = 22.sp),
+        style = scoreTextStyle().copy(fontSize = 22.sp),
         modifier = modifier
             .rotate(STAMP_TILT_DEGREES)
             .background(RiffColors.TourRed)
@@ -55,7 +55,7 @@ fun JudgmentText(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         color = JudgmentColor,
-        style = JudgmentTextStyle.copy(shadow = Shadow(color = JudgmentGlow, blurRadius = glow)),
+        style = judgmentTextStyle().copy(shadow = Shadow(color = JudgmentGlow, blurRadius = glow)),
         modifier = modifier,
     )
 }

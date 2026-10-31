@@ -19,7 +19,7 @@ import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
-import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -29,7 +29,7 @@ internal fun DifficultyChoice(chart: Chart, onClose: () -> Unit, onChosen: (Char
     DifficultyDialog(
         title = chart.title,
         options = chart.difficulties.sorted(),
-        label = { stringResource(difficultyLabel(it.ordinal)) },
+        label = { difficultyName(it.ordinal) },
         onChoose = { difficulty ->
             onClose()
             onChosen(chart, difficulty)
@@ -43,7 +43,7 @@ internal fun DifficultyChoice(chart: Chart, onClose: () -> Unit, onChosen: (Char
 internal fun ChartBadges(chart: Chart, aiSeparated: Boolean) {
     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         chart.difficulties.maxOrNull()?.let {
-            StatusBadge(stringResource(difficultyLabel(it.ordinal)), BadgeTone.NEUTRAL)
+            StatusBadge(difficultyName(it.ordinal), BadgeTone.NEUTRAL)
         }
         when {
             chart.separateGuitar -> StatusBadge(stringResource(R.string.library_separate_guitar), BadgeTone.SUCCESS)

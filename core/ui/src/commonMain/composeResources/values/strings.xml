@@ -3,7 +3,7 @@
     <string name="ui_choose_difficulty">Escolha a dificuldade</string>
     <string name="ui_cancel">Cancelar</string>
     <string name="ui_separation_open">Separação da guitarra</string>
-    <string name="ui_separation_running">Separando a guitarra… %1$d%%</string>
+    <string name="ui_separation_running">Separando a guitarra… %1$d%</string>
     <string name="ui_separation_remaining">cerca de %1$d min</string>
     <string name="ui_separation_paused">Pausado para esfriar…</string>
     <string name="ui_separation_cancel">Cancelar</string>

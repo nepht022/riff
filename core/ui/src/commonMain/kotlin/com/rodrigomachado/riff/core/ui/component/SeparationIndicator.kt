@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -41,10 +40,27 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
-import com.rodrigomachado.riff.core.ui.R
+import com.rodrigomachado.riff.core.ui.resources.Res
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel_all
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel_this
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_close
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_failed
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_no_space
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_ok
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_open
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_open_count
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_paused
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_queue
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_remaining
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_remove
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_running
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_starting
+import com.rodrigomachado.riff.core.ui.resources.ui_separation_waiting_charger
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -109,9 +125,9 @@ fun SeparationIndicatorContent(
     var open by remember { mutableStateOf(false) }
     val total = queue.items.size + if (status is SeparationStatus.Running) 1 else 0
     val description = if (total > 1) {
-        stringResource(R.string.ui_separation_open_count, total)
+        stringResource(Res.string.ui_separation_open_count, total)
     } else {
-        stringResource(R.string.ui_separation_open)
+        stringResource(Res.string.ui_separation_open)
     }
     // Com fila, a falha da última já foi avisada pela notificação: o ícone segue a fila.
     val failure = (status as? SeparationStatus.Failed)?.takeIf { queue.items.isEmpty() }
@@ -172,7 +188,7 @@ private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -
                     onClose()
                     onDismissFailure()
                 },
-            ) { Text(stringResource(R.string.ui_separation_ok)) }
+            ) { Text(stringResource(Res.string.ui_separation_ok)) }
         },
     )
 
@@ -190,9 +206,9 @@ private fun QueuePanel(
         onDismissRequest = onClose,
         title = {
             val waiting = if (queue.waitingForCharger) {
-                R.string.ui_separation_waiting_charger
+                Res.string.ui_separation_waiting_charger
             } else {
-                R.string.ui_separation_starting
+                Res.string.ui_separation_starting
             }
             Text(running?.title ?: stringResource(waiting))
         },
@@ -213,13 +229,13 @@ private fun QueuePanel(
                 ) {
                     Text(
                         stringResource(
-                            if (hasQueue) R.string.ui_separation_cancel_this else R.string.ui_separation_cancel,
+                            if (hasQueue) Res.string.ui_separation_cancel_this else Res.string.ui_separation_cancel,
                         ),
                     )
                 }
             } else {
                 TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
-                    Text(stringResource(R.string.ui_separation_close))
+                    Text(stringResource(Res.string.ui_separation_close))
                 }
             }
         },
@@ -230,7 +246,7 @@ private fun QueuePanel(
                         onClose()
                         queue.onCancelAll()
                     },
-                ) { Text(stringResource(R.string.ui_separation_cancel_all)) }
+                ) { Text(stringResource(Res.string.ui_separation_cancel_all)) }
             }
         },
     )
@@ -239,12 +255,12 @@ private fun QueuePanel(
 @Composable
 private fun QueueList(queue: SeparationQueueView) {
     Text(
-        stringResource(R.string.ui_separation_queue, queue.items.size),
+        stringResource(Res.string.ui_separation_queue, queue.items.size),
         style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.padding(top = Spacing.md),
     )
     queue.items.forEach { song ->
-        val remove = stringResource(R.string.ui_separation_remove, song.title)
+        val remove = stringResource(Res.string.ui_separation_remove, song.title)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(song.title, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             IconButton(
@@ -261,16 +277,16 @@ private fun QueueList(queue: SeparationQueueView) {
 
 @Composable
 private fun runningText(status: SeparationStatus.Running): List<String> {
-    if (status.pausedForHeat) return listOf(stringResource(R.string.ui_separation_paused))
-    val percent = stringResource(R.string.ui_separation_running, (status.progress * PERCENT).roundToInt())
+    if (status.pausedForHeat) return listOf(stringResource(Res.string.ui_separation_paused))
+    val percent = stringResource(Res.string.ui_separation_running, (status.progress * PERCENT).roundToInt())
     val minutes = status.remainingMs?.let { ceil(it / MS_PER_MIN).toInt().coerceAtLeast(1) } ?: return listOf(percent)
-    return listOf(percent, stringResource(R.string.ui_separation_remaining, minutes))
+    return listOf(percent, stringResource(Res.string.ui_separation_remaining, minutes))
 }
 
 @Composable
 private fun failedText(status: SeparationStatus.Failed) = when (status.reason) {
-    SeparationFailure.NO_SPACE -> stringResource(R.string.ui_separation_no_space)
-    else -> stringResource(R.string.ui_separation_failed, status.title)
+    SeparationFailure.NO_SPACE -> stringResource(Res.string.ui_separation_no_space)
+    else -> stringResource(Res.string.ui_separation_failed, status.title)
 }
 
 /** A palheta vermelha do ícone do app (desenhada em código); com falha, fica no tom de erro. */

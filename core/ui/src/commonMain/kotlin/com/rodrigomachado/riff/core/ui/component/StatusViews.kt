@@ -11,12 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.rodrigomachado.riff.core.model.MenuSound
-import com.rodrigomachado.riff.core.ui.R
+import com.rodrigomachado.riff.core.ui.resources.Res
+import com.rodrigomachado.riff.core.ui.resources.core_ui_retry
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 object StatusViewsTestTags {
     const val RETRY = "status_views_retry"
@@ -75,7 +76,7 @@ fun ErrorState(
             textAlign = TextAlign.Center,
         )
         PosterButton(
-            stringResource(R.string.core_ui_retry),
+            stringResource(Res.string.core_ui_retry),
             onClick = onRetry,
             modifier = Modifier.testTag(StatusViewsTestTags.RETRY),
             sound = retrySound,

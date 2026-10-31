@@ -4,7 +4,10 @@ import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withType
+import org.jetbrains.compose.ComposeExtension
+import org.jetbrains.compose.resources.ResourcesExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
@@ -27,14 +30,24 @@ class KmpLibraryComposeConventionPlugin : Plugin<Project> {
                     minSdk = RiffSdk.MIN
                     compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
                     withHostTest { isIncludeAndroidResources = true }
+                    // Os recursos do Compose Multiplatform vão no APK como recursos do Android.
+                    androidResources.enable = true
                 }
                 jvm("desktop") { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+                sourceSets.getByName("commonMain").dependencies {
+                    listOf("compose-mp-runtime", "compose-mp-foundation", "compose-mp-ui", "compose-mp-material3", "compose-mp-resources")
+                        .forEach { implementation(lib(it)) }
+                }
                 sourceSets.getByName("androidHostTest").dependencies {
                     listOf(
                         "junit4", "robolectric", "roborazzi", "roborazzi-compose",
                         "androidx-compose-ui-test-junit4", "androidx-compose-ui-test-manifest",
                     ).forEach { implementation(lib(it)) }
                 }
+            }
+            // Textos e fontes (composeResources) com a classe Res num pacote do módulo, ex.: ...core.ui.resources.
+            extensions.getByType<ComposeExtension>().extensions.configure<ResourcesExtension> {
+                packageOfResClass = "com.rodrigomachado.riff." + path.removePrefix(":").replace(':', '.') + ".resources"
             }
             // O Robolectric codifica espaços do caminho do ~/.m2 como %20 e não acha os jars que baixou.
             providers.gradleProperty("riff.robolectric.mavenRepoLocal").orNull?.let { repo ->

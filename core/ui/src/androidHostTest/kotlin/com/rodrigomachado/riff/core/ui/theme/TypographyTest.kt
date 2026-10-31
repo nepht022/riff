@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
@@ -18,10 +19,15 @@ class TypographyTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private lateinit var newRocker: FontFamily
+    private lateinit var oswald: FontFamily
+
     private fun captured(): Pair<Typography, Shapes> {
         var typography: Typography? = null
         var shapes: Shapes? = null
         composeRule.setContent {
+            newRocker = newRocker()
+            oswald = oswald()
             RiffTheme {
                 typography = MaterialTheme.typography
                 shapes = MaterialTheme.shapes
@@ -33,19 +39,19 @@ class TypographyTest {
     @Test
     fun titlesAndMainButtonsUseNewRocker() {
         val (typography, _) = captured()
-        assertEquals(NewRocker, typography.displayMedium.fontFamily)
-        assertEquals(NewRocker, typography.headlineSmall.fontFamily)
-        assertEquals(NewRocker, typography.titleLarge.fontFamily)
-        assertEquals(NewRocker, typography.labelLarge.fontFamily)
+        assertEquals(newRocker, typography.displayMedium.fontFamily)
+        assertEquals(newRocker, typography.headlineSmall.fontFamily)
+        assertEquals(newRocker, typography.titleLarge.fontFamily)
+        assertEquals(newRocker, typography.labelLarge.fontFamily)
     }
 
     @Test
     fun everythingElseUsesOswald() {
         val (typography, _) = captured()
-        assertEquals(Oswald, typography.bodyMedium.fontFamily)
-        assertEquals(Oswald, typography.titleMedium.fontFamily)
+        assertEquals(oswald, typography.bodyMedium.fontFamily)
+        assertEquals(oswald, typography.titleMedium.fontFamily)
         assertEquals(FontWeight.SemiBold, typography.titleMedium.fontWeight)
-        assertEquals(Oswald, typography.labelMedium.fontFamily)
+        assertEquals(oswald, typography.labelMedium.fontFamily)
     }
 
     @Test

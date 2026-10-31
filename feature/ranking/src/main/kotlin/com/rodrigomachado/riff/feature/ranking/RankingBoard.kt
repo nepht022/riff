@@ -29,7 +29,7 @@ import com.rodrigomachado.riff.core.data.ranking.BoardLine
 import com.rodrigomachado.riff.core.data.ranking.RankingMetric
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
-import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import java.text.NumberFormat
@@ -83,7 +83,7 @@ fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modif
                 verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
             ) {
                 for (difficulty in state.board?.difficulties.orEmpty()) {
-                    Chip(stringResource(difficultyLabel(difficulty.ordinal)), difficulty == state.board?.difficulty) {
+                    Chip(difficultyName(difficulty.ordinal), difficulty == state.board?.difficulty) {
                         actions.onDifficulty(difficulty)
                     }
                 }

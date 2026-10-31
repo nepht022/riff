@@ -11,14 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.window.Dialog
 import com.rodrigomachado.riff.core.model.MenuSound
-import com.rodrigomachado.riff.core.ui.R
+import com.rodrigomachado.riff.core.ui.resources.Res
+import com.rodrigomachado.riff.core.ui.resources.ui_cancel
+import com.rodrigomachado.riff.core.ui.resources.ui_choose_difficulty
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import org.jetbrains.compose.resources.stringResource
 
 /** Etiquetas para testes e para os percursos automáticos de desempenho (`:baselineprofile`). */
 object DifficultyDialogTestTags {
@@ -43,13 +43,13 @@ fun <T> DifficultyDialog(
                 .background(RiffColors.StageBlack, MaterialTheme.shapes.large)
                 .padding(Spacing.lg)
                 // O diálogo é outra janela: a propriedade da raiz do app não chega aqui.
-                .semantics { testTagsAsResourceId = true },
+                .exposeTestTags(),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(title, style = MaterialTheme.typography.titleLarge, color = RiffColors.Paper)
             Text(
-                stringResource(R.string.ui_choose_difficulty),
+                stringResource(Res.string.ui_choose_difficulty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = RiffColors.PaperDim,
             )
@@ -63,7 +63,7 @@ fun <T> DifficultyDialog(
             }
             TextButton(
                 onClick = withMenuSound(MenuSound.BACK, onDismiss),
-            ) { Text(stringResource(R.string.ui_cancel), color = RiffColors.Paper) }
+            ) { Text(stringResource(Res.string.ui_cancel), color = RiffColors.Paper) }
         }
     }
 }

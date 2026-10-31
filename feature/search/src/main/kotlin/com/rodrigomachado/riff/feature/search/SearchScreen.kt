@@ -43,7 +43,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
-import com.rodrigomachado.riff.core.ui.component.difficultyLabel
+import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -119,7 +119,7 @@ fun SearchContent(
         DifficultyDialog(
             title = chart.name,
             options = ready.difficulties.sorted().ifEmpty { listOf(Difficulty.EXPERT) },
-            label = { stringResource(difficultyLabel(it.ordinal)) },
+            label = { difficultyName(it.ordinal) },
             onChoose = {
                 choosing = null
                 onPlay(ready.chartId, it)
@@ -218,7 +218,7 @@ private fun ResultCard(
                 null
             },
         )
-        val difficulties = chart.guitarDifficulties.sorted().map { stringResource(difficultyLabel(it.ordinal)) }
+        val difficulties = chart.guitarDifficulties.sorted().map { difficultyName(it.ordinal) }
         Text(
             difficulties.joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
