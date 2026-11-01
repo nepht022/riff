@@ -83,7 +83,8 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
             check(avutil.av_channel_layout_from_mask(it, avutil.AV_CH_LAYOUT_STEREO), "preparar a conversão")
         }
         // Guardado já: se uma opção falhar, o close() libera o conversor.
-        val swr = (swresample.swr_alloc() ?: throw IOException("sem memória para converter o áudio")).also { resampler = it }
+        val swr = swresample.swr_alloc() ?: throw IOException("sem memória para converter o áudio")
+        resampler = swr
         check(avutil.av_opt_set_chlayout(swr, "in_chlayout", context.ch_layout(), 0), "ler os canais")
         check(avutil.av_opt_set_int(swr, "in_sample_rate", context.sample_rate().toLong(), 0), "ler a taxa")
         check(avutil.av_opt_set_sample_fmt(swr, "in_sample_fmt", context.sample_fmt(), 0), "ler as amostras")
