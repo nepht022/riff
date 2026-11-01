@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
+import com.rodrigomachado.riff.feature.calibration.HiltCalibrationViewModel
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
@@ -207,6 +208,7 @@ private fun NavGraphBuilder.settingsDestinations(
                 back.silenceNextReturn()
                 navController.popBackStack()
             },
+            viewModel = hiltViewModel<HiltCalibrationViewModel>(),
         )
     }
 }

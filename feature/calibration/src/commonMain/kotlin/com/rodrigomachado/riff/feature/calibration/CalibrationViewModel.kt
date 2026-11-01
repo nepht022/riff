@@ -4,14 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.MAX_SYNC_OFFSET_MS
 import com.rodrigomachado.riff.core.data.SettingsRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 sealed interface CalibrationUiState {
     data object Instructions : CalibrationUiState
@@ -25,11 +23,9 @@ sealed interface CalibrationUiState {
     data object AudioFailed : CalibrationUiState
 }
 
-@HiltViewModel
-class CalibrationViewModel @Inject constructor(
-    private val settings: SettingsRepository,
-    private val player: ClickTrackPlayer,
-) : ViewModel() {
+/** A calibração; no celular o Hilt cria a subclasse `HiltCalibrationViewModel`, no PC o app monta as dependências. */
+open class CalibrationViewModel(private val settings: SettingsRepository, private val player: ClickTrackPlayer) :
+    ViewModel() {
     private val state = MutableStateFlow<CalibrationUiState>(CalibrationUiState.Instructions)
     val uiState: StateFlow<CalibrationUiState> = state.asStateFlow()
 
@@ -55,10 +51,10 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
-    /** Instante do toque no relógio `uptimeMillis` (o do evento de toque). */
-    fun onTap(uptimeMs: Long) {
+    /** Instante do toque no relógio [calibrationClockMs] (o do evento de toque ou da tecla). */
+    fun onTap(atMs: Long) {
         val current = state.value as? CalibrationUiState.Measuring ?: return
-        taps += uptimeMs
+        taps += atMs
         state.value = current.copy(taps = taps.size)
     }
 

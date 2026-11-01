@@ -3,9 +3,11 @@
     <string name="calibration_title">Calibration</string>
     <string name="calibration_back">Back</string>
     <string name="calibration_instructions">Tap the screen with each beat.</string>
+    <string name="calibration_instructions_keys">Press any key on each beat.</string>
     <string name="calibration_reset">Reset</string>
     <string name="calibration_start">Start</string>
     <string name="calibration_measuring">Tap with each beat</string>
+    <string name="calibration_measuring_keys">Press on each beat</string>
     <plurals name="calibration_taps">
         <item quantity="one">%1$d tap</item>
         <item quantity="other">%1$d taps</item>
@@ -16,6 +18,6 @@
     <string name="calibration_save">Save</string>
     <string name="calibration_repeat">Repeat</string>
     <string name="calibration_unstable">Unsteady measurement. Try again, tapping with the beat.</string>
-    <string name="calibration_audio_failed">Couldn\'t play the metronome.</string>
+    <string name="calibration_audio_failed">Couldn't play the metronome.</string>
     <string name="calibration_retry">Try again</string>
 </resources>

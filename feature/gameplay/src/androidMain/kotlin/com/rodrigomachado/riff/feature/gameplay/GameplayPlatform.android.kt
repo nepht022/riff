@@ -6,16 +6,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 
 actual val playsByTouch = true
 
 actual fun touchUptimeMs(): Long = SystemClock.uptimeMillis()
-
-/** O `eventTime` da tecla é do mesmo relógio do toque (`uptimeMillis`). */
-actual fun keyLateByMs(event: KeyEvent): Long = touchUptimeMs() - event.nativeKeyEvent.eventTime
 
 /** "Remover animações" do Android: escala de animação zerada. */
 @Composable
@@ -35,7 +31,3 @@ actual fun KeepScreenOn() {
         onDispose { view.keepScreenOn = false }
     }
 }
-
-/** Sair do app já pausa pelo ON_PAUSE; a cortina de notificações (que só tira o foco) não pausa, como antes. */
-@Composable
-actual fun OnWindowFocusLost(onLost: () -> Unit) = Unit

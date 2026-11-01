@@ -1,6 +1,5 @@
 package com.rodrigomachado.riff.feature.calibration
 
-import android.os.SystemClock
 import com.rodrigomachado.riff.core.audio.AudioSink
 import com.rodrigomachado.riff.core.audio.AudioSinkFactory
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-/** Toca o metrônomo e devolve o instante (relógio `uptimeMillis`) em que cada batida saiu no alto-falante. */
+/** Toca o metrônomo e devolve o instante (relógio [calibrationClockMs]) em que cada batida saiu no alto-falante. */
 fun interface ClickTrackPlayer {
     suspend fun play(): List<Long>
 }
@@ -28,7 +27,7 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
             coroutineScope {
                 val watcher = launch {
                     while (isActive) {
-                        timeline.observe(SystemClock.uptimeMillis(), sink.playedFrames)
+                        timeline.observe(calibrationClockMs(), sink.playedFrames)
                         delay(OBSERVE_EVERY_MS)
                     }
                 }
@@ -55,7 +54,7 @@ class AudioClickTrackPlayer @Inject constructor(private val sinks: AudioSinkFact
         var stalledChecks = 0
         while (currentCoroutineContext().isActive) {
             val played = sink.playedFrames
-            timeline.observe(SystemClock.uptimeMillis(), played)
+            timeline.observe(calibrationClockMs(), played)
             if (played >= total) return
             stalledChecks = if (played == last) stalledChecks + 1 else 0
             if (stalledChecks >= STALLED_CHECKS) return

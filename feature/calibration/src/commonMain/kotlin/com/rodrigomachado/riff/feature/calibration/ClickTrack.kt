@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.calibration
 
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.min
@@ -76,7 +77,7 @@ internal object GuitarNote {
     }
 
     private fun lowpass(samples: DoubleArray, cutoff: Double, rate: Int): DoubleArray {
-        val alpha = 1 - exp(-2 * Math.PI * cutoff / rate)
+        val alpha = 1 - exp(-2 * PI * cutoff / rate)
         var y = 0.0
         return DoubleArray(samples.size) {
             y += alpha * (samples[it] - y)

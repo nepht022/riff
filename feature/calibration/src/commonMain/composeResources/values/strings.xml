@@ -3,9 +3,11 @@
     <string name="calibration_title">Calibração</string>
     <string name="calibration_back">Voltar</string>
     <string name="calibration_instructions">Toque na tela junto com cada batida.</string>
+    <string name="calibration_instructions_keys">Aperte qualquer tecla junto com cada batida.</string>
     <string name="calibration_reset">Zerar</string>
     <string name="calibration_start">Começar</string>
     <string name="calibration_measuring">Toque junto com cada batida</string>
+    <string name="calibration_measuring_keys">Aperte junto com cada batida</string>
     <plurals name="calibration_taps">
         <item quantity="one">%1$d toque</item>
         <item quantity="other">%1$d toques</item>
