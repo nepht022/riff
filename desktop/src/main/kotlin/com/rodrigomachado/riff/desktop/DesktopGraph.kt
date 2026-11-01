@@ -33,10 +33,14 @@ import com.rodrigomachado.riff.core.datastore.RiffPreferences
 import com.rodrigomachado.riff.core.datastore.riffDataStore
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.feature.calibration.AudioClickTrackPlayer
+import com.rodrigomachado.riff.feature.calibration.CalibrationViewModel
+import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
 import com.rodrigomachado.riff.feature.results.ResultsViewModel
+import com.rodrigomachado.riff.feature.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,8 +57,10 @@ class DesktopGraph(
     val menuSounds: MenuSoundPlayer = ClipMenuSounds(),
     /** A saída da música da partida (nos testes, uma que só anda no ritmo do relógio: o CI não tem placa de som). */
     audioOut: AudioSinkFactory = DesktopPlayers.speakers,
-    /** Os sons de acerto e de erro da partida. */
+    /** Os sons de acerto e de erro da partida (e a prévia do volume do erro nas Configurações). */
     private val sfx: SfxPlayerFactory = SfxPlayerFactory { ClipSfxPlayer() },
+    /** O metrônomo da calibração (nos testes, um que devolve cliques montados a partir das teclas). */
+    private val clickTrack: ClickTrackPlayer = AudioClickTrackPlayer(audioOut),
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
@@ -110,6 +116,11 @@ class DesktopGraph(
     )
 
     fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, NoRanking)
+
+    // Sem a IA (a aba some) e sem o ranking (a linha do nome some) no PC: os dois são da etapa 4.
+    fun settingsViewModel() = SettingsViewModel(settings, NoAiSeparations, languages, NoRanking, sfx)
+
+    fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
 
     override fun close() {
         database.close()

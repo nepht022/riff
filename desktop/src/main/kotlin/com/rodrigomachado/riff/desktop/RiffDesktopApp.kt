@@ -26,6 +26,8 @@ import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
+import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.home.HomeRoute
@@ -34,9 +36,12 @@ import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.settings.SettingsRoute
+import com.rodrigomachado.riff.feature.settings.SettingsScreen
+import com.rodrigomachado.riff.feature.settings.SettingsTab
 import java.util.Locale
 
-/** O Riff no PC: tela inicial, Biblioteca, partida e resultado; Ranking, Configurações e Reportar vêm depois. */
+/** O Riff no PC: tela inicial, Biblioteca, partida, resultado e Configurações; Ranking e Reportar vêm depois. */
 @Composable
 fun RiffDesktopApp(graph: DesktopGraph) {
     val navController = rememberNavController()
@@ -67,7 +72,7 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
                 HomeScreen(
                     onSolo = { navController.navigate(LibraryRoute) },
                     onRanking = {},
-                    onSettings = {},
+                    onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
                     onReport = {},
                 )
             }
@@ -81,6 +86,7 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
                 )
             }
             matchDestinations(graph, navController)
+            settingsDestinations(graph, navController)
         }
     }
 }
@@ -113,6 +119,30 @@ private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
             viewModel = viewModel { graph.resultsViewModel(route.scoreId) },
+        )
+    }
+}
+
+/**
+ * As Configurações e a calibração, como no celular, sem o que no PC é da etapa 4: a aba da guitarra por IA, o nome no
+ * ranking e as Licenças. No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração
+ * só volta às Configurações.
+ */
+private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navController: NavHostController) {
+    composable<SettingsRoute> {
+        SettingsScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
+            viewModel = viewModel { graph.settingsViewModel() },
+            onRankingName = {},
+            onLicenses = null,
+            tabs = SettingsTab.entries - SettingsTab.AI,
+        )
+    }
+    composable<CalibrationRoute> {
+        CalibrationScreen(
+            onDone = dropUnlessResumed { navController.popBackStack() },
+            viewModel = viewModel { graph.calibrationViewModel() },
         )
     }
 }

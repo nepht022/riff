@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +27,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,36 +101,39 @@ fun CalibrationContent(
 ) {
     val instructions =
         if (tapsByTouch) Res.string.calibration_instructions else Res.string.calibration_instructions_keys
-    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        TextButton(onClick = onDone) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
-        PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when (state) {
-                CalibrationUiState.Instructions -> Message(
-                    stringResource(instructions),
-                    stringResource(Res.string.calibration_start),
-                    onStart,
-                ) {
-                    TextButton(onClick = onReset) {
-                        Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
+    // Na janela larga do PC, uma coluna no meio; no celular a tela é mais estreita que ela e nada muda.
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = MAX_COLUMN_WIDTH).fillMaxSize().padding(horizontal = Spacing.md)) {
+            TextButton(onClick = onDone) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
+            PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                when (state) {
+                    CalibrationUiState.Instructions -> Message(
+                        stringResource(instructions),
+                        stringResource(Res.string.calibration_start),
+                        onStart,
+                    ) {
+                        TextButton(onClick = onReset) {
+                            Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
+                        }
                     }
+
+                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap)
+
+                    is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
+
+                    CalibrationUiState.Unstable -> Message(
+                        stringResource(Res.string.calibration_unstable),
+                        stringResource(Res.string.calibration_repeat),
+                        onStart,
+                    )
+
+                    CalibrationUiState.AudioFailed -> Message(
+                        stringResource(Res.string.calibration_audio_failed),
+                        stringResource(Res.string.calibration_retry),
+                        onStart,
+                    )
                 }
-
-                is CalibrationUiState.Measuring -> TapArea(state.taps, onTap)
-
-                is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
-
-                CalibrationUiState.Unstable -> Message(
-                    stringResource(Res.string.calibration_unstable),
-                    stringResource(Res.string.calibration_repeat),
-                    onStart,
-                )
-
-                CalibrationUiState.AudioFailed -> Message(
-                    stringResource(Res.string.calibration_audio_failed),
-                    stringResource(Res.string.calibration_retry),
-                    onStart,
-                )
             }
         }
     }
@@ -244,3 +249,6 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
 }
 
 private const val NUDGE_MS = 5
+
+/** A largura máxima da coluna da calibração (na janela larga do PC, uma coluna no meio). */
+private val MAX_COLUMN_WIDTH = 640.dp

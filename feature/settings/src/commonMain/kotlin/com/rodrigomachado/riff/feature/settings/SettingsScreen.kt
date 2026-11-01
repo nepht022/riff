@@ -2,12 +2,14 @@ package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -155,49 +158,54 @@ fun SettingsContent(
     var tab by rememberSaveable { mutableStateOf(initialTab.takeIf { it in tabs } ?: tabs.first()) }
     // O idioma em que a tela está: no celular acompanha também uma troca feita nas configurações do sistema.
     val language = currentAppLanguage()
-    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text(stringResource(Res.string.settings_back), color = RiffColors.Paper) }
-            Spacer(Modifier.weight(1f))
-            SeparationIndicator()
-        }
-        PosterTitle(stringResource(Res.string.settings_title), style = MaterialTheme.typography.displaySmall)
-        SettingsTabBar(tabs, tab, onSelect = { tab = it })
-        // Cada aba começa do topo.
-        key(tab) {
-            Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                when (tab) {
-                    SettingsTab.GENERAL -> GeneralTab(
-                        language,
-                        onLanguage,
-                        settings.menuSounds,
-                        onMenuSounds,
-                        rankingName,
-                        onRankingName,
-                        onLicenses,
-                    )
+    // Na janela larga do PC, uma coluna no meio; no celular a tela é mais estreita que ela e nada muda.
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = MAX_COLUMN_WIDTH).fillMaxSize().padding(horizontal = Spacing.md)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(Res.string.settings_back), color = RiffColors.Paper)
+                }
+                Spacer(Modifier.weight(1f))
+                SeparationIndicator()
+            }
+            PosterTitle(stringResource(Res.string.settings_title), style = MaterialTheme.typography.displaySmall)
+            SettingsTabBar(tabs, tab, onSelect = { tab = it })
+            // Cada aba começa do topo.
+            key(tab) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    when (tab) {
+                        SettingsTab.GENERAL -> GeneralTab(
+                            language,
+                            onLanguage,
+                            settings.menuSounds,
+                            onMenuSounds,
+                            rankingName,
+                            onRankingName,
+                            onLicenses,
+                        )
 
-                    SettingsTab.SOUNDS -> SoundsTab(
-                        settings,
-                        onMasterVolume,
-                        onMissVolume,
-                        onPreviewMiss,
-                    )
+                        SettingsTab.SOUNDS -> SoundsTab(
+                            settings,
+                            onMasterVolume,
+                            onMissVolume,
+                            onPreviewMiss,
+                        )
 
-                    SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
+                        SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
 
-                    SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
+                        SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
 
-                    SettingsTab.AI -> AiSeparationSection(
-                        separationUsage,
-                        onDeleteSeparations,
-                        settings,
-                        onAskAlways,
-                        onSeparateOnlyCharging,
-                    )
+                        SettingsTab.AI -> AiSeparationSection(
+                            separationUsage,
+                            onDeleteSeparations,
+                            settings,
+                            onAskAlways,
+                            onSeparateOnlyCharging,
+                        )
+                    }
                 }
             }
         }
@@ -413,3 +421,6 @@ private const val VOLUME_STEPS = 19 // de 5 em 5%
 private const val SPEED_STEPS = 5 // 0,5 a 2,0 de 0,25 em 0,25
 private const val INACTIVE_ALPHA = 0.3f
 internal const val DISABLED_ALPHA = 0.4f
+
+/** A largura máxima da coluna das Configurações (na janela larga do PC, uma coluna no meio). */
+private val MAX_COLUMN_WIDTH = 640.dp
