@@ -17,6 +17,9 @@ roborazzi = "1.76.0"
 # Compose Multiplatform (PC): a 1.12.x usa o mesmo Compose 1.12 do BOM do Android.
 composeMultiplatform = "1.12.2"
 composeMultiplatformMaterial3 = "1.9.0"
+# Decodificador de áudio do PC (bytedeco): um caminho só para ogg, opus, mp3 e wav.
+ffmpeg = "8.1.2-1.5.14"
+javacpp = "1.5.14"
 detekt = "2.0.0-alpha.6"
 kover = "0.9.11"
 room = "2.8.5"
@@ -82,6 +85,8 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 # JSON do Encore e do ranking: no Android vem com o sistema; no PC, a biblioteca original.
 org-json = { module = "org.json:json", version = "20250517" }
+bytedeco-ffmpeg = { module = "org.bytedeco:ffmpeg", version.ref = "ffmpeg" }
+bytedeco-javacpp = { module = "org.bytedeco:javacpp", version.ref = "javacpp" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
