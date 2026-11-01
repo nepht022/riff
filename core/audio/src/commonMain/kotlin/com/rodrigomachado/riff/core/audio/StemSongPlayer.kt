@@ -117,7 +117,20 @@ class StemSongPlayer(
             synchronized(lock) {
                 while (!released && !hasWork()) lock.wait()
             }
-            if (!released) synchronized(renderLock) { renderOnce() }
+            if (!released) synchronized(renderLock) { renderSafely() }
+        }
+    }
+
+    /**
+     * Um erro inesperado não mata a thread de áudio (a partida congelaria): as faixas acabam ali e a música termina.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private fun renderSafely() {
+        try {
+            renderOnce()
+        } catch (e: Exception) {
+            log("A música parou: erro na thread de áudio", e)
+            ended.fill(true)
         }
     }
 
@@ -168,7 +181,7 @@ class StemSongPlayer(
     private fun read(track: Int): Int {
         val count = try {
             sources[track].read(inputs[track], BLOCK_FRAMES)
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) { // no PC, o FFmpeg lança IOException
             log("Faixa $track falhou no meio da música", e)
             0
         }
@@ -248,8 +261,16 @@ class StemSongPlayer(
             lock.notifyAll()
         }
         sink?.stop()
-        audioThread?.join(JOIN_TIMEOUT_MS)
-        sources.forEach { runCatching { it.close() } }
+        val thread = audioThread
+        thread?.join(JOIN_TIMEOUT_MS)
+        // A thread ainda presa (decodificador travado): fechar as faixas embaixo dela derrubaria o app no PC
+        // (memória nativa liberada); melhor deixá-las abertas.
+        if (thread?.isAlive == true) {
+            log("A thread de áudio não parou: as faixas ficam abertas", null)
+            return
+        }
+        // Espera um reposicionamento em andamento (ele segura o renderLock) antes de fechar.
+        synchronized(renderLock) { sources.forEach { runCatching { it.close() } } }
         sink?.release()
     }
 

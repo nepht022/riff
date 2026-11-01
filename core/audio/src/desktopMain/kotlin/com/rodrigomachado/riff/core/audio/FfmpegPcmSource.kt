@@ -49,6 +49,11 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
     private var pendingStart = 0
     private var pendingEnd = 0
     private var drained = false
+    private var badPackets = 0
+    private var inChannels = 0
+    private var inRate = 0
+    private var inFormat = 0
+    private val outputTimeBase = AVRational().num(1).den(DesktopAudioFormat.SAMPLE_RATE)
 
     // Quadros a descartar depois de um reposicionamento (o FFmpeg volta até o quadro-chave anterior).
     private var discardUntil = -1L
@@ -70,24 +75,33 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
         val context = avcodec.avcodec_alloc_context3(decoder).also { codec = it }
         check(avcodec.avcodec_parameters_to_context(context, parameters), "ler o áudio")
         check(avcodec.avcodec_open2(context, decoder, null as AVDictionary?), "abrir o decodificador")
-        if (context.ch_layout().order() == avutil.AV_CHANNEL_ORDER_UNSPEC) {
-            avutil.av_channel_layout_default(context.ch_layout(), context.ch_layout().nb_channels())
-        }
-        resampler = openResampler(context)
+        resampler = openResampler(context.ch_layout(), context.sample_rate(), context.sample_fmt())
         format.duration().takeIf { it > 0 }?.let { durationMs = it / MICROS_PER_MS }
     }
 
-    /** O conversor para 48 kHz estéreo float, a partir do formato do decodificador. */
-    private fun openResampler(context: AVCodecContext): SwrContext {
+    /**
+     * O conversor para 48 kHz estéreo float, a partir do formato de entrada. Um quadro com outro formato (fluxo que
+     * muda de canais ou de taxa no meio) refaz o conversor: passar ao conversor um quadro de outro formato lê fora
+     * do buffer.
+     */
+    private fun openResampler(layout: AVChannelLayout, rate: Int, sampleFormat: Int): SwrContext {
+        resampler?.let { swresample.swr_free(it) }
+        resampler = null
+        if (layout.order() == avutil.AV_CHANNEL_ORDER_UNSPEC) {
+            avutil.av_channel_layout_default(layout, layout.nb_channels())
+        }
+        inChannels = layout.nb_channels()
+        inRate = rate
+        inFormat = sampleFormat
         val output = AVChannelLayout().also {
             check(avutil.av_channel_layout_from_mask(it, avutil.AV_CH_LAYOUT_STEREO), "preparar a conversão")
         }
         // Guardado já: se uma opção falhar, o close() libera o conversor.
         val swr = swresample.swr_alloc() ?: throw IOException("sem memória para converter o áudio")
         resampler = swr
-        check(avutil.av_opt_set_chlayout(swr, "in_chlayout", context.ch_layout(), 0), "ler os canais")
-        check(avutil.av_opt_set_int(swr, "in_sample_rate", context.sample_rate().toLong(), 0), "ler a taxa")
-        check(avutil.av_opt_set_sample_fmt(swr, "in_sample_fmt", context.sample_fmt(), 0), "ler as amostras")
+        check(avutil.av_opt_set_chlayout(swr, "in_chlayout", layout, 0), "ler os canais")
+        check(avutil.av_opt_set_int(swr, "in_sample_rate", rate.toLong(), 0), "ler a taxa")
+        check(avutil.av_opt_set_sample_fmt(swr, "in_sample_fmt", sampleFormat, 0), "ler as amostras")
         check(avutil.av_opt_set_chlayout(swr, "out_chlayout", output, 0), "preparar os canais")
         check(avutil.av_opt_set_int(swr, "out_sample_rate", sampleRate.toLong(), 0), "preparar a taxa")
         check(avutil.av_opt_set_sample_fmt(swr, "out_sample_fmt", avutil.AV_SAMPLE_FMT_FLT, 0), "preparar as amostras")
@@ -109,7 +123,7 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
 
     override fun seekTo(frame: Long) {
         val context = codec ?: throw IOException("faixa fechada")
-        val target = avutil.av_rescale_q(frame, AVRational().num(1).den(sampleRate), format.streams(stream).time_base())
+        val target = avutil.av_rescale_q(frame, outputTimeBase, format.streams(stream).time_base()) + origin()
         check(avformat.av_seek_frame(format, stream, target, avformat.AVSEEK_FLAG_BACKWARD), "reposicionar")
         avcodec.avcodec_flush_buffers(context)
         swresample.swr_init(resampler)
@@ -127,7 +141,10 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
             if (drained) return false
             val received = avcodec.avcodec_receive_frame(context, frame)
             when {
-                received == 0 -> convert(frame)
+                received == 0 -> {
+                    badPackets = 0
+                    convert(frame)
+                }
 
                 received == avutil.AVERROR_EOF() -> {
                     flushResampler()
@@ -136,7 +153,7 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
 
                 received == avutil.AVERROR_EAGAIN() -> feedDecoder(context)
 
-                else -> throw IOException("não deu para decodificar $path: ${errorText(received)}")
+                else -> skipBadData()
             }
         }
         return true
@@ -153,13 +170,36 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
             if (mine) {
                 val sent = avcodec.avcodec_send_packet(context, packet)
                 avcodec.av_packet_unref(packet)
-                if (sent < 0 && sent != avutil.AVERROR_EAGAIN()) {
-                    throw IOException("não deu para decodificar $path: ${errorText(sent)}")
-                }
-                return
+                if (sent >= 0 || sent == avutil.AVERROR_EAGAIN()) return
+                skipBadData() // pacote corrompido: o próximo segue (como o ffmpeg faz)
+                if (drained) return
             }
             avcodec.av_packet_unref(packet)
         }
+    }
+
+    /**
+     * Um trecho corrompido no meio da música (download incompleto, quadro ruim) é pulado; só depois de muitos
+     * seguidos a faixa acaba ali, em vez de derrubar a música.
+     */
+    private fun skipBadData() {
+        if (++badPackets <= MAX_BAD_PACKETS) return
+        flushResampler()
+        drained = true
+    }
+
+    /**
+     * Onde a posição 0 da música cai, nas unidades do fluxo: o início positivo do fluxo (no mp3, o atraso do
+     * codificador), menos as amostras iniciais que o decodificador descarta (o "pre-skip" do Opus): nos tempos
+     * dos pacotes do Opus elas ficam antes do zero.
+     */
+    private fun origin(): Long {
+        val media = format.streams(stream)
+        val start = media.start_time().takeIf { it != avutil.AV_NOPTS_VALUE }?.coerceAtLeast(0) ?: 0
+        val parameters = media.codecpar()
+        val padding = parameters.initial_padding().toLong().takeIf { it > 0 && parameters.sample_rate() > 0 }
+            ?.let { avutil.av_rescale_q(it, AVRational().num(1).den(parameters.sample_rate()), media.time_base()) }
+        return start - (padding ?: 0)
     }
 
     private fun convert(decoded: AVFrame) {
@@ -168,8 +208,11 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
             nextFrame = if (pts == avutil.AV_NOPTS_VALUE) {
                 discardUntil.coerceAtLeast(0)
             } else {
-                avutil.av_rescale_q(pts, format.streams(stream).time_base(), AVRational().num(1).den(sampleRate))
+                avutil.av_rescale_q(pts - origin(), format.streams(stream).time_base(), outputTimeBase)
             }
+        }
+        if (inputChanged(decoded)) {
+            resampler = openResampler(decoded.ch_layout(), decoded.sample_rate(), decoded.format())
         }
         val capacity = swresample.swr_get_out_samples(resampler, decoded.nb_samples())
         val converted = swresample.swr_convert(
@@ -183,6 +226,10 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
         if (converted < 0) throw IOException("não deu para converter o áudio de $path")
         deliver(converted)
     }
+
+    private fun inputChanged(decoded: AVFrame): Boolean =
+        decoded.ch_layout().nb_channels() != inChannels || decoded.sample_rate() != inRate ||
+            decoded.format() != inFormat
 
     private fun flushResampler() {
         val capacity = swresample.swr_get_out_samples(resampler, 0)
@@ -235,6 +282,7 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
 
     companion object {
         private const val MICROS_PER_MS = 1_000L
+        private const val MAX_BAD_PACKETS = 50
         private const val ERROR_TEXT_BYTES = 256L
 
         init {
@@ -276,7 +324,7 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
         private fun errorText(status: Int): String {
             val text = BytePointer(ERROR_TEXT_BYTES)
             avutil.av_strerror(status, text, ERROR_TEXT_BYTES)
-            return text.string
+            return text.string.substringBefore('\u0000')
         }
     }
 }
