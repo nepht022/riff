@@ -10,7 +10,7 @@ kotlin {
             implementation(libs.jetbrains.lifecycle.runtime.compose)
         }
         androidMain.dependencies {
-            // A pista (stage/) ainda é só do Android: Compose do BOM, como nos outros módulos do celular.
+            // No Android, o Compose do BOM, como nos outros módulos do celular.
             implementation(project.dependencies.platform(libs.androidx.compose.bom))
             implementation(libs.androidx.compose.material3)
             implementation(libs.androidx.compose.ui.tooling.preview)
