@@ -41,6 +41,7 @@ import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
+import com.rodrigomachado.riff.feature.settings.HiltSettingsViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
 import com.rodrigomachado.riff.feature.settings.SettingsScreen
 
@@ -189,6 +190,7 @@ private fun NavGraphBuilder.settingsDestinations(
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
             onRankingName = onRankingName,
             onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
+            viewModel = hiltViewModel<HiltSettingsViewModel>(),
         )
     }
     composable<LicensesRoute> {
