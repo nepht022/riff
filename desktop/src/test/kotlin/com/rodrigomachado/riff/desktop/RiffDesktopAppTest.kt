@@ -17,6 +17,7 @@ import io.github.takahirom.roborazzi.captureRoboImage
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.util.Locale
 
 /**
@@ -30,16 +31,24 @@ private val TextRasterTolerance =
 class RiffDesktopAppTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @get:Rule
+    val temp = TemporaryFolder()
+
     private val system = Locale.getDefault()
+    private val graph by lazy { DesktopGraph(temp.newFolder("dados")) }
 
     @After
-    fun restoreLocale() = Locale.setDefault(system)
+    fun restore() {
+        Locale.setDefault(system)
+        graph.close()
+    }
 
     @Test
     fun opensOnTheHomeScreenInPortugueseEvenOnAnEnglishWindows() {
         Locale.setDefault(Locale.US)
         DesktopLocale.applyDefault()
-        composeRule.setContent { RiffDesktopApp() }
+        composeRule.setContent { RiffDesktopApp(graph) }
 
         composeRule.onNodeWithText("Sozinho").assertExists()
         composeRule.onNodeWithContentDescription("Sala, em breve").assertExists()
@@ -48,7 +57,7 @@ class RiffDesktopAppTest {
     @Test
     fun aSmallWindowStillReachesTheRanking() {
         DesktopLocale.applyDefault()
-        composeRule.setContent { Box(Modifier.size(800.dp, 500.dp)) { RiffDesktopApp() } }
+        composeRule.setContent { Box(Modifier.size(800.dp, 500.dp)) { RiffDesktopApp(graph) } }
 
         composeRule.onNodeWithTag(HomeTestTags.RANKING).performScrollTo().assertIsDisplayed()
     }
@@ -57,7 +66,7 @@ class RiffDesktopAppTest {
     @Test
     fun homeScreenshot() {
         DesktopLocale.applyDefault()
-        composeRule.setContent { RiffDesktopApp() }
+        composeRule.setContent { RiffDesktopApp(graph) }
 
         composeRule.onRoot()
             .captureRoboImage("src/test/screenshots/Home_desktop.png", roborazziOptions = TextRasterTolerance)

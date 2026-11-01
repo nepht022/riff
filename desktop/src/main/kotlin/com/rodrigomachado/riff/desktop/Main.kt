@@ -11,14 +11,18 @@ private const val MIN_HEIGHT = 500
 
 fun main() {
     DesktopLocale.applyDefault()
+    val graph = DesktopGraph(DesktopPaths.dataDir)
     application {
         Window(
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                graph.close()
+                exitApplication()
+            },
             title = "Riff",
             state = rememberWindowState(width = 1280.dp, height = 800.dp),
         ) {
             window.minimumSize = Dimension(MIN_WIDTH, MIN_HEIGHT)
-            RiffDesktopApp()
+            RiffDesktopApp(graph)
         }
     }
 }
