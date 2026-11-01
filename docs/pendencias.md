@@ -94,6 +94,14 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 2c-1: pista e regras da palheta (revisão final, 2026-11-01)
+
+- Notas longas com a palheta: palhetada errada ou troca de cor durante a nota longa não a interrompe; num acorde longo, soltar uma cor só encerra aquela (no Clone Hero o acorde inteiro cai). Decidir antes de ligar o teclado (2c-2).
+- Palhetada que chega alguns ms antes da cor (troca de acorde no teclado) conta como erro; a camada de entrada da 2c-2 pode segurar a palhetada uns ms esperando a cor, e precisa ignorar a repetição automática da tecla.
+- `quadToQuad` com quadrilátero degenerado (tamanho zero antes do layout, janela minimizada) dá NaN; manter a matriz anterior e deixar a função `internal`.
+- Faltam testes de HOPO em acorde e de palhetada errada durante nota longa.
+- No PC, a conversão da matriz para o Skia a cada quadro e a cópia do ladrilho ao trocar de visual (pequenas).
+
 ## Riff no Windows, etapa 2b: áudio no PC (revisão final, 2026-11-01)
 
 - Arquivos temporários `riff-*` das faixas de `.sng` podem sobrar em `%TEMP%` (disco cheio ao extrair, processo encerrado no meio); limpar os antigos ao iniciar, numa pasta própria.

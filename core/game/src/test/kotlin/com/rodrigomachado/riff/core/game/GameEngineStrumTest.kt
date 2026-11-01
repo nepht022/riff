@@ -71,7 +71,7 @@ class GameEngineStrumTest {
         val engine = GameEngine(listOf(note(1_000, 0), note(1_200, 1, hopo = true)))
         engine.onStrum(setOf(0), 1_000)
 
-        assertEquals(listOf(Judgment.PERFECT), engine.onFret(1, setOf(1), 1_200))
+        assertEquals(listOf(Judgment.PERFECT), engine.onFretsChanged(setOf(1), 1_200))
     }
 
     @Test
@@ -79,7 +79,7 @@ class GameEngineStrumTest {
         val engine = GameEngine(listOf(note(1_000, 0), note(1_500, 1, hopo = true)))
         engine.update(1_300) // a primeira passou sem ser tocada
 
-        assertNull(engine.onFret(1, setOf(1), 1_500))
+        assertNull(engine.onFretsChanged(setOf(1), 1_500))
         assertEquals(listOf(Judgment.PERFECT), engine.onStrum(setOf(1), 1_500))
     }
 
@@ -88,14 +88,14 @@ class GameEngineStrumTest {
         val engine = GameEngine(listOf(note(1_000, 0), note(1_500, 3, tap = true)))
         engine.update(1_300)
 
-        assertEquals(listOf(Judgment.PERFECT), engine.onFret(3, setOf(3), 1_500))
+        assertEquals(listOf(Judgment.PERFECT), engine.onFretsChanged(setOf(3), 1_500))
     }
 
     @Test
     fun aStrumRightAfterAFretHitIsNotAnOverstrum() {
         val engine = GameEngine(listOf(note(1_000, 0), note(1_200, 1, hopo = true), note(3_000, 0)))
         engine.onStrum(setOf(0), 1_000)
-        engine.onFret(1, setOf(1), 1_200)
+        engine.onFretsChanged(setOf(1), 1_200)
 
         assertEquals(emptyList<Judgment>(), engine.onStrum(setOf(1), 1_230))
         assertEquals(2, engine.combo)
@@ -106,7 +106,7 @@ class GameEngineStrumTest {
         val engine = GameEngine(listOf(note(1_000, 0), note(1_200, 1)))
         engine.onStrum(setOf(0), 1_000)
 
-        assertNull(engine.onFret(1, setOf(1), 1_200))
+        assertNull(engine.onFretsChanged(setOf(1), 1_200))
         assertEquals(listOf(Judgment.PERFECT), engine.onStrum(setOf(1), 1_200))
     }
 
@@ -122,5 +122,46 @@ class GameEngineStrumTest {
 
         assertTrue(atRelease > 100)
         assertEquals(atRelease, engine.score)
+    }
+
+    /** Perdeu a anterior e palhetou a próxima na hora: acerta a próxima, e a anterior vira erro (sem travar). */
+    @Test
+    fun aMissedNoteDoesNotLockTheNextOnes() {
+        val engine = GameEngine(listOf(note(1_000, 0), note(1_100, 2), note(1_200, 4)))
+
+        assertEquals(listOf(Judgment.PERFECT), engine.onStrum(setOf(2), 1_100))
+        assertEquals(Judgment.MISS, engine.judgmentOf(0))
+        assertEquals(listOf(Judgment.PERFECT), engine.onStrum(setOf(4), 1_200))
+        assertEquals(2, engine.combo)
+    }
+
+    /** Pull-off: soltar a cor de cima deixa só a de baixo segurada, e o HOPO dela acerta. */
+    @Test
+    fun releasingAFretHitsTheHopoBelow() {
+        val engine = GameEngine(listOf(note(1_000, 2), note(1_200, 0, hopo = true)))
+        engine.onStrum(setOf(0, 2), 1_000)
+
+        assertEquals(listOf(Judgment.PERFECT), engine.onFretsChanged(setOf(0), 1_200))
+    }
+
+    /** Quem palheta o HOPO na batida (a cor já tinha acertado antes) não leva erro. */
+    @Test
+    fun strummingAHopoThatTheFretAlreadyHitIsForgivenWithinItsWindow() {
+        val engine = GameEngine(listOf(note(1_000, 0), note(1_200, 1, hopo = true), note(3_000, 0)))
+        engine.onStrum(setOf(0), 1_000)
+        assertEquals(listOf(Judgment.GOOD), engine.onFretsChanged(setOf(1), 1_130)) // 70 ms antes
+
+        assertEquals(emptyList<Judgment>(), engine.onStrum(setOf(1), 1_200))
+        assertEquals(2, engine.combo)
+    }
+
+    /** O perdão não engole uma palhetada que acerta a nota seguinte. */
+    @Test
+    fun aStrumRightAfterAHopoStillHitsTheNextStrumNote() {
+        val engine = GameEngine(listOf(note(900, 0), note(1_000, 1, hopo = true), note(1_040, 2)))
+        engine.onStrum(setOf(0), 900)
+        engine.onFretsChanged(setOf(1), 1_000)
+
+        assertEquals(listOf(Judgment.PERFECT), engine.onStrum(setOf(2), 1_040))
     }
 }

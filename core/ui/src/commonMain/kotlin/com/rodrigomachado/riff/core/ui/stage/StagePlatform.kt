@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.ui.stage
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shader
 
 // O que a pista pede de cada plataforma: o resto do desenho é o mesmo no celular e no PC.
 
@@ -30,3 +31,9 @@ internal interface TexturePerspective {
 }
 
 internal expect fun TexturePerspective(): TexturePerspective
+
+/**
+ * O ladrilho da pista como shader (repete na profundidade, preso nas laterais). No celular, o `BitmapShader` de
+ * sempre; no PC, com filtro linear e mipmap pedidos ao Skia (o shader de imagem do Compose do PC não filtra).
+ */
+internal expect fun tiledShader(image: ImageBitmap): Shader

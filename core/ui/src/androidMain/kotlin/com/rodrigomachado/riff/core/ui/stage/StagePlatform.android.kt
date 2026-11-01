@@ -4,7 +4,10 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Matrix
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asComposePaint
 import androidx.compose.ui.graphics.nativeCanvas
@@ -43,3 +46,5 @@ private class AndroidTexturePerspective : TexturePerspective {
         const val CORNERS = 4
     }
 }
+
+internal actual fun tiledShader(image: ImageBitmap): Shader = ImageShader(image, TileMode.Clamp, TileMode.Repeated)

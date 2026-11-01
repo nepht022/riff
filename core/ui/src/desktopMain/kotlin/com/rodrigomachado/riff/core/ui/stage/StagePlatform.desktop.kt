@@ -1,13 +1,20 @@
 package com.rodrigomachado.riff.core.ui.stage
 
 import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.asComposeShader
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.skiaPaint
 import org.jetbrains.skia.FilterBlurMode
+import org.jetbrains.skia.FilterMipmap
+import org.jetbrains.skia.FilterMode
+import org.jetbrains.skia.FilterTileMode
+import org.jetbrains.skia.Image
 import org.jetbrains.skia.MaskFilter
+import org.jetbrains.skia.MipmapMode
 
 /** Raio do `BlurMaskFilter` do Android → sigma do Skia (a mesma conversão que o Android faz por dentro). */
 private const val BLUR_SIGMA_SCALE = 0.57735f
@@ -24,8 +31,8 @@ internal actual fun tilePaint(blurRadius: Float): Paint = Paint().apply {
 
 internal actual fun defaultTilePaint(): Paint = tilePaint()
 
-/** Sem mipmap no PC: o filtro mais forte segura o ladrilho encolhido perto do horizonte. */
-internal actual fun texturePaint(): Paint = Paint().apply { filterQuality = FilterQuality.High }
+/** O filtro da textura no PC vem do próprio shader ([tiledShader]). */
+internal actual fun texturePaint(): Paint = Paint()
 
 internal actual fun ImageBitmap.prepareMipmaps() = Unit
 
@@ -54,3 +61,14 @@ private class DesktopTexturePerspective : TexturePerspective {
         canvas.concat(matrix)
     }
 }
+
+/**
+ * O shader de imagem do Compose no PC amostra sem filtro (vizinho mais próximo): esticado, o ladrilho sai em
+ * blocos e cintila perto do horizonte. Aqui o Skia filtra linear e usa mipmap.
+ */
+internal actual fun tiledShader(image: ImageBitmap): Shader = Image.makeFromBitmap(image.asSkiaBitmap()).makeShader(
+    FilterTileMode.CLAMP,
+    FilterTileMode.REPEAT,
+    FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR),
+    null,
+).asComposeShader()
