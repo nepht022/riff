@@ -66,6 +66,7 @@ class DesktopGraph(
     private val randomRead = FileRandomReadOpener()
     private val folderSource = SngFolderSource(FileFolderSource(), randomRead)
     val settings: SettingsRepository = PreferencesSettingsRepository(preferences)
+    val languages = DesktopAppLanguageStore(File(dataDir, "language.txt"))
     val libraryFolderStore: LibraryFolderStore = PreferencesLibraryFolderStore(preferences)
     val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
