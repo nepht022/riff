@@ -124,7 +124,7 @@ class MidiChartParserTest {
     }
 
     @Test
-    fun tapMarkerMakesNotesInsideItsSpanHopoOnEveryDifficulty() {
+    fun tapMarkerMakesNotesInsideItsSpanTapsOnEveryDifficulty() {
         // Tecla 104: um único marcador de tap vale para todas as dificuldades.
         val tracks = MidiChartParser.parse(
             midi {
@@ -135,7 +135,7 @@ class MidiChartParserTest {
                 note(470, 104, 20)
             },
         ).tracks
-        assertEquals(listOf(false, true), tracks.getValue(Difficulty.EXPERT).map { it.isHopo })
-        assertEquals(listOf(false, true), tracks.getValue(Difficulty.HARD).map { it.isHopo })
+        assertEquals(listOf(false, true), tracks.getValue(Difficulty.EXPERT).map { it.isTap })
+        assertEquals(listOf(false, true), tracks.getValue(Difficulty.HARD).map { it.isTap })
     }
 }

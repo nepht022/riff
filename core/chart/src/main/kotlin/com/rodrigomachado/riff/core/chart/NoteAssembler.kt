@@ -37,11 +37,11 @@ internal object NoteAssembler {
                 previous = chord // só a aberta: não vira nota, mas é a anterior da próxima (como no Clone Hero)
                 continue
             }
-            val isHopo = chord.isTap || resolveHopo(chord, previous, hopoThresholdTicks)
+            val isHopo = !chord.isTap && resolveHopo(chord, previous, hopoThresholdTicks)
             val startMs = tempoMap.tickToMs(chord.tick)
             for ((lane, lengthTicks) in chord.lengthsByLane.toSortedMap()) {
                 val sustainMs = if (lengthTicks > 0) tempoMap.tickToMs(chord.tick + lengthTicks) - startMs else 0.0
-                notes += Note(startMs.roundToLong(), lane, sustainMs.roundToLong(), isHopo)
+                notes += Note(startMs.roundToLong(), lane, sustainMs.roundToLong(), isHopo, isTap = chord.isTap)
             }
             previous = chord
         }

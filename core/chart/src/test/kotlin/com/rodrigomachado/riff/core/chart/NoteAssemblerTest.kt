@@ -57,9 +57,21 @@ class NoteAssemblerTest {
         assertEquals(listOf(false, false, true), notes.map { it.isHopo })
     }
 
+    /** Tap é tap, não HOPO: com a palheta, vale sem palhetar mesmo depois de um erro (o HOPO não). */
     @Test
-    fun tapIsAlwaysHopo() {
-        assertEquals(true, assemble(single(0, 3, tap = true)).single().isHopo)
+    fun tapIsMarkedAsTapNotHopo() {
+        val note = assemble(single(0, 3, tap = true)).single()
+
+        assertEquals(true, note.isTap)
+        assertEquals(false, note.isHopo)
+    }
+
+    @Test
+    fun naturalAndForcedNotesAreNotTaps() {
+        val notes = assemble(single(0, 0), single(60, 1), single(120, 2, forcing = Forcing.STRUM))
+
+        assertEquals(listOf(false, true, false), notes.map { it.isHopo })
+        assertEquals(listOf(false, false, false), notes.map { it.isTap })
     }
 
     @Test
