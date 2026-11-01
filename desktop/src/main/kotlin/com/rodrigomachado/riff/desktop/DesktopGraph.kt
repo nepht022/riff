@@ -1,11 +1,14 @@
 package com.rodrigomachado.riff.desktop
 
+import com.rodrigomachado.riff.core.audio.ClipMenuSounds
+import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.NoAiSeparations
 import com.rodrigomachado.riff.core.data.NoSeparationScheduler
 import com.rodrigomachado.riff.core.data.PreferencesLibraryFolderStore
 import com.rodrigomachado.riff.core.data.PreferencesSettingsRepository
 import com.rodrigomachado.riff.core.data.RoomChartRepository
+import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FileFolderAccess
 import com.rodrigomachado.riff.core.data.folder.FileFolderSource
 import com.rodrigomachado.riff.core.data.folder.FileFolderWriter
@@ -28,7 +31,11 @@ import java.io.File
  * As dependências do Riff no PC, montadas à mão (no celular quem monta é o Hilt). Banco e preferências ficam em
  * [dataDir]; feche ao sair.
  */
-class DesktopGraph(dataDir: File) : AutoCloseable {
+class DesktopGraph(
+    dataDir: File,
+    /** Os sons dos botões (nos testes, um que só anota). */
+    val menuSounds: MenuSoundPlayer = ClipMenuSounds(),
+) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
     private val preferences = RiffPreferences(riffDataStore(File(dataDir, "riff_settings.preferences_pb"), scope))
@@ -36,7 +43,7 @@ class DesktopGraph(dataDir: File) : AutoCloseable {
 
     private val charts = RoomChartRepository(database.chartDao())
     private val folderSource = SngFolderSource(FileFolderSource(), FileRandomReadOpener())
-    private val settings = PreferencesSettingsRepository(preferences)
+    val settings: SettingsRepository = PreferencesSettingsRepository(preferences)
     val libraryFolderStore: LibraryFolderStore = PreferencesLibraryFolderStore(preferences)
     val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()

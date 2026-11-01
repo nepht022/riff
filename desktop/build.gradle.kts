@@ -22,6 +22,8 @@ dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:library"))
     implementation(project(":core:data"))
+    implementation(project(":core:audio"))
+    implementation(project(":core:model"))
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(libs.jetbrains.navigation.compose)
@@ -41,4 +43,11 @@ compose.desktop {
     application {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
     }
+}
+
+// Medição do áudio no PC: ./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"
+tasks.register<JavaExec>("runAudioCheck") {
+    group = "riff"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.rodrigomachado.riff.desktop.AudioCheckKt")
 }

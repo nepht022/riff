@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Monta as seis variações do som de erro a partir de gravações reais de guitarra (CC0, em third_party/sons).
 
-Precisa de ffmpeg e numpy. Uso: python3 scripts/montar_sfx_erro.py third_party/sons core/audio/src/main/res/raw
+Precisa de ffmpeg e numpy. Uso: python3 scripts/montar_sfx_erro.py third_party/sons core/audio/src/androidMain/res/raw
 Origem e licença de cada gravação: third_party/README.md.
 """
 import subprocess

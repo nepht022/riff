@@ -5,7 +5,7 @@ No estilo dos menus de jogos de guitarra, mas só com as nossas gravações: nav
 confirmar é um power chord (a nota gravada somada à quinta e à oitava, afinadas da mesma gravação), voltar é
 a palheta arrastando na corda.
 
-Precisa de ffmpeg e numpy. Uso: python3 scripts/montar_sfx_menu.py third_party/sons core/audio/src/main/res/raw
+Precisa de ffmpeg e numpy. Uso: python3 scripts/montar_sfx_menu.py third_party/sons core/audio/src/androidMain/res/raw
 Origem e licença de cada gravação: third_party/README.md.
 """
 import math

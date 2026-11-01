@@ -94,6 +94,17 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 2b: áudio no PC (revisão final, 2026-11-01)
+
+- Arquivos temporários `riff-*` das faixas de `.sng` podem sobrar em `%TEMP%` (disco cheio ao extrair, processo encerrado no meio); limpar os antigos ao iniciar, numa pasta própria.
+- Falha ao carregar as bibliotecas nativas do FFmpeg (antivírus, jar do sistema errado) vira `Error`, não `IOException`: converter no abridor.
+- O FFmpeg abre os arquivos sem lista de protocolos/formatos permitidos (defesa extra para mapas baixados).
+- Alocações nativas por quadro decodificado (`pointerTo`, `AVRational`); retornos nulos de alocação sem checagem.
+- `JavaSoundSink`: `Thread.sleep(2)` pode dormir ~15 ms no Windows (margem curta com 42 ms de buffer); a posição da linha não desconta a latência real da saída (fica para a calibração do PC); o README traz o tamanho do buffer, não a latência medida.
+- Sons do menu do PC: 5 Clips abertos na montagem do grafo e nunca fechados.
+- Empacotamento: o classificador nativo vem da máquina de build (o instalador precisa ser feito no Windows); excluir os executáveis `ffmpeg`/`ffprobe` do jar; avisos de licença da LGPL do FFmpeg.
+- `thePositionNeverGoesBack` não continua depois da pausa; `playMenuSound` local sombreia a função no `RiffDesktopApp`; `@Suppress` redundante no `StemSongPlayer`.
+
 ## Riff no Windows, etapa 2a: Biblioteca no PC (revisão final, 2026-11-01)
 
 - `.sng` corrompido no PC: o arquivo fica aberto até o coletor de lixo, e o Windows não deixa apagá-lo nesse meio tempo (fechar o `RandomRead` quando `SngPackage.open` falhar; o mesmo no `ChartDownloader`).
