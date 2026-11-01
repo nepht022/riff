@@ -172,7 +172,8 @@ open class LibraryViewModel(
     private suspend fun needsAsking(chartId: String): Boolean {
         val running = scheduler.status.value
         val separating = running is SeparationStatus.Running && running.chartId == chartId
-        if (separating || scheduler.queue.value.any { it.chartId == chartId }) return false
+        // Sem a separação neste aparelho (o PC até a etapa 4), o "Separar" da pergunta não faria nada.
+        if (!scheduler.isAvailable || separating || scheduler.queue.value.any { it.chartId == chartId }) return false
         when (separations.stateOf(chartId)) {
             AiSeparationState.SEPARATED -> return false
             AiSeparationState.DECLINED -> if (!settings.settings.first().askSeparationAlways) return false

@@ -1,0 +1,309 @@
+package com.rodrigomachado.riff.desktop
+
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.KeyInjectionScope
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import com.rodrigomachado.riff.core.audio.AudioSink
+import com.rodrigomachado.riff.core.audio.AudioSinkFactory
+import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
+import com.rodrigomachado.riff.core.audio.SfxPlayer
+import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.ui.component.DifficultyDialogTestTags
+import com.rodrigomachado.riff.feature.gameplay.GameplayTestTags
+import com.rodrigomachado.riff.feature.home.HomeTestTags
+import com.rodrigomachado.riff.feature.library.LibraryTestTags
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.DataOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import kotlin.math.PI
+import kotlin.math.sin
+
+/**
+ * A partida no app do PC, de ponta a ponta: Biblioteca → dificuldade → partida (tocando de verdade, com o FFmpeg
+ * decodificando o tom da pasta) → Resultado com o recorde gravado; "Jogar de novo" e Sair não empilham telas.
+ * O som sai numa saída falsa que anda no ritmo do relógio (o CI não tem placa de som).
+ */
+@OptIn(ExperimentalTestApi::class)
+class DesktopGameplayFlowTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    private val sinks = mutableListOf<RealTimeSink>()
+    private var graph: DesktopGraph? = null
+
+    @After
+    fun close() {
+        graph?.close()
+    }
+
+    @Test
+    fun theLibraryPlaysASongToTheResultsAndBackWithoutStackingScreens() {
+        val graph = openApp()
+
+        // Biblioteca → a música → a única dificuldade → a partida.
+        startTheSong()
+        // A cor verde segurada antes e a palheta ↓ na hora da primeira nota (a segunda passa: erro).
+        holdGreenAndStrumAt(FIRST_NOTE_MS)
+        playUntil(hasText(PLAY_AGAIN))
+
+        val chartId = runBlocking { graph.charts.observeCharts().first().single().id }
+        val record = runBlocking { graph.scores.best(chartId, Difficulty.EXPERT) }
+        assertNotNull("o recorde foi gravado", record)
+        assertEquals("as duas notas foram julgadas", 2, record!!.perfect + record.good + record.miss)
+        assertTrue("a palheta acertou a primeira nota: $record", record.perfect + record.good >= 1)
+
+        // Jogar de novo: a partida no lugar do Resultado.
+        composeRule.mainClock.autoAdvance = false
+        composeRule.clickOnWindowThread(composeRule.onNodeWithText(PLAY_AGAIN))
+        playInTheMatchUntil("a partida") { exists(STAGE) }
+        composeRule.onNodeWithText(PLAY_AGAIN).assertDoesNotExist()
+        // Esc pausa e Sair volta à Biblioteca (não ao Resultado de antes).
+        composeRule.pressKeys { pressKey(Key.Escape) }
+        playInTheMatchUntil("a pausa") { exists(hasTestTag(GameplayTestTags.EXIT)) }
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(GameplayTestTags.EXIT))
+        playUntil(hasTestTag(LibraryTestTags.LIST))
+        composeRule.onNodeWithText(PLAY_AGAIN).assertDoesNotExist()
+
+        // Outra partida até o fim; do Resultado, Voltar leva à Biblioteca.
+        startTheSong()
+        playUntil(hasText(PLAY_AGAIN))
+        composeRule.clickOnWindowThread(composeRule.onNodeWithText(BACK))
+        composeRule.waitUntilAtLeastOneExists(hasTestTag(LibraryTestTags.LIST), TIMEOUT_MS)
+        composeRule.onNodeWithText(PLAY_AGAIN).assertDoesNotExist()
+        composeRule.onNodeWithTag(GameplayTestTags.STAGE).assertDoesNotExist()
+    }
+
+    /** Uma pasta com um mapa de duas notas e 2 s de tom, já importada; o app aberto na tela inicial. */
+    private fun openApp(): DesktopGraph {
+        val charts = temp.newFolder("mapas")
+        File(charts, "Tom do PC").apply { mkdirs() }.run {
+            File(this, "notes.chart").writeText(CHART)
+            writeTone(File(this, "song.wav"), SONG_MS)
+        }
+        val audioOut = AudioSinkFactory { rate -> RealTimeSink(rate).also { synchronized(sinks) { sinks += it } } }
+        val graph = DesktopGraph(
+            temp.newFolder("dados"),
+            menuSounds = MenuSoundPlayer { _, _ -> },
+            audioOut = audioOut,
+            sfx = SfxPlayerFactory { SilentSfx },
+        ).also { graph = it }
+        runBlocking {
+            graph.libraryFolderStore.setRootUri(pcUri(charts))
+            graph.chartImporter.import(pcUri(charts))
+        }
+        DesktopLocale.applyDefault()
+        composeRule.setContent {
+            // A janela do teste não disputa o foco do sistema: sem isso a partida pausaria como num Alt+Tab.
+            val real = LocalWindowInfo.current
+            val focused = remember(real) { FocusedWindow(real) }
+            CompositionLocalProvider(LocalWindowInfo provides focused) { RiffDesktopApp(graph) }
+        }
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(HomeTestTags.SOLO))
+        composeRule.waitUntilAtLeastOneExists(hasText(TITLE), TIMEOUT_MS)
+        return graph
+    }
+
+    private fun startTheSong() {
+        composeRule.clickOnWindowThread(composeRule.onNodeWithText(TITLE))
+        composeRule.waitUntilAtLeastOneExists(hasTestTag(DifficultyDialogTestTags.OPTION), TIMEOUT_MS)
+        composeRule.mainClock.autoAdvance = false
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(DifficultyDialogTestTags.OPTION))
+        playInTheMatchUntil("a partida") { exists(STAGE) }
+    }
+
+    /**
+     * A partida pede um quadro atrás do outro, e a espera do teste pela tela parada só voltaria no fim da música:
+     * com a partida aberta, o relógio do teste anda à mão, um quadro de cada vez, enquanto a música anda de verdade.
+     * Uma tela de fora da partida ([screen]) só vale quando a partida já saiu de vez (a transição terminou); aí o
+     * relógio volta a andar sozinho.
+     */
+    private fun playUntil(screen: SemanticsMatcher) = play("a tela ${screen.description}") {
+        exists(screen) && !exists(STAGE)
+    }
+
+    /** Dentro da partida: [what] aparece (a pausa, o próprio palco) ou a música chega a um ponto. */
+    private fun playInTheMatchUntil(what: String, done: () -> Boolean) = play(what, done)
+
+    private fun play(what: String, done: () -> Boolean) {
+        composeRule.mainClock.autoAdvance = false
+        val deadline = System.currentTimeMillis() + MATCH_TIMEOUT_MS
+        while (!done()) {
+            check(System.currentTimeMillis() < deadline) { "não chegou: $what" }
+            composeRule.mainClock.advanceTimeByFrame()
+            Thread.sleep(FRAME_SLEEP_MS)
+        }
+        composeRule.mainClock.autoAdvance = !exists(STAGE)
+    }
+
+    private fun exists(matcher: SemanticsMatcher) = composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+
+    /** Pelas teclas de verdade (A segurado, ↓ na hora), lendo a posição da música na saída falsa. */
+    private fun holdGreenAndStrumAt(noteMs: Long) {
+        val sink = synchronized(sinks) { sinks.last() }
+        playInTheMatchUntil("a música em ${noteMs - FRET_EARLY_MS} ms") { sink.positionMs >= noteMs - FRET_EARLY_MS }
+        composeRule.pressKeys { keyDown(Key.A) }
+        playInTheMatchUntil("a música em ${noteMs - STRUM_EARLY_MS} ms") { sink.positionMs >= noteMs - STRUM_EARLY_MS }
+        composeRule.pressKeys { pressKey(Key.DirectionDown) }
+        composeRule.pressKeys { keyUp(Key.A) }
+    }
+
+    private fun ComposeContentTestRule.pressKeys(block: KeyInjectionScope.() -> Unit) =
+        runOnUiThread { onRoot().performKeyInput(block) }
+
+    private class FocusedWindow(real: WindowInfo) : WindowInfo by real {
+        override val isWindowFocused: Boolean get() = true
+    }
+
+    private object SilentSfx : SfxPlayer {
+        override fun hit(lane: Int) = Unit
+
+        override fun miss() = Unit
+
+        override fun setVolumes(hit: Float, miss: Float) = Unit
+
+        override fun release() = Unit
+    }
+
+    private companion object {
+        const val TIMEOUT_MS = 15_000L
+        const val MATCH_TIMEOUT_MS = 30_000L
+        const val SONG_MS = 2_000
+        const val FIRST_NOTE_MS = 1_000L
+        const val FRET_EARLY_MS = 300L
+        const val STRUM_EARLY_MS = 15L
+        const val FRAME_SLEEP_MS = 4L
+        const val TITLE = "Tom do PC"
+        const val PLAY_AGAIN = "Jogar de novo"
+        const val BACK = "Voltar"
+
+        // 120 BPM e 192 ticks por batida: 384 = 1 s, 576 = 1,5 s.
+        val STAGE = hasTestTag(GameplayTestTags.STAGE)
+
+        val CHART = """
+            [Song]
+            {
+              Name = "$TITLE"
+              Artist = "Banda"
+              Resolution = 192
+            }
+            [ExpertSingle]
+            {
+              384 = N 0 0
+              576 = N 1 0
+            }
+        """.trimIndent()
+    }
+}
+
+/** Um WAV de 16 bits, mono, 48 kHz, com um lá (440 Hz) de [durationMs]. */
+private fun writeTone(file: File, durationMs: Int) {
+    val rate = 48_000
+    val samples = rate * durationMs / 1_000
+    DataOutputStream(FileOutputStream(file).buffered()).use { out ->
+        fun int(value: Int) = out.writeInt(Integer.reverseBytes(value))
+        fun short(value: Int) = out.writeShort(java.lang.Short.reverseBytes(value.toShort()).toInt())
+        out.writeBytes("RIFF")
+        int(36 + samples * 2)
+        out.writeBytes("WAVEfmt ")
+        int(16)
+        short(1) // PCM
+        short(1) // mono
+        int(rate)
+        int(rate * 2)
+        short(2)
+        short(16)
+        out.writeBytes("data")
+        int(samples * 2)
+        repeat(samples) { short((sin(2 * PI * 440 * it / rate) * 8_000).toInt()) }
+    }
+}
+
+/**
+ * Saída falsa no ritmo do relógio: aceita no máximo [BUFFER_MS] à frente do que já "tocou", e o que tocou é o tempo
+ * desde [start] (sem contar as pausas). A música anda em tempo real sem alto-falante.
+ */
+private class RealTimeSink(private val rate: Int) : AudioSink {
+    private val lock = Object()
+    private var playedBefore = 0L
+    private var startedAtNs = 0L
+    private var written = 0L
+
+    @Volatile private var running = false
+
+    @Volatile private var stopped = false
+
+    val positionMs: Long get() = playedFrames * 1_000 / rate
+
+    override fun start() = synchronized(lock) {
+        if (!running) {
+            startedAtNs = System.nanoTime()
+            running = true
+        }
+    }
+
+    override fun pause() = synchronized(lock) {
+        if (running) {
+            playedBefore = clockFrames()
+            running = false
+        }
+    }
+
+    override fun stop() {
+        stopped = true
+        pause()
+    }
+
+    override fun write(buffer: FloatArray, offsetFrames: Int, frames: Int): Int {
+        var done = 0
+        while (done < frames && running && !stopped) {
+            val room = synchronized(lock) { clockFrames() + rate * BUFFER_MS / 1_000 - written }
+            if (room <= 0) {
+                Thread.sleep(1)
+                continue
+            }
+            val count = minOf(room, (frames - done).toLong()).toInt()
+            synchronized(lock) { written += count }
+            done += count
+        }
+        return done
+    }
+
+    override val playedFrames: Long get() = synchronized(lock) { minOf(written, clockFrames()) }
+
+    override fun release() = Unit
+
+    private fun clockFrames(): Long =
+        if (running) playedBefore + (System.nanoTime() - startedAtNs) * rate / 1_000_000_000 else playedBefore
+
+    private companion object {
+        const val BUFFER_MS = 50
+    }
+}

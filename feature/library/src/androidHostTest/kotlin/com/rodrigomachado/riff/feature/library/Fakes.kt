@@ -118,6 +118,7 @@ class FakeScheduler : SeparationScheduler {
     override val queue = MutableStateFlow(emptyList<QueuedSeparation>())
     override val waitingForCharger = MutableStateFlow(false)
     override var lowMemoryDevice = false
+    override var isAvailable = true
     val enqueued = mutableListOf<String>()
 
     /** Uma música separando agora. */
