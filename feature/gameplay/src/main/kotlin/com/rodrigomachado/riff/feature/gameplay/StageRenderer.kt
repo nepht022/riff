@@ -85,7 +85,7 @@ private fun DrawScope.drawNote(
         radius * geometry.scaleAt(head),
         note.lane,
         missed = judgment == Judgment.MISS,
-        hopo = note.isHopo,
+        hopo = note.isHopo || note.isTap, // o tap tem o mesmo visual do HOPO
     )
 }
 

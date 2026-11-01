@@ -1,9 +1,10 @@
 package com.rodrigomachado.riff.core.ui.stage
 
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -56,16 +57,19 @@ object RockShapes {
 
     /** Caveira de frente: crânio, mandíbula, olhos, nariz e dentes vazados com [holes]. */
     fun skull(canvas: Canvas, paint: Paint, cx: Float, cy: Float, s: Float, holes: Paint) {
-        canvas.drawOval(RectF(cx - s, cy - s, cx + s, cy + s * 0.75f), paint)
+        canvas.drawOval(Rect(cx - s, cy - s, cx + s, cy + s * 0.75f), paint)
         canvas.drawRoundRect(
-            RectF(cx - s * 0.55f, cy + s * 0.4f, cx + s * 0.55f, cy + s * 1.05f),
+            cx - s * 0.55f,
+            cy + s * 0.4f,
+            cx + s * 0.55f,
+            cy + s * 1.05f,
             s * 0.15f,
             s * 0.15f,
             paint,
         )
         for (dx in floatArrayOf(-0.4f, 0.4f)) {
             canvas.drawOval(
-                RectF(cx + dx * s - s * 0.27f, cy - s * 0.05f, cx + dx * s + s * 0.27f, cy + s * 0.42f),
+                Rect(cx + dx * s - s * 0.27f, cy - s * 0.05f, cx + dx * s + s * 0.27f, cy + s * 0.42f),
                 holes,
             )
         }
@@ -76,9 +80,12 @@ object RockShapes {
             close()
         }
         canvas.drawPath(nose, holes)
-        val teeth = Paint(holes).apply { strokeWidth = max(1f, s * 0.06f) }
+        val teeth = tilePaint().apply {
+            blendMode = holes.blendMode
+            strokeWidth = max(1f, s * 0.06f)
+        }
         for (dx in floatArrayOf(-0.3f, -0.1f, 0.1f, 0.3f)) {
-            canvas.drawLine(cx + dx * s, cy + s * 0.75f, cx + dx * s, cy + s * 1.02f, teeth)
+            canvas.drawLine(Offset(cx + dx * s, cy + s * 0.75f), Offset(cx + dx * s, cy + s * 1.02f), teeth)
         }
     }
 

@@ -1,9 +1,8 @@
 package com.rodrigomachado.riff.core.ui.stage
 
-import android.graphics.Shader
+import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
 /** A superfície de sempre (Palco): degradê escuro e trama fina. */
@@ -21,10 +20,9 @@ internal fun DrawScope.drawStageSurface(cache: StageCache) {
 
 internal fun DrawScope.drawTexture(cache: StageCache, shader: Shader) {
     cache.texturePaint.shader = shader
-    drawIntoCanvas {
-        val canvas = it.nativeCanvas
+    drawIntoCanvas { canvas ->
         canvas.save()
-        canvas.concat(cache.textureMatrix)
+        cache.texturePerspective.concatTo(canvas)
         canvas.drawRect(0f, cache.textureTop, HighwayTexture.WIDTH.toFloat(), cache.textureBottom, cache.texturePaint)
         canvas.restore()
     }

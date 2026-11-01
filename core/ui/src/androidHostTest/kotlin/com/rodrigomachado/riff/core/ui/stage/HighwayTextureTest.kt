@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.ui.stage
 
+import androidx.compose.ui.graphics.asAndroidBitmap
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
 import com.rodrigomachado.riff.core.model.TrackLook
@@ -24,7 +25,7 @@ class HighwayTextureTest {
     @Test
     fun everyOtherBackgroundIsAnOpaqueTileOfTheRightSize() {
         for (kind in HighwayBackground.entries - HighwayBackground.STAGE) {
-            val tile = requireNotNull(HighwayTexture.background(kind)) { kind.name }
+            val tile = requireNotNull(HighwayTexture.background(kind)) { kind.name }.asAndroidBitmap()
             assertEquals(kind.name, HighwayTexture.WIDTH, tile.width)
             assertEquals(kind.name, HighwayTexture.DEPTH, tile.height)
             assertEquals(kind.name, 255, tile.getPixel(tile.width / 2, tile.height / 2) ushr 24)
@@ -34,7 +35,7 @@ class HighwayTextureTest {
     @Test
     fun artIsTransparentAroundTheStamps() {
         for (kind in HighwayArt.entries - HighwayArt.NONE) {
-            val tile = requireNotNull(HighwayTexture.art(kind)) { kind.name }
+            val tile = requireNotNull(HighwayTexture.art(kind)) { kind.name }.asAndroidBitmap()
             val pixels = IntArray(tile.width * tile.height)
             tile.getPixels(pixels, 0, tile.width, 0, 0, tile.width, tile.height)
             val alphas = pixels.map { it ushr 24 }
@@ -48,10 +49,10 @@ class HighwayTextureTest {
     @Test
     fun tilesHaveMipmapsForTheFarEnd() {
         for (kind in HighwayBackground.entries - HighwayBackground.STAGE) {
-            assertTrue(kind.name, HighwayTexture.background(kind)!!.hasMipMap())
+            assertTrue(kind.name, HighwayTexture.background(kind)!!.asAndroidBitmap().hasMipMap())
         }
         for (kind in HighwayArt.entries - HighwayArt.NONE) {
-            assertTrue(kind.name, HighwayTexture.art(kind)!!.hasMipMap())
+            assertTrue(kind.name, HighwayTexture.art(kind)!!.asAndroidBitmap().hasMipMap())
         }
     }
 
@@ -65,15 +66,15 @@ class HighwayTextureTest {
 
     @Test
     fun tilesAreTheSameEveryTime() {
-        val a = HighwayTexture.background(HighwayBackground.LEATHER)!!
-        val b = HighwayTexture.background(HighwayBackground.LEATHER)!!
+        val a = HighwayTexture.background(HighwayBackground.LEATHER)!!.asAndroidBitmap()
+        val b = HighwayTexture.background(HighwayBackground.LEATHER)!!.asAndroidBitmap()
         assertTrue(a.sameAs(b))
     }
 
     @Test
     fun theTileRepeatsWithoutAVisibleSeam() {
         for (kind in HighwayBackground.entries - HighwayBackground.STAGE) {
-            val tile = HighwayTexture.background(kind)!!
+            val tile = HighwayTexture.background(kind)!!.asAndroidBitmap()
             val difference = (0 until tile.width).map { x ->
                 channelDistance(tile.getPixel(x, 0), tile.getPixel(x, tile.height - 1))
             }.average()

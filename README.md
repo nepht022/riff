@@ -130,7 +130,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 - **Suíte completa antes de cada merge:**
 
   ```bash
-  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
+  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
   ```
 
@@ -165,6 +165,8 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:databa
 - No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
 - O Android Lint dos módulos multiplataforma roda com `./scripts/gw lintMultiplatform`.
 - **Áudio no PC:** o FFmpeg (bytedeco) decodifica ogg, opus, mp3 e wav (soltos ou dentro de `.sng`) sempre em 48 kHz estéreo, e o Java Sound toca (16 bits, buffer de 2.048 quadros ≈ 42 ms). Os sons de erro e do menu são os mesmos WAV do celular. Medição: `./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"` toca 20 s cortando a guitarra a cada 2 s e imprime a deriva entre o relógio e a posição da música.
+- **A pista no PC:** o `stage/` do `:core:ui` é todo comum; as texturas (fundos e estampas) são geradas pelo Canvas do Compose, com três detalhes por plataforma (o desfoque, o mipmap e a matriz de perspectiva, que no celular segue o `setPolyToPoly` do Android). As cenas dos testes de tela da pista ficam em `core/ui/src/commonTest` e servem aos dois: as referências do PC ficam em `core/ui/src/test/screenshots/desktop`.
+- **Palheta (regras para o PC, no `GameEngine`):** `onStrum` julga o acorde inteiro numa palhetada (nota simples aceita cores mais baixas seguradas junto; acorde exige exatamente as cores dele; cada nota do acorde conta); `onFret` acerta o tap sempre e o HOPO depois de um acerto, sem palhetar; palhetada sem nota ou com cor errada quebra o combo, perdoada até 50 ms depois de um acerto sem palheta. O toque do celular segue pelo `onPress`.
 - Medido em 2026-11-01 no PC do usuário (Windows): a deriva oscila entre −13 e +17 ms sem acumular em 20 s (faixas separadas em pasta e um `.sng` com 5 faixas opus); o som leva ~650 ms para começar na primeira vez (a partida espera, sincronizada) e volta na hora ao continuar; 1 minuto de opus decodifica em ~145 ms.
 
 ```bash

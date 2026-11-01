@@ -1,15 +1,12 @@
 package com.rodrigomachado.riff.core.ui.stage
 
-import android.graphics.Bitmap
-import android.graphics.BitmapShader
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Shader
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import com.rodrigomachado.riff.core.model.HighwayBackground
@@ -75,26 +72,26 @@ class StageCache {
     var scrollDistance = 0f
 
     private var texturesFor: TrackLook? = null
-    internal var backgroundShader: BitmapShader? = null
+    internal var backgroundShader: Shader? = null
         private set
-    internal var artShader: BitmapShader? = null
+    internal var artShader: Shader? = null
         private set
     internal var edges = edgeColors(HighwayBackground.STAGE)
         private set
-    internal val texturePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    internal val texturePaint = texturePaint()
 
     /** Escurece a textura para o fundo, como o degradê da pista de sempre. */
     internal var fade: Brush = Brush.verticalGradient(listOf(Color.Black, Color.Transparent))
         private set
-    internal val textureMatrix = Matrix()
+    internal val texturePerspective = TexturePerspective()
 
-    /** Faixa do ladrilho (em px da textura) que cobre a pista: desenhada pela [textureMatrix], vira o trapézio. */
+    /** Faixa do ladrilho (em px da textura) que cobre a pista: desenhada pela [texturePerspective], vira o trapézio. */
     internal var textureTop = 0f
         private set
     internal var textureBottom = 0f
         private set
-    private val polySrc = FloatArray(8)
-    private val polyDst = FloatArray(8)
+    internal val polySrc = FloatArray(8)
+    internal val polyDst = FloatArray(8)
 
     private fun rebuildTexturesIfNeeded() {
         if (texturesFor == look) return
@@ -104,11 +101,11 @@ class StageCache {
         edges = edgeColors(look.background)
     }
 
-    private fun tiled(bitmap: Bitmap) = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.REPEAT)
+    private fun tiled(bitmap: ImageBitmap) = tiledShader(bitmap)
 
     /**
      * Põe o ladrilho na pista em perspectiva, já rolado: a faixa do ladrilho que cobre da borda de baixo da pista
-     * ao fundo vai para o trapézio. `setPolyToPoly` com 4 pontos é exata para um plano visto em perspectiva. A
+     * ao fundo vai para o trapézio. A homografia de 4 pontos é exata para um plano visto em perspectiva. A
      * matriz vai no canvas, não no shader: trocar a matriz do shader recria o shader nativo a cada quadro.
      */
     internal fun updateTextureMatrix() {
@@ -138,7 +135,7 @@ class StageCache {
         polyDst[5] = g.yAt(far)
         polyDst[6] = g.leftAt(far)
         polyDst[7] = g.yAt(far)
-        textureMatrix.setPolyToPoly(polySrc, 0, polyDst, 0, 4)
+        texturePerspective.set(polySrc, polyDst)
         textureTop = vFar
         textureBottom = vNear
     }

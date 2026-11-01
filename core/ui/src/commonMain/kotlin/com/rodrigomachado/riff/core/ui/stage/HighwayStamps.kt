@@ -1,10 +1,13 @@
 package com.rodrigomachado.riff.core.ui.stage
 
-import android.graphics.Canvas
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.StrokeCap
 import com.rodrigomachado.riff.core.model.HighwayArt
 
 /** Estampas claras da pista (design da pista), desenhadas num ladrilho transparente de [HighwayTexture]. */
@@ -16,7 +19,7 @@ internal object HighwayStamps {
         val depth = HighwayTexture.DEPTH.toFloat()
         // Esticadas na profundidade: a perspectiva da pista as achata, e assim elas ficam legíveis.
         canvas.save()
-        canvas.scale(1f, STRETCH, 0f, 0f)
+        canvas.scale(1f, STRETCH)
         draw(kind, canvas, ink, holes, cx, depth / STRETCH)
         canvas.restore()
     }
@@ -63,12 +66,7 @@ internal object HighwayStamps {
 
     private fun shape(canvas: Canvas, paint: Paint, cx: Float, cy: Float, s: Float, build: (Path) -> Unit) {
         val path = Path().also(build)
-        path.transform(
-            Matrix().apply {
-                postScale(s, s)
-                postTranslate(cx, cy)
-            },
-        )
+        path.transform(Matrix().apply { setScaleTranslate(s, s, cx, cy) })
         canvas.drawPath(path, paint)
     }
 
@@ -89,29 +87,30 @@ internal object HighwayStamps {
     }
 
     private fun guitar(canvas: Canvas, paint: Paint, holes: Paint, cx: Float, cy: Float, s: Float) {
-        canvas.drawOval(RectF(cx - s * 0.75f, cy + s * 0.15f, cx + s * 0.75f, cy + s * 1.4f), paint)
-        canvas.drawOval(RectF(cx - s * 0.55f, cy - s * 0.45f, cx + s * 0.55f, cy + s * 0.6f), paint)
+        canvas.drawOval(Rect(cx - s * 0.75f, cy + s * 0.15f, cx + s * 0.75f, cy + s * 1.4f), paint)
+        canvas.drawOval(Rect(cx - s * 0.55f, cy - s * 0.45f, cx + s * 0.55f, cy + s * 0.6f), paint)
         canvas.drawRect(cx - s * 0.12f, cy - s * 1.7f, cx + s * 0.12f, cy - s * 0.3f, paint)
         canvas.drawRect(cx - s * 0.25f, cy - s * 2.2f, cx + s * 0.25f, cy - s * 1.7f, paint)
-        canvas.drawOval(RectF(cx - s * 0.2f, cy + s * 0.45f, cx + s * 0.2f, cy + s * 0.85f), holes)
+        canvas.drawOval(Rect(cx - s * 0.2f, cy + s * 0.45f, cx + s * 0.2f, cy + s * 0.85f), holes)
     }
 
     private fun tattoo(canvas: Canvas, paint: Paint, cx: Float, cy: Float, s: Float) {
         // Coração com uma adaga atravessada.
         val heart = Path().apply {
-            addOval(RectF(cx - s, cy - s * 0.6f, cx, cy + s * 0.3f), Path.Direction.CW)
-            addOval(RectF(cx, cy - s * 0.6f, cx + s, cy + s * 0.3f), Path.Direction.CW)
+            addOval(Rect(cx - s, cy - s * 0.6f, cx, cy + s * 0.3f), Path.Direction.Clockwise)
+            addOval(Rect(cx, cy - s * 0.6f, cx + s, cy + s * 0.3f), Path.Direction.Clockwise)
             moveTo(cx - s * 0.97f, cy - s * 0.05f)
             lineTo(cx + s * 0.97f, cy - s * 0.05f)
             lineTo(cx, cy + s * 1.1f)
             close()
-            op(Path(), Path.Op.UNION)
+            op(this, Path(), PathOperation.Union)
         }
         canvas.drawPath(heart, paint)
-        val blade = Paint(paint).apply {
+        val blade = tilePaint().apply {
+            color = paint.color
             strokeWidth = s * 0.16f
-            strokeCap = Paint.Cap.ROUND
+            strokeCap = StrokeCap.Round
         }
-        canvas.drawLine(cx - s * 1.5f, cy + s * 0.9f, cx + s * 1.4f, cy - s * 1.05f, blade)
+        canvas.drawLine(Offset(cx - s * 1.5f, cy + s * 0.9f), Offset(cx + s * 1.4f, cy - s * 1.05f), blade)
     }
 }

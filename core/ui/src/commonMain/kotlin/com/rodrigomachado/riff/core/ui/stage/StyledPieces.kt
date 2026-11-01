@@ -142,40 +142,13 @@ private fun DrawScope.pickButton(cache: StageCache, color: Color, pressed: Boole
     scale(0.42f, 0.42f, Offset.Zero) { drawPath(cache.pickPath, if (pressed) Color.White else Color(0xFF0F0F0F)) }
 }
 
-/** Formas em tamanho 1 (as mesmas de [RockShapes], em `Path` do Compose). */
+/** Formas em tamanho 1 de [RockShapes], cada uma num `Path` novo. */
 internal object UnitShapes {
-    fun pick() = Path().apply {
-        moveTo(0f, 1.15f)
-        cubicTo(-0.55f, 0.75f, -1f, 0.1f, -0.95f, -0.45f)
-        cubicTo(-0.9f, -0.95f, 0.9f, -0.95f, 0.95f, -0.45f)
-        cubicTo(1f, 0.1f, 0.55f, 0.75f, 0f, 1.15f)
-        close()
-    }
+    fun pick() = Path().also { RockShapes.pick(it) }
 
-    fun star(points: Int = 5, inner: Float = 0.45f) = Path().apply {
-        for (i in 0 until points * 2) {
-            val r = if (i % 2 == 0) 1f else inner
-            val a = -PI / 2 + i * PI / points
-            val x = (r * cos(a)).toFloat()
-            val y = (r * sin(a)).toFloat()
-            if (i == 0) moveTo(x, y) else lineTo(x, y)
-        }
-        close()
-    }
+    fun star() = Path().also { RockShapes.star(it) }
 
-    fun bolt() = Path().apply {
-        val p = RockShapes.BOLT
-        moveTo(p[0], p[1])
-        for (i in 2 until p.size step 2) lineTo(p[i], p[i + 1])
-        close()
-    }
+    fun bolt() = Path().also { RockShapes.bolt(it) }
 
-    fun flame() = Path().apply {
-        moveTo(-1f, 1f)
-        cubicTo(-1f, 0.2f, -0.6f, -0.1f, -0.45f, -0.7f)
-        cubicTo(-0.25f, -0.2f, -0.1f, -0.3f, 0f, -1f)
-        cubicTo(0.15f, -0.4f, 0.35f, -0.3f, 0.5f, -0.75f)
-        cubicTo(0.65f, -0.1f, 1f, 0.2f, 1f, 1f)
-        close()
-    }
+    fun flame() = Path().also { RockShapes.flame(it) }
 }

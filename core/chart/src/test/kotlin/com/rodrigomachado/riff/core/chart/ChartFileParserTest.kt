@@ -65,7 +65,8 @@ class ChartFileParserTest {
                 Note(2000, 3, 0, false),
                 Note(3000, 4, 0, false),
                 Note(3250, 3, 0, false), // HOPO natural invertido pela flag N 5
-                Note(5250, 0, 0, true), // tap (N 6); a nota aberta (N 7) do tick 1200 é ignorada
+                // tap (N 6); a nota aberta (N 7) do tick 1200 é ignorada
+                Note(5250, 0, 0, isHopo = false, isTap = true),
             ),
             expert,
         )

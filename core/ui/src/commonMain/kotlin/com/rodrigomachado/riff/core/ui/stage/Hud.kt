@@ -9,8 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
@@ -28,8 +28,10 @@ private val JudgmentGlowRadius = 12.dp
 /** Placar com separador de milhar do idioma do aparelho, no estilo letreiro. */
 @Composable
 fun ScoreText(score: Long, modifier: Modifier = Modifier) {
-    val locale = LocalConfiguration.current.locales[0]
-    val formatted = remember(score, locale) { NumberFormat.getIntegerInstance(locale).format(score) }
+    val locale = Locale.current
+    val formatted = remember(score, locale) {
+        NumberFormat.getIntegerInstance(java.util.Locale.forLanguageTag(locale.toLanguageTag())).format(score)
+    }
     PosterTitle(formatted, modifier, style = scoreTextStyle(), heading = false)
 }
 

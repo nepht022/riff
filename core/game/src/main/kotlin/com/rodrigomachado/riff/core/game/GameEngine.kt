@@ -39,6 +39,9 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
     private var streakStartMs = 0L
     private var songTimeMs = 0L
 
+    // Nota do último acerto sem palheta (HOPO/tap): a palhetada na janela dela é perdoada.
+    private var lastFretHitNoteMs = Long.MIN_VALUE / 2
+
     private class ActiveSustain(val endMs: Long, var scoredUntilMs: Long)
 
     val multiplier: Int get() = min(MAX_MULTIPLIER, 1 + combo / HITS_PER_MULTIPLIER_STEP)
@@ -86,6 +89,90 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
             combo = 0 // toque sem nota quebra o combo e o "tempo sem errar"
             return null
         }
+        return hit(index, timeMs)
+    }
+
+    /**
+     * Palhetada (PC) com as cores [held] seguradas: acerta o primeiro acorde pendente da janela que bate com as
+     * cores (nota simples aceita cores mais baixas seguradas junto; acorde exige exatamente as cores dele), e os
+     * pendentes antes dele viram erro: perder uma nota não trava as seguintes. Cada nota do acorde conta como um
+     * acerto. Palhetada sem nota ou com cor errada quebra o combo (`null`), como no Clone Hero; dentro da janela de
+     * uma nota que a cor já acertou sem palheta (HOPO/tap), ela é perdoada (lista vazia).
+     */
+    fun onStrum(held: Set<Int>, timeMs: Long): List<Judgment>? {
+        update(timeMs)
+        val chord = matchingChord(held, timeMs)
+        if (chord != null) {
+            missPendingBefore(notes[chord.first()].timeMs)
+            return chord.map { hit(it, timeMs) }
+        }
+        if (abs(timeMs - lastFretHitNoteMs) <= windows.goodMs) return emptyList()
+        combo = 0
+        return null
+    }
+
+    /**
+     * As cores seguradas mudaram (apertou ou soltou uma, com a palheta ligada, no PC): acerta sem palhetar o tap,
+     * sempre, e o HOPO, só se a nota anterior foi acertada — inclusive soltando a cor de cima (pull-off). Fora disso
+     * não faz nada (`null`, sem quebrar o combo).
+     */
+    fun onFretsChanged(held: Set<Int>, timeMs: Long): List<Judgment>? {
+        update(timeMs)
+        val chord = nextChord(timeMs) ?: return null
+        val first = notes[chord.first()]
+        val withoutStrum = first.isTap || (first.isHopo && combo > 0)
+        if (!withoutStrum || !fretsMatch(chord, held)) return null
+        lastFretHitNoteMs = first.timeMs
+        return chord.map { hit(it, timeMs) }
+    }
+
+    /** O primeiro acorde pendente da janela cujas cores batem com [held]. */
+    private fun matchingChord(held: Set<Int>, timeMs: Long): List<Int>? {
+        var i = firstPending
+        while (i < notes.size && notes[i].timeMs <= timeMs + windows.goodMs) {
+            val chordTime = notes[i].timeMs
+            val chord = (i until notes.size).takeWhile { notes[it].timeMs == chordTime }
+            val pending = chord.filter { judgments[it] == null }
+            if (chordTime >= timeMs - windows.goodMs && pending.isNotEmpty() && fretsMatch(pending, held)) {
+                return pending
+            }
+            i += chord.size
+        }
+        return null
+    }
+
+    /** As notas pendentes antes de [timeMs] viram erro (o jogador pulou para a seguinte). */
+    private fun missPendingBefore(timeMs: Long) {
+        var i = firstPending
+        while (i < notes.size && notes[i].timeMs < timeMs) {
+            if (judgments[i] == null) {
+                record(i, Judgment.MISS)
+                combo = 0
+            }
+            i++
+        }
+    }
+
+    /** O acorde (índices) mais cedo ainda sem julgamento dentro da janela de acerto. */
+    private fun nextChord(timeMs: Long): List<Int>? {
+        var i = firstPending
+        while (i < notes.size && notes[i].timeMs <= timeMs + windows.goodMs) {
+            if (judgments[i] == null && notes[i].timeMs >= timeMs - windows.goodMs) {
+                val chordTime = notes[i].timeMs
+                return (i until notes.size).takeWhile { notes[it].timeMs == chordTime }.filter { judgments[it] == null }
+            }
+            i++
+        }
+        return null
+    }
+
+    private fun fretsMatch(chord: List<Int>, held: Set<Int>): Boolean {
+        val lanes = chord.map { notes[it].lane }.toSet()
+        return if (lanes.size == 1) held.maxOrNull() == lanes.single() else held == lanes
+    }
+
+    /** Registra o acerto da nota [index] tocada em [timeMs]: julgamento, pontos, combo e sustain. */
+    private fun hit(index: Int, timeMs: Long): Judgment {
         val note = notes[index]
         val judgment = if (abs(note.timeMs - timeMs) <= windows.perfectMs) Judgment.PERFECT else Judgment.GOOD
         record(index, judgment)
@@ -96,7 +183,7 @@ class GameEngine(notes: List<Note>, private val windows: JudgmentWindows = Judgm
         maxCombo = max(maxCombo, combo)
         longestCleanMs = max(longestCleanMs, note.timeMs - streakStartMs)
         if (note.sustainMs > 0) {
-            sustains[lane] = ActiveSustain(note.timeMs + note.sustainMs, max(timeMs, note.timeMs))
+            sustains[note.lane] = ActiveSustain(note.timeMs + note.sustainMs, max(timeMs, note.timeMs))
         }
         return judgment
     }
