@@ -207,7 +207,8 @@ class StemSongPlayer(
             val old = sink ?: return
             val fresh = try {
                 sinks.create(sampleRate)
-            } catch (e: RuntimeException) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                // No celular o AudioTrack lança RuntimeException; no PC, sem saída de som, IOException.
                 log("Não deu para voltar: a saída de áudio nova não abriu", e)
                 return
             }
