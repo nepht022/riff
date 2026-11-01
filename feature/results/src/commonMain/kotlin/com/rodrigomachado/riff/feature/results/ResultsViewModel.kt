@@ -1,6 +1,5 @@
 package com.rodrigomachado.riff.feature.results
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.ChartRepository
@@ -8,13 +7,11 @@ import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.ScoreRecord
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 sealed interface ResultsUiState {
     data object Loading : ResultsUiState
@@ -32,14 +29,13 @@ sealed interface ResultsUiState {
     ) : ResultsUiState
 }
 
-@HiltViewModel
-class ResultsViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+/** O resultado da partida [scoreId]; no celular o [HiltResultsViewModel] lê o id dos argumentos da rota. */
+open class ResultsViewModel(
+    private val scoreId: Long,
     private val scores: ScoreRepository,
     private val charts: ChartRepository,
     private val ranking: RankingRepository,
 ) : ViewModel() {
-    private val scoreId: Long = checkNotNull(savedStateHandle["scoreId"])
     private val state = MutableStateFlow<ResultsUiState>(ResultsUiState.Loading)
     val uiState: StateFlow<ResultsUiState> = state.asStateFlow()
 

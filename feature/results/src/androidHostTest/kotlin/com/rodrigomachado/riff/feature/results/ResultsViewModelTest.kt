@@ -83,7 +83,7 @@ class ResultsViewModelTest {
     private val ranking = RecordingRanking()
 
     private fun viewModel(scoreId: Long, records: List<ScoreRecord>) =
-        ResultsViewModel(SavedStateHandle(mapOf("scoreId" to scoreId)), FakeScores(records), FakeCharts(), ranking)
+        HiltResultsViewModel(SavedStateHandle(mapOf("scoreId" to scoreId)), FakeScores(records), FakeCharts(), ranking)
 
     @Test
     fun highestScoreIsANewBest() = runTest {

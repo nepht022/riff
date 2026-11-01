@@ -17,12 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.text.intl.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -36,16 +33,31 @@ import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.stage.ScoreText
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import com.rodrigomachado.riff.feature.results.resources.Res
+import com.rodrigomachado.riff.feature.results.resources.results_accuracy
+import com.rodrigomachado.riff.feature.results.resources.results_back
+import com.rodrigomachado.riff.feature.results.resources.results_clean_time
+import com.rodrigomachado.riff.feature.results.resources.results_good
+import com.rodrigomachado.riff.feature.results.resources.results_max_combo
+import com.rodrigomachado.riff.feature.results.resources.results_miss
+import com.rodrigomachado.riff.feature.results.resources.results_missing
+import com.rodrigomachado.riff.feature.results.resources.results_new_best
+import com.rodrigomachado.riff.feature.results.resources.results_new_best_spoken
+import com.rodrigomachado.riff.feature.results.resources.results_perfect
+import com.rodrigomachado.riff.feature.results.resources.results_play_again
+import com.rodrigomachado.riff.feature.results.resources.results_summary
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 
 @Composable
 fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
     onDone: () -> Unit,
+    viewModel: ResultsViewModel,
     modifier: Modifier = Modifier,
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
-    viewModel: ResultsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName)
@@ -64,9 +76,9 @@ fun ResultsContent(
         ResultsUiState.Loading -> LoadingState(modifier)
 
         ResultsUiState.Missing -> EmptyState(
-            title = stringResource(R.string.results_missing),
+            title = stringResource(Res.string.results_missing),
             message = "",
-            actionLabel = stringResource(R.string.results_back),
+            actionLabel = stringResource(Res.string.results_back),
             onAction = onDone,
             modifier = modifier,
         )
@@ -85,12 +97,13 @@ private fun ReadyResults(
     onChooseName: () -> Unit,
 ) {
     val record = state.record
-    val locale = LocalConfiguration.current.locales[0]
+    // O idioma da interface (no celular, o da configuração; no PC, o do sistema), como no placar do Hud.
+    val locale = java.util.Locale.forLanguageTag(Locale.current.toLanguageTag())
     val score = remember(record.score, locale) { NumberFormat.getIntegerInstance(locale).format(record.score) }
     val accuracy = remember(record.accuracy, locale) { NumberFormat.getPercentInstance(locale).format(record.accuracy) }
     // Frase para o TalkBack: "1 ponto" no singular e o recorde como frase (o selo em maiúsculas seria soletrado).
-    val summary = pluralStringResource(R.plurals.results_summary, record.score.toPluralCount(), score, accuracy) +
-        if (state.isNewBest) " " + stringResource(R.string.results_new_best_spoken) else ""
+    val summary = pluralStringResource(Res.plurals.results_summary, record.score.toPluralCount(), score, accuracy) +
+        if (state.isNewBest) " " + stringResource(Res.string.results_new_best_spoken) else ""
     Column(
         modifier
             .fillMaxSize()
@@ -104,31 +117,31 @@ private fun ReadyResults(
         Text(state.artist, style = MaterialTheme.typography.titleMedium, color = RiffColors.PaperDim)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             StatusBadge(difficultyName(record.difficulty.ordinal), BadgeTone.NEUTRAL)
-            if (state.isNewBest) StatusBadge(stringResource(R.string.results_new_best), BadgeTone.SUCCESS)
+            if (state.isNewBest) StatusBadge(stringResource(Res.string.results_new_best), BadgeTone.SUCCESS)
         }
         ScoreText(record.score)
         Column(
             Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small).padding(Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Stat(stringResource(R.string.results_accuracy), accuracy)
-            Stat(stringResource(R.string.results_max_combo), record.maxCombo.toString())
-            Stat(stringResource(R.string.results_perfect), record.perfect.toString())
-            record.cleanStreakMs?.let { Stat(stringResource(R.string.results_clean_time), minutesSeconds(it)) }
-            Stat(stringResource(R.string.results_good), record.good.toString())
-            Stat(stringResource(R.string.results_miss), record.miss.toString())
+            Stat(stringResource(Res.string.results_accuracy), accuracy)
+            Stat(stringResource(Res.string.results_max_combo), record.maxCombo.toString())
+            Stat(stringResource(Res.string.results_perfect), record.perfect.toString())
+            record.cleanStreakMs?.let { Stat(stringResource(Res.string.results_clean_time), minutesSeconds(it)) }
+            Stat(stringResource(Res.string.results_good), record.good.toString())
+            Stat(stringResource(Res.string.results_miss), record.miss.toString())
         }
         if (state.rankingOn) {
             RankingCard(state.ranking, { onSeeRanking(record.chartId, state.title, record.difficulty) }, onChooseName)
         }
         PosterButton(
-            stringResource(R.string.results_play_again),
+            stringResource(Res.string.results_play_again),
             onClick = { onPlayAgain(record.chartId, record.difficulty) },
             sound = MenuSound.CONFIRM,
         )
         TextButton(
             onClick = onDone,
-        ) { Text(stringResource(R.string.results_back), color = RiffColors.Paper) }
+        ) { Text(stringResource(Res.string.results_back), color = RiffColors.Paper) }
     }
 }
 

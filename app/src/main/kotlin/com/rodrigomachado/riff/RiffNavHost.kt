@@ -36,6 +36,7 @@ import com.rodrigomachado.riff.feature.ranking.RankingRoute
 import com.rodrigomachado.riff.feature.ranking.RankingSongsScreen
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
+import com.rodrigomachado.riff.feature.results.HiltResultsViewModel
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
@@ -145,6 +146,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
             onSeeRanking = dropUnlessResumed { chartId, title, difficulty ->
                 navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
             },
+            viewModel = hiltViewModel<HiltResultsViewModel>(),
         )
     }
 }

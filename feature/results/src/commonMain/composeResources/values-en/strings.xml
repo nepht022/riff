@@ -5,7 +5,7 @@
     <string name="results_clean_time">Time without missing</string>
     <string name="results_ranking_position">Ranking: #%1$d of %2$d</string>
     <string name="results_ranking_sending">Sending to the ranking…</string>
-    <string name="results_ranking_queued">No internet: it goes to the ranking when you\'re back online</string>
+    <string name="results_ranking_queued">No internet: it goes to the ranking when you're back online</string>
     <string name="results_ranking_no_name">Choose a name to join the ranking</string>
     <string name="results_see_ranking">See ranking</string>
     <string name="results_perfect">Perfect</string>

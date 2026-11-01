@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
@@ -213,6 +214,45 @@ class ResultsContentTest {
         composeRule.onNode(
             SemanticsMatcher("um ponto no singular") { node ->
                 node.config.getOrNull(SemanticsProperties.PaneTitle) == "Resultado: 1 ponto, precisão de 88%."
+            },
+        ).assertExists()
+    }
+
+    /** Em inglês (o Locale padrão do processo, como o app define): o placar, o recorde e o apóstrofo simples. */
+    @Test
+    @Config(qualifiers = "en")
+    fun inEnglishTheQueuedRankingReadsWithAPlainApostrophe() {
+        val system = Locale.getDefault()
+        Locale.setDefault(Locale.ENGLISH)
+        try {
+            composeRule.setContent {
+                RiffTheme {
+                    ResultsContent(
+                        ResultsUiState.Ready(
+                            record(2, 48_300),
+                            "Música",
+                            "Banda",
+                            isNewBest = true,
+                            ranking = SubmitStatus.Queued,
+                            rankingOn = true,
+                        ),
+                        onPlayAgain = { _, _ -> },
+                        onDone = {},
+                    )
+                }
+            }
+            composeRule.waitForIdle()
+        } finally {
+            Locale.setDefault(system)
+        }
+
+        composeRule.onNodeWithText("48,300").assertExists()
+        composeRule.onNodeWithText("NEW BEST").assertExists()
+        composeRule.onNodeWithText("No internet: it goes to the ranking when you're back online")
+            .performScrollTo().assertExists()
+        composeRule.onNode(
+            SemanticsMatcher("resumo em inglês") { node ->
+                node.config.getOrNull(SemanticsProperties.PaneTitle) == "Result: 48,300 points, 88% accuracy. New best!"
             },
         ).assertExists()
     }
