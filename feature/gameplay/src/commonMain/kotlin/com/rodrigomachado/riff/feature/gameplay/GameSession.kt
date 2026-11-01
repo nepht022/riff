@@ -82,6 +82,8 @@ class GameSession(
         player.pause()
         syncClock()
         pointerLanes.clear()
+        // As cores seguradas no teclado também: a tecla subindo depois (com a pausa aberta) não desconta nada.
+        heldFrets.clear()
         for (lane in fingers.indices) {
             if (fingers[lane] == 0) continue
             fingers[lane] = 1 // pausar solta a trilha de vez, com quantos dedos estiverem nela

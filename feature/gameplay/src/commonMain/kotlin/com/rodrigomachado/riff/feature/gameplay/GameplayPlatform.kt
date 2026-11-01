@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.key.KeyEvent
 
 /**
  * O relógio dos eventos de toque (o mesmo do `uptimeMillis` de cada toque): a diferença diz quanto o toque esperou
@@ -19,3 +20,13 @@ expect fun GameBackHandler(enabled: Boolean, onBack: () -> Unit)
 /** A tela não apaga durante a partida: no celular, a tela acesa; no PC, nada. */
 @Composable
 expect fun KeepScreenOn()
+
+/** Quanto a tecla [event] esperou até chegar à partida (como o toque): o julgamento usa o instante da tecla. */
+expect fun keyLateByMs(event: KeyEvent): Long
+
+/**
+ * A janela perdeu o foco no meio da partida: [onLost]. No PC, o Alt+Tab (as teclas seguradas não vão subir aqui).
+ * No celular, nada: sair do app já pausa pelo ON_PAUSE, e a cortina de notificações tira o foco sem sair do app.
+ */
+@Composable
+expect fun OnWindowFocusLost(onLost: () -> Unit)

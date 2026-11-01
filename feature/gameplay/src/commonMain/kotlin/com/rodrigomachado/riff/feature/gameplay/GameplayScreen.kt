@@ -5,12 +5,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -39,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
@@ -47,9 +48,6 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
-import com.rodrigomachado.riff.core.ui.stage.JudgmentText
-import com.rodrigomachado.riff.core.ui.stage.MultiplierStamp
-import com.rodrigomachado.riff.core.ui.stage.ScoreText
 import com.rodrigomachado.riff.core.ui.stage.StageCache
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -59,14 +57,9 @@ import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_audio_failed
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_back
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_chart_missing
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_chart_unreadable
-import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_combo
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_exit
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_folder_lost
-import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_judgment_good
-import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_judgment_perfect
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_no_audio
-import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_no_separate_guitar
-import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_pause
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_paused
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_resume
 import com.rodrigomachado.riff.feature.gameplay.resources.gameplay_sync
@@ -87,9 +80,11 @@ object GameplayTestTags {
     const val PROGRESS = "gameplay_progress"
 }
 
-private const val COMBO_MIN_TO_SHOW = 10
 internal const val SCRIM_ALPHA = 0.8f
 private val PROGRESS_HEIGHT = 4.dp
+
+/** A pista deitada tem a proporção da pista do celular em pé (9:16). */
+private const val HIGHWAY_ASPECT = 9f / 16f
 
 /** Véu sobre a imagem do mapa: ela fica de fundo, sem disputar com a pista. */
 private const val ART_VEIL = 0.65f
@@ -173,30 +168,42 @@ internal fun GameStage(
             }
         }
     }
-    Box(modifier.fillMaxSize()) {
-        state.art?.let { image ->
-            Image(image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = ART_VEIL)))
-        }
+    val keys = rememberGameKeys(session, state.isPaused, onPause, onResume)
+    val highway = @Composable { highwayModifier: Modifier ->
         Canvas(
-            Modifier
-                .fillMaxSize()
+            highwayModifier
                 .testTag(GameplayTestTags.STAGE)
                 .pointerInput(session, leftHanded) { handleLanes(session, leftHanded) },
         ) {
             frame // lê o contador para redesenhar a cada frame
             drawStage(stageCache, session, msPerUnit, leftHanded, reducedMotion)
         }
-        SongProgressBar(
-            session,
-            { frame },
-            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)
-                .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS),
-        )
-        Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
+    }
+    BoxWithConstraints(modifier.fillMaxSize().then(keys)) {
+        state.art?.let { image ->
+            Image(image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = ART_VEIL)))
+        }
+        if (maxWidth > maxHeight) {
+            // Deitada (PC): a pista central com a proporção da do celular, na altura toda; o placar nas laterais.
+            val highwayWidth = maxHeight * HIGHWAY_ASPECT
+            Box(Modifier.align(Alignment.Center).fillMaxHeight().width(highwayWidth)) {
+                highway(Modifier.fillMaxSize())
+                JudgmentPop(session, hud, { frame }, reducedMotion, Modifier.align(Alignment.Center))
+                SongProgressBar(session, { frame }, Modifier.align(Alignment.BottomCenter).progressBar())
+            }
+            SideHud(hud, onPause, highwayWidth, Modifier.fillMaxSize())
+        } else {
+            highway(Modifier.fillMaxSize())
+            SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
+            Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
+        }
         if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit)
     }
 }
+
+private fun Modifier.progressBar() = fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)
+    .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS)
 
 private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLanes(
     session: GameSession,
@@ -220,67 +227,6 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
             }
         }
     }
-}
-
-@Composable
-private fun Hud(
-    session: GameSession,
-    hud: HudState,
-    frame: () -> Long,
-    reducedMotion: Boolean,
-    onPause: () -> Unit,
-    modifier: Modifier,
-) {
-    Box(modifier.padding(Spacing.md)) {
-        // Cada um no seu canto: o placar crescendo não empurra o Pausar, que fica sempre no centro.
-        ScoreText(hud.score, Modifier.align(Alignment.TopStart))
-        TextButton(
-            onClick = onPause,
-            modifier = Modifier.align(Alignment.TopCenter).testTag(GameplayTestTags.PAUSE),
-        ) {
-            Text(stringResource(Res.string.gameplay_pause), color = RiffColors.Paper)
-        }
-        MultiplierStamp(hud.multiplier, Modifier.align(Alignment.TopEnd))
-        if (hud.combo >= COMBO_MIN_TO_SHOW) {
-            Text(
-                stringResource(Res.string.gameplay_combo, hud.combo),
-                style = MaterialTheme.typography.labelLarge,
-                color = RiffColors.Paper,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = Spacing.xl * 2),
-            )
-        }
-        val judgment = hud.judgment
-        if (judgment != null && hud.showingJudgment) {
-            val label = if (judgment == Judgment.PERFECT) {
-                Res.string.gameplay_judgment_perfect
-            } else {
-                Res.string.gameplay_judgment_good
-            }
-            JudgmentText(
-                stringResource(label),
-                Modifier.align(Alignment.Center).graphicsLayer {
-                    frame() // relê a cada quadro só esta camada, sem recompor o placar
-                    val bounce = judgmentBounce(session.judgmentAgeMs(), reducedMotion)
-                    scaleX = bounce
-                    scaleY = bounce
-                },
-            )
-        }
-        if (hud.showingNotice) {
-            NoSeparateGuitarNotice(Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.xl * 3))
-        }
-    }
-}
-
-/** As faixas separadas falharam: a partida segue com um arquivo só (spec da guitarra separada §4). */
-@Composable
-private fun NoSeparateGuitarNotice(modifier: Modifier) {
-    Text(
-        stringResource(Res.string.gameplay_no_separate_guitar),
-        style = MaterialTheme.typography.bodyMedium,
-        color = RiffColors.PaperDim,
-        modifier = modifier,
-    )
 }
 
 @Composable

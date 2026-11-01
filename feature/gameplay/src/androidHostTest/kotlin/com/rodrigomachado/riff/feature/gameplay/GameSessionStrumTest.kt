@@ -89,4 +89,19 @@ class GameSessionStrumTest {
         assertFalse(session.isPressed(0))
         assertFalse(session.isPressed(3))
     }
+
+    /** Pausar (Esc) com uma cor segurada a solta de vez: a tecla subindo depois não desconta um aperto novo. */
+    @Test
+    fun pausingLetsGoOfTheHeldFrets() {
+        val session = session(note(9_000, lane = 0))
+        session.fretDown(0)
+
+        session.pause()
+        assertFalse(session.isPressed(0))
+        session.fretUp(0) // a tecla sobe com a pausa aberta
+        player.play() // volta a tocar (sem a volta de 0,5 s da retomada)
+        session.fretDown(0)
+
+        assertTrue(session.isPressed(0))
+    }
 }
