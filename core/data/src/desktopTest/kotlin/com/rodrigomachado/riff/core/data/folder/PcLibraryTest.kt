@@ -21,11 +21,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
 
 /** A biblioteca numa pasta do PC: listar, importar, pasta que some e excluir (a raiz nunca). */
 class PcLibraryTest {
@@ -63,6 +65,13 @@ class PcLibraryTest {
 
     private val rootUri get() = pcUri(root)
     private val charts by lazy { RoomChartRepository(database.chartDao()) }
+
+    /** As preferências do PC com a raiz da biblioteca já escolhida. */
+    private suspend fun folderStore() = PreferencesLibraryFolderStore(
+        RiffPreferences(riffDataStore(File(temp.root, "riff_settings.preferences_pb"), scope)),
+    )
+        .also { it.setRootUri(rootUri) }
+
     private fun importer() = FolderChartImporter(source, charts, Dispatchers.IO, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
     }
@@ -83,6 +92,17 @@ class PcLibraryTest {
         assertEquals(setOf("Canção", "Pacote"), charts.observeCharts().first().map { it.title }.toSet())
     }
 
+    /** No PC o caminho vem cru: "%" e "+" são caracteres comuns em nomes de pasta, não código de URI. */
+    @Test
+    fun aRootWithPercentAndPlusInTheNameImports() = runBlocking {
+        val odd = File(root.parentFile, "100% Rock+AC").apply { mkdirs() }
+        root.copyRecursively(odd)
+
+        val report = importer().import(pcUri(odd))
+
+        assertEquals(2, report.importedCount)
+    }
+
     @Test
     fun aFolderThatDisappearedRaisesAccessLost() {
         val uri = rootUri
@@ -94,10 +114,7 @@ class PcLibraryTest {
     @Test
     fun deletingAChartRemovesOnlyItsFolder() = runBlocking {
         importer().import(rootUri)
-        val folders = PreferencesLibraryFolderStore(
-            RiffPreferences(riffDataStore(File(temp.root, "riff_settings.preferences_pb"), scope)),
-        )
-        folders.setRootUri(rootUri)
+        val folders = folderStore()
         val song = charts.observeCharts().first().single { it.title == "Canção" }
 
         val result = FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO)
@@ -108,14 +125,34 @@ class PcLibraryTest {
         assertTrue(root.exists() && File(root, "Pacote B.sng").exists())
     }
 
+    /** Uma junção (ou link) dentro da pasta do mapa sai junto, mas o que está do outro lado fica. */
+    @Test
+    fun deletingAChartDoesNotFollowLinksOutOfItsFolder() = runBlocking {
+        val outside = temp.newFolder("fora da biblioteca").apply { File(this, "importante.txt").writeText("x") }
+        assumeTrue("o sistema não deixou criar link/junção", linkTo(outside, File(root, "Música Á/atalho")))
+        importer().import(rootUri)
+        val folders = folderStore()
+        val song = charts.observeCharts().first().single { it.title == "Canção" }
+
+        FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO).delete(listOf(song.id))
+
+        assertFalse(File(root, "Música Á").exists())
+        assertTrue(File(outside, "importante.txt").exists())
+    }
+
+    /** Link simbólico; no Windows sem permissão para isso, uma junção (`mklink /J`, não pede administrador). */
+    private fun linkTo(target: File, link: File): Boolean =
+        runCatching { Files.createSymbolicLink(link.toPath(), target.toPath()) }.isSuccess ||
+            (
+                System.getProperty("os.name").startsWith("Windows") &&
+                    ProcessBuilder("cmd", "/c", "mklink", "/J", link.path, target.path).start().waitFor() == 0
+                )
+
     @Test
     fun theLibraryRootIsNeverDeleted() = runBlocking {
         File(root, "notes.chart").writeText(chartText("Solto", "Na Raiz"))
         importer().import(rootUri)
-        val folders = PreferencesLibraryFolderStore(
-            RiffPreferences(riffDataStore(File(temp.root, "riff_settings.preferences_pb"), scope)),
-        )
-        folders.setRootUri(rootUri)
+        val folders = folderStore()
         val loose = charts.observeCharts().first().single { it.title == "Solto" }
 
         val result = FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO)

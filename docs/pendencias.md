@@ -94,6 +94,18 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 2a: Biblioteca no PC (revisão final, 2026-11-01)
+
+- `.sng` corrompido no PC: o arquivo fica aberto até o coletor de lixo, e o Windows não deixa apagá-lo nesse meio tempo (fechar o `RandomRead` quando `SngPackage.open` falhar; o mesmo no `ChartDownloader`).
+- `FileRandomReadOpener` (PC) lê com `seek` + `read` num arquivo compartilhado: trocar pela leitura posicional do canal antes de ler faixas em paralelo (etapa do áudio).
+- O marcador `#sng` pode confundir uma pasta chamada `x#sng` no PC (inofensivo: vira mapa ilegível).
+- `RankingConfig` gerado sem escapar `$`, `"` e `\` da URL (as do Apps Script não têm).
+- Baseline Profile anterior à Biblioteca multiplataforma (cita `R` da Biblioteca e não tem `HiltLibraryViewModel`): refazer antes da próxima release.
+- Seletor de pasta do PC sem janela-mãe (pode abrir atrás do Riff), com o visual Metal do Swing e título fixo em português.
+- Ao fechar a janela, o banco fecha antes das coroutines dos ViewModels (uma importação em andamento deixa exceções no log).
+- Navegação do PC sem `dropUnlessResumed`: hoje um segundo clique rápido cai na tela que entra (sem efeito); quando Reportar e Configurações funcionarem no PC, proteger como no celular, com teste.
+- O código só do PC (`desktopMain`) não passa por lint (o lint do alvo JVM acusa o código gerado pelo Room).
+
 ## Riff no Windows, etapa 1: base comum (revisão final, 2026-10-31)
 
 - O placar e o "PERFEITO!" da partida remontam a fonte (`newRocker()`) a cada mudança de pontos: só alocação, sem novo layout; montar a família uma vez no tema.

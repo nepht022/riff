@@ -7,6 +7,10 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.io.RandomAccessFile
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * O "URI" de uma pasta ou arquivo no PC: o caminho absoluto com `/` (o Java aceita no Windows, e as regras de
@@ -62,8 +66,21 @@ class FileFolderWriter : FolderWriter {
     }
 
     override suspend fun deleteDocument(fileUri: String): Boolean {
-        val file = File(fileUri)
-        return !file.exists() || file.deleteRecursively()
+        val path = File(fileUri).toPath()
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) return true
+        return runCatching { deleteTree(path) }.isSuccess
+    }
+
+    /**
+     * Apaga a pasta e o conteúdo sem entrar em links nem junções do Windows: o link sai, o que está do outro lado
+     * fica (o `deleteRecursively` do Kotlin seguiria a junção e apagaria fora da biblioteca).
+     */
+    private fun deleteTree(path: Path) {
+        val attributes = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        if (attributes.isDirectory && !attributes.isSymbolicLink && !attributes.isOther) {
+            Files.list(path).use { children -> children.toList() }.forEach(::deleteTree)
+        }
+        Files.delete(path)
     }
 }
 

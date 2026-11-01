@@ -179,8 +179,14 @@ class FolderChartImporter(
         private val NOTES_FILES = setOf("notes.chart", "notes.mid")
         private const val SNG = ".sng"
 
-        /** Nome legível da raiz a partir do URI do SAF (`.../tree/primary%3ACharts` vira `Charts`). */
-        private fun folderNameOf(uri: String): String =
-            URLDecoder.decode(uri.substringAfterLast('/'), "UTF-8").substringAfterLast('/').substringAfterLast(':')
+        /**
+         * Nome legível da raiz: no celular, a partir do URI do SAF (`.../tree/primary%3ACharts` vira `Charts`); no PC
+         * o caminho vem cru ("100% Rock" é um nome, não um código de URI).
+         */
+        private fun folderNameOf(uri: String): String {
+            val last = uri.substringAfterLast('/')
+            if (!uri.contains("://")) return last
+            return URLDecoder.decode(last, "UTF-8").substringAfterLast('/').substringAfterLast(':')
+        }
     }
 }
