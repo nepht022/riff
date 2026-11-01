@@ -28,11 +28,12 @@ jobs:
       # Os screenshots do celular são comparados exatos: no Linux o Robolectric desenha as telas iguais às
       # referências gravadas no Windows (conferido em 2026-10-30).
       # Módulos multiplataforma (celular e PC): testes Android em testAndroidHostTest, do PC em desktopTest/test,
-      # screenshots em verifyRoborazziAndroidHostTest (Android) e verifyRoborazziJvm (PC, com 1% de tolerância
+      # screenshots em verifyRoborazziAndroidHostTest (Android), verifyRoborazziDesktop (o lado PC dos módulos) e
+      # verifyRoborazziJvm (o app do PC); as do PC com 1% de tolerância
       # para a suavização das letras); lint de todos eles em lintMultiplatform.
       - name: Lint, testes, screenshots e build
         run: >-
           ./gradlew detekt lintDebug lintMultiplatform
           test testAndroidHostTest desktopTest
-          verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm
+          verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm
           koverVerify assembleDebug
