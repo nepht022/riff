@@ -18,6 +18,8 @@ class KmpLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("org.jetbrains.kotlin.multiplatform")
             pluginManager.apply("com.android.kotlin.multiplatform.library")
+            // Android Lint no código do módulo (o plugin multiplataforma do AGP só cria o lint com este plugin).
+            pluginManager.apply("com.android.lint")
             extensions.configure<KotlinMultiplatformExtension> {
                 (this as ExtensionAware).extensions.configure<KotlinMultiplatformAndroidLibraryTarget>("android") {
                     namespace = "com.rodrigomachado.riff." + path.removePrefix(":").replace(':', '.')

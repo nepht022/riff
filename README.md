@@ -130,7 +130,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 - **Suíte completa antes de cada merge:**
 
   ```bash
-  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
+  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
   ```
 
@@ -159,7 +159,11 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ### Riff no PC (em construção)
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui` e `:feature:home` são multiplataforma (Android e PC), e `:desktop` é o app do PC. Nesta etapa a janela só abre a tela inicial; jogar com teclado e controle vem nas próximas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:feature:home` e `:feature:library` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para abrir a Biblioteca: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador. Jogar, as Configurações e o resto vêm nas próximas etapas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+
+- Os dados do Riff no PC (banco, preferências) ficam em `%APPDATA%\Riff`; a biblioteca do PC é separada da do celular.
+- No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
+- O Android Lint dos módulos multiplataforma roda com `./scripts/gw lintMultiplatform`.
 
 ```bash
 ./scripts/gw :desktop:run   # abre a janela do Riff no Windows
@@ -172,7 +176,7 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui` e `:feature:ho
 ./scripts/gw test                              # testes unitários
 ./scripts/gw detekt -PdetektAutoCorrect        # formata (ktlint) e corrige
 ./scripts/gw detekt                            # análise estática
-./scripts/gw lintDebug                         # Android Lint
+./scripts/gw lintDebug lintMultiplatform       # Android Lint (módulos Android e multiplataforma)
 ```
 
 O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codifica o espaço como `%20`). Nesse caso, passe `-Priff.robolectric.mavenRepoLocal=<pasta sem espaço>`, como o `scripts/gw` já faz, ou coloque a propriedade no `gradle.properties` do usuário para o Android Studio.
@@ -187,12 +191,12 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:core:chart` | Leitura de mapas do Clone Hero (`notes.chart`, `notes.mid`, `song.ini` e pacotes `.sng`) |
 | `:core:game` | Relógio da música e motor do jogo (julgamento, combo e pontuação) |
 | `:core:audio` | Player da música (MediaPlayer, ou faixas separadas misturadas com a guitarra cortada no erro), e sons de acerto, erro e menu (SoundPool), gerados por `scripts/gerar_sfx.py`, `scripts/montar_sfx_erro.py` e `scripts/montar_sfx_menu.py` |
-| `:core:database` | Room: mapas, dificuldades, ajustes de sincronia, recordes, separações e filas (esquemas em `schemas/`) |
-| `:core:datastore` | Preferências do jogador e pasta da biblioteca |
-| `:core:data` | Repositório de mapas, acesso a pastas por SAF (leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
-| `:core:encore` | Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
+| `:core:database` | Multiplataforma. Room (no PC, com o SQLite embutido): mapas, dificuldades, ajustes de sincronia, recordes, separações e filas (esquemas em `schemas/`) |
+| `:core:datastore` | Multiplataforma. Preferências do jogador e pasta da biblioteca |
+| `:core:data` | Multiplataforma. Repositório de mapas, acesso a pastas (SAF no celular, `java.io` no PC; leitura, `.sng` como pasta e gravação), importador de mapas e download de mapas do Encore |
+| `:core:encore` | Multiplataforma. Cliente do Encore (enchor.us): pesquisa, marca de guitarra separada e download |
 | `:core:separation` | Guitarra separada por IA: o modelo htdemucs_6s em ONNX (`scripts/exportar_modelo_ia.sh`), a STFT e a separação por trechos portadas do demucs.onnx, a decodificação, a gravação em `.m4a` e o trabalho em segundo plano (WorkManager) |
-| `:feature:library` | Tela da Biblioteca: escolher pasta, importar, lista e relatório |
+| `:feature:library` | Multiplataforma. Tela da Biblioteca: escolher pasta, importar, lista e relatório |
 | `:feature:search` | Pesquisa no Encore: resultados, download com progresso e Jogar |
 | `:feature:gameplay` | A partida: pista em movimento, toque com vários dedos, chama, sons, pausa, sincronia e fim |
 | `:feature:results` | Resultado da partida e recorde |
@@ -202,7 +206,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
 | `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
-| `:desktop` | O Riff no PC (Windows), em construção: por enquanto abre a tela inicial (`./scripts/gw :desktop:run`) |
+| `:desktop` | O Riff no PC (Windows), em construção: por enquanto a tela inicial e a Biblioteca (`./scripts/gw :desktop:run`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots
