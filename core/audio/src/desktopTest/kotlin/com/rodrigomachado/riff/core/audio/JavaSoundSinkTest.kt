@@ -1,10 +1,14 @@
 package com.rodrigomachado.riff.core.audio
 
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import java.lang.reflect.Proxy
 import javax.sound.sampled.LineUnavailableException
+import javax.sound.sampled.SourceDataLine
 
 class JavaSoundSinkTest {
     @Test
@@ -22,5 +26,28 @@ class JavaSoundSinkTest {
         assertThrows(IOException::class.java) {
             JavaSoundSink(48_000) { throw LineUnavailableException("sem placa de som") }
         }
+    }
+
+    /** Assim que a linha anda, o som está saindo: sem esperar o segundo de segurança das saídas sem timestamp. */
+    @Test
+    fun itPresentsAsSoonAsTheLineMoves() {
+        var position = 0L
+        val line = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(SourceDataLine::class.java)) { _, method, _ ->
+            when (method.name) {
+                "getLongFramePosition" -> position
+                "available" -> 0
+                "isOpen", "isRunning", "isActive" -> true
+                else -> null
+            }
+        } as SourceDataLine
+        val sink = JavaSoundSink(48_000) { line }
+
+        sink.start()
+        Thread.sleep(20) // a posição nunca passa do tempo desde que começou
+        position = 480 // 10 ms tocados
+        sink.playedFrames
+
+        assertTrue(sink.isPresenting)
+        assertEquals(480L, sink.playedFrames)
     }
 }

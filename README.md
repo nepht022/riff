@@ -164,6 +164,8 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:databa
 - Os dados do Riff no PC (banco, preferências) ficam em `%APPDATA%\Riff`; a biblioteca do PC é separada da do celular.
 - No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
 - O Android Lint dos módulos multiplataforma roda com `./scripts/gw lintMultiplatform`.
+- **Áudio no PC:** o FFmpeg (bytedeco) decodifica ogg, opus, mp3 e wav (soltos ou dentro de `.sng`) sempre em 48 kHz estéreo, e o Java Sound toca (16 bits, buffer de 2.048 quadros ≈ 42 ms). Os sons de erro e do menu são os mesmos WAV do celular. Medição: `./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"` toca 20 s cortando a guitarra a cada 2 s e imprime a deriva entre o relógio e a posição da música.
+- Medido em 2026-11-01 no PC do usuário (Windows): a deriva oscila entre −13 e +17 ms sem acumular em 20 s (faixas separadas em pasta e um `.sng` com 5 faixas opus); o som leva ~650 ms para começar na primeira vez (a partida espera, sincronizada) e volta na hora ao continuar; 1 minuto de opus decodifica em ~145 ms.
 
 ```bash
 ./scripts/gw :desktop:run   # abre a janela do Riff no Windows

@@ -44,3 +44,10 @@ compose.desktop {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
     }
 }
+
+// Medição do áudio no PC: ./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"
+tasks.register<JavaExec>("runAudioCheck") {
+    group = "riff"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.rodrigomachado.riff.desktop.AudioCheckKt")
+}

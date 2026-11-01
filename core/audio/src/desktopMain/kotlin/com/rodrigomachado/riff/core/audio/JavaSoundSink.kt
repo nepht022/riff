@@ -67,12 +67,10 @@ class JavaSoundSink(sampleRate: Int, openLine: (AudioFormat) -> SourceDataLine =
     override val playedFrames: Long
         get() {
             if (paused) return presented.frames
-            return presented.update(
-                head = line.longFramePosition,
-                stampFrame = null,
-                stampNs = null,
-                nowNs = System.nanoTime(),
-            )
+            // A posição da linha já é a leitura de agora: vale como timestamp (sem ela, o relógio esperaria 1 s).
+            val head = line.longFramePosition
+            val now = System.nanoTime()
+            return presented.update(head = head, stampFrame = head, stampNs = now, nowNs = now)
         }
 
     override val isPresenting: Boolean get() = presented.isPresenting
