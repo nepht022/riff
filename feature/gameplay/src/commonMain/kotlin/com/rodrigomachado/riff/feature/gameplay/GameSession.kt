@@ -33,6 +33,7 @@ class GameSession(
 
     /** Dedos em cada trilha: a trilha só é solta quando o último sai. */
     private val fingers = IntArray(Note.LANE_COUNT)
+    private val heldFrets = sortedSetOf<Int>()
     private val pointerLanes = HashMap<Long, Int>()
     private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
@@ -183,17 +184,69 @@ class GameSession(
             onMiss()
             return
         }
+        onHit(listOf(lane), judgment, missedEarlierNote)
+    }
+
+    /** Resposta do acerto nas [lanes]: guitarra ou som, chama e o julgamento na tela. */
+    private fun onHit(lanes: Collection<Int>, judgment: Judgment, missedEarlierNote: Boolean) {
         if (missedEarlierNote) sfx.miss()
         // Com a guitarra separada, ela mesma é a resposta do acerto (como no Guitar Hero).
         when {
             guitar != null -> guitar.setGuitarAudible(true)
-            hitSounds -> sfx.hit(lane)
+            hitSounds -> lanes.forEach(sfx::hit)
         }
         val now = timeSource.nowMs()
-        flameStartedAt[lane] = now
+        lanes.forEach { flameStartedAt[it] = now }
         lastJudgment = judgment
         lastJudgmentAt = now
     }
+
+    /**
+     * Cor [lane] apertada no teclado (PC, com a palheta): fica segurada, e acerta sem palhetar o tap ou o HOPO que
+     * bater com as cores seguradas.
+     */
+    fun fretDown(lane: Int, lateByMs: Long = 0) {
+        if (isPaused || rewind != null || lane in heldFrets) return
+        heldFrets += lane
+        fingers[lane]++
+        judgeWithoutStrum(lateByMs)
+    }
+
+    /** Cor [lane] solta: encerra a nota longa dela e pode acertar o HOPO de baixo (pull-off). */
+    fun fretUp(lane: Int, lateByMs: Long = 0) {
+        if (lane !in heldFrets) return
+        heldFrets -= lane
+        fingers[lane]--
+        engine.onRelease(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
+        if (!isPaused && rewind == null) judgeWithoutStrum(lateByMs)
+    }
+
+    /** Palhetada (PC): julga o acorde com as cores seguradas; errada, toca o erro e cala a guitarra. */
+    fun strum(lateByMs: Long = 0) {
+        if (isPaused || rewind != null) return
+        val judgments = engine.onStrum(heldFrets.toSet(), clock.positionMs() - lateByMs.coerceAtLeast(0))
+        val missedEarlierNote = engine.count(Judgment.MISS) > missesHeard
+        missesHeard = engine.count(Judgment.MISS)
+        when {
+            judgments == null -> onMiss()
+            judgments.isNotEmpty() -> onHit(hitLanes(judgments.size), judgments.first(), missedEarlierNote)
+        }
+    }
+
+    /** Solta todas as cores seguradas (a janela perdeu o foco: as teclas não vão subir). */
+    fun releaseAllFrets() {
+        heldFrets.toList().forEach { fretUp(it) }
+    }
+
+    private fun judgeWithoutStrum(lateByMs: Long) {
+        val judgments = engine.onFretsChanged(heldFrets.toSet(), clock.positionMs() - lateByMs.coerceAtLeast(0))
+        val missedEarlierNote = engine.count(Judgment.MISS) > missesHeard
+        missesHeard = engine.count(Judgment.MISS)
+        if (!judgments.isNullOrEmpty()) onHit(hitLanes(judgments.size), judgments.first(), missedEarlierNote)
+    }
+
+    /** As cores do acerto: a de cima numa nota simples (as de baixo são apoio), todas num acorde. */
+    private fun hitLanes(notes: Int): Collection<Int> = if (notes == 1) listOf(heldFrets.max()) else heldFrets.toList()
 
     /** A nota passou da hora sem ser tocada: a guitarra cala já (o erro em si só vem no fim da janela). */
     private fun silenceGuitarForOverdueNote() {
