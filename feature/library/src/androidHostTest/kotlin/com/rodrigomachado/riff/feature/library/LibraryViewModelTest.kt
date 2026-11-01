@@ -192,6 +192,20 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun withoutSeparationOnThisDeviceTheSongPlaysWithoutAsking() = runTest {
+        // O PC até a etapa 4: perguntar ofereceria um "Separar" que não faz nada.
+        probe.audio["m"] = ChartAudio.Single("u/song.opus")
+        scheduler.isAvailable = false
+        val vm = viewModel()
+
+        vm.onDifficultyChosen(song, Difficulty.EXPERT)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.prompt)
+        assertEquals(PlayRequestLibrary("m", Difficulty.EXPERT), vm.uiState.value.play)
+    }
+
+    @Test
     fun aSongWithItsOwnGuitarPlaysRightAway() = runTest {
         probe.audio["m"] = ChartAudio.Stems("g", listOf("s"), "s")
         val vm = viewModel()

@@ -1,0 +1,22 @@
+<resources>
+    <string name="results_new_best">NEW BEST</string>
+    <string name="results_accuracy">Accuracy</string>
+    <string name="results_max_combo">Best combo</string>
+    <string name="results_clean_time">Time without missing</string>
+    <string name="results_ranking_position">Ranking: #%1$d of %2$d</string>
+    <string name="results_ranking_sending">Sending to the ranking…</string>
+    <string name="results_ranking_queued">No internet: it goes to the ranking when you're back online</string>
+    <string name="results_ranking_no_name">Choose a name to join the ranking</string>
+    <string name="results_see_ranking">See ranking</string>
+    <string name="results_perfect">Perfect</string>
+    <string name="results_good">Good</string>
+    <string name="results_miss">Misses</string>
+    <string name="results_play_again">Play again</string>
+    <string name="results_back">Back</string>
+    <string name="results_missing">This result no longer exists.</string>
+    <plurals name="results_summary">
+        <item quantity="one">Result: %1$s point, %2$s accuracy.</item>
+        <item quantity="other">Result: %1$s points, %2$s accuracy.</item>
+    </plurals>
+    <string name="results_new_best_spoken">New best!</string>
+</resources>

@@ -40,6 +40,7 @@ object NoSeparationScheduler : SeparationScheduler {
     override val queue: StateFlow<List<QueuedSeparation>> = MutableStateFlow(emptyList())
     override val waitingForCharger: StateFlow<Boolean> = MutableStateFlow(false)
     override val lowMemoryDevice: Boolean = false
+    override val isAvailable: Boolean = false
 
     override fun enqueue(songs: List<QueuedSeparation>) = Unit
 

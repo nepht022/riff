@@ -21,6 +21,7 @@ import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
+import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
@@ -35,6 +36,7 @@ import com.rodrigomachado.riff.feature.ranking.RankingRoute
 import com.rodrigomachado.riff.feature.ranking.RankingSongsScreen
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
+import com.rodrigomachado.riff.feature.results.HiltResultsViewModel
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
@@ -129,6 +131,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltGameplayViewModel>(),
         )
     }
     composable<ResultsRoute> {
@@ -143,6 +146,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
             onSeeRanking = dropUnlessResumed { chartId, title, difficulty ->
                 navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
             },
+            viewModel = hiltViewModel<HiltResultsViewModel>(),
         )
     }
 }

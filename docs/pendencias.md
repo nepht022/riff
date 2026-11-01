@@ -94,6 +94,18 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 2c-2: partida no PC (revisão final, 2026-11-01)
+
+- No Android, as teclas novas da partida valem para qualquer teclado: o direcional de um controle Bluetooth ou do controle da TV palheta (sem nota perto, é erro e cala a guitarra), e Esc pausa/continua em vez de virar "Voltar". Rever junto com o controle (etapa 3).
+- `keyLateByMs` do PC sem teste próprio (o limite de 0 a 200 ms e o caminho sem evento AWT); se o `when` do AWT vier noutro relógio, toda tecla seria julgada 200 ms atrasada. Conferir também se o `when` no Windows é o instante da tecla (`GetMessageTime`).
+- `SingleSongPlayer.prepare` (PC): `stems` só é guardado depois do `prepare`; cancelado no meio (depois do `setUp`), a thread `riff-audio` (não-daemon) e a saída ficam órfãs. Hoje não há como sair durante o Carregando no PC.
+- Fechar a janela no meio da música: `graph.close()` fecha o banco antes de a composição sair (`Main.kt`); se a música terminar nesse instante, o `scores.save` cai num banco fechado (exceção no log, sem travar). A saída depende do `exitProcessOnExit` padrão (a thread de áudio é não-daemon): vale um comentário em `Main.kt`.
+- `DesktopGameplayFlowTest` depende de tempo real: palheta 15 ms antes da nota, espera de 4 ms por quadro e sincronização de 500 ms; num CI carregado pode sair da janela. Centralizar a palhetada (≈ 0 ms) e citar `windows.goodMs`.
+- Baseline Profile cita a assinatura antiga de `GameplayScreen` (`baseline-prof.txt:19779`): regenerar (já anotado acima para a base comum).
+- Esc não volta da tela "Não dá para jogar" no PC (só Tab+Enter ou mouse); a spec §5 pede "Esc/○ volta" — etapa 3, com a navegação por teclado do Resultado.
+- Teste manual que falta: Alt+Tab durante a partida, voltar e apertar Enter sem clicar (o foco do palco deve continuar).
+- Sem screenshot da janela quase quadrada (~800×790), onde cada lateral do placar tem ~175 dp.
+
 ## Riff no Windows, etapa 2c-1: pista e regras da palheta (revisão final, 2026-11-01)
 
 - Notas longas com a palheta: palhetada errada ou troca de cor durante a nota longa não a interrompe; num acorde longo, soltar uma cor só encerra aquela (no Clone Hero o acorde inteiro cai). Decidir antes de ligar o teclado (2c-2).

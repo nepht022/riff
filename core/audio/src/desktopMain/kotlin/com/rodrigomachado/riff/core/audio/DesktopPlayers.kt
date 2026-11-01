@@ -8,13 +8,17 @@ import com.rodrigomachado.riff.core.chart.sng.RandomReadOpener
  * qualquer player que seja, e cortaria a música inteira a cada erro.
  */
 object DesktopPlayers {
-    fun songPlayers(randomRead: RandomReadOpener) = SongPlayerFactory {
-        SingleSongPlayer(randomRead)
+    /** A saída de som do PC (Java Sound). Os testes do app trocam por uma que só anda no ritmo do relógio. */
+    val speakers = AudioSinkFactory { JavaSoundSink(it) }
+
+    fun songPlayers(randomRead: RandomReadOpener, sinks: AudioSinkFactory = speakers) = SongPlayerFactory {
+        SingleSongPlayer(randomRead, sinks)
     }
 
-    fun stemPlayers(randomRead: RandomReadOpener) = StemSongPlayerFactory { guitarUri, backingUris ->
-        StemSongPlayer(guitarUri, backingUris, opener(randomRead), sinks)
-    }
+    fun stemPlayers(randomRead: RandomReadOpener, sinks: AudioSinkFactory = speakers) =
+        StemSongPlayerFactory { guitarUri, backingUris ->
+            StemSongPlayer(guitarUri, backingUris, opener(randomRead), sinks)
+        }
 
     /** No PC não há chamada nem fone desconectado que pause a música. */
     val interruptions = PlaybackInterruptionsFactory {
@@ -25,12 +29,11 @@ object DesktopPlayers {
         }
     }
 
-    private val sinks = AudioSinkFactory { JavaSoundSink(it) }
-
     private fun opener(randomRead: RandomReadOpener) = PcmSourceOpener { FfmpegPcmSource.open(it, randomRead) }
 
     /** A música de um arquivo só: o [uri] chega no [prepare]. */
-    private class SingleSongPlayer(private val randomRead: RandomReadOpener) : SongPlayer {
+    private class SingleSongPlayer(private val randomRead: RandomReadOpener, private val sinks: AudioSinkFactory) :
+        SongPlayer {
         private var stems: StemSongPlayer? = null
 
         override suspend fun prepare(uri: String) {

@@ -159,7 +159,9 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ### Riff no PC (em construção)
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:feature:home` e `:feature:library` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para abrir a Biblioteca: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador. Jogar, as Configurações e o resto vêm nas próximas etapas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay` e `:feature:results` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. Calibração, Configurações, controle, ranking e o resto vêm nas próximas etapas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+
+**Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita. Ranking e a pergunta da separação por IA ainda não existem no PC.
 
 - Os dados do Riff no PC (banco, preferências) ficam em `%APPDATA%\Riff`; a biblioteca do PC é separada da do celular.
 - No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
