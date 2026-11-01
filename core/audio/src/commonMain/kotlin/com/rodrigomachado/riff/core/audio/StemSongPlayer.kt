@@ -1,8 +1,5 @@
 package com.rodrigomachado.riff.core.audio
 
-import android.os.Process
-import android.os.SystemClock
-import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,11 +16,11 @@ class StemSongPlayer(
     private val backingUris: List<String>,
     private val opener: PcmSourceOpener,
     private val sinks: AudioSinkFactory,
-    private val log: (String, Throwable?) -> Unit = { message, error -> Log.w(TAG, message, error) },
+    private val log: (String, Throwable?) -> Unit = ::audioLog,
     private val startThread: Boolean = true,
-    private val nowMs: () -> Long = { SystemClock.uptimeMillis() },
+    private val nowMs: () -> Long = ::uptimeMs,
     /** Roda na thread de áudio ao começar: prioridade de áudio, para o sistema não atrasá-la com o aparelho ocupado. */
-    private val raiseAudioPriority: () -> Unit = { Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO) },
+    private val raiseAudioPriority: () -> Unit = ::raiseAudioThreadPriority,
 ) : StemPlayer {
     private val lock = Object()
 
@@ -285,6 +282,5 @@ class StemSongPlayer(
         private const val END_SILENCE_BLOCKS = 4
         private const val GUITAR = 0
         private const val JOIN_TIMEOUT_MS = 1_000L
-        private const val TAG = "RiffAudio"
     }
 }

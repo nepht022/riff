@@ -6,12 +6,6 @@ import android.media.SoundPool
 import com.rodrigomachado.riff.core.model.MenuSound
 import kotlin.random.Random
 
-/** Sons de guitarra dos botões do menu. */
-fun interface MenuSoundPlayer {
-    /** Toca o som do papel [sound] em [volume] (0 a 1; 0 não toca). */
-    fun play(sound: MenuSound, volume: Float)
-}
-
 /**
  * Navegar e confirmar sorteiam entre duas gravações; voltar tem uma. Os sons são carregados uma vez e ficam na
  * memória enquanto o app vive (são poucos e curtos).

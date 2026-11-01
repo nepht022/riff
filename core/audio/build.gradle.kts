@@ -1,18 +1,24 @@
 plugins {
-    alias(libs.plugins.riff.android.library)
-    alias(libs.plugins.riff.android.hilt)
+    alias(libs.plugins.riff.kmp.library)
+    alias(libs.plugins.riff.kmp.hilt)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.core.audio"
-}
-
-dependencies {
-    implementation(project(":core:model"))
-    implementation(project(":core:chart"))
-    implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit4)
-    testImplementation(testFixtures(project(":core:chart")))
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
+kotlin {
+    (this as ExtensionAware).extensions.configure<com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget>(
+        "android",
+    ) {
+        // Os sons do app (res/raw) para o SoundPool.
+        androidResources.enable = true
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:model"))
+            implementation(project(":core:chart"))
+            implementation(libs.kotlinx.coroutines.core)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(project.dependencies.testFixtures(project(":core:chart")))
+            implementation(libs.androidx.test.core)
+        }
+    }
 }

@@ -12,7 +12,7 @@ import kotlin.math.pow
 
 /** Os efeitos são gerados por scripts/gerar_sfx.py; este teste garante formato, duração e volume. */
 class SfxAssetsTest {
-    private fun file(name: String) = File("src/main/res/raw/$name")
+    private fun file(name: String) = File("src/androidMain/res/raw/$name")
 
     private fun check(name: String, maxSeconds: Double) {
         val format = AudioSystem.getAudioFileFormat(file(name))

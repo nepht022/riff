@@ -11,24 +11,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 
-/**
- * Avisa quando a música da partida deve parar por fora do jogo: perda do foco de áudio (ligação, outro app tocando)
- * ou fone desconectado (o som iria para o alto-falante).
- */
-interface PlaybackInterruptions {
-    /**
-     * Pede o foco de áudio e passa a avisar em [onInterrupted]; [onBusy] quando o Android nega o foco (no meio de uma
-     * ligação). Chamar de novo ao continuar pede o foco outra vez.
-     */
-    fun start(onInterrupted: () -> Unit, onBusy: () -> Unit)
-
-    fun stop()
-}
-
-fun interface PlaybackInterruptionsFactory {
-    fun create(): PlaybackInterruptions
-}
-
 class AndroidPlaybackInterruptions(private val context: Context) : PlaybackInterruptions {
     private val audio = context.getSystemService(AudioManager::class.java)
     private var onInterrupted: (() -> Unit)? = null

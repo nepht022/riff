@@ -2,7 +2,7 @@
 """Gera os sons de acerto do Riff. Tudo sintetizado aqui, sem samples de terceiros.
 O som de erro vem de gravações CC0: scripts/montar_sfx_erro.py.
 
-Uso: python3 scripts/gerar_sfx.py core/audio/src/main/res/raw
+Uso: python3 scripts/gerar_sfx.py core/audio/src/androidMain/res/raw
 """
 import math
 import random
