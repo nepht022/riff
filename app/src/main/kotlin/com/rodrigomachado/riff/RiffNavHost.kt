@@ -21,6 +21,7 @@ import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
+import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
@@ -129,6 +130,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltGameplayViewModel>(),
         )
     }
     composable<ResultsRoute> {

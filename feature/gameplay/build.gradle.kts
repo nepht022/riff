@@ -1,14 +1,21 @@
 plugins {
-    alias(libs.plugins.riff.android.feature)
+    alias(libs.plugins.riff.kmp.feature)
     alias(libs.plugins.roborazzi)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.feature.gameplay"
-}
-
-dependencies {
-    implementation(libs.androidx.activity.compose)
-    implementation(project(":core:game"))
-    implementation(project(":core:audio"))
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:game"))
+            implementation(project(":core:audio"))
+        }
+        getByName("desktopTest").dependencies {
+            // A skia nativa do sistema (decodificar a imagem do mapa nos testes do PC).
+            implementation(compose.desktop.currentOs)
+        }
+        androidMain.dependencies {
+            // BackHandler (Voltar do sistema pausa a partida).
+            implementation(libs.androidx.activity.compose)
+        }
+    }
 }
