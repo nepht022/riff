@@ -13,6 +13,8 @@ private const val NANOS_PER_MS = 1_000_000
 /** Um ajuste do relógio do sistema no meio da música não vira uma tecla apertada segundos atrás. */
 private const val MAX_KEY_LATE_MS = 200L
 
+actual val playsByTouch = false
+
 actual fun touchUptimeMs(): Long = System.nanoTime() / NANOS_PER_MS
 
 /** O evento do AWT traz o instante da tecla no relógio de parede (`currentTimeMillis`); sem ele, agora. */

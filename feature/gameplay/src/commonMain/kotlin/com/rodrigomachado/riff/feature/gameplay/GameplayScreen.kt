@@ -173,7 +173,7 @@ internal fun GameStage(
         Canvas(
             highwayModifier
                 .testTag(GameplayTestTags.STAGE)
-                .pointerInput(session, leftHanded) { handleLanes(session, leftHanded) },
+                .lanesByTouch(session, leftHanded),
         ) {
             frame // lê o contador para redesenhar a cada frame
             drawStage(stageCache, session, msPerUnit, leftHanded, reducedMotion)
@@ -184,7 +184,7 @@ internal fun GameStage(
             Image(image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = ART_VEIL)))
         }
-        if (maxWidth > maxHeight) {
+        if (!playsByTouch && maxWidth > maxHeight) {
             // Deitada (PC): a pista central com a proporção da do celular, na altura toda; o placar nas laterais.
             val highwayWidth = maxHeight * HIGHWAY_ASPECT
             Box(Modifier.align(Alignment.Center).fillMaxHeight().width(highwayWidth)) {
@@ -201,6 +201,10 @@ internal fun GameStage(
         if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit)
     }
 }
+
+/** Os dedos na pista tocam as trilhas; no PC, o mouse na pista não toca (lá se joga com a palheta). */
+private fun Modifier.lanesByTouch(session: GameSession, leftHanded: Boolean) =
+    if (playsByTouch) pointerInput(session, leftHanded) { handleLanes(session, leftHanded) } else this
 
 private fun Modifier.progressBar() = fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)
     .height(PROGRESS_HEIGHT).testTag(GameplayTestTags.PROGRESS)

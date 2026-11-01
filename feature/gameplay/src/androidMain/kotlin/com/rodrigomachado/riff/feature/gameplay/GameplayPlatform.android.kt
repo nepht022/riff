@@ -10,6 +10,8 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 
+actual val playsByTouch = true
+
 actual fun touchUptimeMs(): Long = SystemClock.uptimeMillis()
 
 /** O `eventTime` da tecla é do mesmo relógio do toque (`uptimeMillis`). */

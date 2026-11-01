@@ -4,8 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.KeyEvent
 
 /**
+ * Joga-se tocando na pista (celular, em pé ou deitado, com a pista na tela toda). No PC, não: joga-se com a palheta,
+ * o mouse na pista não toca, e a janela deitada mostra a pista central com o placar nas laterais.
+ */
+expect val playsByTouch: Boolean
+
+/**
  * O relógio dos eventos de toque (o mesmo do `uptimeMillis` de cada toque): a diferença diz quanto o toque esperou
- * até chegar à partida. No celular, `SystemClock.uptimeMillis`; no PC, o relógio monotônico da JVM.
+ * até chegar à partida. No celular, `SystemClock.uptimeMillis`; no PC (sem toque), o relógio monotônico da JVM.
  */
 expect fun touchUptimeMs(): Long
 

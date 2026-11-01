@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.pressKey
 import com.rodrigomachado.riff.core.model.Judgment
 import org.junit.Assert.assertEquals
@@ -51,5 +52,20 @@ class DesktopGameplayKeysTest {
         composeRule.onRoot().performKeyInput { pressKey(Key.Enter) }
         assertFalse(paused)
         composeRule.onNodeWithTag(GameplayTestTags.EXIT).assertDoesNotExist()
+    }
+
+    /** No PC se joga com a palheta: o mouse na pista não aperta a trilha nem acerta a nota. */
+    @Test
+    fun theMouseOnTheHighwayDoesNotPlay() {
+        val session = playingSession(note(1_000, lane = 2), positionMs = 1_000)
+        composeRule.showStage({ readyState(session) })
+
+        composeRule.onNodeWithTag(GameplayTestTags.STAGE).performMouseInput {
+            moveTo(center.copy(y = height * 0.9f))
+            press()
+        }
+
+        assertFalse(session.isPressed(2))
+        assertEquals(0, session.engine.combo)
     }
 }

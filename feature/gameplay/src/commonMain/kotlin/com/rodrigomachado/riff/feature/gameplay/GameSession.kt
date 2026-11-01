@@ -33,7 +33,10 @@ class GameSession(
 
     /** Dedos em cada trilha: a trilha só é solta quando o último sai. */
     private val fingers = IntArray(Note.LANE_COUNT)
+
+    /** As cores seguradas no teclado, mesmo na pausa e na fita; [engagedFrets] são as que já valem na trilha. */
     private val heldFrets = sortedSetOf<Int>()
+    private val engagedFrets = HashSet<Int>()
     private val pointerLanes = HashMap<Long, Int>()
     private val guitar = player as? GuitarTrackControl
     private val flameStartedAt = LongArray(Note.LANE_COUNT) { NEVER }
@@ -82,8 +85,8 @@ class GameSession(
         player.pause()
         syncClock()
         pointerLanes.clear()
-        // As cores seguradas no teclado também: a tecla subindo depois (com a pausa aberta) não desconta nada.
-        heldFrets.clear()
+        // As cores seguradas no teclado continuam seguradas, mas soltam a trilha; voltam a valer quando a música anda.
+        engagedFrets.clear()
         for (lane in fingers.indices) {
             if (fingers[lane] == 0) continue
             fingers[lane] = 1 // pausar solta a trilha de vez, com quantos dedos estiverem nela
@@ -119,6 +122,7 @@ class GameSession(
     /** Avança a partida até o instante atual. Chamado a cada frame. */
     fun tick(): Long {
         rewind?.let { return rewindStep(it) }
+        engageHeldFrets()
         // A música voltou por fora do jogo: o ajuste feito na pausa vale agora.
         if (pendingOffsetMs != 0L && !isPaused) applyPendingOffset()
         // Começando (o som ainda não saiu), ou tocando/pausando por fora do jogo (o relógio discorda do player),
@@ -208,24 +212,25 @@ class GameSession(
      * bater com as cores seguradas.
      */
     fun fretDown(lane: Int, lateByMs: Long = 0) {
-        if (isPaused || rewind != null || lane in heldFrets) return
-        heldFrets += lane
-        fingers[lane]++
+        if (!heldFrets.add(lane)) return
+        // Apertada na pausa ou na fita: fica segurada, para a palhetada depois, sem julgar agora.
+        if (isPaused || rewind != null) return
+        engageHeldFrets()
         judgeWithoutStrum(lateByMs)
     }
 
     /** Cor [lane] solta: encerra a nota longa dela e pode acertar o HOPO de baixo (pull-off). */
     fun fretUp(lane: Int, lateByMs: Long = 0) {
-        if (lane !in heldFrets) return
-        heldFrets -= lane
-        fingers[lane]--
-        engine.onRelease(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
+        if (!heldFrets.remove(lane)) return
+        // Com um dedo ainda na trilha (celular com teclado), a trilha continua apertada.
+        if (engagedFrets.remove(lane)) release(lane, lateByMs)
         if (!isPaused && rewind == null) judgeWithoutStrum(lateByMs)
     }
 
     /** Palhetada (PC): julga o acorde com as cores seguradas; errada, toca o erro e cala a guitarra. */
     fun strum(lateByMs: Long = 0) {
         if (isPaused || rewind != null) return
+        engageHeldFrets()
         val judgments = engine.onStrum(heldFrets.toSet(), clock.positionMs() - lateByMs.coerceAtLeast(0))
         val missedEarlierNote = engine.count(Judgment.MISS) > missesHeard
         missesHeard = engine.count(Judgment.MISS)
@@ -238,6 +243,14 @@ class GameSession(
     /** Solta todas as cores seguradas (a janela perdeu o foco: as teclas não vão subir). */
     fun releaseAllFrets() {
         heldFrets.toList().forEach { fretUp(it) }
+    }
+
+    /** As cores seguradas na pausa ou na fita passam a valer na trilha (sem julgar: a palhetada julga). */
+    private fun engageHeldFrets() {
+        if (engagedFrets.size == heldFrets.size || isPaused) return
+        for (lane in heldFrets) {
+            if (engagedFrets.add(lane)) fingers[lane]++
+        }
     }
 
     private fun judgeWithoutStrum(lateByMs: Long) {

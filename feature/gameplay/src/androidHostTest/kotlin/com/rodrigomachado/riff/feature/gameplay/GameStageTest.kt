@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Settings
@@ -16,6 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class GameStageTest {
@@ -104,5 +106,16 @@ class GameStageTest {
         val stage = composeRule.onNodeWithTag(GameplayTestTags.STAGE).fetchSemanticsNode().boundsInRoot
         val pause = composeRule.onNodeWithTag(GameplayTestTags.PAUSE).fetchSemanticsNode().boundsInRoot
         assertEquals(stage.center.x, pause.center.x, 1f)
+    }
+
+    /** O celular deitado (giro automático, tablet) mantém a pista na tela toda: a pista central é só do PC. */
+    @Test
+    @Config(qualifiers = "w800dp-h360dp-land")
+    fun aPhoneLyingDownKeepsTheHighwayOnTheWholeScreen() {
+        show()
+
+        val screen = composeRule.onRoot().fetchSemanticsNode().size.width
+        val stage = composeRule.onNodeWithTag(GameplayTestTags.STAGE).fetchSemanticsNode().size.width
+        assertEquals(screen, stage)
     }
 }

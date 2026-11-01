@@ -104,4 +104,62 @@ class GameSessionStrumTest {
 
         assertTrue(session.isPressed(0))
     }
+
+    /** A cor apertada enquanto a fita volta fica segurada: a palhetada na nota, depois, acerta. */
+    @Test
+    fun aFretPressedDuringTheRewindCountsOnTheStrum() {
+        player.positionMs = 30_000
+        val session = GameSession(listOf(note(30_000)), player, sfx, time, audioOffsetMs = 0, rewindOnResumeMs = 500)
+            .also { it.start() }
+        session.pause()
+        session.resume()
+
+        session.fretDown(0) // a fita ainda voltando
+        time.now += GameSession.REWIND_ANIMATION_MS
+        session.tick()
+        player.positionMs = 30_000
+        time.now += GameSession.SYNC_INTERVAL_MS
+        session.tick()
+        session.strum()
+
+        assertEquals(Judgment.PERFECT, session.lastJudgment)
+        assertTrue(session.isPressed(0))
+    }
+
+    /** A cor segurada desde antes da pausa, sem soltar até continuar, vale na palhetada seguinte. */
+    @Test
+    fun aFretHeldThroughThePauseCountsOnTheStrum() {
+        player.positionMs = 1_000
+        val session = session(note(1_000, lane = 1))
+        session.fretDown(1)
+        session.pause()
+
+        player.play() // volta a tocar (sem a volta de 0,5 s da retomada)
+        session.strum()
+
+        assertEquals(Judgment.PERFECT, session.lastJudgment)
+        session.fretUp(1)
+        assertFalse(session.isPressed(1))
+    }
+
+    /** Celular com teclado: soltar a tecla com o dedo ainda na trilha não encerra a nota longa do dedo. */
+    @Test
+    fun releasingTheKeyKeepsTheLongNoteOfTheFingerStillOnTheLane() {
+        player.positionMs = 1_000
+        val session = session(note(1_000, lane = 2, sustainMs = 2_000))
+        session.pressPointer(pointer = 7, lane = 2)
+        session.fretDown(2)
+        player.positionMs = 1_500
+        time.now = GameSession.SYNC_INTERVAL_MS
+        session.tick()
+
+        session.fretUp(2)
+        val atRelease = session.engine.score
+        player.positionMs = 2_500
+        time.now = GameSession.SYNC_INTERVAL_MS * 2
+        session.tick()
+
+        assertTrue(session.isPressed(2))
+        assertTrue(session.engine.score > atRelease)
+    }
 }
