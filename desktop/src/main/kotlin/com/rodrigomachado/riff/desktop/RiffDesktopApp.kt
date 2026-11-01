@@ -3,17 +3,41 @@ package com.rodrigomachado.riff.desktop
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
+import com.rodrigomachado.riff.feature.library.LibraryRoute
+import com.rodrigomachado.riff.feature.library.LibraryScreen
 import java.util.Locale
 
-/** O Riff no PC: por enquanto só a tela inicial; os botões levam às telas nas próximas etapas. */
+/** O Riff no PC: tela inicial e Biblioteca; jogar, Ranking, Configurações e Reportar vêm nas próximas etapas. */
 @Composable
-fun RiffDesktopApp() {
+fun RiffDesktopApp(graph: DesktopGraph) {
+    val navController = rememberNavController()
     RiffTheme {
         StageBackground(Modifier.fillMaxSize()) {
-            HomeScreen(onSolo = {}, onRanking = {}, onSettings = {}, onReport = {})
+            NavHost(navController, startDestination = HomeRoute) {
+                composable<HomeRoute> {
+                    HomeScreen(
+                        onSolo = { navController.navigate(LibraryRoute) },
+                        onRanking = {},
+                        onSettings = {},
+                        onReport = {},
+                    )
+                }
+                composable<LibraryRoute> {
+                    LibraryScreen(
+                        onPlay = { _, _ -> },
+                        onBack = { navController.popBackStack() },
+                        viewModel = viewModel { graph.libraryViewModel() },
+                    )
+                }
+            }
         }
     }
 }

@@ -27,6 +27,16 @@ detekt {
     autoCorrect = providers.gradleProperty("detektAutoCorrect").isPresent
 }
 
+// Android Lint do código de todos os módulos multiplataforma (eles não têm a variante debug do lintDebug); o lint
+// do alvo do PC fica de fora (analisa o código gerado pelo Room e não é lint de Android). O CI roda este.
+val lintMultiplatform = tasks.register("lintMultiplatform")
+subprojects {
+    val module = path
+    pluginManager.withPlugin("com.android.kotlin.multiplatform.library") {
+        lintMultiplatform.configure { dependsOn("$module:lintAndroidMain") }
+    }
+}
+
 dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
     kover(project(":core:chart"))

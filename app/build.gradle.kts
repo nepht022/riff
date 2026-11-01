@@ -79,6 +79,8 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.hilt.work)
     implementation(project(":feature:library"))
+    // A rota da Biblioteca cria o ViewModel com hiltViewModel() (a tela comum recebe pronto).
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(project(":feature:search"))
     implementation(project(":feature:gameplay"))
     implementation(project(":feature:results"))

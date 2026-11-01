@@ -1,23 +1,24 @@
 plugins {
-    alias(libs.plugins.riff.android.library)
-    alias(libs.plugins.riff.android.room)
-    alias(libs.plugins.riff.android.hilt)
+    alias(libs.plugins.riff.kmp.library)
+    alias(libs.plugins.riff.kmp.room)
+    alias(libs.plugins.riff.kmp.hilt)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.core.database"
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines.core)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.androidx.test.core)
+            implementation(libs.androidx.room.testing)
+        }
+    }
 }
 
-dependencies {
-    implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit4)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.androidx.room.testing)
-}
-
-// Os esquemas exportados viram assets dos testes, para o teste de migração (DSL nova do AGP 9).
-extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-    sourceSets.getByName("test").assets.directories.add("$projectDir/schemas")
+// Os esquemas exportados viram assets dos testes do Android, para o teste de migração.
+androidComponents {
+    onVariants { variant ->
+        variant.hostTests.values.forEach { it.sources.assets?.addStaticSourceDirectory("$projectDir/schemas") }
+    }
 }

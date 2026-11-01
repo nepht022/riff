@@ -75,7 +75,13 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+# SQLite embutido para o Room no PC (a mesma versão que o Room 2.8.5 usa).
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version = "2.6.2" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+# Só a anotação @Inject, para as classes comuns ao celular e ao PC (o Hilt só roda no celular).
+javax-inject = { module = "javax.inject:javax.inject", version = "1" }
+# JSON do Encore e do ranking: no Android vem com o sistema; no PC, a biblioteca original.
+org-json = { module = "org.json:json", version = "20250517" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
@@ -84,9 +90,14 @@ androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", 
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 # O mesmo lifecycle em versão multiplataforma (JetBrains), para o código comum ao celular e ao PC.
 jetbrains-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+jetbrains-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+# Navegação multiplataforma (JetBrains) para o PC; no celular o app segue com a do androidx.
+jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version = "2.10.0" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "androidxHilt" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+# Dispatchers.Main no PC (a thread da janela, a do AWT/Swing), que o viewModelScope usa.
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp" }
@@ -127,4 +138,8 @@ riff-android-application-compose = { id = "riff.android.application.compose" }
 riff-android-library = { id = "riff.android.library" }
 riff-android-library-compose = { id = "riff.android.library.compose" }
 riff-jvm-library = { id = "riff.jvm.library" }
+riff-kmp-library = { id = "riff.kmp.library" }
+riff-kmp-hilt = { id = "riff.kmp.hilt" }
+riff-kmp-room = { id = "riff.kmp.room" }
 riff-kmp-library-compose = { id = "riff.kmp.library.compose" }
+riff-kmp-feature = { id = "riff.kmp.feature" }
