@@ -19,6 +19,10 @@ class KmpRoomConventionPlugin : Plugin<Project> {
                 sourceSets.getByName("commonMain").dependencies { implementation(lib("androidx-room-runtime")) }
                 sourceSets.getByName("desktopMain").dependencies { implementation(lib("androidx-sqlite-bundled")) }
             }
+            // O lint do alvo do PC analisaria o código que o Room gera (acusa RestrictedApi nas classes do Room);
+            // o código do módulo continua no lint do Android (lintAndroidMain).
+            tasks.matching { it.name.startsWith("lint") && (it.name.endsWith("Jvm") || "Desktop" in it.name) }
+                .configureEach { enabled = false }
             dependencies {
                 add("kspAndroid", lib("androidx-room-compiler"))
                 add("kspDesktop", lib("androidx-room-compiler"))
