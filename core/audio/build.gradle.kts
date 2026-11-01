@@ -27,6 +27,8 @@ kotlin {
             implementation(project(":core:chart"))
             implementation(libs.kotlinx.coroutines.core)
         }
+        // Os WAV dos sons servem o PC direto da pasta do Android (sem cópia).
+        getByName("desktopMain").resources.srcDir("src/androidMain/res/raw")
         getByName("desktopMain").dependencies {
             implementation(libs.bytedeco.ffmpeg)
             implementation(libs.bytedeco.javacpp)

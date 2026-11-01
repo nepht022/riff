@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.lifecycleScope
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
+import com.rodrigomachado.riff.core.audio.menuSoundsTurnedOn
+import com.rodrigomachado.riff.core.audio.playMenuSound
 import com.rodrigomachado.riff.core.data.LegacyAppLanguage
 import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.SettingsRepository

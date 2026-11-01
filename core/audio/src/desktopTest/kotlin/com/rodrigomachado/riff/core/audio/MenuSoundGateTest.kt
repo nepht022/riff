@@ -1,4 +1,4 @@
-package com.rodrigomachado.riff
+package com.rodrigomachado.riff.core.audio
 
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
