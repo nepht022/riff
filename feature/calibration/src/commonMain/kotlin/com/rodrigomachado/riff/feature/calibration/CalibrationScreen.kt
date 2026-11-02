@@ -27,7 +27,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +36,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
 import com.rodrigomachado.riff.core.ui.input.lateByMs
+import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.calibration.resources.Res
@@ -101,9 +101,9 @@ fun CalibrationContent(
 ) {
     val instructions =
         if (tapsByTouch) Res.string.calibration_instructions else Res.string.calibration_instructions_keys
-    // Na janela larga do PC, uma coluna no meio; no celular a tela é mais estreita que ela e nada muda.
+    // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = MAX_COLUMN_WIDTH).fillMaxSize().padding(horizontal = Spacing.md)) {
+        Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
             TextButton(onClick = onDone) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
             PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -249,6 +249,3 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
 }
 
 private const val NUDGE_MS = 5
-
-/** A largura máxima da coluna da calibração (na janela larga do PC, uma coluna no meio). */
-private val MAX_COLUMN_WIDTH = 640.dp

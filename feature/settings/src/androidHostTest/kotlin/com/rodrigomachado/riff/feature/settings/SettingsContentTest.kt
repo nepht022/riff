@@ -27,6 +27,7 @@ import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -444,5 +445,15 @@ class SettingsContentTest {
 
         composeRule.onNodeWithText("Idioma").assertExists()
         composeRule.onNodeWithText("Licenças e privacidade").assertDoesNotExist()
+    }
+
+    /** Celular deitado (ou tablet): as Configurações continuam na tela toda; a coluna no meio é só a do PC. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w780dp-h360dp-land")
+    fun aPhoneLyingDownKeepsTheSettingsOnTheWholeScreen() {
+        show()
+
+        val back = composeRule.onNodeWithText("Voltar").getUnclippedBoundsInRoot()
+        assertTrue("Voltar em ${back.left}", back.left.value < 40f)
     }
 }

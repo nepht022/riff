@@ -1,13 +1,17 @@
 package com.rodrigomachado.riff.feature.calibration
 
 import com.rodrigomachado.riff.core.audio.AudioSink
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 class AudioClickTrackPlayerTest {
@@ -77,5 +81,67 @@ class AudioClickTrackPlayerTest {
 
         // A posição apresentada (PresentedFrames) guarda estado entre leituras: duas ao mesmo tempo a corrompem.
         assertEquals(1, sink.mostReadersAtOnce)
+    }
+
+    /** Saída que abre mas não toca (fone desconectado, driver parado): a escrita espera até a saída ser parada. */
+    private class BlockedSink : AudioSink {
+        @Volatile var stopped = false
+        var released = false
+
+        override fun start() = Unit
+
+        override fun pause() = Unit
+
+        override fun stop() {
+            stopped = true
+        }
+
+        override fun write(buffer: FloatArray, offsetFrames: Int, frames: Int): Int {
+            while (!stopped) Thread.sleep(2)
+            return 0
+        }
+
+        override val playedFrames: Long get() = 0
+
+        override fun release() {
+            released = true
+        }
+    }
+
+    @Test
+    fun cancellingTheMeasurementFreesAnOutputStuckWriting() {
+        val sink = BlockedSink()
+        val player = AudioClickTrackPlayer { sink }
+
+        runBlocking {
+            val measuring = async(kotlinx.coroutines.Dispatchers.Default) { player.play() }
+            delay(200)
+            // Sem a correção, a escrita não volta nunca e o cancelamento espera para sempre.
+            withTimeout(5_000) { measuring.cancelAndJoinQuietly() }
+        }
+
+        assertTrue(sink.released)
+    }
+
+    @Test
+    fun anOutputThatStopsWhileWritingFailsTheMeasurement() {
+        val sink = BlockedSink()
+        val player = AudioClickTrackPlayer { sink }
+
+        runBlocking {
+            try {
+                withTimeout(30_000) { player.play() }
+                fail("a medição deveria falhar")
+            } catch (_: IOException) {
+                // A tela mostra "Não deu para tocar o metrônomo".
+            }
+        }
+
+        assertTrue(sink.released)
+    }
+
+    private suspend fun kotlinx.coroutines.Deferred<*>.cancelAndJoinQuietly() {
+        cancel()
+        join()
     }
 }

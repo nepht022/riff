@@ -94,6 +94,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 2d: calibração e Configurações no PC (revisão final, 2026-11-01)
+
+- Linux (X11): a repetição automática gera pares soltar/apertar, e segurar uma tecla na calibração conta vários toques; o alvo é o Windows (ignorar descidas da mesma tecla menos de ~30 ms depois da subida resolveria).
+- Na medição do PC, toda tecla vira toque (inclusive Tab) e o Esc não sai: quem usa só o teclado espera o metrônomo acabar (alguns segundos). Etapa 3, com a navegação por teclado.
+- `DesktopAppLanguageStore` grava `language.txt` na thread da tela e sem atomicidade (um corte no meio volta o jogo ao Português); gravar num temporário e renomear.
+- O `key(language)` do app do PC descarta o estado lembrado das telas da pilha (rolagem etc.); hoje a pilha na troca é só Início → Configurações.
+- `savingTheCalibrationAppliesTheOffset` confere só `settings.audioOffsetMs`, não a partida seguinte (a ligação é anterior e coberta pelos testes da partida).
+- A escrita do `JavaSoundSink` espera para sempre por uma linha que não consome: a calibração já se protege (Task de correção da revisão); conferir a partida no PC com um fone USB desconectado no meio.
+
 ## Riff no Windows, etapa 2c-2: partida no PC (revisão final, 2026-11-01)
 
 - No Android, as teclas novas da partida valem para qualquer teclado: o direcional de um controle Bluetooth ou do controle da TV palheta (sem nota perto, é erro e cala a guitarra), e Esc pausa/continua em vez de virar "Voltar". Rever junto com o controle (etapa 3).

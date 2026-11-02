@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -42,6 +41,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
+import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -158,9 +158,9 @@ fun SettingsContent(
     var tab by rememberSaveable { mutableStateOf(initialTab.takeIf { it in tabs } ?: tabs.first()) }
     // O idioma em que a tela está: no celular acompanha também uma troca feita nas configurações do sistema.
     val language = currentAppLanguage()
-    // Na janela larga do PC, uma coluna no meio; no celular a tela é mais estreita que ela e nada muda.
+    // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = MAX_COLUMN_WIDTH).fillMaxSize().padding(horizontal = Spacing.md)) {
+        Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onBack) {
                     Text(stringResource(Res.string.settings_back), color = RiffColors.Paper)
@@ -421,6 +421,3 @@ private const val VOLUME_STEPS = 19 // de 5 em 5%
 private const val SPEED_STEPS = 5 // 0,5 a 2,0 de 0,25 em 0,25
 private const val INACTIVE_ALPHA = 0.3f
 internal const val DISABLED_ALPHA = 0.4f
-
-/** A largura máxima da coluna das Configurações (na janela larga do PC, uma coluna no meio). */
-private val MAX_COLUMN_WIDTH = 640.dp

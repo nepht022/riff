@@ -4,12 +4,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,5 +111,16 @@ class CalibrationContentTest {
         composeRule.onNodeWithText("Salvar").performClick()
 
         assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
+    }
+
+    /** Celular deitado (ou tablet): a medição recebe os toques na tela toda; a coluna no meio é só a do PC. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w780dp-h360dp-land")
+    fun aPhoneLyingDownTakesTapsOnTheWholeScreen() {
+        show(CalibrationUiState.Measuring(taps = 0))
+
+        val screen = composeRule.onRoot().fetchSemanticsNode().size.width
+        val area = composeRule.onNodeWithTag(CalibrationTestTags.TAP_AREA).fetchSemanticsNode().size.width
+        assertTrue("área $area de $screen", area > screen * 0.9f)
     }
 }
