@@ -20,6 +20,8 @@ composeMultiplatformMaterial3 = "1.9.0"
 # Decodificador de áudio do PC (bytedeco): um caminho só para ogg, opus, mp3 e wav.
 ffmpeg = "8.1.2-1.5.14"
 javacpp = "1.5.14"
+# Controle no PC (GLFW): XInput e DirectInput, com a base de mapeamentos de controles do SDL.
+lwjgl = "3.3.6"
 detekt = "2.0.0-alpha.6"
 kover = "0.9.11"
 room = "2.8.5"
@@ -87,6 +89,8 @@ javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 org-json = { module = "org.json:json", version = "20250517" }
 bytedeco-ffmpeg = { module = "org.bytedeco:ffmpeg", version.ref = "ffmpeg" }
 bytedeco-javacpp = { module = "org.bytedeco:javacpp", version.ref = "javacpp" }
+lwjgl-core = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
+lwjgl-glfw = { module = "org.lwjgl:lwjgl-glfw", version.ref = "lwjgl" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
