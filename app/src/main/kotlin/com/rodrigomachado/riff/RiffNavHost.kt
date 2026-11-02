@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
+import com.rodrigomachado.riff.feature.calibration.HiltCalibrationViewModel
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
@@ -41,6 +42,7 @@ import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
+import com.rodrigomachado.riff.feature.settings.HiltSettingsViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
 import com.rodrigomachado.riff.feature.settings.SettingsScreen
 
@@ -189,6 +191,7 @@ private fun NavGraphBuilder.settingsDestinations(
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
             onRankingName = onRankingName,
             onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
+            viewModel = hiltViewModel<HiltSettingsViewModel>(),
         )
     }
     composable<LicensesRoute> {
@@ -205,6 +208,7 @@ private fun NavGraphBuilder.settingsDestinations(
                 back.silenceNextReturn()
                 navController.popBackStack()
             },
+            viewModel = hiltViewModel<HiltCalibrationViewModel>(),
         )
     }
 }

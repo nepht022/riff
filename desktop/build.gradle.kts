@@ -23,6 +23,8 @@ dependencies {
     implementation(project(":feature:library"))
     implementation(project(":feature:gameplay"))
     implementation(project(":feature:results"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:calibration"))
     implementation(project(":core:game"))
     implementation(project(":core:data"))
     implementation(project(":core:audio"))

@@ -16,6 +16,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
+import com.rodrigomachado.riff.core.ui.input.lateByMs
 
 /**
  * As teclas da partida ligadas à [session]: cores e palheta com o atraso de cada evento (como o toque), e a tecla
@@ -31,7 +33,7 @@ internal class GameKeyboard(private val session: GameSession, onPauseKey: () -> 
     )
 
     fun onKeyEvent(event: KeyEvent): Boolean {
-        lateByMs = keyLateByMs(event)
+        lateByMs = event.lateByMs()
         return when (event.type) {
             KeyEventType.KeyDown -> input.keyDown(event.key)
             KeyEventType.KeyUp -> input.keyUp(event.key)

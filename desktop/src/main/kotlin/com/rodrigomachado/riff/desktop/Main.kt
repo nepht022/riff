@@ -10,8 +10,8 @@ private const val MIN_WIDTH = 800
 private const val MIN_HEIGHT = 500
 
 fun main() {
-    DesktopLocale.applyDefault()
     val graph = DesktopGraph(DesktopPaths.dataDir)
+    graph.languages.apply()
     application {
         Window(
             onCloseRequest = {
