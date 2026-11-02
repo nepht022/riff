@@ -159,9 +159,9 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ### Riff no PC (em construção)
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay` e `:feature:results` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. Calibração, Configurações, controle, ranking e o resto vêm nas próximas etapas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings` e `:feature:calibration` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; controle, teclas configuráveis, ranking e o resto vêm nas próximas etapas (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
 
-**Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita. Ranking e a pergunta da separação por IA ainda não existem no PC.
+**Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na Calibração, aperte qualquer tecla (menos Esc) junto com cada batida; o atraso salvo vale nas partidas. Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita. Ranking e a pergunta da separação por IA ainda não existem no PC.
 
 - Os dados do Riff no PC (banco, preferências) ficam em `%APPDATA%\Riff`; a biblioteca do PC é separada da do celular.
 - No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
@@ -212,7 +212,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
 | `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
-| `:desktop` | O Riff no PC (Windows), em construção: por enquanto a tela inicial e a Biblioteca (`./scripts/gw :desktop:run`) |
+| `:desktop` | O Riff no PC (Windows), em construção: tela inicial, Biblioteca, partida, Resultado, Configurações e Calibração (`./scripts/gw :desktop:run`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots
