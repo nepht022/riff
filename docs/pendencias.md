@@ -94,6 +94,10 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 3a: o controle na partida (2026-11-03)
+
+- **Teste com o controle de verdade, adiado pelo usuário** (sem o controle à mão): rodar `./scripts/gw :desktop:runPadCheck` (mapeado ou cru? ordem dos botões? intervalo de leitura) e jogar com o controle: cores, palheta no direcional e no analógico, Start, Alt+Tab (o controle não faz nada sem foco), controle ligado depois de abrir o jogo (o `glfwPollEvents` na thread `riff-pad` deve achá-lo) e cabo desconectado com uma cor segurada (pausa antes de soltar). Se a ordem crua do controle for outra, a 3b deixa configurar.
+
 ## Riff no Windows, etapa 2d: calibração e Configurações no PC (revisão final, 2026-11-01)
 
 - Linux (X11): a repetição automática gera pares soltar/apertar, e segurar uma tecla na calibração conta vários toques; o alvo é o Windows (ignorar descidas da mesma tecla menos de ~30 ms depois da subida resolveria).
