@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -42,6 +44,9 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             prefs[FRET_STYLE] = updated.fretStyle.name
             prefs[SHOW_CHART_IMAGE] = updated.showChartImage
             prefs[SEPARATE_ONLY_CHARGING] = updated.separateOnlyCharging
+            prefs[CONTROLS_STRUM] = updated.controls.strum
+            prefs[CONTROLS_KEYS] = encodeChoices(updated.controls.keys)
+            prefs[CONTROLS_PAD] = encodeChoices(updated.controls.pad)
             prefs.remove(LEGACY_ASK_SEPARATION_ALWAYS)
             // As opções do Spotify (até a 0.4.0): o Spotify saiu do app.
             SPOTIFY_KEYS.forEach { prefs.remove(it) }
@@ -103,7 +108,20 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             fretStyle = enumOr(this[FRET_STYLE], default.fretStyle),
             showChartImage = flag(SHOW_CHART_IMAGE, default.showChartImage),
             separateOnlyCharging = flag(SEPARATE_ONLY_CHARGING, default.separateOnlyCharging),
+            controls = controls(),
         )
+    }
+
+    /**
+     * Cada ação lida sobre o padrão: ação desconhecida, valor ilegível ou ausente ficam com o padrão daquela ação.
+     * As escolhas entram pela mesma troca da tela, então uma tecla ou um botão repetido no disco não vale por dois.
+     */
+    private fun Preferences.controls(): Controls {
+        val keys = decodeChoices(this[CONTROLS_KEYS]) { it.toLongOrNull() }
+        val pad = decodeChoices(this[CONTROLS_PAD]) { value -> value.takeIf { PAD_BUTTON.matches(it) } }
+        val strum = flag(CONTROLS_STRUM, Settings.DEFAULT.controls.strum)
+        val chosen = keys.fold(Controls(strum = strum)) { controls, (action, key) -> controls.withKey(action, key) }
+        return pad.fold(chosen) { controls, (action, button) -> controls.withPad(action, button) }
     }
 
     private fun Preferences.flag(key: Preferences.Key<Boolean>, default: Boolean): Boolean = this[key] ?: default
@@ -145,6 +163,14 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
             SPOTIFY_NEXT_SONG_DIRECT,
         )
         val SEPARATE_ONLY_CHARGING = booleanPreferencesKey("separate_only_charging")
+        val CONTROLS_STRUM = booleanPreferencesKey("controls_strum")
+
+        // Texto `AÇÃO=valor;…`: o `Key.keyCode` (FRET_1=4294967361;…) e o botão (FRET_1=m:3;…).
+        val CONTROLS_KEYS = stringPreferencesKey("controls_keys")
+        val CONTROLS_PAD = stringPreferencesKey("controls_pad")
+
+        /** Botão do layout do GLFW (`m:3`), cru (`r:12`) ou o chapéu (`h:up`/`h:down`). */
+        val PAD_BUTTON = Regex("[mr]:\\d{1,3}|h:(up|down)")
         val LEGACY_SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val LEGACY_DEFAULT_DIFFICULTY = stringPreferencesKey("default_difficulty")
         val LIBRARY_ROOT_URI = stringPreferencesKey("library_root_uri")
@@ -154,3 +180,14 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
 /** Nome gravado de uma opção; um nome que não existe mais (versão antiga ou futura) volta ao padrão. */
 private inline fun <reified E : Enum<E>> enumOr(name: String?, default: E): E =
     name?.let { n -> enumValues<E>().firstOrNull { it.name == n } } ?: default
+
+private fun <V> encodeChoices(choices: Map<ControlAction, V>): String =
+    choices.entries.joinToString(";") { (action, value) -> "${action.name}=$value" }
+
+/** Os pares legíveis de `AÇÃO=valor;…`, na ordem gravada; o resto é ignorado (fica o padrão). */
+private fun <V : Any> decodeChoices(text: String?, parse: (String) -> V?): List<Pair<ControlAction, V>> =
+    text.orEmpty().split(';').mapNotNull { entry ->
+        val action = ControlAction.entries.firstOrNull { it.name == entry.substringBefore('=', "") }
+        val value = parse(entry.substringAfter('=', ""))
+        if (action != null && value != null) action to value else null
+    }
