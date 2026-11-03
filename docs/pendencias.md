@@ -94,6 +94,19 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 3c: navegação sem mouse (2026-11-03)
+
+- O controle nos menus (direcional, ✕, ○) só foi testado com controle falso e uma janela de teste: vai junto do teste com o controle (3a).
+- O ○ cancelando o diálogo de escolha de **tecla** não tem teste próprio.
+- Com a partida carregando, o controle nos menus não está suspenso: um ✕ manda Enter à tela de carregamento (sem nada focável, sem efeito hoje).
+- Os diálogos da Biblioteca (apagar, separar, dificuldade) receberam a navegação por teclado, mas nenhum teste os percorre de ponta a ponta.
+- O destaque do foco não tem screenshot dentro de diálogos, abas e sliders (só botão e cartão).
+- Segurar o Esc volta duas vezes (a repetição automática fecha o diálogo ou para a medição e, ~500 ms depois, volta de tela).
+- No teste com o controle (3a): diálogo da dificuldade, pausa (direcional, ✕ e ○), calibração com o controle e Start seguido de ✕ logo depois de continuar — o controle nos diálogos só foi testado entregando a tecla por dentro do Compose, não pelo `focusOwner` da janela.
+- `editRetrying` (gravar com nova tentativa) está no código comum: o celular também tenta de novo (inofensivo). O `WriteRetryTest` não cobre "3 falhas, o erro sobe" e não cancela o escopo que cria.
+- `opened` do `MenuKeys` é uma lista global da thread da janela (uma janela só hoje).
+- Pausa continuada pelo Enter do teclado sem o intervalo de 1 quadro: sem teste próprio (o RED só aparecia continuando pelo Start do controle).
+
 ## Riff no Windows, etapa 3b: controles configuráveis (2026-11-03)
 
 - Ranking por modo (celular, PC com palheta, PC sem palheta) é da etapa 4: hoje o recorde não guarda o modo em que foi feito.

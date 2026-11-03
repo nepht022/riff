@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,9 +34,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
+import com.rodrigomachado.riff.core.ui.input.PAD_MENU_BACK
+import com.rodrigomachado.riff.core.ui.input.TakePadFromMenus
 import com.rodrigomachado.riff.core.ui.input.lateByMs
+import com.rodrigomachado.riff.core.ui.input.nowNanos
 import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -85,6 +91,7 @@ fun CalibrationScreen(
         onDone = onDone,
         onReset = { viewModel.reset(onDone) },
         modifier = modifier,
+        onCancel = viewModel::cancel,
     )
 }
 
@@ -98,13 +105,18 @@ fun CalibrationContent(
     onDone: () -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Esc durante a medição (PC): para a medição e volta às instruções. */
+    onCancel: () -> Unit = {},
 ) {
     val instructions =
         if (tapsByTouch) Res.string.calibration_instructions else Res.string.calibration_instructions_keys
     // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
-            TextButton(onClick = onDone) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
+            TextButton(
+                onClick = onDone,
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
             PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when (state) {
@@ -113,12 +125,12 @@ fun CalibrationContent(
                         stringResource(Res.string.calibration_start),
                         onStart,
                     ) {
-                        TextButton(onClick = onReset) {
+                        TextButton(onClick = onReset, modifier = Modifier.focusHighlight(CircleShape)) {
                             Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
                         }
                     }
 
-                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap)
+                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap, onCancel)
 
                     is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
 
@@ -152,11 +164,12 @@ private fun Message(text: String, action: String, onAction: () -> Unit, secondar
 
 /**
  * A tela inteira recebe os toques; o instante é o do evento, no relógio [calibrationClockMs]. No PC, as teclas
- * ([rememberTapKeys]).
+ * ([rememberTapKeys]) e os botões do controle ([PadTaps]), e o Esc para a medição ([onCancel]).
  */
 @Composable
-private fun TapArea(taps: Int, onTap: (Long) -> Unit) {
-    val input = if (tapsByTouch) Modifier.touchTaps(onTap) else rememberTapKeys(onTap)
+private fun TapArea(taps: Int, onTap: (Long) -> Unit, onCancel: () -> Unit) {
+    PadTaps(onTap)
+    val input = if (tapsByTouch) Modifier.touchTaps(onTap) else rememberTapKeys(onTap, onCancel)
     val measuring = if (tapsByTouch) Res.string.calibration_measuring else Res.string.calibration_measuring_keys
     Box(
         Modifier
@@ -197,19 +210,23 @@ private fun Modifier.touchTaps(onTap: (Long) -> Unit) = pointerInput(Unit) {
 
 /**
  * As teclas como toques (PC): a área pega o foco ao aparecer e cada tecla que desce é um toque, no instante em que
- * foi apertada. O Esc não conta (fica para quem está em volta), e a repetição automática de uma tecla segurada
- * também não: só a primeira descida de cada tecla.
+ * foi apertada. O Esc não conta: para a medição ([onCancel]) e não chega a quem está em volta (não volta de tela
+ * junto). A repetição automática de uma tecla segurada também não conta: só a primeira descida de cada tecla.
  */
 @Composable
-private fun rememberTapKeys(onTap: (Long) -> Unit): Modifier {
+private fun rememberTapKeys(onTap: (Long) -> Unit, onCancel: () -> Unit): Modifier {
     val tap by rememberUpdatedState(onTap)
+    val cancel by rememberUpdatedState(onCancel)
     val down = remember { mutableSetOf<Key>() }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     return Modifier
         .onKeyEvent { event ->
             when {
-                event.key == Key.Escape -> false
+                event.key == Key.Escape -> {
+                    if (event.type == KeyEventType.KeyDown) cancel()
+                    true
+                }
 
                 event.type == KeyEventType.KeyDown -> {
                     if (down.add(event.key)) tap(calibrationClockMs() - event.lateByMs())
@@ -225,6 +242,22 @@ private fun rememberTapKeys(onTap: (Long) -> Unit): Modifier {
         .focusTarget()
 }
 
+/**
+ * Os botões do controle como toques (PC; no celular não há controle): cada um que desce conta, no instante da leitura
+ * dele (`PadEvent.atNanos`, levado ao [calibrationClockMs] pelo quanto esperou), não no de quando chegou aqui.
+ * Medindo, o controle sai dos menus: virar uma tecla falsa contaria o toque atrasado pela fila. Só o ○ continua lá
+ * (vira o Esc, que para a medição).
+ */
+@Composable
+private fun PadTaps(onTap: (Long) -> Unit) {
+    val gamepad = LocalGamepad.current ?: return
+    TakePadFromMenus { it != PAD_MENU_BACK }
+    val tap by rememberUpdatedState(onTap)
+    LaunchedEffect(gamepad) {
+        gamepad.events.collect { if (it.down) tap(calibrationClockMs() - (nowNanos() - it.atNanos) / NANOS_PER_MS) }
+    }
+}
+
 @Composable
 private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Unit, onRepeat: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
@@ -236,16 +269,20 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(-NUDGE_MS) },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.calibration_less), color = RiffColors.Paper) }
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(NUDGE_MS) },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.calibration_more), color = RiffColors.Paper) }
         }
         PosterButton(stringResource(Res.string.calibration_save), onClick = onSave, sound = MenuSound.CONFIRM)
         TextButton(
             onClick = withMenuSound(MenuSound.CONFIRM, onRepeat),
+            modifier = Modifier.focusHighlight(CircleShape),
         ) { Text(stringResource(Res.string.calibration_repeat), color = RiffColors.Paper) }
     }
 }
 
 private const val NUDGE_MS = 5
+private const val NANOS_PER_MS = 1_000_000L

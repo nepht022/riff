@@ -33,7 +33,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
@@ -100,7 +102,10 @@ private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCa
             enabled = selected > 0,
             sound = MenuSound.NAVIGATE,
         )
-        TextButton(onClick = withMenuSound(MenuSound.BACK, callbacks.onCancelSelecting)) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.BACK, callbacks.onCancelSelecting),
+            modifier = Modifier.focusHighlight(CircleShape),
+        ) {
             Text(stringResource(Res.string.library_delete_cancel), color = RiffColors.Paper)
         }
         Spacer(Modifier.weight(1f))
@@ -115,6 +120,7 @@ private fun SelectAll(allSelected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .size(48.dp)
+            .focusHighlight()
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
             .semantics {
                 contentDescription = description
@@ -164,6 +170,7 @@ internal fun DeletableChart(
                 onCheckedChange = if (canDelete) ({ callbacks.onToggle(chartId) }) else null,
                 enabled = canDelete,
                 colors = CheckboxDefaults.colors(checkedColor = RiffColors.TourRed, uncheckedColor = RiffColors.Paper),
+                modifier = Modifier.focusHighlight(),
             )
             card(Modifier.weight(1f), if (canDelete) ({ callbacks.onToggle(chartId) }) else ({}))
         }
@@ -184,6 +191,7 @@ private fun DeleteX(title: String, modifier: Modifier, onClick: () -> Unit) {
             .offset(x = 6.dp, y = (-6).dp)
             .size(32.dp)
             .background(RiffColors.TourRed, CircleShape)
+            .focusHighlight(CircleShape)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
             .semantics {
                 contentDescription = description
@@ -206,14 +214,24 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
     if (state.needsPermission) {
         AlertDialog(
             onDismissRequest = callbacks.onDismiss,
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = callbacks.onDismiss),
             text = { Text(stringResource(Res.string.library_delete_permission)) },
             confirmButton = {
-                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onAllow)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.NAVIGATE, onAllow),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.library_delete_allow))
                 }
             },
             dismissButton = {
-                TextButton(onClick = withMenuSound(MenuSound.BACK, callbacks.onDismiss)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK, callbacks.onDismiss),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.library_delete_cancel))
                 }
             },
@@ -222,9 +240,16 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
     if (state.failed > 0) {
         AlertDialog(
             onDismissRequest = callbacks.onFailureShown,
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = callbacks.onFailureShown),
             text = { Text(pluralStringResource(Res.plurals.library_delete_failed, state.failed, state.failed)) },
             confirmButton = {
-                TextButton(onClick = withMenuSound(MenuSound.CONFIRM, callbacks.onFailureShown)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.CONFIRM, callbacks.onFailureShown),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.library_delete_ok))
                 }
             },
@@ -236,6 +261,10 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
 private fun ConfirmDeletion(ask: DeleteAsk, callbacks: DeletionCallbacks) {
     AlertDialog(
         onDismissRequest = callbacks.onDismiss,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = callbacks.onDismiss),
         title = {
             Text(
                 ask.title?.let { stringResource(Res.string.library_delete_title_one, it) }
@@ -251,12 +280,18 @@ private fun ConfirmDeletion(ask: DeleteAsk, callbacks: DeletionCallbacks) {
             }
         },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.CONFIRM, callbacks.onConfirm)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM, callbacks.onConfirm),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.library_delete), color = RiffColors.TourRed)
             }
         },
         dismissButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK, callbacks.onDismiss)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, callbacks.onDismiss),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.library_delete_cancel))
             }
         },

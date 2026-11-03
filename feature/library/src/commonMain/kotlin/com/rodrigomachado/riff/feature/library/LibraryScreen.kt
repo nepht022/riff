@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +39,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.TrackCard
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.rememberMenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -149,10 +151,14 @@ fun LibraryContent(
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
-    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
+    var filtering by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf("") }
+    val closeFilter = Modifier.escapeClosesFilter(filtering) {
+        filtering = false
+        filter = ""
+    }
+    Column(closeFilter.then(modifier).fillMaxSize().padding(horizontal = Spacing.md)) {
         LibraryHeader(onBack, onSearch)
-        var filtering by rememberSaveable { mutableStateOf(false) }
-        var filter by rememberSaveable { mutableStateOf("") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             PosterTitle(
                 stringResource(Res.string.library_title),
@@ -240,13 +246,13 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
 @Composable
 private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
     Box(Modifier.fillMaxWidth()) {
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.library_back), color = RiffColors.Paper)
         }
         SeparationIndicator(Modifier.align(Alignment.Center))
         TextButton(
             onClick = withMenuSound(MenuSound.NAVIGATE, onSearch),
-            modifier = Modifier.align(Alignment.CenterEnd),
+            modifier = Modifier.align(Alignment.CenterEnd).focusHighlight(CircleShape),
         ) {
             Text(stringResource(Res.string.library_search), color = RiffColors.Paper)
         }

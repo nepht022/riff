@@ -10,6 +10,7 @@ import androidx.compose.ui.test.KeyInjectionScope
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -26,6 +27,7 @@ import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialogTestTags
 import com.rodrigomachado.riff.desktop.pad.NoPadSource
+import com.rodrigomachado.riff.desktop.pad.PadSource
 import com.rodrigomachado.riff.feature.gameplay.GameplayTestTags
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import kotlinx.coroutines.flow.first
@@ -53,8 +55,11 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         opened?.close()
     }
 
-    /** O app na tela inicial, com a pasta de mapas já importada. */
-    fun openApp(): DesktopGraph {
+    /**
+     * O app na tela inicial, com a pasta de mapas já importada; com [pad], o controle já lido, e as teclas que ele
+     * manda aos menus por [sendMenuKey].
+     */
+    fun openApp(pad: PadSource = NoPadSource, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
             File(this, "notes.chart").writeText(CHART)
@@ -66,8 +71,9 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             menuSounds = MenuSoundPlayer { _, _ -> },
             audioOut = audioOut,
             sfx = SfxPlayerFactory { SilentSfx },
-            padSource = NoPadSource,
+            padSource = pad,
         ).also { opened = it }
+        graph.gamepad.start()
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))
             graph.chartImporter.import(pcUri(charts))
@@ -77,7 +83,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             // A janela do teste não disputa o foco do sistema: sem isso a partida pausaria como num Alt+Tab.
             val real = LocalWindowInfo.current
             val focused = remember(real) { FocusedWindow(real) }
-            CompositionLocalProvider(LocalWindowInfo provides focused) { RiffDesktopApp(graph) }
+            CompositionLocalProvider(LocalWindowInfo provides focused) { RiffDesktopApp(graph, sendMenuKey) }
         }
         return graph
     }
@@ -94,7 +100,11 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         composeRule.waitUntilAtLeastOneExists(hasTestTag(DifficultyDialogTestTags.OPTION), TIMEOUT_MS)
         composeRule.mainClock.autoAdvance = false
         composeRule.clickOnWindowThread(composeRule.onNodeWithTag(DifficultyDialogTestTags.OPTION))
-        playInTheMatchUntil("a partida") { exists(STAGE) }
+        // O diálogo da dificuldade sai com animação (o relógio do teste anda à mão): enquanto ele existe, a tela tem
+        // duas raízes e as teclas não sabem para qual ir.
+        playInTheMatchUntil("a partida, sem o diálogo") {
+            exists(STAGE) && composeRule.onAllNodes(isRoot()).fetchSemanticsNodes().size == 1
+        }
     }
 
     /**
@@ -122,6 +132,12 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
     }
 
     fun exists(matcher: SemanticsMatcher) = composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+
+    /** A partida anda até a música chegar a [ms] (pela saída falsa). */
+    fun playTo(ms: Long) {
+        val sink = synchronized(sinks) { sinks.last() }
+        playInTheMatchUntil("a música em $ms ms") { sink.positionMs >= ms }
+    }
 
     /**
      * Pelas teclas de verdade, lendo a posição da música na saída falsa: [fret] segurada antes da primeira nota e

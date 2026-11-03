@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.datastore
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -11,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.Settings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -27,8 +29,24 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
 
     val libraryRootUri: Flow<String?> = safeData.map { it[LIBRARY_ROOT_URI] }
 
+    /**
+     * Grava tentando de novo: no Windows, trocar o arquivo recém-gravado às vezes falha por um instante (o antivírus
+     * ou o indexador o seguram: "Unable to rename"). Na última tentativa, a falha segue para quem gravou.
+     */
+    private suspend fun editRetrying(transform: suspend (MutablePreferences) -> Unit) {
+        repeat(WRITE_ATTEMPTS - 1) {
+            try {
+                dataStore.edit(transform)
+                return
+            } catch (_: IOException) {
+                delay(WRITE_RETRY_MS)
+            }
+        }
+        dataStore.edit(transform)
+    }
+
     suspend fun updateSettings(transform: (Settings) -> Settings) {
-        dataStore.edit { prefs ->
+        editRetrying { prefs ->
             val updated = transform(prefs.toSettings())
             prefs[AUDIO_OFFSET_MS] = updated.audioOffsetMs
             prefs[NOTE_SPEED] = updated.noteSpeed
@@ -60,31 +78,31 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
 
     /** Só a chave, antes da primeira reserva: se a resposta se perder, a nova tentativa usa a mesma. */
     suspend fun setPlayerKey(key: String) {
-        dataStore.edit { it[PLAYER_KEY] = key }
+        editRetrying { it[PLAYER_KEY] = key }
     }
 
     /** O nome sumiu do ranking e outra pessoa pegou: a chave fica (é a mesma pessoa), o nome é pedido de novo. */
     suspend fun forgetPlayerName() {
-        dataStore.edit { it.remove(PLAYER_NAME) }
+        editRetrying { it.remove(PLAYER_NAME) }
     }
 
     /** Tirado do ranking pelo dono: nome e chave somem; um nome novo começa do zero, com outra chave. */
     suspend fun forgetPlayer() {
-        dataStore.edit {
+        editRetrying {
             it.remove(PLAYER_NAME)
             it.remove(PLAYER_KEY)
         }
     }
 
     suspend fun setPlayer(name: String, key: String) {
-        dataStore.edit {
+        editRetrying {
             it[PLAYER_NAME] = name
             it[PLAYER_KEY] = key
         }
     }
 
     suspend fun setLibraryRootUri(uri: String) {
-        dataStore.edit { it[LIBRARY_ROOT_URI] = uri }
+        editRetrying { it[LIBRARY_ROOT_URI] = uri }
     }
 
     private fun Preferences.toSettings(): Settings {
@@ -130,6 +148,10 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         this[key]?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f)
 
     private companion object {
+        /** Três tentativas, 50 ms entre elas: o arquivo costuma ser liberado em poucos milissegundos. */
+        const val WRITE_ATTEMPTS = 3
+        const val WRITE_RETRY_MS = 50L
+
         val AUDIO_OFFSET_MS = intPreferencesKey("audio_offset_ms")
         val NOTE_SPEED = floatPreferencesKey("note_speed")
         val LEFT_HANDED = booleanPreferencesKey("left_handed")

@@ -47,7 +47,15 @@ fun TrackCard(
             Modifier
                 .fillMaxWidth()
                 .background(RiffColors.Paper, MaterialTheme.shapes.small)
-                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .then(
+                    if (onClick != null) {
+                        Modifier
+                            .focusHighlight(MaterialTheme.shapes.small)
+                            .clickable(role = Role.Button, onClick = onClick)
+                    } else {
+                        Modifier
+                    },
+                )
                 .heightIn(min = 48.dp)
                 .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,

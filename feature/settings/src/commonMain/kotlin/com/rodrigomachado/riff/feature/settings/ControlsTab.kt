@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,8 +31,12 @@ import androidx.compose.ui.platform.testTag
 import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.PAD_MENU_BACK
+import com.rodrigomachado.riff.core.ui.input.TakePadFromMenus
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -103,7 +108,10 @@ internal fun ControlsTab(
             choosing = Choosing(action, keyboard = false)
         }
     }
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onDefaults)) {
+    TextButton(
+        onClick = withMenuSound(MenuSound.NAVIGATE, onDefaults),
+        modifier = Modifier.focusHighlight(CircleShape),
+    ) {
         Text(stringResource(Res.string.settings_controls_defaults), color = RiffColors.Paper)
     }
     choosing?.let { choice ->
@@ -148,6 +156,10 @@ private fun ChooseDialog(
     // Uma escolha só por diálogo: dois botões na mesma leitura (ou duas teclas antes de a tela refazer) não trocam
     // uma terceira ação em cascata.
     var chosen by remember(choice) { mutableStateOf(false) }
+    // No PC o controle não anda nos menus atrás nem neste diálogo: no do botão, todo botão é escolhível (o ○ também;
+    // cancela-se com o Esc); no da tecla, só o ○ (vira o Esc, que cancela) — o direcional e o ✕ não viram teclas
+    // escolhidas.
+    TakePadFromMenus { !choice.keyboard || it != PAD_MENU_BACK }
     if (!choice.keyboard && gamepad != null) {
         LaunchedEffect(choice, gamepad) {
             val button = gamepad.presses.first { window.isWindowFocused }
@@ -165,24 +177,33 @@ private fun ChooseDialog(
         title = { Text(stringResource(title, name)) },
         text = { Text(stringResource(Res.string.settings_controls_escape)) },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, onClose),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.settings_controls_cancel))
             }
         },
-        modifier = Modifier.testTag(ControlsTestTags.CHOOSING).focusRequester(focus).focusable().onPreviewKeyEvent {
-            if (it.type == KeyEventType.KeyDown) {
-                when {
-                    it.key == Key.Escape -> onClose()
+        // No PC o diálogo é o de cima nas teclas dos menus (a tela de trás não lhe toma o foco); as teclas, todas dele.
+        modifier = Modifier
+            .menuKeys(onBack = null)
+            .testTag(ControlsTestTags.CHOOSING)
+            .focusRequester(focus)
+            .focusable()
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyDown) {
+                    when {
+                        it.key == Key.Escape -> onClose()
 
-                    choice.keyboard && window.isWindowFocused && !chosen -> {
-                        chosen = true
-                        onChosenKey(it.key.keyCode)
-                        onClose()
+                        choice.keyboard && window.isWindowFocused && !chosen -> {
+                            chosen = true
+                            onChosenKey(it.key.keyCode)
+                            onClose()
+                        }
                     }
                 }
-            }
-            true
-        },
+                true
+            },
     )
     LaunchedEffect(Unit) { focus.requestFocus() }
 }

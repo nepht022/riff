@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.rodrigomachado.riff.core.model.Judgment
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.stage.JudgmentText
 import com.rodrigomachado.riff.core.ui.stage.MultiplierStamp
 import com.rodrigomachado.riff.core.ui.stage.ScoreText
@@ -90,7 +92,7 @@ internal fun SideHud(hud: HudState, onPause: () -> Unit, highwayWidth: Dp, modif
 
 @Composable
 private fun PauseButton(onPause: () -> Unit, modifier: Modifier) {
-    TextButton(onClick = onPause, modifier = modifier.testTag(GameplayTestTags.PAUSE)) {
+    TextButton(onClick = onPause, modifier = modifier.testTag(GameplayTestTags.PAUSE).focusHighlight(CircleShape)) {
         Text(stringResource(Res.string.gameplay_pause), color = RiffColors.Paper)
     }
 }

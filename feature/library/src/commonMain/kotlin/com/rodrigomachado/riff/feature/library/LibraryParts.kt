@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.difficultyName
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -69,12 +71,18 @@ internal fun ListActions(onRescan: () -> Unit, onPickFolder: () -> Unit, onSelec
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         PosterButton(stringResource(Res.string.library_rescan), onClick = onRescan, sound = MenuSound.NAVIGATE)
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onPickFolder)) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onPickFolder),
+            modifier = Modifier.focusHighlight(CircleShape),
+        ) {
             Text(stringResource(Res.string.library_change_folder), color = RiffColors.Paper, maxLines = 1)
         }
         // Encostado à direita, alinhado com o Pesquisar do cabeçalho.
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSelect)) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onSelect),
+            modifier = Modifier.focusHighlight(CircleShape),
+        ) {
             Text(stringResource(Res.string.library_select), color = RiffColors.Paper, maxLines = 1)
         }
     }

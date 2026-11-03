@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -27,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.changedToDown
@@ -41,12 +44,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
 import com.rodrigomachado.riff.core.ui.stage.StageCache
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -77,6 +83,8 @@ object GameplayTestTags {
     const val STAGE = "gameplay_stage"
     const val PAUSE = "gameplay_pause"
     const val EXIT = "gameplay_exit"
+    const val RESUME = "gameplay_resume"
+    const val PAUSE_MENU = "gameplay_pause_menu"
     const val PROGRESS = "gameplay_progress"
 }
 
@@ -104,13 +112,7 @@ fun GameplayScreen(
     when (val current = state) {
         GameplayUiState.Loading -> LoadingState(modifier)
 
-        is GameplayUiState.Unavailable -> EmptyState(
-            title = stringResource(Res.string.gameplay_unavailable_title),
-            message = stringResource(current.reason.message()),
-            actionLabel = stringResource(Res.string.gameplay_back),
-            onAction = onExit,
-            modifier = modifier,
-        )
+        is GameplayUiState.Unavailable -> UnavailableScreen(current.reason, onExit, modifier)
 
         is GameplayUiState.Ready -> GameStage(
             state = current,
@@ -125,6 +127,18 @@ fun GameplayScreen(
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
     }
+}
+
+/** "Não dá para jogar": o motivo e o Voltar; no PC, as setas e o Esc (volta) como nos menus. */
+@Composable
+internal fun UnavailableScreen(reason: UnavailableReason, onExit: () -> Unit, modifier: Modifier = Modifier) {
+    EmptyState(
+        title = stringResource(Res.string.gameplay_unavailable_title),
+        message = stringResource(reason.message()),
+        actionLabel = stringResource(Res.string.gameplay_back),
+        onAction = onExit,
+        modifier = modifier.menuKeys(onBack = onExit),
+    )
 }
 
 /**
@@ -143,6 +157,8 @@ internal fun GameStage(
     animate: Boolean = true,
 ) {
     val session = state.session
+    // A pausa já no instante em que muda (o teclado e o controle a leem antes de a tela recompor).
+    val matchPause = rememberMatchPause(state.isPaused, onPause, onResume)
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
@@ -152,7 +168,7 @@ internal fun GameStage(
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
     val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
-    GameBackHandler(enabled = !state.isPaused, onBack = onPause)
+    GameBackHandler(enabled = !state.isPaused, onBack = matchPause.pause)
     if (animate) {
         LaunchedEffect(session) {
             while (isActive) {
@@ -168,9 +184,10 @@ internal fun GameStage(
             }
         }
     }
-    val keys = rememberGameKeys(session, state.settings.controls, state.isPaused, onPause, onResume)
+    val pauseMenu = remember { PauseMenu() }
+    val keys = rememberGameKeys(session, state.settings.controls, matchPause, state.isPaused, pauseMenu)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
-    HandleGamepad(session, state.isPaused, onPause, onResume)
+    HandleGamepad(session, matchPause, state.settings.controls.pad[ControlAction.PAUSE])
     val highway = @Composable { highwayModifier: Modifier ->
         Canvas(
             highwayModifier
@@ -194,13 +211,13 @@ internal fun GameStage(
                 JudgmentPop(session, hud, { frame }, reducedMotion, Modifier.align(Alignment.Center))
                 SongProgressBar(session, { frame }, Modifier.align(Alignment.BottomCenter).progressBar())
             }
-            SideHud(hud, onPause, highwayWidth, Modifier.fillMaxSize())
+            SideHud(hud, matchPause.pause, highwayWidth, Modifier.fillMaxSize())
         } else {
             highway(Modifier.fillMaxSize())
             SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
-            Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
+            Hud(session, hud, { frame }, reducedMotion, matchPause.pause, Modifier.fillMaxSize())
         }
-        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit)
+        if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, matchPause.resume, onExit)
     }
 }
 
@@ -238,12 +255,17 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
 @Composable
 private fun PauseOverlay(
     state: GameplayUiState.Ready,
+    menu: PauseMenu,
     onAdjustOffset: (Int) -> Unit,
     onResume: () -> Unit,
     onExit: () -> Unit,
 ) {
+    // A pausa fechou com um botão focado: a próxima começa sem foco (a primeira seta foca o Continuar).
+    DisposableEffect(menu) { onDispose { menu.hasFocus = false } }
     Column(
-        Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA)),
+        Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA))
+            .testTag(GameplayTestTags.PAUSE_MENU)
+            .pauseMenu(menu),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -258,9 +280,14 @@ private fun PauseOverlay(
                 modifier = Modifier.padding(horizontal = Spacing.lg).semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
-        PosterButton(stringResource(Res.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
+        PosterButton(
+            stringResource(Res.string.gameplay_resume),
+            onClick = onResume,
+            modifier = Modifier.testTag(GameplayTestTags.RESUME).focusRequester(menu.first),
+            sound = MenuSound.CONFIRM,
+        )
         SyncAdjuster(state.songOffsetMs, onAdjustOffset)
-        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
+        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.gameplay_exit), color = RiffColors.Paper)
         }
     }
@@ -277,7 +304,10 @@ private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             for ((label, deltaMs) in SYNC_BUTTONS) {
-                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE) { onAdjustOffset(deltaMs) }) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.NAVIGATE) { onAdjustOffset(deltaMs) },
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(label), color = RiffColors.Paper)
                 }
             }

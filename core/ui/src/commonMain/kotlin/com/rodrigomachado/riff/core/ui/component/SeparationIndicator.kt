@@ -40,6 +40,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.resources.Res
 import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel
 import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel_all
@@ -135,7 +136,9 @@ fun SeparationIndicatorContent(
     Box(modifier) {
         IconButton(
             onClick = withMenuSound(MenuSound.NAVIGATE) { open = true },
-            modifier = Modifier.testTag(SeparationIndicatorTags.ICON).semantics { contentDescription = description },
+            modifier = Modifier.testTag(SeparationIndicatorTags.ICON)
+                .semantics { contentDescription = description }
+                .focusHighlight(CircleShape),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (status is SeparationStatus.Running) {
@@ -181,6 +184,10 @@ private fun Count(total: Int, modifier: Modifier) {
 private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -> Unit, onClose: () -> Unit) =
     AlertDialog(
         onDismissRequest = onClose,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onClose),
         text = { Text(failedText(status)) },
         confirmButton = {
             TextButton(
@@ -188,6 +195,7 @@ private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -
                     onClose()
                     onDismissFailure()
                 },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.ui_separation_ok)) }
         },
     )
@@ -204,6 +212,10 @@ private fun QueuePanel(
     val hasQueue = queue.items.isNotEmpty()
     AlertDialog(
         onDismissRequest = onClose,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onClose),
         title = {
             val waiting = if (queue.waitingForCharger) {
                 Res.string.ui_separation_waiting_charger
@@ -226,6 +238,7 @@ private fun QueuePanel(
                         onClose()
                         onCancel()
                     },
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) {
                     Text(
                         stringResource(
@@ -234,7 +247,10 @@ private fun QueuePanel(
                     )
                 }
             } else {
-                TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK, onClose),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.ui_separation_close))
                 }
             }
@@ -246,6 +262,7 @@ private fun QueuePanel(
                         onClose()
                         queue.onCancelAll()
                     },
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) { Text(stringResource(Res.string.ui_separation_cancel_all)) }
             }
         },
@@ -269,7 +286,7 @@ private fun QueueList(queue: SeparationQueueView) {
                 modifier = Modifier.clearAndSetSemantics {
                     contentDescription = remove
                     role = Role.Button
-                },
+                }.focusHighlight(CircleShape),
             ) { Text("✕", color = RiffColors.PaperDim) }
         }
     }

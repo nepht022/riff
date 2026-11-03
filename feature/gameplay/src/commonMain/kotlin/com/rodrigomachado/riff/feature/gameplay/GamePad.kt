@@ -11,6 +11,7 @@ import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.PadAction
 import com.rodrigomachado.riff.core.ui.input.PadEvent
+import com.rodrigomachado.riff.core.ui.input.TakePadFromMenus
 import com.rodrigomachado.riff.core.ui.input.nowNanos
 import kotlinx.coroutines.launch
 
@@ -22,18 +23,21 @@ private const val NANOS_PER_MS = 1_000_000L
  * O controle na partida (PC; no celular [LocalGamepad] é nulo e nada muda): as cores e a palheta chegam à mesma
  * [session] do teclado, descontando quanto cada evento esperou; Start pausa e, na pausa, continua (com o som do
  * Continuar, como o Enter). Com a janela sem foco (Alt+Tab) o controle é ignorado: o GLFW o lê em segundo plano.
- * O controle desconectado no meio da música pausa (as cores chegam soltas logo depois).
+ * O controle desconectado no meio da música pausa (as cores chegam soltas logo depois). Tocando, nenhum botão vira
+ * tecla nos menus ([TakePadFromMenus]: o ✕ que acerta a nota não confirma nada); na pausa, só o da pausa
+ * ([pauseButton]) fica com a partida (Start continua, sem virar também um Enter), e os outros andam nos botões dela.
  */
 @Composable
-internal fun HandleGamepad(session: GameSession, isPaused: Boolean, onPause: () -> Unit, onResume: () -> Unit) {
+internal fun HandleGamepad(session: GameSession, matchPause: MatchPause, pauseButton: String?) {
     val gamepad = LocalGamepad.current ?: return
     val window = LocalWindowInfo.current
-    val paused by rememberUpdatedState(isPaused)
-    val pause by rememberUpdatedState(onPause)
-    val resume by rememberUpdatedState(withMenuSound(MenuSound.CONFIRM, onResume))
+    // A pausa de agora, não a da última recomposição: o ✕ logo depois de o Start continuar já é da partida.
+    TakePadFromMenus { !matchPause.isPaused || it == pauseButton }
+    val pause = matchPause.pause
+    val resume by rememberUpdatedState(withMenuSound(MenuSound.CONFIRM, matchPause.resume))
     // Na thread da janela, como o teclado: a sessão não é thread-safe.
     LaunchedEffect(gamepad, session) {
-        val unplug = UnplugWatch(gamepad) { if (!paused) pause() }
+        val unplug = UnplugWatch(gamepad) { if (!matchPause.isPaused) pause() }
         launch { gamepad.connected.collect { unplug.check() } }
         gamepad.events.collect { event ->
             // O cabo saiu: pausa antes de as cores soltas chegarem (soltar uma cor tocando poderia acertar um
@@ -41,7 +45,7 @@ internal fun HandleGamepad(session: GameSession, isPaused: Boolean, onPause: () 
             unplug.check()
             // O foco de agora, não o da composição: o evento pode chegar antes de a perda do foco recompor.
             if (window.isWindowFocused) {
-                onEvent(session, event, if (paused) resume else pause)
+                onEvent(session, event, if (matchPause.isPaused) resume else pause)
             }
         }
     }

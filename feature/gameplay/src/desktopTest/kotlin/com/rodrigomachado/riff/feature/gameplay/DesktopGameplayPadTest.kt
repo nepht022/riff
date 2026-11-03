@@ -3,12 +3,17 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.PadAction
 import com.rodrigomachado.riff.core.ui.input.PadEvent
+import com.rodrigomachado.riff.core.ui.input.PadMenuSuspension
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
@@ -83,6 +88,68 @@ class DesktopGameplayPadTest {
         composeRule.onNodeWithTag(GameplayTestTags.EXIT).assertDoesNotExist()
     }
 
+    /**
+     * Start continua e, no mesmo quadro (antes de a tela recompor sem a pausa), o ✕ desce: ele é uma cor, não um
+     * Enter nos menus (que, chegando depois, pausaria de novo).
+     */
+    @Test
+    fun aCrossRightAfterResumingIsNotAMenuKey() {
+        val session = playingSession(note(60_000))
+        var paused by mutableStateOf(true)
+        var pauses = 0
+        val suspension = PadMenuSuspension()
+        composeRule.showStage(
+            { readyState(session, isPaused = paused) },
+            {
+                pauses++
+                paused = true
+            },
+            pad,
+            onResume = { paused = false },
+            suspension = suspension,
+        )
+        composeRule.mainClock.autoAdvance = false
+
+        press(PadAction.PAUSE)
+        press(PadAction.FRET_4)
+        // A descida crua do ✕ chega à coleta dos menus logo depois do evento da partida, como no PC.
+        val sent = composeRule.runOnIdle { suspension.allows(CROSS) }
+        composeRule.onNodeWithTag(GameplayTestTags.EXIT).assertExists() // o mesmo quadro: a pausa ainda na tela
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        // A tecla falsa chegaria à janela depois (`invokeLater`), já sem a pausa na tela.
+        if (sent) composeRule.runOnUiThread { composeRule.onRoot().performKeyInput { pressKey(Key.Enter) } }
+        composeRule.waitForIdle()
+
+        assertFalse("o ✕ virou um Enter nos menus", sent)
+        assertFalse("pausou de novo", paused)
+        assertEquals(0, pauses)
+    }
+
+    /**
+     * Start continua e, no mesmo quadro, a seta do teclado palheta (a nota acerta): não é engolida pela pausa que já
+     * fechou. Continuar pelo teclado não tem esse intervalo (o Compose recompõe antes de cada tecla).
+     */
+    @Test
+    fun anArrowRightAfterStartResumesStrums() {
+        val session = playingSession(note(1_000, lane = 0), positionMs = 1_000).also { it.pause() }
+        var paused by mutableStateOf(true)
+        composeRule.showStage({ readyState(session, isPaused = paused) }, { paused = true }, pad) {
+            session.resume()
+            paused = false
+        }
+        composeRule.mainClock.autoAdvance = false
+        press(PadAction.PAUSE)
+        composeRule.onNodeWithTag(GameplayTestTags.EXIT).assertExists() // o mesmo quadro: a pausa ainda na tela
+        composeRule.runOnUiThread {
+            composeRule.onRoot().performKeyInput {
+                keyDown(Key.A)
+                pressKey(Key.DirectionDown)
+            }
+        }
+        composeRule.runOnIdle { assertEquals(Judgment.PERFECT, session.lastJudgment) }
+    }
+
     /** Alt+Tab com o controle na mão: o GLFW lê o controle em segundo plano, mas a partida não ouve. */
     @Test
     fun withTheWindowUnfocusedThePadIsIgnored() {
@@ -117,5 +184,10 @@ class DesktopGameplayPadTest {
 
         assertEquals(1, pauses)
         assertFalse(session.isPressed(0))
+    }
+
+    private companion object {
+        /** O ✕ (o A do layout de controle): Enter nos menus. */
+        const val CROSS = "m:0"
     }
 }

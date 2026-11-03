@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.window.Dialog
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.resources.Res
 import com.rodrigomachado.riff.core.ui.resources.ui_cancel
 import com.rodrigomachado.riff.core.ui.resources.ui_choose_difficulty
@@ -42,8 +44,10 @@ fun <T> DifficultyDialog(
             Modifier
                 .background(RiffColors.StageBlack, MaterialTheme.shapes.large)
                 .padding(Spacing.lg)
-                // O diálogo é outra janela: a propriedade da raiz do app não chega aqui.
-                .exposeTestTags(),
+                // O diálogo é outra janela: a propriedade da raiz do app não chega aqui, nem as teclas dos menus do PC
+                // (as setas andam por ele, e o Esc o fecha sem chegar à tela de trás).
+                .exposeTestTags()
+                .menuKeys(onBack = dismiss),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -63,6 +67,7 @@ fun <T> DifficultyDialog(
             }
             TextButton(
                 onClick = withMenuSound(MenuSound.BACK, onDismiss),
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.ui_cancel), color = RiffColors.Paper) }
         }
     }
