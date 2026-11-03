@@ -162,4 +162,59 @@ class GameSessionStrumTest {
         assertTrue(session.isPressed(2))
         assertTrue(session.engine.score > atRelease)
     }
+
+    private fun withoutStrum(vararg notes: Note) =
+        GameSession(notes.toList(), player, sfx, time, audioOffsetMs = 0, strum = false).also { it.start() }
+
+    /** Sem palheta (Configurações → Controles): apertar a cor na hora basta, como o toque do celular. */
+    @Test
+    fun withoutStrumThePressAloneHits() {
+        player.positionMs = 1_000
+        val session = withoutStrum(note(1_000, lane = 0))
+
+        session.fretDown(0)
+
+        assertEquals(Judgment.PERFECT, session.lastJudgment)
+        assertEquals(1, session.engine.combo)
+    }
+
+    @Test
+    fun withoutStrumTheStrumKeyDoesNothing() {
+        player.positionMs = 5_000
+        val session = withoutStrum(note(1_000, lane = 0), note(9_000, lane = 0))
+
+        session.strum()
+
+        assertEquals(0, sfx.misses)
+    }
+
+    @Test
+    fun withoutStrumReleasingEndsTheLongNote() {
+        player.positionMs = 1_000
+        val session = withoutStrum(note(1_000, lane = 2, sustainMs = 2_000))
+        session.fretDown(2)
+        player.positionMs = 1_500
+        time.now = GameSession.SYNC_INTERVAL_MS
+        session.tick()
+
+        session.fretUp(2)
+        val atRelease = session.engine.score
+        player.positionMs = 2_500
+        time.now = GameSession.SYNC_INTERVAL_MS * 2
+        session.tick()
+
+        assertEquals(atRelease, session.engine.score)
+        assertFalse(session.isPressed(2))
+    }
+
+    /** Cor sem nota, sem palheta: erro, como um toque errado no celular. */
+    @Test
+    fun aWrongFretWithoutStrumIsAMissLikeTouch() {
+        player.positionMs = 5_000
+        val session = withoutStrum(note(1_000, lane = 0), note(9_000, lane = 0))
+
+        session.fretDown(3)
+
+        assertEquals(1, sfx.misses)
+    }
 }
