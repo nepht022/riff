@@ -55,6 +55,7 @@ import com.rodrigomachado.riff.feature.settings.resources.settings_controls_pres
 import com.rodrigomachado.riff.feature.settings.resources.settings_controls_press_key
 import com.rodrigomachado.riff.feature.settings.resources.settings_controls_strum
 import com.rodrigomachado.riff.feature.settings.resources.settings_controls_strum_hint
+import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.stringResource
 
 object ControlsTestTags {
@@ -144,14 +145,15 @@ private fun ChooseDialog(
     val gamepad = LocalGamepad.current
     val chosenPad by rememberUpdatedState(onChosenPad)
     val close by rememberUpdatedState(onClose)
+    // Uma escolha só por diálogo: dois botões na mesma leitura (ou duas teclas antes de a tela refazer) não trocam
+    // uma terceira ação em cascata.
+    var chosen by remember(choice) { mutableStateOf(false) }
     if (!choice.keyboard && gamepad != null) {
         LaunchedEffect(choice, gamepad) {
-            gamepad.presses.collect { button ->
-                if (window.isWindowFocused) {
-                    chosenPad(button)
-                    close()
-                }
-            }
+            val button = gamepad.presses.first { window.isWindowFocused }
+            chosen = true
+            chosenPad(button)
+            close()
         }
     }
     val focus = remember { FocusRequester() }
@@ -172,7 +174,8 @@ private fun ChooseDialog(
                 when {
                     it.key == Key.Escape -> onClose()
 
-                    choice.keyboard && window.isWindowFocused -> {
+                    choice.keyboard && window.isWindowFocused && !chosen -> {
+                        chosen = true
                         onChosenKey(it.key.keyCode)
                         onClose()
                     }

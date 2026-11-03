@@ -173,4 +173,27 @@ class PadMapperTest {
             read(mapped(leftY = 0.7f), mapped(), raw(hat = HAT_DOWN)),
         )
     }
+
+    /**
+     * Controle cru: escolher △ (botão cru 12) para o Vermelho troca com o Verde (que é △ pelo padrão `m:3`): o mesmo
+     * botão físico tem um nome só, e △ não aperta duas cores.
+     */
+    @Test
+    fun choosingARawButtonUsedByAnotherActionSwapsThem() {
+        val triangle = raw(RawButton.TRIANGLE).pressedSince(null).single()
+        choosing(ControlAction.FRET_2 to triangle)
+
+        val events = read(raw(), raw(RawButton.TRIANGLE), raw(), raw(RawButton.CIRCLE))
+
+        assertEquals(listOf(down(PadAction.FRET_2, 2)), events[1])
+        assertEquals(listOf(down(PadAction.FRET_1, 4)), events[3])
+    }
+
+    /** No cru, o direcional (botão ou chapéu) tem o nome do layout: escolhê-lo para uma cor tira-o da palheta. */
+    @Test
+    fun aRawDpadIsNamedLikeTheLayout() {
+        assertEquals(listOf("m:11"), raw(RawButton.UP).pressedSince(null))
+        assertEquals(listOf("m:13"), raw(hat = HAT_DOWN).pressedSince(null))
+        assertEquals(listOf("r:9"), raw(9).pressedSince(null))
+    }
 }

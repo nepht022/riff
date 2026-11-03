@@ -27,14 +27,21 @@ private fun String.index(prefix: String): Int? = removePrefix(prefix).toIntOrNul
 
 /**
  * Os botões que desceram desde [before] (nulo = acabou de ligar: tudo o que está apertado), como texto para a escolha:
- * `m:N` num controle mapeado; `r:N` e `h:up`/`h:down` num cru.
+ * `m:N` num controle mapeado. Num cru, cada botão físico tem um nome só: o do layout quando a ordem crua do DualShock 3
+ * o conhece (△ cru 12 é `m:3`, como o padrão; o direcional, botão ou chapéu, é `m:11`/`m:13`), senão `r:N`. Assim a
+ * troca das escolhas percebe o mesmo botão em duas ações.
  */
 internal fun PadSnapshot.pressedSince(before: PadSnapshot?): List<String> {
     val mapped = layout
     if (mapped != null) return (mapped - before?.layout.orEmpty()).sorted().map { "$MAPPED_PREFIX$it" }
     val hatDown = hat and (before?.hat ?: 0).inv()
-    val hats = listOf(HAT_UP to HAT_UP_TEXT, HAT_DOWN to HAT_DOWN_TEXT).filter { hatDown and it.first != 0 }
-    return (raw - before?.raw.orEmpty()).sorted().map { "$RAW_PREFIX$it" } + hats.map { it.second }
+    val hats = listOf(HAT_UP to MappedButton.DPAD_UP, HAT_DOWN to MappedButton.DPAD_DOWN)
+        .filter { hatDown and it.first != 0 }
+        .map { "$MAPPED_PREFIX${it.second}" }
+    val buttons = (raw - before?.raw.orEmpty()).sorted().map { index ->
+        MAPPED_OF_RAW[index]?.let { "$MAPPED_PREFIX$it" } ?: "$RAW_PREFIX$index"
+    }
+    return (buttons + hats).distinct()
 }
 
 private const val MAPPED_PREFIX = "m:"
@@ -61,3 +68,6 @@ private val RAW_OF_MAPPED: Map<Int, Int> = mapOf(
     MappedButton.DPAD_DOWN to RawButton.DOWN,
     14 to 7, // direcional ←
 )
+
+/** A tabela ao contrário: o nome (do layout) de cada botão cru do DualShock 3. */
+private val MAPPED_OF_RAW: Map<Int, Int> = RAW_OF_MAPPED.entries.associate { (mapped, raw) -> raw to mapped }

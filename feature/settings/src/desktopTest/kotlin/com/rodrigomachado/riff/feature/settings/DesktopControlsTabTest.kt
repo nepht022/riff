@@ -209,4 +209,19 @@ class DesktopControlsTabTest {
 
         assertEquals(listOf("defaults"), events)
     }
+
+    /** Dois botões na mesma leitura (ou o controle religando com botões segurados): só o primeiro é escolhido. */
+    @Test
+    fun twoPressesAtOnceChooseOnlyTheFirst() {
+        show()
+        chooseButtonForGreen()
+
+        composeRule.runOnIdle {
+            assertTrue(pad.presses.tryEmit("m:1"))
+            assertTrue(pad.presses.tryEmit("m:2"))
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(listOf("pad:FRET_1:m:1"), events)
+    }
 }
