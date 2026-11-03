@@ -28,9 +28,10 @@ internal fun startGlfwForPads(hint: (Int, Int) -> Unit = ::glfwInitHint, init: (
 }
 
 /**
- * O controle pelo GLFW: o primeiro joystick ligado, no layout de controle quando a base do SDL o conhece
- * (`glfwGetGamepadState`), senão cru (botões, eixo 1 e chapéu 0 pelo índice). Sem controle, procura de novo a cada
- * leitura: um controle ligado depois é encontrado.
+ * O controle pelo GLFW: o primeiro joystick ligado, com os botões crus e o chapéu 0 pelo índice sempre (um botão `r:`
+ * escolhido vale em qualquer controle) e, quando a base do SDL o conhece, também no layout de controle
+ * (`glfwGetGamepadState`, com o analógico dele); senão, o analógico é o eixo cru 1. Sem controle, procura de novo a
+ * cada leitura: um controle ligado depois é encontrado.
  */
 class GlfwPadSource : PadSource {
     private var started = false
@@ -51,20 +52,23 @@ class GlfwPadSource : PadSource {
         return current?.let(::read)
     }
 
-    private fun read(pad: Int): PadSnapshot? = if (glfwJoystickIsGamepad(pad) && glfwGetGamepadState(pad, state)) {
-        PadSnapshot(
-            mapped = true,
-            buttons = (0 until GAMEPAD_BUTTONS).filterTo(mutableSetOf()) { state.buttons(it).toInt() == GLFW_PRESS },
-            leftY = state.axes(GLFW_GAMEPAD_AXIS_LEFT_Y),
-        )
-    } else {
-        // Sumiu entre a procura e a leitura: os três voltam nulos.
-        glfwGetJoystickButtons(pad)?.let { buttons ->
+    /** Sumiu entre a procura e a leitura: os botões crus voltam nulos, e a leitura também. */
+    private fun read(pad: Int): PadSnapshot? {
+        val buttons = glfwGetJoystickButtons(pad) ?: return null
+        val raw = (0 until buttons.limit()).filterTo(mutableSetOf()) { buttons.get(it).toInt() == GLFW_PRESS }
+        val hat = glfwGetJoystickHats(pad)?.takeIf { it.limit() > 0 }?.get(0)?.toInt() ?: 0
+        return if (glfwJoystickIsGamepad(pad) && glfwGetGamepadState(pad, state)) {
             PadSnapshot(
-                mapped = false,
-                buttons = (0 until buttons.limit()).filterTo(mutableSetOf()) { buttons.get(it).toInt() == GLFW_PRESS },
+                raw = raw,
+                hat = hat,
+                leftY = state.axes(GLFW_GAMEPAD_AXIS_LEFT_Y),
+                layout = (0 until GAMEPAD_BUTTONS).filterTo(mutableSetOf()) { state.buttons(it).toInt() == GLFW_PRESS },
+            )
+        } else {
+            PadSnapshot(
+                raw = raw,
+                hat = hat,
                 leftY = glfwGetJoystickAxes(pad)?.takeIf { it.limit() > RAW_LEFT_Y }?.get(RAW_LEFT_Y) ?: 0f,
-                hat = glfwGetJoystickHats(pad)?.takeIf { it.limit() > 0 }?.get(0)?.toInt() ?: 0,
             )
         }
     }

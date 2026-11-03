@@ -1,5 +1,7 @@
 package com.rodrigomachado.riff.desktop.pad
 
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.PadEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -12,7 +14,8 @@ import kotlin.concurrent.thread
 
 /**
  * O controle do PC, lido numa thread própria (`riff-pad`, daemon) a cada ~1 ms: a mesma thread inicia, lê e encerra a
- * [source] (o GLFW exige). Só as mudanças viram [events], com o instante [clock] da leitura em que apareceram. Sem o
+ * [source] (o GLFW exige). Só as mudanças viram [events] (com os botões de [setBindings]), com o instante [clock] da
+ * leitura em que apareceram; cada botão que desce vira também um [presses] (para a escolha na aba). Sem o
  * GLFW (nativo ausente ou `glfwInit` falso), [connected] fica falso para sempre e o jogo segue só com o teclado.
  */
 class GlfwGamepad(
@@ -26,6 +29,11 @@ class GlfwGamepad(
     private val mutableConnected = MutableStateFlow(false)
     override val events: SharedFlow<PadEvent> = mutableEvents.asSharedFlow()
     override val connected: StateFlow<Boolean> = mutableConnected.asStateFlow()
+    private val mutablePresses = MutableSharedFlow<String>(extraBufferCapacity = EVENT_BUFFER)
+    override val presses: SharedFlow<String> = mutablePresses.asSharedFlow()
+
+    /** Os botões escolhidos, trocados pela thread do app e lidos pela `riff-pad` a cada leitura. */
+    @Volatile private var bindings: Map<ControlAction, String> = Controls.DEFAULT_PAD
 
     @Volatile private var running = true
     private var reader: Thread? = null
@@ -43,16 +51,25 @@ class GlfwGamepad(
         reader = thread(isDaemon = true, name = "riff-pad") { read() }
     }
 
+    /** Os botões escolhidos (`Controls.pad`): valem a partir da próxima leitura. */
+    fun setBindings(pad: Map<ControlAction, String>) {
+        bindings = pad
+    }
+
     private fun read() {
         if (!started()) return
         try {
             val mapper = PadMapper()
+            var previous: PadSnapshot? = null
             while (running) {
                 val snapshot = source.poll()
                 val at = clock()
                 // Sumiu: desconectado antes das cores soltas, para a partida pausar antes de soltá-las.
                 if (snapshot == null) mutableConnected.value = false
+                mapper.pad = bindings
                 mapper.changes(snapshot, at).forEach { mutableEvents.tryEmit(it) }
+                snapshot?.pressedSince(previous)?.forEach { mutablePresses.tryEmit(it) }
+                previous = snapshot
                 mutableConnected.value = snapshot != null
                 Thread.sleep(POLL_MS)
             }

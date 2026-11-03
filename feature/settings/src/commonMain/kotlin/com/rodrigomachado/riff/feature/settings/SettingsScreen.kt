@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.AppLanguage
+import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
@@ -40,6 +41,7 @@ import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
 import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -60,6 +62,7 @@ import com.rodrigomachado.riff.feature.settings.resources.settings_not_calibrate
 import com.rodrigomachado.riff.feature.settings.resources.settings_note_speed
 import com.rodrigomachado.riff.feature.settings.resources.settings_title
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
@@ -87,9 +90,12 @@ fun SettingsScreen(
     onRankingName: () -> Unit = {},
     /** Abrir as licenças e a privacidade; `null` esconde a linha. */
     onLicenses: (() -> Unit)? = {},
-    /** As abas mostradas, na ordem da barra. */
-    tabs: List<SettingsTab> = SettingsTab.entries,
+    /** As abas mostradas, na ordem da barra (no celular, sem a dos Controles). */
+    tabs: List<SettingsTab> = SettingsTab.entries - SettingsTab.CONTROLS,
 ) {
+    // O controle do PC; no celular não há (nem a aba).
+    val padConnected by (LocalGamepad.current?.connected ?: remember { MutableStateFlow(false) })
+        .collectAsStateWithLifecycle()
     val rankingName by viewModel.rankingName.collectAsStateWithLifecycle()
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     val usage by viewModel.separationUsage.collectAsStateWithLifecycle()
@@ -116,6 +122,11 @@ fun SettingsScreen(
         onSeparateOnlyCharging = viewModel::setSeparateOnlyCharging,
         onTrackLook = viewModel::setTrackLook,
         onShowChartImage = viewModel::setShowChartImage,
+        padConnected = padConnected,
+        onStrum = viewModel::setStrum,
+        onControlKey = viewModel::setKey,
+        onControlPad = viewModel::setPad,
+        onControlDefaults = viewModel::resetControls,
         rankingName = rankingName,
         onRankingName = onRankingName,
         onLicenses = onLicenses,
@@ -151,8 +162,14 @@ fun SettingsContent(
     onRankingName: () -> Unit = {},
     /** `null` esconde a linha das licenças (sem a tela delas). */
     onLicenses: (() -> Unit)? = {},
-    /** As abas mostradas, na ordem da barra (no PC, sem a da IA). */
-    tabs: List<SettingsTab> = SettingsTab.entries,
+    /** Há um controle ligado no PC (a aba Controles avisa quando não há). */
+    padConnected: Boolean = false,
+    onStrum: (Boolean) -> Unit = {},
+    onControlKey: (ControlAction, Long) -> Unit = { _, _ -> },
+    onControlPad: (ControlAction, String) -> Unit = { _, _ -> },
+    onControlDefaults: () -> Unit = {},
+    /** As abas mostradas, na ordem da barra (no celular, sem a dos Controles; no PC, sem a da IA). */
+    tabs: List<SettingsTab> = SettingsTab.entries - SettingsTab.CONTROLS,
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).
     var tab by rememberSaveable { mutableStateOf(initialTab.takeIf { it in tabs } ?: tabs.first()) }
@@ -195,6 +212,15 @@ fun SettingsContent(
                         )
 
                         SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
+
+                        SettingsTab.CONTROLS -> ControlsTab(
+                            settings.controls,
+                            padConnected,
+                            onStrum,
+                            onControlKey,
+                            onControlPad,
+                            onControlDefaults,
+                        )
 
                         SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
 

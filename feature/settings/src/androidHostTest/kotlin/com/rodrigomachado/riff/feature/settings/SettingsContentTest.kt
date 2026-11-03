@@ -66,7 +66,7 @@ class SettingsContentTest {
         settings: Settings = Settings.DEFAULT,
         separationUsage: SeparationUsage = SeparationUsage(0, 0),
         initialTab: SettingsTab = SettingsTab.GENERAL,
-        tabs: List<SettingsTab> = SettingsTab.entries,
+        tabs: List<SettingsTab> = SettingsTab.entries - SettingsTab.CONTROLS,
         licenses: Boolean = true,
     ) = composeRule.setContent {
         CompositionLocalProvider(LocalMenuSound provides { sounds += it }) {
@@ -436,6 +436,29 @@ class SettingsContentTest {
 
         composeRule.onNodeWithText("Sons").assertExists()
         composeRule.onNodeWithText("Guitarra IA").assertDoesNotExist()
+    }
+
+    /** O celular não escolhe teclas nem botões: as abas padrão não têm a dos Controles. */
+    @Test
+    fun thePhoneDoesNotSeeTheControlsTab() {
+        composeRule.setContent {
+            RiffTheme {
+                SettingsContent(
+                    settings = Settings.DEFAULT,
+                    onMasterVolume = {},
+                    onMissVolume = {},
+                    onNoteSpeed = {},
+                    onLeftHanded = {},
+                    onMenuSounds = {},
+                    onPreviewMiss = {},
+                    onCalibrate = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Jogo").assertExists()
+        composeRule.onNodeWithText("Controles").assertDoesNotExist()
     }
 
     /** Sem a tela das licenças (o PC), a linha some. */

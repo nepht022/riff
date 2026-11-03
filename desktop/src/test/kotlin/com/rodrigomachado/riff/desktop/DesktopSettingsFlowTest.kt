@@ -4,7 +4,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -15,7 +14,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
-import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.calibration.CalibrationTestTags
@@ -145,20 +143,6 @@ class DesktopSettingsFlowTest {
     private fun click(text: String) {
         composeRule.waitUntilAtLeastOneExists(hasText(text), TIMEOUT_MS)
         composeRule.clickOnWindowThread(composeRule.onNodeWithText(text))
-    }
-
-    private class FocusedWindow(real: WindowInfo) : WindowInfo by real {
-        override val isWindowFocused: Boolean get() = true
-    }
-
-    private object SilentSfx : SfxPlayer {
-        override fun hit(lane: Int) = Unit
-
-        override fun miss() = Unit
-
-        override fun setVolumes(hit: Float, miss: Float) = Unit
-
-        override fun release() = Unit
     }
 
     private companion object {

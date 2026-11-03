@@ -18,9 +18,9 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * As Configurações na janela deitada do PC (960×540): uma coluna de até 640 dp no meio, sem a aba da IA nem as
- * Licenças. Com até 1% dos pixels de folga (a suavização das letras muda entre Windows e Linux), como nos outros
- * screenshots do PC.
+ * As Configurações na janela deitada do PC (960×540): uma coluna de até 640 dp no meio, com a aba Controles e sem a
+ * da IA nem as Licenças. Com até 1% dos pixels de folga (a suavização das letras muda entre Windows e Linux), como
+ * nos outros screenshots do PC.
  */
 class DesktopSettingsScreenshotTest {
     @get:Rule
@@ -63,6 +63,9 @@ class DesktopSettingsScreenshotTest {
 
     @Test
     fun gameTab() = capture("Settings_wide_game", SettingsTab.GAME)
+
+    @Test
+    fun controlsTab() = capture("Settings_wide_controls", SettingsTab.CONTROLS)
 
     private companion object {
         val Tolerance = RoborazziOptions(compareOptions = RoborazziOptions.CompareOptions(changeThreshold = 0.01f))

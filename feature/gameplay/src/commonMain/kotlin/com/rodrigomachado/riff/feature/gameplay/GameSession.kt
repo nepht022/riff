@@ -27,6 +27,8 @@ class GameSession(
     private val hitSounds: Boolean = true,
     /** Quanto voltar ao continuar depois de uma pausa (modo biblioteca: dá tempo de se preparar). */
     private val rewindOnResumeMs: Long = 0,
+    /** Tocar com palheta (PC); sem ela, apertar a cor na hora basta, como o toque (Configurações → Controles). */
+    private val strum: Boolean = true,
 ) {
     val engine = GameEngine(notes)
     private val clock = SongClock(timeSource, audioOffsetMs)
@@ -181,6 +183,11 @@ class GameSession(
     private fun press(lane: Int, lateByMs: Long) {
         if (isPaused || rewind != null) return
         fingers[lane]++
+        judgePress(lane, lateByMs)
+    }
+
+    /** O julgamento do toque na [lane] (já apertada): acerto, ou erro sem nota. */
+    private fun judgePress(lane: Int, lateByMs: Long) {
         val judgment = engine.onPress(lane, clock.positionMs() - lateByMs.coerceAtLeast(0))
         // O toque pode ter marcado como erro uma nota anterior (a do quadro tem folga): conta aqui, para o quadro
         // seguinte não tocar o erro depois do acerto nem calar a guitarra que este acerto ligou.
@@ -216,7 +223,7 @@ class GameSession(
         // Apertada na pausa ou na fita: fica segurada, para a palhetada depois, sem julgar agora.
         if (isPaused || rewind != null) return
         engageHeldFrets()
-        judgeWithoutStrum(lateByMs)
+        if (strum) judgeWithoutStrum(lateByMs) else judgePress(lane, lateByMs)
     }
 
     /** Cor [lane] solta: encerra a nota longa dela e pode acertar o HOPO de baixo (pull-off). */
@@ -224,12 +231,12 @@ class GameSession(
         if (!heldFrets.remove(lane)) return
         // Com um dedo ainda na trilha (celular com teclado), a trilha continua apertada.
         if (engagedFrets.remove(lane)) release(lane, lateByMs)
-        if (!isPaused && rewind == null) judgeWithoutStrum(lateByMs)
+        if (strum && !isPaused && rewind == null) judgeWithoutStrum(lateByMs)
     }
 
     /** Palhetada (PC): julga o acorde com as cores seguradas; errada, toca o erro e cala a guitarra. */
     fun strum(lateByMs: Long = 0) {
-        if (isPaused || rewind != null) return
+        if (!strum || isPaused || rewind != null) return
         engageHeldFrets()
         val judgments = engine.onStrum(heldFrets.toSet(), clock.positionMs() - lateByMs.coerceAtLeast(0))
         val missedEarlierNote = engine.count(Judgment.MISS) > missesHeard

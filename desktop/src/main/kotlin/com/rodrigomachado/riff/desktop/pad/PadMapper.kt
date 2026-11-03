@@ -1,15 +1,21 @@
 package com.rodrigomachado.riff.desktop.pad
 
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.ui.input.PadAction
 import com.rodrigomachado.riff.core.ui.input.PadEvent
 import kotlin.math.abs
 
 /**
- * As leituras do controle viram mudanças com os botões de fábrica: △ verde, ○ vermelho, □ amarelo, ✕ azul, R1 laranja,
- * Start pausa; a palheta é o direcional ↑/↓ (ou o chapéu, no modo cru) e o analógico esquerdo, uma palhetada por
- * borda de descida de qualquer um. Guarda o que estava apertado (e a histerese do analógico) entre as leituras.
+ * As leituras do controle viram mudanças com os botões escolhidos ([pad]; de fábrica: △ verde, ○ vermelho, □ amarelo,
+ * ✕ azul, R1 laranja, Start pausa, direcional ↑/↓ — ou o chapéu, no modo cru — palheta). O analógico esquerdo palheta
+ * sempre, além da escolha; uma palhetada por borda de descida de qualquer um. Guarda o que estava apertado (e a
+ * histerese do analógico) entre as leituras.
  */
 class PadMapper {
+    /** Os botões escolhidos (`Controls.pad`); trocá-los no meio vale a partir da próxima leitura. */
+    var pad: Map<ControlAction, String> = Controls.DEFAULT_PAD
+
     private var held = emptySet<PadAction>()
     private var strummers = emptySet<Strummer>()
 
@@ -17,7 +23,7 @@ class PadMapper {
     fun changes(current: PadSnapshot?, atNanos: Long): List<PadEvent> {
         val nowHeld = current?.let(::heldIn).orEmpty()
         val nowStrummers = current?.let(::strummersIn).orEmpty()
-        val events = HELD_ACTIONS.mapNotNull { action ->
+        val events = HELD_ACTIONS.mapNotNull { (_, action) ->
             when (action) {
                 in nowHeld - held -> PadEvent(action, down = true, atNanos = atNanos)
                 in held - nowHeld -> PadEvent(action, down = false, atNanos = atNanos)
@@ -29,21 +35,12 @@ class PadMapper {
         return events
     }
 
-    private fun heldIn(snapshot: PadSnapshot): Set<PadAction> {
-        val buttons = if (snapshot.mapped) MAPPED_BUTTONS else RAW_BUTTONS
-        return buttons.filterKeys { it in snapshot.buttons }.values.toSet()
-    }
+    private fun heldIn(snapshot: PadSnapshot): Set<PadAction> =
+        HELD_ACTIONS.filter { (choice, _) -> snapshot.isPressed(pad[choice]) }.mapTo(mutableSetOf()) { it.second }
 
     private fun strummersIn(snapshot: PadSnapshot): Set<Strummer> = buildSet {
-        val (up, down) = if (snapshot.mapped) {
-            MappedButton.DPAD_UP to MappedButton.DPAD_DOWN
-        } else {
-            RawButton.UP to RawButton.DOWN
-        }
-        if (up in snapshot.buttons) add(Strummer.DPAD_UP)
-        if (down in snapshot.buttons) add(Strummer.DPAD_DOWN)
-        if (snapshot.hat and HAT_UP != 0) add(Strummer.HAT_UP)
-        if (snapshot.hat and HAT_DOWN != 0) add(Strummer.HAT_DOWN)
+        if (snapshot.isPressed(pad[ControlAction.STRUM_UP])) add(Strummer.BUTTON_UP)
+        if (snapshot.isPressed(pad[ControlAction.STRUM_DOWN])) add(Strummer.BUTTON_DOWN)
         stick(snapshot.leftY)?.let(::add)
     }
 
@@ -57,30 +54,20 @@ class PadMapper {
         }
     }
 
-    private enum class Strummer { DPAD_UP, DPAD_DOWN, HAT_UP, HAT_DOWN, STICK_UP, STICK_DOWN }
+    private enum class Strummer { BUTTON_UP, BUTTON_DOWN, STICK_UP, STICK_DOWN }
 
     private companion object {
         const val STICK_ON = 0.5f
         const val STICK_OFF = 0.3f
 
-        /** As ações seguradas (com soltura), na ordem dos eventos de uma mesma leitura. */
-        val HELD_ACTIONS = PadAction.entries - PadAction.STRUM
-
-        val MAPPED_BUTTONS = mapOf(
-            MappedButton.Y to PadAction.FRET_1,
-            MappedButton.B to PadAction.FRET_2,
-            MappedButton.X to PadAction.FRET_3,
-            MappedButton.A to PadAction.FRET_4,
-            MappedButton.RIGHT_BUMPER to PadAction.FRET_5,
-            MappedButton.START to PadAction.PAUSE,
-        )
-        val RAW_BUTTONS = mapOf(
-            RawButton.TRIANGLE to PadAction.FRET_1,
-            RawButton.CIRCLE to PadAction.FRET_2,
-            RawButton.SQUARE to PadAction.FRET_3,
-            RawButton.CROSS to PadAction.FRET_4,
-            RawButton.R1 to PadAction.FRET_5,
-            RawButton.START to PadAction.PAUSE,
+        /** As ações seguradas (com soltura): a escolha e a ação da partida, na ordem dos eventos de uma leitura. */
+        val HELD_ACTIONS = listOf(
+            ControlAction.FRET_1 to PadAction.FRET_1,
+            ControlAction.FRET_2 to PadAction.FRET_2,
+            ControlAction.FRET_3 to PadAction.FRET_3,
+            ControlAction.FRET_4 to PadAction.FRET_4,
+            ControlAction.FRET_5 to PadAction.FRET_5,
+            ControlAction.PAUSE to PadAction.PAUSE,
         )
     }
 }

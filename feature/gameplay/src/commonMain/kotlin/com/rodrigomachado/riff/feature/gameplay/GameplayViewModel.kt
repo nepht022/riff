@@ -122,6 +122,8 @@ open class GameplayViewModel(
             hitSounds = false,
             // O jogador veio jogar: volta um pouco para retomar no ritmo.
             rewindOnResumeMs = REWIND_ON_RESUME_MS,
+            // No PC, com ou sem palheta (Configurações → Controles); no celular, sempre o toque.
+            strum = settings.controls.strum,
         )
         if (!pauseRequested) session.start()
         interruptions = interruptionsFactory.create().also {

@@ -1,6 +1,8 @@
 package com.rodrigomachado.riff.feature.settings
 
 import com.rodrigomachado.riff.core.model.AppLanguage
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.FretStyle
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
@@ -179,5 +181,45 @@ class SettingsViewModelTest {
 
         assertEquals(HighwayBackground.NEON, repository.settings.value.highwayBackground)
         assertEquals(HighwayArt.STARS, repository.settings.value.highwayArt)
+    }
+
+    @Test
+    fun theControlChoicesAreSaved() = runTest {
+        val vm = viewModel()
+        val q = Controls.desktopKey(81)
+
+        vm.setStrum(false)
+        vm.setKey(ControlAction.FRET_1, q)
+        vm.setPad(ControlAction.FRET_1, "r:9")
+        advanceUntilIdle()
+
+        val expected = Controls(strum = false).withKey(ControlAction.FRET_1, q).withPad(ControlAction.FRET_1, "r:9")
+        assertEquals(expected, repository.settings.value.controls)
+    }
+
+    /** Escolher a tecla de outra ação troca as duas (a troca é do modelo). */
+    @Test
+    fun choosingAKeyInUseSwapsIt() = runTest {
+        val vm = viewModel()
+
+        vm.setKey(ControlAction.FRET_1, Controls.DEFAULT_KEYS.getValue(ControlAction.FRET_2))
+        advanceUntilIdle()
+
+        val keys = repository.settings.value.controls.keys
+        assertEquals(Controls.DEFAULT_KEYS.getValue(ControlAction.FRET_2), keys[ControlAction.FRET_1])
+        assertEquals(Controls.DEFAULT_KEYS.getValue(ControlAction.FRET_1), keys[ControlAction.FRET_2])
+    }
+
+    @Test
+    fun defaultsRestoreEverything() = runTest {
+        val vm = viewModel()
+        vm.setStrum(false)
+        vm.setKey(ControlAction.PAUSE, Controls.desktopKey(81))
+        vm.setPad(ControlAction.STRUM_UP, "h:up")
+
+        vm.resetControls()
+        advanceUntilIdle()
+
+        assertEquals(Controls(), repository.settings.value.controls)
     }
 }

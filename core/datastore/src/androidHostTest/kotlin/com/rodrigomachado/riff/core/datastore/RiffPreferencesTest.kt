@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.FretStyle
 import com.rodrigomachado.riff.core.model.HighwayArt
 import com.rodrigomachado.riff.core.model.HighwayBackground
@@ -160,6 +162,48 @@ class RiffPreferencesTest {
         store.edit { it[stringPreferencesKey("highway_background")] = "DISCO_BALL" }
 
         assertEquals(HighwayBackground.STAGE, RiffPreferences(store).settings.first().highwayBackground)
+    }
+
+    @Test
+    fun controlsSurviveSavingAndReading() = runTest {
+        val preferences = RiffPreferences(InMemoryPreferencesStore())
+        val controls = Controls(strum = false)
+            .withKey(ControlAction.FRET_1, Controls.desktopKey(81)) // Q
+            .withPad(ControlAction.STRUM_UP, "r:7")
+
+        preferences.updateSettings { it.copy(controls = controls) }
+
+        assertEquals(controls, preferences.settings.first().controls)
+    }
+
+    /** Texto estragado ou de uma versão futura: cada ação ilegível (ou que falta) fica com o seu padrão. */
+    @Test
+    fun anUnreadableValueFallsBackToItsDefault() = runTest {
+        val store = InMemoryPreferencesStore()
+        store.edit {
+            it[stringPreferencesKey("controls_keys")] = "FRET_1=xx;FOO=3;FRET_2=${Controls.desktopKey(81)};lixo"
+            it[stringPreferencesKey("controls_pad")] = "FRET_3=;PAUSE=r:9;=m:1"
+        }
+
+        val controls = RiffPreferences(store).settings.first().controls
+
+        assertEquals(Controls.DEFAULT_KEYS + (ControlAction.FRET_2 to Controls.desktopKey(81)), controls.keys)
+        assertEquals(Controls.DEFAULT_PAD + (ControlAction.PAUSE to "r:9"), controls.pad)
+        assertEquals(true, controls.strum)
+    }
+
+    /** Uma tecla gravada para duas ações (texto mexido à mão) não vale por duas: a leitura troca, como a escolha. */
+    @Test
+    fun aKeySavedForTwoActionsIsNotUsedTwice() = runTest {
+        val store = InMemoryPreferencesStore()
+        // A, a tecla padrão do FRET_1.
+        store.edit { it[stringPreferencesKey("controls_keys")] = "FRET_2=${Controls.desktopKey(65)}" }
+
+        val keys = RiffPreferences(store).settings.first().controls.keys
+
+        assertEquals(Controls.desktopKey(65), keys[ControlAction.FRET_2])
+        assertEquals(Controls.desktopKey(83), keys[ControlAction.FRET_1])
+        assertEquals(ControlAction.entries.size, keys.values.toSet().size)
     }
 
     @Test

@@ -65,4 +65,25 @@
     <string name="settings_licenses">Licenças e privacidade</string>
     <string name="settings_licenses_open">Ver</string>
     <string name="settings_language">Idioma</string>
+    <string name="settings_tab_controls">Controles</string>
+    <string name="settings_controls_strum">Tocar com palheta</string>
+    <string name="settings_controls_strum_hint">Desligado, apertar a cor na hora basta.</string>
+    <string name="settings_controls_keyboard">Teclado</string>
+    <string name="settings_controls_pad">Controle</string>
+    <string name="settings_controls_no_pad">Sem controle ligado</string>
+    <string name="settings_controls_defaults">Voltar ao padrão</string>
+    <string name="settings_controls_press_key">Aperte a tecla para %1$s</string>
+    <string name="settings_controls_press_button">Aperte o botão para %1$s</string>
+    <string name="settings_controls_escape">Esc cancela</string>
+    <string name="settings_controls_cancel">Cancelar</string>
+    <string name="settings_controls_button">Botão %1$d</string>
+    <string name="settings_controls_dpad">Direcional %1$s</string>
+    <string name="settings_action_fret_1">Verde</string>
+    <string name="settings_action_fret_2">Vermelho</string>
+    <string name="settings_action_fret_3">Amarelo</string>
+    <string name="settings_action_fret_4">Azul</string>
+    <string name="settings_action_fret_5">Laranja</string>
+    <string name="settings_action_strum_up">Palheta ↑</string>
+    <string name="settings_action_strum_down">Palheta ↓</string>
+    <string name="settings_action_pause">Pausa</string>
 </resources>

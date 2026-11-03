@@ -23,6 +23,8 @@ data class Settings(
     val fretStyle: FretStyle = FretStyle.DISCS,
     /** Mostrar a capa ou a imagem de fundo do mapa atrás da pista. */
     val showChartImage: Boolean = true,
+    /** Teclas, botões do controle e palheta da partida no PC (o celular não usa). */
+    val controls: Controls = Controls(),
 ) {
     init {
         require(noteSpeed in MIN_NOTE_SPEED..MAX_NOTE_SPEED) { "noteSpeed fora de $MIN_NOTE_SPEED..$MAX_NOTE_SPEED" }

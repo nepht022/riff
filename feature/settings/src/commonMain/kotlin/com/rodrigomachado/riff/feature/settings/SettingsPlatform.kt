@@ -20,3 +20,9 @@ expect fun formatFileSize(bytes: Long): String
  */
 @Composable
 expect fun rememberLanguageRefresh(): () -> Unit
+
+/**
+ * O nome de uma tecla gravada nos controles (o `Key.keyCode` do Compose): no PC, o nome que o Java dá ao código
+ * AWT dos 32 bits de baixo ("A", "Up", "Enter"); no celular (sem a aba), o próprio número.
+ */
+expect fun keyName(keyCode: Long): String

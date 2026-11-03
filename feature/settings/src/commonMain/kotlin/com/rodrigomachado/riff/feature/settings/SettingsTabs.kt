@@ -50,12 +50,13 @@ import com.rodrigomachado.riff.feature.settings.resources.settings_ranking_choos
 import com.rodrigomachado.riff.feature.settings.resources.settings_ranking_name
 import com.rodrigomachado.riff.feature.settings.resources.settings_sounds
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_ai
+import com.rodrigomachado.riff.feature.settings.resources.settings_tab_controls
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_general
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_track_look
 import org.jetbrains.compose.resources.stringResource
 
-/** As abas das Configurações, na ordem da barra. */
-enum class SettingsTab { GENERAL, SOUNDS, GAME, TRACK_LOOK, AI }
+/** As abas das Configurações, na ordem da barra; a dos Controles é só do PC. */
+enum class SettingsTab { GENERAL, SOUNDS, GAME, CONTROLS, TRACK_LOOK, AI }
 
 /** Barra de abas que rola de lado se não couber; a escolhida fica clara e sublinhada de vermelho. */
 @Composable
@@ -103,6 +104,7 @@ private fun tabTitle(tab: SettingsTab): String = stringResource(
         SettingsTab.GENERAL -> Res.string.settings_tab_general
         SettingsTab.SOUNDS -> Res.string.settings_sounds
         SettingsTab.GAME -> Res.string.settings_game
+        SettingsTab.CONTROLS -> Res.string.settings_tab_controls
         SettingsTab.TRACK_LOOK -> Res.string.settings_tab_track_look
         SettingsTab.AI -> Res.string.settings_tab_ai
     },

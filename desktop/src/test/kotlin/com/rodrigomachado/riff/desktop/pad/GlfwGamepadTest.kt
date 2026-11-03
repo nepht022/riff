@@ -54,7 +54,7 @@ class GlfwGamepadTest {
                 gamepad.events.onSubscription {
                     while (source.polls < 2) delay(1)
                     assertFalse(gamepad.connected.value)
-                    source.pad = PadSnapshot(mapped = true, setOf(MappedButton.Y))
+                    source.pad = PadSnapshot(raw = emptySet(), layout = setOf(MappedButton.Y))
                 }.first()
             }
             assertEquals(PadAction.FRET_1, first.action)
@@ -66,7 +66,7 @@ class GlfwGamepadTest {
     /** O cabo saiu: as cores seguradas são soltas e o controle aparece desligado. */
     @Test
     fun aPadUnpluggedReleasesTheHeldFrets(): Unit = runBlocking {
-        val source = FakeSource().apply { pad = PadSnapshot(mapped = true, setOf(MappedButton.Y)) }
+        val source = FakeSource().apply { pad = PadSnapshot(raw = emptySet(), layout = setOf(MappedButton.Y)) }
         GlfwGamepad(source).also { it.start() }.use { gamepad ->
             withTimeout(TIMEOUT_MS) { gamepad.connected.first { it } }
             val released: PadEvent = withTimeout(TIMEOUT_MS) {
@@ -74,6 +74,19 @@ class GlfwGamepadTest {
             }
             assertEquals(PadEvent(PadAction.FRET_1, down = false, atNanos = released.atNanos), released)
             withTimeout(TIMEOUT_MS) { gamepad.connected.first { !it } }
+        }
+    }
+
+    /** Na escolha do botão: um controle cru informa o botão cru que desceu (e não o que já estava apertado). */
+    @Test
+    fun pressingAButtonReportsItForTheChoice(): Unit = runBlocking {
+        val source = FakeSource().apply { pad = PadSnapshot(raw = setOf(2)) }
+        GlfwGamepad(source).also { it.start() }.use { gamepad ->
+            withTimeout(TIMEOUT_MS) { gamepad.connected.first { it } }
+            val pressed = withTimeout(TIMEOUT_MS) {
+                gamepad.presses.onSubscription { source.pad = PadSnapshot(raw = setOf(2, 9)) }.first()
+            }
+            assertEquals("r:9", pressed)
         }
     }
 
@@ -99,7 +112,7 @@ class GlfwGamepadTest {
 
     @Test
     fun closingStopsTheReadingThread(): Unit = runBlocking {
-        val source = FakeSource().apply { pad = PadSnapshot(mapped = true, emptySet()) }
+        val source = FakeSource().apply { pad = PadSnapshot(raw = emptySet(), layout = emptySet()) }
         val gamepad = GlfwGamepad(source).also { it.start() }
         withTimeout(TIMEOUT_MS) { gamepad.connected.first { it } }
         assertClosesQuickly(gamepad)

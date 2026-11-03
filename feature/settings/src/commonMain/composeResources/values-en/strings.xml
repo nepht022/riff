@@ -65,4 +65,25 @@
     <string name="settings_licenses">Licenses and privacy</string>
     <string name="settings_licenses_open">View</string>
     <string name="settings_language">Language</string>
+    <string name="settings_tab_controls">Controls</string>
+    <string name="settings_controls_strum">Play with strum</string>
+    <string name="settings_controls_strum_hint">Off, pressing the color on time is enough.</string>
+    <string name="settings_controls_keyboard">Keyboard</string>
+    <string name="settings_controls_pad">Controller</string>
+    <string name="settings_controls_no_pad">No controller connected</string>
+    <string name="settings_controls_defaults">Restore defaults</string>
+    <string name="settings_controls_press_key">Press the key for %1$s</string>
+    <string name="settings_controls_press_button">Press the button for %1$s</string>
+    <string name="settings_controls_escape">Esc cancels</string>
+    <string name="settings_controls_cancel">Cancel</string>
+    <string name="settings_controls_button">Button %1$d</string>
+    <string name="settings_controls_dpad">D-pad %1$s</string>
+    <string name="settings_action_fret_1">Green</string>
+    <string name="settings_action_fret_2">Red</string>
+    <string name="settings_action_fret_3">Yellow</string>
+    <string name="settings_action_fret_4">Blue</string>
+    <string name="settings_action_fret_5">Orange</string>
+    <string name="settings_action_strum_up">Strum ↑</string>
+    <string name="settings_action_strum_down">Strum ↓</string>
+    <string name="settings_action_pause">Pause</string>
 </resources>

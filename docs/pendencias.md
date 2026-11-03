@@ -94,6 +94,17 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 3b: controles configuráveis (2026-11-03)
+
+- Ranking por modo (celular, PC com palheta, PC sem palheta) é da etapa 4: hoje o recorde não guarda o modo em que foi feito.
+- Escolher botões do controle na aba Controles: testado só com controle falso (vai junto do teste com o controle, acima).
+- Com só o controle à mão, o diálogo de escolha de botão não cancela pelo controle (Esc ou mouse); a navegação sem mouse é da 3c.
+- Nomes de tecla na aba: `getKeyText` descarta a posição (Shift esquerdo/direito e Enter/Enter numérico aparecem iguais) e as setas saem em inglês ("Up"/"Down").
+- A leitura das preferências aceita qualquer `Long` como tecla (sem a posição, 0 ou o Esc): a aba mostra a tecla e a partida não a reconhece; aceitar só códigos com posição 1..4 e diferentes do Esc.
+- Hipótese a conferir no Windows (teclado ABNT2): Ç, ´ e ~ podem chegar como `VK_UNDEFINED` (0) e valer todas pela mesma ação; recusar o código 0 no diálogo se confirmar. Conferir também se o AWT consome o Tab antes do Compose quando ele é escolhido.
+- O `PadMapper` interpreta o texto das escolhas a cada leitura (~1 ms): converter uma vez em `setBindings`.
+- `remember` dentro do `?:` em `SettingsScreen.kt` (funciona porque `LocalGamepad` é estático).
+
 ## Riff no Windows, etapa 3a: o controle na partida (2026-11-03)
 
 - **Teste com o controle de verdade, adiado pelo usuário** (sem o controle à mão): rodar `./scripts/gw :desktop:runPadCheck` (mapeado ou cru? ordem dos botões? intervalo de leitura) e jogar com o controle: cores, palheta no direcional e no analógico, Start, Alt+Tab (o controle não faz nada sem foco), controle ligado depois de abrir o jogo (o `glfwPollEvents` na thread `riff-pad` deve achá-lo) e cabo desconectado com uma cor segurada (pausa antes de soltar). Se a ordem crua do controle for outra, a 3b deixa configurar.
