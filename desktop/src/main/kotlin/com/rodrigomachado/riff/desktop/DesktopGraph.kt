@@ -33,6 +33,9 @@ import com.rodrigomachado.riff.core.datastore.RiffPreferences
 import com.rodrigomachado.riff.core.datastore.riffDataStore
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.desktop.pad.GlfwGamepad
+import com.rodrigomachado.riff.desktop.pad.GlfwPadSource
+import com.rodrigomachado.riff.desktop.pad.PadSource
 import com.rodrigomachado.riff.feature.calibration.AudioClickTrackPlayer
 import com.rodrigomachado.riff.feature.calibration.CalibrationViewModel
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
@@ -61,6 +64,8 @@ class DesktopGraph(
     private val sfx: SfxPlayerFactory = SfxPlayerFactory { ClipSfxPlayer() },
     /** O metrônomo da calibração (nos testes, um que devolve cliques montados a partir das teclas). */
     private val clickTrack: ClickTrackPlayer = AudioClickTrackPlayer(audioOut),
+    /** O controle (nos testes, uma fonte sem controle: o CI não tem tela para o GLFW). */
+    padSource: PadSource = GlfwPadSource(),
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
@@ -122,7 +127,11 @@ class DesktopGraph(
 
     fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
 
+    /** O controle do PC, lido na própria thread desde a abertura do jogo. */
+    val gamepad = GlfwGamepad(padSource)
+
     override fun close() {
+        gamepad.close()
         database.close()
         scope.cancel()
     }

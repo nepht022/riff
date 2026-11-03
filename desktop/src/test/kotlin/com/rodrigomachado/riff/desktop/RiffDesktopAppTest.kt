@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.RoborazziOptions
+import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import io.github.takahirom.roborazzi.captureRoboImage
 import org.junit.After
@@ -36,7 +37,7 @@ class RiffDesktopAppTest {
     val temp = TemporaryFolder()
 
     private val system = Locale.getDefault()
-    private val graph by lazy { DesktopGraph(temp.newFolder("dados")) }
+    private val graph by lazy { DesktopGraph(temp.newFolder("dados"), padSource = NoPadSource) }
 
     @After
     fun restore() {

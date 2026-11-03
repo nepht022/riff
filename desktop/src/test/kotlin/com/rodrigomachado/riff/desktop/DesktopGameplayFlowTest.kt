@@ -25,6 +25,7 @@ import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.data.folder.pcUri
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialogTestTags
+import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.gameplay.GameplayTestTags
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import com.rodrigomachado.riff.feature.library.LibraryTestTags
@@ -114,6 +115,7 @@ class DesktopGameplayFlowTest {
             menuSounds = MenuSoundPlayer { _, _ -> },
             audioOut = audioOut,
             sfx = SfxPlayerFactory { SilentSfx },
+            padSource = NoPadSource,
         ).also { graph = it }
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))

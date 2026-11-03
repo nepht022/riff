@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.calibration.CalibrationTestTags
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.calibration.calibrationClockMs
@@ -127,6 +128,7 @@ class DesktopSettingsFlowTest {
             menuSounds = MenuSoundPlayer { _, _ -> },
             sfx = SfxPlayerFactory { SilentSfx },
             clickTrack = ClickTrackPlayer { clicks.await() },
+            padSource = NoPadSource,
         ).also { graph = it }
         DesktopLocale.applyDefault()
         composeRule.setContent {
