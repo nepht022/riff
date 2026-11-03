@@ -94,6 +94,12 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 3b: controles configuráveis (2026-11-03)
+
+- Ranking por modo (celular, PC com palheta, PC sem palheta) é da etapa 4: hoje o recorde não guarda o modo em que foi feito.
+- Escolher botões do controle na aba Controles: testado só com controle falso (vai junto do teste com o controle, acima).
+- Com só o controle à mão, o diálogo de escolha de botão não cancela pelo controle (Esc ou mouse); a navegação sem mouse é da 3c.
+
 ## Riff no Windows, etapa 3a: o controle na partida (2026-11-03)
 
 - **Teste com o controle de verdade, adiado pelo usuário** (sem o controle à mão): rodar `./scripts/gw :desktop:runPadCheck` (mapeado ou cru? ordem dos botões? intervalo de leitura) e jogar com o controle: cores, palheta no direcional e no analógico, Start, Alt+Tab (o controle não faz nada sem foco), controle ligado depois de abrir o jogo (o `glfwPollEvents` na thread `riff-pad` deve achá-lo) e cabo desconectado com uma cor segurada (pausa antes de soltar). Se a ordem crua do controle for outra, a 3b deixa configurar.
