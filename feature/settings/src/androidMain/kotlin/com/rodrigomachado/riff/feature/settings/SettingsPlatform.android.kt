@@ -21,3 +21,5 @@ actual fun rememberLanguageRefresh(): () -> Unit {
     // Antes do Android 13 o sistema não refaz a tela sozinho: refaz aqui, já no idioma novo.
     return { if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) activity?.recreate() }
 }
+
+actual fun keyName(keyCode: Long): String = keyCode.toString()

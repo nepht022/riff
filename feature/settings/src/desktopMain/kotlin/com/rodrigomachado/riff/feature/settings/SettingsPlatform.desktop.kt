@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.runtime.Composable
 import com.rodrigomachado.riff.core.model.AppLanguage
+import java.awt.event.KeyEvent
 import java.util.Locale
 
 @Composable
@@ -25,3 +26,7 @@ actual fun formatFileSize(bytes: Long): String {
 
 @Composable
 actual fun rememberLanguageRefresh(): () -> Unit = {}
+
+actual fun keyName(keyCode: Long): String = KeyEvent.getKeyText((keyCode and AWT_CODE_BITS).toInt())
+
+private const val AWT_CODE_BITS = 0xFFFFFFFFL

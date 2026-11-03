@@ -9,6 +9,8 @@ import com.rodrigomachado.riff.core.data.AppLanguageStore
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.model.AppLanguage
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.model.TrackLook
@@ -83,6 +85,17 @@ open class SettingsViewModel(
     }
 
     fun setShowChartImage(show: Boolean) = save { it.copy(showChartImage = show) }
+
+    fun setStrum(strum: Boolean) = save { it.copy(controls = it.controls.copy(strum = strum)) }
+
+    /** A tecla de [action]; a ação que já a usava fica com a antiga (troca). */
+    fun setKey(action: ControlAction, keyCode: Long) = save { it.copy(controls = it.controls.withKey(action, keyCode)) }
+
+    /** O botão de [action]; a ação que já o usava fica com o antigo (troca). */
+    fun setPad(action: ControlAction, button: String) = save { it.copy(controls = it.controls.withPad(action, button)) }
+
+    /** Palheta ligada e as teclas e botões de antes da escolha. */
+    fun resetControls() = save { it.copy(controls = Controls()) }
 
     fun previewMiss() = preview { it.miss() }
 
