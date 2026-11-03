@@ -26,7 +26,9 @@ object MappedButton {
     const val RIGHT_BUMPER = 5
     const val START = 7
     const val DPAD_UP = 11
+    const val DPAD_RIGHT = 12
     const val DPAD_DOWN = 13
+    const val DPAD_LEFT = 14
 }
 
 /** A ordem crua do DualShock 3 (a base escolhida para o modo cru): o controle fora da base do SDL. */

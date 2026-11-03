@@ -34,6 +34,8 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.PAD_MENU_BACK
+import com.rodrigomachado.riff.core.ui.input.TakePadFromMenus
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -154,6 +156,10 @@ private fun ChooseDialog(
     // Uma escolha só por diálogo: dois botões na mesma leitura (ou duas teclas antes de a tela refazer) não trocam
     // uma terceira ação em cascata.
     var chosen by remember(choice) { mutableStateOf(false) }
+    // No PC o controle não anda nos menus atrás nem neste diálogo: no do botão, todo botão é escolhível (o ○ também;
+    // cancela-se com o Esc); no da tecla, só o ○ (vira o Esc, que cancela) — o direcional e o ✕ não viram teclas
+    // escolhidas.
+    TakePadFromMenus { !choice.keyboard || it != PAD_MENU_BACK }
     if (!choice.keyboard && gamepad != null) {
         LaunchedEffect(choice, gamepad) {
             val button = gamepad.presses.first { window.isWindowFocused }

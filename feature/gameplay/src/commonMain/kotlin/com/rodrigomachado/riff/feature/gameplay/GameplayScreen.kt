@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
@@ -184,7 +185,7 @@ internal fun GameStage(
     val pauseMenu = remember { PauseMenu() }
     val keys = rememberGameKeys(session, state.settings.controls, state.isPaused, pauseMenu, onPause, onResume)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
-    HandleGamepad(session, state.isPaused, onPause, onResume)
+    HandleGamepad(session, state.isPaused, state.settings.controls.pad[ControlAction.PAUSE], onPause, onResume)
     val highway = @Composable { highwayModifier: Modifier ->
         Canvas(
             highwayModifier

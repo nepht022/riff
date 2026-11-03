@@ -10,6 +10,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -25,9 +26,12 @@ import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.LocalPadMenuSuspension
+import com.rodrigomachado.riff.core.ui.input.PadMenuSuspension
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.desktop.pad.PadMenuKeys
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
 import com.rodrigomachado.riff.feature.calibration.CalibrationScreen
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
@@ -45,10 +49,12 @@ import java.util.Locale
 
 /**
  * O Riff no PC: tela inicial, Biblioteca, partida, resultado e Configurações; Ranking e Reportar vêm depois. Fora da
- * partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta.
+ * partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O
+ * controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só
+ * vale na partida e na escolha de botão).
  */
 @Composable
-fun RiffDesktopApp(graph: DesktopGraph) {
+fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null) {
     val navController = rememberNavController()
     // Como no celular: a preferência é lida na hora do toque (mudar as Configurações não recompõe o app).
     val settings = graph.settings.settings.collectAsState(initial = null)
@@ -62,11 +68,34 @@ fun RiffDesktopApp(graph: DesktopGraph) {
             previous = current
         }
     }
+    val padSuspension = remember { PadMenuSuspension() }
+    if (sendMenuKey != null) PadOnTheMenus(graph, padSuspension, sendMenuKey)
     // Trocar o idioma refaz as telas já no idioma novo (os textos leem o Locale padrão), com a mesma pilha.
     val language by graph.languages.language.collectAsState()
     RiffTheme {
-        CompositionLocalProvider(LocalMenuSound provides playMenuSound, LocalGamepad provides graph.gamepad) {
+        CompositionLocalProvider(
+            LocalMenuSound provides playMenuSound,
+            LocalGamepad provides graph.gamepad,
+            LocalPadMenuSuspension provides padSuspension,
+        ) {
             key(language) { DesktopScreens(graph, navController) }
+        }
+    }
+}
+
+/**
+ * Cada botão que desce, com a janela focada e sem quem o tire dos menus ([suspension]: a partida tocando, a escolha
+ * de um botão), vira a tecla dos menus. A suspensão é vista na hora da descida, na coleta (que só repassa): o ✕ que
+ * desceu com a partida tocando não vira um Enter depois, nem um botão segurado ao trocar de tela.
+ */
+@Composable
+private fun PadOnTheMenus(graph: DesktopGraph, suspension: PadMenuSuspension, sendMenuKey: (awtKeyCode: Int) -> Unit) {
+    val window = LocalWindowInfo.current
+    LaunchedEffect(graph, suspension, sendMenuKey) {
+        val keys = PadMenuKeys(sendMenuKey)
+        graph.gamepad.presses.collect { button ->
+            // O foco de agora: o GLFW lê o controle com a janela em segundo plano (Alt+Tab).
+            if (window.isWindowFocused && suspension.allows(button)) keys.onPress(button)
         }
     }
 }
