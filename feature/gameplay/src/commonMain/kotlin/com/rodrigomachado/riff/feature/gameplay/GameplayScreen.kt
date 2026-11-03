@@ -169,6 +169,8 @@ internal fun GameStage(
         }
     }
     val keys = rememberGameKeys(session, state.isPaused, onPause, onResume)
+    // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
+    HandleGamepad(session, state.isPaused, onPause, onResume)
     val highway = @Composable { highwayModifier: Modifier ->
         Canvas(
             highwayModifier

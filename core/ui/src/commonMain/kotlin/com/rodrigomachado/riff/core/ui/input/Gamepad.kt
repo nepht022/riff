@@ -32,3 +32,6 @@ interface Gamepad {
 
 /** O controle do PC; nulo no celular (lá não há leitura de controle). */
 val LocalGamepad = staticCompositionLocalOf<Gamepad?> { null }
+
+/** O relógio dos eventos do controle (`PadEvent.atNanos`): quem recebe um evento mede quanto ele esperou. */
+expect fun nowNanos(): Long

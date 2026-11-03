@@ -12,6 +12,8 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Note
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.ui.input.Gamepad
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 
 /** A janela do teste com o foco nas mãos do teste (o Alt+Tab de mentira). */
@@ -31,17 +33,23 @@ fun playingSession(vararg notes: Note, positionMs: Long = 0): GameSession {
     }
 }
 
-/** Mostra o palco da partida (sem o loop de quadros) numa janela com o foco controlado, que é devolvida. */
+/**
+ * Mostra o palco da partida (sem o loop de quadros) numa janela com o foco controlado, que é devolvida; com o
+ * controle [gamepad] (nulo: sem controle, como no celular).
+ */
 fun ComposeContentTestRule.showStage(
     state: () -> GameplayUiState.Ready,
     onPause: () -> Unit = {},
+    gamepad: Gamepad? = null,
     onResume: () -> Unit = {},
 ): ControlledWindowInfo {
     lateinit var window: ControlledWindowInfo
     setContent {
         val real = LocalWindowInfo.current
         window = remember { ControlledWindowInfo(real) }
-        CompositionLocalProvider(LocalWindowInfo provides window) { Stage(state(), onPause, onResume) }
+        CompositionLocalProvider(LocalWindowInfo provides window, LocalGamepad provides gamepad) {
+            Stage(state(), onPause, onResume)
+        }
     }
     waitForIdle()
     return window

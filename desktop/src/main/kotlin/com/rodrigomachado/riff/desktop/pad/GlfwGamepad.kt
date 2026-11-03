@@ -40,6 +40,8 @@ class GlfwGamepad(
             while (running) {
                 val snapshot = source.poll()
                 val at = clock()
+                // Sumiu: desconectado antes das cores soltas, para a partida pausar antes de soltá-las.
+                if (snapshot == null) mutableConnected.value = false
                 mapper.changes(snapshot, at).forEach { mutableEvents.tryEmit(it) }
                 mutableConnected.value = snapshot != null
                 Thread.sleep(POLL_MS)
