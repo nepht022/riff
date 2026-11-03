@@ -33,6 +33,7 @@ import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.TrackLook
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.stage.FretsPreview
 import com.rodrigomachado.riff.core.ui.stage.HighwayPreview
 import com.rodrigomachado.riff.core.ui.stage.NotesPreview
@@ -88,6 +89,10 @@ internal fun TrackLookSection(look: TrackLook, onLook: (TrackLookChange) -> Unit
         val close = { open = null }
         AlertDialog(
             onDismissRequest = close,
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = close),
             title = { Text(choiceTitle(choice)) },
             text = {
                 TrackLookChoices(choice, look) {

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
@@ -45,6 +46,10 @@ internal fun SeparationPrompt(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onDismiss),
         title = { Text(stringResource(Res.string.library_separate_title)) },
         text = {
             Column {

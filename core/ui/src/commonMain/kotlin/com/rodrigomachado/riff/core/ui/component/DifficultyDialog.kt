@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.window.Dialog
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.resources.Res
 import com.rodrigomachado.riff.core.ui.resources.ui_cancel
 import com.rodrigomachado.riff.core.ui.resources.ui_choose_difficulty
@@ -43,8 +44,10 @@ fun <T> DifficultyDialog(
             Modifier
                 .background(RiffColors.StageBlack, MaterialTheme.shapes.large)
                 .padding(Spacing.lg)
-                // O diálogo é outra janela: a propriedade da raiz do app não chega aqui.
-                .exposeTestTags(),
+                // O diálogo é outra janela: a propriedade da raiz do app não chega aqui, nem as teclas dos menus do PC
+                // (as setas andam por ele, e o Esc o fecha sem chegar à tela de trás).
+                .exposeTestTags()
+                .menuKeys(onBack = dismiss),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

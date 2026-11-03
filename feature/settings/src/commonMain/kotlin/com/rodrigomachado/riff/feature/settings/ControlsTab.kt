@@ -34,6 +34,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -177,20 +178,26 @@ private fun ChooseDialog(
                 Text(stringResource(Res.string.settings_controls_cancel))
             }
         },
-        modifier = Modifier.testTag(ControlsTestTags.CHOOSING).focusRequester(focus).focusable().onPreviewKeyEvent {
-            if (it.type == KeyEventType.KeyDown) {
-                when {
-                    it.key == Key.Escape -> onClose()
+        // No PC o diálogo é o de cima nas teclas dos menus (a tela de trás não lhe toma o foco); as teclas, todas dele.
+        modifier = Modifier
+            .menuKeys(onBack = null)
+            .testTag(ControlsTestTags.CHOOSING)
+            .focusRequester(focus)
+            .focusable()
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyDown) {
+                    when {
+                        it.key == Key.Escape -> onClose()
 
-                    choice.keyboard && window.isWindowFocused && !chosen -> {
-                        chosen = true
-                        onChosenKey(it.key.keyCode)
-                        onClose()
+                        choice.keyboard && window.isWindowFocused && !chosen -> {
+                            chosen = true
+                            onChosenKey(it.key.keyCode)
+                            onClose()
+                        }
                     }
                 }
-            }
-            true
-        },
+                true
+            },
     )
     LaunchedEffect(Unit) { focus.requestFocus() }
 }

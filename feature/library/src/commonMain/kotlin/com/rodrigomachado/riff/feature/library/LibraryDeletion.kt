@@ -35,6 +35,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
@@ -213,6 +214,10 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
     if (state.needsPermission) {
         AlertDialog(
             onDismissRequest = callbacks.onDismiss,
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = callbacks.onDismiss),
             text = { Text(stringResource(Res.string.library_delete_permission)) },
             confirmButton = {
                 TextButton(
@@ -235,6 +240,10 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
     if (state.failed > 0) {
         AlertDialog(
             onDismissRequest = callbacks.onFailureShown,
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = callbacks.onFailureShown),
             text = { Text(pluralStringResource(Res.plurals.library_delete_failed, state.failed, state.failed)) },
             confirmButton = {
                 TextButton(
@@ -252,6 +261,10 @@ internal fun DeletionDialogs(state: DeletionState, callbacks: DeletionCallbacks,
 private fun ConfirmDeletion(ask: DeleteAsk, callbacks: DeletionCallbacks) {
     AlertDialog(
         onDismissRequest = callbacks.onDismiss,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = callbacks.onDismiss),
         title = {
             Text(
                 ask.title?.let { stringResource(Res.string.library_delete_title_one, it) }

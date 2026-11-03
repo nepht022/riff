@@ -40,6 +40,7 @@ import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -146,6 +147,10 @@ internal fun GeneralTab(
     if (choosing) {
         AlertDialog(
             onDismissRequest = { choosing = false },
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = { choosing = false }),
             title = { Text(stringResource(Res.string.settings_language)) },
             text = {
                 Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {

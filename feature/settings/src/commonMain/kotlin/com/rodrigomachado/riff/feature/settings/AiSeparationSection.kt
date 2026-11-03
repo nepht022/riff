@@ -22,6 +22,7 @@ import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -73,6 +74,10 @@ internal fun AiSeparationSection(
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
+
+            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+            modifier = Modifier.menuKeys(onBack = { confirming = false }),
             text = { Text(stringResource(Res.string.settings_ai_delete_confirm)) },
             confirmButton = {
                 TextButton(

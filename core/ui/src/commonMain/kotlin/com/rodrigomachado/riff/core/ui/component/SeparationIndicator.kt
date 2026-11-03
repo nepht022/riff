@@ -40,6 +40,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationFailure
 import com.rodrigomachado.riff.core.model.SeparationStatus
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.resources.Res
 import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel
 import com.rodrigomachado.riff.core.ui.resources.ui_separation_cancel_all
@@ -183,6 +184,10 @@ private fun Count(total: Int, modifier: Modifier) {
 private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -> Unit, onClose: () -> Unit) =
     AlertDialog(
         onDismissRequest = onClose,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onClose),
         text = { Text(failedText(status)) },
         confirmButton = {
             TextButton(
@@ -207,6 +212,10 @@ private fun QueuePanel(
     val hasQueue = queue.items.isNotEmpty()
     AlertDialog(
         onDismissRequest = onClose,
+
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onClose),
         title = {
             val waiting = if (queue.waitingForCharger) {
                 Res.string.ui_separation_waiting_charger

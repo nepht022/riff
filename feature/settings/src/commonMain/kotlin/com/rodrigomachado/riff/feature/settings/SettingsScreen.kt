@@ -44,6 +44,7 @@ import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
 import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -311,7 +312,10 @@ private fun TrackLookTab(
     )
 }
 
-/** O valor acompanha o dedo; só é gravado (e o som de prévia toca) quando o jogador solta. */
+/**
+ * O valor acompanha o dedo; só é gravado (e o som de prévia toca) quando o jogador solta. No PC, ←/→ mudam o valor
+ * (o próprio Slider, gravando ao soltar a tecla) e ↑/↓ saem dele para a linha de cima ou de baixo.
+ */
 @Composable
 private fun SettingSlider(
     label: String,
@@ -347,7 +351,7 @@ private fun SettingSlider(
                 activeTickColor = RiffColors.Paper,
                 inactiveTickColor = RiffColors.PaperDim,
             ),
-            modifier = modifier.focusHighlight(),
+            modifier = modifier.focusHighlight().upDownLeave(),
         )
     }
 }

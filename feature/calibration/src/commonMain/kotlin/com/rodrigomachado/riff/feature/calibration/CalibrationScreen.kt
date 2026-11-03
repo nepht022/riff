@@ -87,6 +87,7 @@ fun CalibrationScreen(
         onDone = onDone,
         onReset = { viewModel.reset(onDone) },
         modifier = modifier,
+        onCancel = viewModel::cancel,
     )
 }
 
@@ -100,6 +101,8 @@ fun CalibrationContent(
     onDone: () -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Esc durante a medição (PC): para a medição e volta às instruções. */
+    onCancel: () -> Unit = {},
 ) {
     val instructions =
         if (tapsByTouch) Res.string.calibration_instructions else Res.string.calibration_instructions_keys
@@ -123,7 +126,7 @@ fun CalibrationContent(
                         }
                     }
 
-                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap)
+                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap, onCancel)
 
                     is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
 
@@ -157,11 +160,11 @@ private fun Message(text: String, action: String, onAction: () -> Unit, secondar
 
 /**
  * A tela inteira recebe os toques; o instante é o do evento, no relógio [calibrationClockMs]. No PC, as teclas
- * ([rememberTapKeys]).
+ * ([rememberTapKeys]), e o Esc para a medição ([onCancel]).
  */
 @Composable
-private fun TapArea(taps: Int, onTap: (Long) -> Unit) {
-    val input = if (tapsByTouch) Modifier.touchTaps(onTap) else rememberTapKeys(onTap)
+private fun TapArea(taps: Int, onTap: (Long) -> Unit, onCancel: () -> Unit) {
+    val input = if (tapsByTouch) Modifier.touchTaps(onTap) else rememberTapKeys(onTap, onCancel)
     val measuring = if (tapsByTouch) Res.string.calibration_measuring else Res.string.calibration_measuring_keys
     Box(
         Modifier
@@ -202,19 +205,23 @@ private fun Modifier.touchTaps(onTap: (Long) -> Unit) = pointerInput(Unit) {
 
 /**
  * As teclas como toques (PC): a área pega o foco ao aparecer e cada tecla que desce é um toque, no instante em que
- * foi apertada. O Esc não conta (fica para quem está em volta), e a repetição automática de uma tecla segurada
- * também não: só a primeira descida de cada tecla.
+ * foi apertada. O Esc não conta: para a medição ([onCancel]) e não chega a quem está em volta (não volta de tela
+ * junto). A repetição automática de uma tecla segurada também não conta: só a primeira descida de cada tecla.
  */
 @Composable
-private fun rememberTapKeys(onTap: (Long) -> Unit): Modifier {
+private fun rememberTapKeys(onTap: (Long) -> Unit, onCancel: () -> Unit): Modifier {
     val tap by rememberUpdatedState(onTap)
+    val cancel by rememberUpdatedState(onCancel)
     val down = remember { mutableSetOf<Key>() }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     return Modifier
         .onKeyEvent { event ->
             when {
-                event.key == Key.Escape -> false
+                event.key == Key.Escape -> {
+                    if (event.type == KeyEventType.KeyDown) cancel()
+                    true
+                }
 
                 event.type == KeyEventType.KeyDown -> {
                     if (down.add(event.key)) tap(calibrationClockMs() - event.lateByMs())
