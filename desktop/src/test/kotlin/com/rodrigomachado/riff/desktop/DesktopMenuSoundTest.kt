@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -21,7 +22,11 @@ class DesktopMenuSoundTest {
 
     private val played = mutableListOf<MenuSound>()
     private val graph by lazy {
-        DesktopGraph(temp.newFolder("dados"), menuSounds = MenuSoundPlayer { sound, _ -> played += sound })
+        DesktopGraph(
+            temp.newFolder("dados"),
+            menuSounds = MenuSoundPlayer { sound, _ -> played += sound },
+            padSource = NoPadSource,
+        )
     }
 
     @After

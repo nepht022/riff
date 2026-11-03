@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -37,7 +38,7 @@ class DesktopLibraryTest {
             File(this, "song.ogg").writeBytes(ByteArray(10))
         }
         File(charts, "quebrada").apply { mkdirs() }.run { File(this, "notes.chart").writeText("não é mapa") }
-        val graph = DesktopGraph(temp.newFolder("dados")).also { graph = it }
+        val graph = DesktopGraph(temp.newFolder("dados"), padSource = NoPadSource).also { graph = it }
         // A pasta já escolhida e importada (o seletor do PC é uma janela do sistema, conferida à mão).
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))

@@ -24,6 +24,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.StageBackground
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
@@ -58,7 +59,7 @@ fun RiffDesktopApp(graph: DesktopGraph) {
     // Trocar o idioma refaz as telas já no idioma novo (os textos leem o Locale padrão), com a mesma pilha.
     val language by graph.languages.language.collectAsState()
     RiffTheme {
-        CompositionLocalProvider(LocalMenuSound provides playMenuSound) {
+        CompositionLocalProvider(LocalMenuSound provides playMenuSound, LocalGamepad provides graph.gamepad) {
             key(language) { DesktopScreens(graph, navController) }
         }
     }
