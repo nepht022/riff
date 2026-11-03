@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.changedToDown
@@ -49,6 +51,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
 import com.rodrigomachado.riff.core.ui.stage.StageCache
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -79,6 +82,8 @@ object GameplayTestTags {
     const val STAGE = "gameplay_stage"
     const val PAUSE = "gameplay_pause"
     const val EXIT = "gameplay_exit"
+    const val RESUME = "gameplay_resume"
+    const val PAUSE_MENU = "gameplay_pause_menu"
     const val PROGRESS = "gameplay_progress"
 }
 
@@ -106,13 +111,7 @@ fun GameplayScreen(
     when (val current = state) {
         GameplayUiState.Loading -> LoadingState(modifier)
 
-        is GameplayUiState.Unavailable -> EmptyState(
-            title = stringResource(Res.string.gameplay_unavailable_title),
-            message = stringResource(current.reason.message()),
-            actionLabel = stringResource(Res.string.gameplay_back),
-            onAction = onExit,
-            modifier = modifier,
-        )
+        is GameplayUiState.Unavailable -> UnavailableScreen(current.reason, onExit, modifier)
 
         is GameplayUiState.Ready -> GameStage(
             state = current,
@@ -127,6 +126,18 @@ fun GameplayScreen(
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
     }
+}
+
+/** "Não dá para jogar": o motivo e o Voltar; no PC, as setas e o Esc (volta) como nos menus. */
+@Composable
+internal fun UnavailableScreen(reason: UnavailableReason, onExit: () -> Unit, modifier: Modifier = Modifier) {
+    EmptyState(
+        title = stringResource(Res.string.gameplay_unavailable_title),
+        message = stringResource(reason.message()),
+        actionLabel = stringResource(Res.string.gameplay_back),
+        onAction = onExit,
+        modifier = modifier.menuKeys(onBack = onExit),
+    )
 }
 
 /**
@@ -170,7 +181,8 @@ internal fun GameStage(
             }
         }
     }
-    val keys = rememberGameKeys(session, state.settings.controls, state.isPaused, onPause, onResume)
+    val pauseMenu = remember { PauseMenu() }
+    val keys = rememberGameKeys(session, state.settings.controls, state.isPaused, pauseMenu, onPause, onResume)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
     HandleGamepad(session, state.isPaused, onPause, onResume)
     val highway = @Composable { highwayModifier: Modifier ->
@@ -202,7 +214,7 @@ internal fun GameStage(
             SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
             Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
         }
-        if (state.isPaused) PauseOverlay(state, onAdjustOffset, onResume, onExit)
+        if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, onResume, onExit)
     }
 }
 
@@ -240,12 +252,17 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.handleLa
 @Composable
 private fun PauseOverlay(
     state: GameplayUiState.Ready,
+    menu: PauseMenu,
     onAdjustOffset: (Int) -> Unit,
     onResume: () -> Unit,
     onExit: () -> Unit,
 ) {
+    // A pausa fechou com um botão focado: a próxima começa sem foco (a primeira seta foca o Continuar).
+    DisposableEffect(menu) { onDispose { menu.hasFocus = false } }
     Column(
-        Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA)),
+        Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA))
+            .testTag(GameplayTestTags.PAUSE_MENU)
+            .pauseMenu(menu),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -260,7 +277,12 @@ private fun PauseOverlay(
                 modifier = Modifier.padding(horizontal = Spacing.lg).semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
-        PosterButton(stringResource(Res.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
+        PosterButton(
+            stringResource(Res.string.gameplay_resume),
+            onClick = onResume,
+            modifier = Modifier.testTag(GameplayTestTags.RESUME).focusRequester(menu.first),
+            sound = MenuSound.CONFIRM,
+        )
         SyncAdjuster(state.songOffsetMs, onAdjustOffset)
         TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.gameplay_exit), color = RiffColors.Paper)

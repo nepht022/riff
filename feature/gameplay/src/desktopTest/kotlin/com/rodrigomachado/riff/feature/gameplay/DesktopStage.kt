@@ -41,6 +41,7 @@ fun ComposeContentTestRule.showStage(
     state: () -> GameplayUiState.Ready,
     onPause: () -> Unit = {},
     gamepad: Gamepad? = null,
+    onExit: () -> Unit = {},
     onResume: () -> Unit = {},
 ): ControlledWindowInfo {
     lateinit var window: ControlledWindowInfo
@@ -48,7 +49,7 @@ fun ComposeContentTestRule.showStage(
         val real = LocalWindowInfo.current
         window = remember { ControlledWindowInfo(real) }
         CompositionLocalProvider(LocalWindowInfo provides window, LocalGamepad provides gamepad) {
-            Stage(state(), onPause, onResume)
+            Stage(state(), onPause, onResume, onExit)
         }
     }
     waitForIdle()
@@ -56,14 +57,14 @@ fun ComposeContentTestRule.showStage(
 }
 
 @Composable
-private fun Stage(state: GameplayUiState.Ready, onPause: () -> Unit, onResume: () -> Unit) {
+private fun Stage(state: GameplayUiState.Ready, onPause: () -> Unit, onResume: () -> Unit, onExit: () -> Unit) {
     RiffTheme {
         GameStage(
             state,
             reducedMotion = true,
             onPause = onPause,
             onResume = onResume,
-            onExit = {},
+            onExit = onExit,
             onSessionFinished = {},
             animate = false,
         )
