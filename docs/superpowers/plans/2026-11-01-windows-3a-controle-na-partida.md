@@ -20,7 +20,7 @@
 
 - O celular fica igual (nenhuma dependência nova no Android; o `CompositionLocal` do controle é nulo lá). Screenshots do celular sem regravar.
 - Botões de fábrica (escolha minha, pelas cores dos símbolos do PlayStation, que o controle genérico imita): verde **△** (Y do layout do GLFW), vermelho **○** (B), amarelo **□** (X), azul **✕** (A), laranja **R1** (right bumper); palheta **direcional ↑/↓** e também o **analógico esquerdo** para cima/baixo (limiar 0,5, com histerese até 0,3); pausa **Start**. Configurar é da 3b.
-- Controle fora da base do SDL (modo cru): botões 0–3 → azul, vermelho, amarelo, verde (ordem ✕ ○ □ △ comum nos genéricos DirectInput — a conferir com o verificador), botão 5 → laranja, botão 9 → pausa, chapéu 0 ↑/↓ → palheta. Se o verificador mostrar outra ordem no controle do usuário, a Task 2 segue o que ele mostrar (Ruling no ledger).
+- Controle fora da base do SDL (modo cru), pela ordem crua do DualShock 3 (base escolhida pelo usuário: "use como base um controle de ps3"): botão 12 △ → verde, 13 ○ → vermelho, 15 □ → amarelo, 14 ✕ → azul, 11 R1 → laranja, 3 Start → pausa, 4 ↑ e 6 ↓ → palheta; o chapéu 0 ↑/↓ (clones que expõem o direcional como chapéu) também palheta. Com o controle na base do SDL (o caso comum), vale o layout mapeado acima.
 - Atraso do evento: `(System.nanoTime() - evento.atNanos) / 1_000_000`, limitado a 0..200 ms (o mesmo limite do teclado).
 - Janela sem foco: os eventos do controle são ignorados (o GLFW lê o controle mesmo com a janela em segundo plano; a partida já pausa ao perder o foco).
 - Lições: textos do `composeResources` com `%1$d` e sem `\'`/`\"`; testes do PC que navegam teclam na thread da janela; `git grep`; Gradle por `./scripts/gw`; memória curta (não deixar Gradle/`:desktop:run` em segundo plano).
@@ -43,7 +43,7 @@
 - Create: `desktop/src/main/kotlin/com/rodrigomachado/riff/desktop/pad/PadCheck.kt` — `fun main()`: inicializa o GLFW (falhou: imprime o motivo e sai), lista os controles (`glfwJoystickPresent` 0..15: nome, GUID, `glfwJoystickIsGamepad`, nome do mapeamento) e, por 20 s, imprime cada mudança de botão do layout de gamepad (quando há mapeamento) e dos botões/eixos/chapéus crus, e ao fim o intervalo real entre leituras (média e pior caso).
 
 - [ ] **Step 1:** Implementar; `./scripts/gw :desktop:compileKotlin detekt` → BUILD SUCCESSFUL. (Ferramenta de medição, como o `AudioCheck`: sem teste automático.)
-- [ ] **Step 2: No Windows (usuário)** — `./scripts/gw :desktop:runPadCheck` com o controle ligado: apertar △ ○ □ ✕ R1, Start, direcional ↑/↓ e analógico esquerdo. Anotar no ledger: nome, se tem mapeamento (gamepad) ou é cru, a ordem dos botões crus e o intervalo de leitura. Se o intervalo médio passar de 4 ms, Ruling na Task 2 (ex.: `timeBeginPeriod` pelo JNA não é dependência; usar espera ativa curta).
+- [ ] **Step 2: No Windows (usuário)** — (adiado para o teste da Task 3, a pedido do usuário: base PS3) `./scripts/gw :desktop:runPadCheck` com o controle ligado: apertar △ ○ □ ✕ R1, Start, direcional ↑/↓ e analógico esquerdo. Anotar no ledger: nome, se tem mapeamento (gamepad) ou é cru, a ordem dos botões crus e o intervalo de leitura. Se o intervalo médio passar de 4 ms, Ruling na Task 2 (ex.: `timeBeginPeriod` pelo JNA não é dependência; usar espera ativa curta).
 - [ ] **Step 3: Commit** — `feat: verificador do controle no PC`
 
 ### Task 2: Leitura do controle (thread própria, só mudanças)
