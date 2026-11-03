@@ -28,10 +28,20 @@ class GlfwGamepad(
     override val connected: StateFlow<Boolean> = mutableConnected.asStateFlow()
 
     @Volatile private var running = true
-    private val reader = thread(isDaemon = true, name = "riff-pad") { read() }
+    private var reader: Thread? = null
 
     /** A thread de leitura ainda está viva (nos testes). */
-    internal val isReading: Boolean get() = reader.isAlive
+    internal val isReading: Boolean get() = reader?.isAlive == true
+
+    /**
+     * Começa a ler (uma vez; depois de [close], nada). O app chama com a janela já aberta: o `glfwInit` define a
+     * escala (DPI) do processo no Windows, e o AWT precisa escolher a dele antes.
+     */
+    @Synchronized
+    fun start() {
+        if (reader != null || !running) return
+        reader = thread(isDaemon = true, name = "riff-pad") { read() }
+    }
 
     private fun read() {
         if (!started()) return
@@ -62,10 +72,13 @@ class GlfwGamepad(
     }
 
     /** Para a leitura e espera a thread encerrar o GLFW (até [JOIN_MS]: fechar o jogo nunca trava aqui). */
+    @Synchronized
     override fun close() {
         running = false
-        reader.interrupt()
-        reader.join(JOIN_MS)
+        reader?.run {
+            interrupt()
+            join(JOIN_MS)
+        }
     }
 
     private companion object {

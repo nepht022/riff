@@ -31,10 +31,25 @@ class GlfwGamepadTest {
         }
     }
 
+    /** A leitura (e o glfwInit) só começa quando o app pede, com a janela já aberta (o AWT escolhe a escala antes). */
+    @Test
+    fun theReadingStartsOnlyWhenAsked(): Unit = runBlocking {
+        val source = FakeSource()
+        GlfwGamepad(source).use { gamepad ->
+            delay(50)
+            assertEquals(0, source.polls)
+            assertFalse(gamepad.isReading)
+
+            gamepad.start()
+
+            withTimeout(TIMEOUT_MS) { while (source.polls == 0) delay(1) }
+        }
+    }
+
     @Test
     fun aPadPluggedInLaterIsFound(): Unit = runBlocking {
         val source = FakeSource()
-        GlfwGamepad(source).use { gamepad ->
+        GlfwGamepad(source).also { it.start() }.use { gamepad ->
             val first = withTimeout(TIMEOUT_MS) {
                 gamepad.events.onSubscription {
                     while (source.polls < 2) delay(1)
@@ -52,7 +67,7 @@ class GlfwGamepadTest {
     @Test
     fun aPadUnpluggedReleasesTheHeldFrets(): Unit = runBlocking {
         val source = FakeSource().apply { pad = PadSnapshot(mapped = true, setOf(MappedButton.Y)) }
-        GlfwGamepad(source).use { gamepad ->
+        GlfwGamepad(source).also { it.start() }.use { gamepad ->
             withTimeout(TIMEOUT_MS) { gamepad.connected.first { it } }
             val released: PadEvent = withTimeout(TIMEOUT_MS) {
                 gamepad.events.onSubscription { source.pad = null }.first()
@@ -65,7 +80,7 @@ class GlfwGamepadTest {
     @Test
     fun withoutGlfwTheGameStillOpens() {
         val source = FakeSource(ready = { false })
-        val gamepad = GlfwGamepad(source)
+        val gamepad = GlfwGamepad(source).also { it.start() }
         gamepad.awaitReadingThread()
         assertFalse(gamepad.connected.value)
         assertEquals(0, source.polls)
@@ -76,7 +91,7 @@ class GlfwGamepadTest {
     @Test
     fun aMissingNativeLibraryIsNoPad() {
         val source = FakeSource(ready = { throw UnsatisfiedLinkError("sem glfw") })
-        val gamepad = GlfwGamepad(source)
+        val gamepad = GlfwGamepad(source).also { it.start() }
         gamepad.awaitReadingThread()
         assertFalse(gamepad.connected.value)
         assertClosesQuickly(gamepad)
@@ -85,7 +100,7 @@ class GlfwGamepadTest {
     @Test
     fun closingStopsTheReadingThread(): Unit = runBlocking {
         val source = FakeSource().apply { pad = PadSnapshot(mapped = true, emptySet()) }
-        val gamepad = GlfwGamepad(source)
+        val gamepad = GlfwGamepad(source).also { it.start() }
         withTimeout(TIMEOUT_MS) { gamepad.connected.first { it } }
         assertClosesQuickly(gamepad)
         assertFalse(gamepad.isReading)

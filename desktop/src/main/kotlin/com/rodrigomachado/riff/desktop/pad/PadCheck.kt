@@ -11,7 +11,6 @@ import org.lwjgl.glfw.GLFW.glfwGetJoystickGUID
 import org.lwjgl.glfw.GLFW.glfwGetJoystickHats
 import org.lwjgl.glfw.GLFW.glfwGetJoystickName
 import org.lwjgl.glfw.GLFW.glfwGetVersionString
-import org.lwjgl.glfw.GLFW.glfwInit
 import org.lwjgl.glfw.GLFW.glfwJoystickIsGamepad
 import org.lwjgl.glfw.GLFW.glfwJoystickPresent
 import org.lwjgl.glfw.GLFW.glfwSetErrorCallback
@@ -28,7 +27,7 @@ import kotlin.math.roundToInt
  */
 fun main() {
     glfwSetErrorCallback(GLFWErrorCallback.createPrint(System.err))
-    if (!glfwInit()) {
+    if (!startGlfwForPads()) {
         println("O GLFW não iniciou: sem leitura de controle neste PC.")
         return
     }

@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.desktop
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -22,6 +23,8 @@ fun main() {
             state = rememberWindowState(width = 1280.dp, height = 800.dp),
         ) {
             window.minimumSize = Dimension(MIN_WIDTH, MIN_HEIGHT)
+            // O controle começa a ser lido com a janela aberta (o AWT escolhe a escala da tela antes do GLFW).
+            LaunchedEffect(Unit) { graph.gamepad.start() }
             RiffDesktopApp(graph)
         }
     }

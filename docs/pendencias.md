@@ -98,6 +98,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 - **Teste com o controle de verdade, adiado pelo usuário** (sem o controle à mão): rodar `./scripts/gw :desktop:runPadCheck` (mapeado ou cru? ordem dos botões? intervalo de leitura) e jogar com o controle: cores, palheta no direcional e no analógico, Start, Alt+Tab (o controle não faz nada sem foco), controle ligado depois de abrir o jogo (o `glfwPollEvents` na thread `riff-pad` deve achá-lo) e cabo desconectado com uma cor segurada (pausa antes de soltar). Se a ordem crua do controle for outra, a 3b deixa configurar.
 
+- No teste com o controle: medir o intervalo real da leitura **dentro do jogo** (o `runPadCheck` é outro processo, sem janela, e o `Thread.sleep(1)` no Windows pode dar ~1 ms ou ~15 ms); se passar de ~2 ms, espera híbrida (`parkNanos` + espera ativa curta). Conferir também a janela numa tela com escala de 150% (a leitura já só começa com a janela aberta).
+- Leitura do controle: uma exceção inesperada na `riff-pad` encerra a leitura sem soltar as cores (capturar `Exception`, registrar e soltar no `finally`); eventos descartados sem aviso se o buffer de 64 encher; erros do GLFW sem registro no jogo (`glfwSetErrorCallback`).
+- Cor do controle segurada durante o Alt+Tab precisa ser apertada de novo ao voltar (como o teclado).
+- `unpluggingThePadPausesTheMatch` não prova a ordem pausa-antes-de-soltar (montar um pull-off que acertaria com a ordem trocada).
+- `runPadCheck` não chama `glfwPollEvents` (não vê controle ligado durante os 20 s) e só acompanha o primeiro controle.
+- Empacotamento (etapa 4): os nativos do LWJGL seguem o sistema do build (um instalador do Windows feito no CI Linux sairia sem eles) e um runtime do `jlink` precisa do `jdk.unsupported`. Base de mapeamentos do SDL fixa na do GLFW 3.4 (`glfwUpdateGamepadMappings` com um `gamecontrollerdb.txt` novo é opcional).
+
 ## Riff no Windows, etapa 2d: calibração e Configurações no PC (revisão final, 2026-11-01)
 
 - Linux (X11): a repetição automática gera pares soltar/apertar, e segurar uma tecla na calibração conta vários toques; o alvo é o Windows (ignorar descidas da mesma tecla menos de ~30 ms depois da subida resolveria).

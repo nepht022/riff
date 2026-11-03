@@ -1,7 +1,9 @@
 package com.rodrigomachado.riff.desktop.pad
 
+import org.lwjgl.glfw.GLFW.GLFW_FALSE
 import org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_AXIS_LEFT_Y
 import org.lwjgl.glfw.GLFW.GLFW_JOYSTICK_1
+import org.lwjgl.glfw.GLFW.GLFW_JOYSTICK_HAT_BUTTONS
 import org.lwjgl.glfw.GLFW.GLFW_JOYSTICK_LAST
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 import org.lwjgl.glfw.GLFW.glfwGetGamepadState
@@ -9,11 +11,21 @@ import org.lwjgl.glfw.GLFW.glfwGetJoystickAxes
 import org.lwjgl.glfw.GLFW.glfwGetJoystickButtons
 import org.lwjgl.glfw.GLFW.glfwGetJoystickHats
 import org.lwjgl.glfw.GLFW.glfwInit
+import org.lwjgl.glfw.GLFW.glfwInitHint
 import org.lwjgl.glfw.GLFW.glfwJoystickIsGamepad
 import org.lwjgl.glfw.GLFW.glfwJoystickPresent
 import org.lwjgl.glfw.GLFW.glfwPollEvents
 import org.lwjgl.glfw.GLFW.glfwTerminate
 import org.lwjgl.glfw.GLFWGamepadState
+
+/**
+ * Inicia o GLFW para ler controles. Sem a dica, o GLFW repete cada direcional em chapéu como 4 botões a mais no fim da
+ * lista crua, e um clone com 12 botões apertaria cores ao palhetar (o 14 é o ✕ do DualShock 3).
+ */
+internal fun startGlfwForPads(hint: (Int, Int) -> Unit = ::glfwInitHint, init: () -> Boolean = ::glfwInit): Boolean {
+    hint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE)
+    return init()
+}
 
 /**
  * O controle pelo GLFW: o primeiro joystick ligado, no layout de controle quando a base do SDL o conhece
@@ -26,7 +38,7 @@ class GlfwPadSource : PadSource {
     private val state by lazy { GLFWGamepadState.create() }
 
     override fun init(): Boolean {
-        started = glfwInit()
+        started = startGlfwForPads()
         return started
     }
 
