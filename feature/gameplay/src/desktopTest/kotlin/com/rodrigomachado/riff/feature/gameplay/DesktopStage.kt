@@ -14,6 +14,8 @@ import com.rodrigomachado.riff.core.model.Note
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.LocalPadMenuSuspension
+import com.rodrigomachado.riff.core.ui.input.PadMenuSuspension
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 
 /** A janela do teste com o foco nas mãos do teste (o Alt+Tab de mentira). */
@@ -35,12 +37,13 @@ fun playingSession(vararg notes: Note, positionMs: Long = 0): GameSession {
 
 /**
  * Mostra o palco da partida (sem o loop de quadros) numa janela com o foco controlado, que é devolvida; com o
- * controle [gamepad] (nulo: sem controle, como no celular).
+ * controle [gamepad] (nulo: sem controle, como no celular) e a suspensão dele nos menus ([suspension], a do app do PC).
  */
 fun ComposeContentTestRule.showStage(
     state: () -> GameplayUiState.Ready,
     onPause: () -> Unit = {},
     gamepad: Gamepad? = null,
+    suspension: PadMenuSuspension? = null,
     onExit: () -> Unit = {},
     onResume: () -> Unit = {},
 ): ControlledWindowInfo {
@@ -48,7 +51,11 @@ fun ComposeContentTestRule.showStage(
     setContent {
         val real = LocalWindowInfo.current
         window = remember { ControlledWindowInfo(real) }
-        CompositionLocalProvider(LocalWindowInfo provides window, LocalGamepad provides gamepad) {
+        CompositionLocalProvider(
+            LocalWindowInfo provides window,
+            LocalGamepad provides gamepad,
+            LocalPadMenuSuspension provides suspension,
+        ) {
             Stage(state(), onPause, onResume, onExit)
         }
     }

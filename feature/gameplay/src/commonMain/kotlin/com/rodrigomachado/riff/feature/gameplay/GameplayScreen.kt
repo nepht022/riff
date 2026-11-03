@@ -157,6 +157,8 @@ internal fun GameStage(
     animate: Boolean = true,
 ) {
     val session = state.session
+    // A pausa já no instante em que muda (o teclado e o controle a leem antes de a tela recompor).
+    val matchPause = rememberMatchPause(state.isPaused, onPause, onResume)
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
@@ -166,7 +168,7 @@ internal fun GameStage(
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
     val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
     // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
-    GameBackHandler(enabled = !state.isPaused, onBack = onPause)
+    GameBackHandler(enabled = !state.isPaused, onBack = matchPause.pause)
     if (animate) {
         LaunchedEffect(session) {
             while (isActive) {
@@ -183,9 +185,9 @@ internal fun GameStage(
         }
     }
     val pauseMenu = remember { PauseMenu() }
-    val keys = rememberGameKeys(session, state.settings.controls, state.isPaused, pauseMenu, onPause, onResume)
+    val keys = rememberGameKeys(session, state.settings.controls, matchPause, state.isPaused, pauseMenu)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
-    HandleGamepad(session, state.isPaused, state.settings.controls.pad[ControlAction.PAUSE], onPause, onResume)
+    HandleGamepad(session, matchPause, state.settings.controls.pad[ControlAction.PAUSE])
     val highway = @Composable { highwayModifier: Modifier ->
         Canvas(
             highwayModifier
@@ -209,13 +211,13 @@ internal fun GameStage(
                 JudgmentPop(session, hud, { frame }, reducedMotion, Modifier.align(Alignment.Center))
                 SongProgressBar(session, { frame }, Modifier.align(Alignment.BottomCenter).progressBar())
             }
-            SideHud(hud, onPause, highwayWidth, Modifier.fillMaxSize())
+            SideHud(hud, matchPause.pause, highwayWidth, Modifier.fillMaxSize())
         } else {
             highway(Modifier.fillMaxSize())
             SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
-            Hud(session, hud, { frame }, reducedMotion, onPause, Modifier.fillMaxSize())
+            Hud(session, hud, { frame }, reducedMotion, matchPause.pause, Modifier.fillMaxSize())
         }
-        if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, onResume, onExit)
+        if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, matchPause.resume, onExit)
     }
 }
 

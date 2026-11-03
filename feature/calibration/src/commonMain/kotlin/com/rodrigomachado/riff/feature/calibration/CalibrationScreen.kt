@@ -36,8 +36,12 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
+import com.rodrigomachado.riff.core.ui.input.PAD_MENU_BACK
+import com.rodrigomachado.riff.core.ui.input.TakePadFromMenus
 import com.rodrigomachado.riff.core.ui.input.lateByMs
+import com.rodrigomachado.riff.core.ui.input.nowNanos
 import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -160,10 +164,11 @@ private fun Message(text: String, action: String, onAction: () -> Unit, secondar
 
 /**
  * A tela inteira recebe os toques; o instante é o do evento, no relógio [calibrationClockMs]. No PC, as teclas
- * ([rememberTapKeys]), e o Esc para a medição ([onCancel]).
+ * ([rememberTapKeys]) e os botões do controle ([PadTaps]), e o Esc para a medição ([onCancel]).
  */
 @Composable
 private fun TapArea(taps: Int, onTap: (Long) -> Unit, onCancel: () -> Unit) {
+    PadTaps(onTap)
     val input = if (tapsByTouch) Modifier.touchTaps(onTap) else rememberTapKeys(onTap, onCancel)
     val measuring = if (tapsByTouch) Res.string.calibration_measuring else Res.string.calibration_measuring_keys
     Box(
@@ -237,6 +242,22 @@ private fun rememberTapKeys(onTap: (Long) -> Unit, onCancel: () -> Unit): Modifi
         .focusTarget()
 }
 
+/**
+ * Os botões do controle como toques (PC; no celular não há controle): cada um que desce conta, no instante da leitura
+ * dele (`PadEvent.atNanos`, levado ao [calibrationClockMs] pelo quanto esperou), não no de quando chegou aqui.
+ * Medindo, o controle sai dos menus: virar uma tecla falsa contaria o toque atrasado pela fila. Só o ○ continua lá
+ * (vira o Esc, que para a medição).
+ */
+@Composable
+private fun PadTaps(onTap: (Long) -> Unit) {
+    val gamepad = LocalGamepad.current ?: return
+    TakePadFromMenus { it != PAD_MENU_BACK }
+    val tap by rememberUpdatedState(onTap)
+    LaunchedEffect(gamepad) {
+        gamepad.events.collect { if (it.down) tap(calibrationClockMs() - (nowNanos() - it.atNanos) / NANOS_PER_MS) }
+    }
+}
+
 @Composable
 private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Unit, onRepeat: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
@@ -264,3 +285,4 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
 }
 
 private const val NUDGE_MS = 5
+private const val NANOS_PER_MS = 1_000_000L

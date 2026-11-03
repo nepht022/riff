@@ -151,10 +151,14 @@ fun LibraryContent(
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
-    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
+    var filtering by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf("") }
+    val closeFilter = Modifier.escapeClosesFilter(filtering) {
+        filtering = false
+        filter = ""
+    }
+    Column(closeFilter.then(modifier).fillMaxSize().padding(horizontal = Spacing.md)) {
         LibraryHeader(onBack, onSearch)
-        var filtering by rememberSaveable { mutableStateOf(false) }
-        var filter by rememberSaveable { mutableStateOf("") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             PosterTitle(
                 stringResource(Res.string.library_title),

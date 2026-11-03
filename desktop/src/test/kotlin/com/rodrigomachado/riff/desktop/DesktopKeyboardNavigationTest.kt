@@ -26,6 +26,7 @@ import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.calibration.CalibrationTestTags
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.home.HomeTestTags
+import com.rodrigomachado.riff.feature.library.LibraryTestTags
 import com.rodrigomachado.riff.feature.settings.SettingsTestTags
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
@@ -141,6 +142,31 @@ class DesktopKeyboardNavigationTest {
         composeRule.onNode(target).assertIsFocused().assertIsDisplayed()
     }
 
+    /** O campo do filtro não prende o foco: ↓ sai dele para a lista (o controle também, pelo direcional). */
+    @Test
+    fun downLeavesTheLibraryFilter() {
+        openFilter()
+
+        press(Key.DirectionDown)
+
+        assertTrue("↓ não saiu do filtro", !focused(hasTestTag(LibraryTestTags.FILTER)))
+        pressUntilFocused(Key.DirectionDown, hasText(chartTitle(1)), max = FILTER_TO_LIST_PRESSES)
+    }
+
+    /** Esc com o filtro aberto fecha o filtro (e fica na Biblioteca); o seguinte volta à tela inicial. */
+    @Test
+    fun escapeClosesTheLibraryFilterFirst() {
+        openFilter()
+
+        press(Key.Escape)
+
+        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasTestTag(LibraryTestTags.FILTER)) }
+        composeRule.onNodeWithText(chartTitle(1)).assertExists()
+        composeRule.onNodeWithTag(HomeTestTags.SOLO).assertDoesNotExist()
+        press(Key.Escape)
+        composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
+    }
+
     @Test
     fun escapeClosesADialogWithoutGoingBack() {
         openSettings()
@@ -231,6 +257,17 @@ class DesktopKeyboardNavigationTest {
         return graph
     }
 
+    /** A Biblioteca com mapas, o filtro aberto pela lupa e o campo dele com o foco (digitando). */
+    private fun openFilter() {
+        openApp(charts = FILTER_CHARTS)
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(HomeTestTags.SOLO))
+        composeRule.waitUntilAtLeastOneExists(hasText(chartTitle(1)), TIMEOUT_MS)
+        composeRule.clickOnWindowThread(composeRule.onNodeWithContentDescription("Pesquisar na biblioteca"))
+        composeRule.waitUntilAtLeastOneExists(hasTestTag(LibraryTestTags.FILTER), TIMEOUT_MS)
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(LibraryTestTags.FILTER))
+        composeRule.waitUntil(TIMEOUT_MS) { focused(hasTestTag(LibraryTestTags.FILTER)) }
+    }
+
     /** O app aberto e as Configurações pelo ícone do canto (o caminho até elas não é o que se testa). */
     private fun openSettings(): DesktopGraph {
         val graph = openApp()
@@ -273,6 +310,10 @@ class DesktopKeyboardNavigationTest {
         const val MAX_PRESSES = 8
         const val CHART_COUNT = 30
         const val TARGET_CHART = 25
+        const val FILTER_CHARTS = 3
+
+        /** Entre o filtro e o primeiro mapa, as ações da lista (Procurar de novo, Trocar pasta, Selecionar). */
+        const val FILTER_TO_LIST_PRESSES = 4
 
         /** Os botões acima da lista (Voltar, Pesquisar, a lupa, as ações da lista). */
         const val EXTRA_PRESSES = 10
