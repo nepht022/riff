@@ -62,6 +62,9 @@ private class MenuKeysNode(var onBack: (() -> Unit)?) :
     override fun onAttach() {
         opened += this
         // Antes de observar: uma tela já ativa recebe o ON_RESUME na hora, dentro do addObserver.
+        // Lido só aqui de propósito: o nó vive dentro de uma tela (destino da navegação ou diálogo), cujo dono do ciclo
+        // de vida não muda enquanto ele existe.
+        @Suppress("SuspiciousCompositionLocalModifierRead")
         val current = currentValueOf(LocalLifecycleOwner).lifecycle
         lifecycle = current
         current.addObserver(onResume)
