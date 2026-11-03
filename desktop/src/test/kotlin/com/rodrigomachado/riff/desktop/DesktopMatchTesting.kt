@@ -10,6 +10,7 @@ import androidx.compose.ui.test.KeyInjectionScope
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -99,7 +100,11 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         composeRule.waitUntilAtLeastOneExists(hasTestTag(DifficultyDialogTestTags.OPTION), TIMEOUT_MS)
         composeRule.mainClock.autoAdvance = false
         composeRule.clickOnWindowThread(composeRule.onNodeWithTag(DifficultyDialogTestTags.OPTION))
-        playInTheMatchUntil("a partida") { exists(STAGE) }
+        // O diálogo da dificuldade sai com animação (o relógio do teste anda à mão): enquanto ele existe, a tela tem
+        // duas raízes e as teclas não sabem para qual ir.
+        playInTheMatchUntil("a partida, sem o diálogo") {
+            exists(STAGE) && composeRule.onAllNodes(isRoot()).fetchSemanticsNodes().size == 1
+        }
     }
 
     /**
