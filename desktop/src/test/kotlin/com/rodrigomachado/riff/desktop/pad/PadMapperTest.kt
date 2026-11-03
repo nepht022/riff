@@ -1,5 +1,7 @@
 package com.rodrigomachado.riff.desktop.pad
 
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.ui.input.PadAction
 import com.rodrigomachado.riff.core.ui.input.PadEvent
 import org.junit.Assert.assertEquals
@@ -9,9 +11,15 @@ import org.junit.Test
 class PadMapperTest {
     private val mapper = PadMapper()
 
-    private fun mapped(vararg buttons: Int, leftY: Float = 0f) = PadSnapshot(mapped = true, buttons.toSet(), leftY)
+    /** Um controle mapeado: os botões do layout (os crus não importam aqui). */
+    private fun mapped(vararg buttons: Int, leftY: Float = 0f) =
+        PadSnapshot(raw = emptySet(), leftY = leftY, layout = buttons.toSet())
 
-    private fun raw(vararg buttons: Int, hat: Int = 0) = PadSnapshot(mapped = false, buttons.toSet(), hat = hat)
+    private fun raw(vararg buttons: Int, hat: Int = 0) = PadSnapshot(raw = buttons.toSet(), hat = hat)
+
+    private fun choosing(vararg choices: Pair<ControlAction, String>) {
+        mapper.pad = choices.fold(Controls()) { controls, (action, button) -> controls.withPad(action, button) }.pad
+    }
 
     private fun down(action: PadAction, at: Long) = PadEvent(action, down = true, atNanos = at)
 
@@ -126,5 +134,43 @@ class PadMapperTest {
     fun aReconnectedPadStrumsAgain() {
         val held = mapped(MappedButton.DPAD_DOWN)
         assertEquals(listOf(down(PadAction.STRUM, 3)), read(held, null, held)[2])
+    }
+
+    /** ✕ (m:0) escolhido para o verde: vale no layout mapeado e, no cru, pela ordem do DualShock 3 (14). */
+    @Test
+    fun aChosenPadButtonPlaysItsFret() {
+        choosing(ControlAction.FRET_1 to "m:0")
+
+        assertEquals(
+            listOf(
+                listOf(down(PadAction.FRET_1, 1)),
+                listOf(up(PadAction.FRET_1, 2)),
+                listOf(down(PadAction.FRET_4, 3)),
+                listOf(down(PadAction.FRET_1, 4), up(PadAction.FRET_4, 4)),
+            ),
+            read(mapped(MappedButton.A), mapped(), mapped(MappedButton.Y), raw(RawButton.CROSS)),
+        )
+    }
+
+    /** O botão cru 7 escolhido para a palheta ↓: vale num controle cru e num mapeado (os crus vêm sempre). */
+    @Test
+    fun aChosenRawButtonStrums() {
+        choosing(ControlAction.STRUM_DOWN to "r:7")
+        val mappedWithRaw7 = PadSnapshot(raw = setOf(7), layout = emptySet())
+
+        assertEquals(
+            listOf(listOf(down(PadAction.STRUM, 1)), emptyList(), emptyList(), listOf(down(PadAction.STRUM, 4))),
+            read(raw(7), raw(7), mapped(MappedButton.DPAD_DOWN), mappedWithRaw7),
+        )
+    }
+
+    @Test
+    fun theStickStillStrumsWithAnyChoice() {
+        choosing(ControlAction.STRUM_UP to "r:1", ControlAction.STRUM_DOWN to "h:down")
+
+        assertEquals(
+            listOf(listOf(down(PadAction.STRUM, 1)), emptyList(), listOf(down(PadAction.STRUM, 3))),
+            read(mapped(leftY = 0.7f), mapped(), raw(hat = HAT_DOWN)),
+        )
     }
 }

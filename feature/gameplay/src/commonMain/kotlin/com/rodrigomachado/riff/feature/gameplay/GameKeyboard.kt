@@ -14,18 +14,21 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import com.rodrigomachado.riff.core.model.ControlAction
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
 import com.rodrigomachado.riff.core.ui.input.lateByMs
 
 /**
- * As teclas da partida ligadas à [session]: cores e palheta com o atraso de cada evento (como o toque), e a tecla
- * da pausa em [onPauseKey].
+ * As teclas da partida ([keys], as escolhidas) ligadas à [session]: cores e palheta com o atraso de cada evento (como
+ * o toque), e a tecla da pausa (a escolhida ou o Esc) em [onPauseKey].
  */
-internal class GameKeyboard(private val session: GameSession, onPauseKey: () -> Unit) {
+internal class GameKeyboard(private val session: GameSession, keys: Map<ControlAction, Long>, onPauseKey: () -> Unit) {
     private var lateByMs = 0L
     private val input = KeyboardInput(
+        keys = keys,
         onFretDown = { session.fretDown(it, lateByMs) },
         onFretUp = { session.fretUp(it, lateByMs) },
         onStrum = { session.strum(lateByMs) },
@@ -49,14 +52,16 @@ internal class GameKeyboard(private val session: GameSession, onPauseKey: () -> 
 }
 
 /**
- * O teclado na partida (PC; no celular com teclado também, e o toque segue igual): o palco pede o foco ao aparecer
- * e ao abrir ou fechar a pausa (o foco pode ter ido a um botão dela). Enter/Esc pausam; na pausa, continuam, como o
- * Continuar (com o mesmo som). Um botão da pausa com o foco (Tab) recebe o Enter antes, e vale o botão.
+ * O teclado na partida (PC, com as teclas escolhidas em [controls]; no celular com teclado também, com as de fábrica,
+ * e o toque segue igual): o palco pede o foco ao aparecer e ao abrir ou fechar a pausa (o foco pode ter ido a um botão
+ * dela). A tecla da pausa (Enter de fábrica) e o Esc pausam; na pausa, continuam, como o Continuar (com o mesmo som).
+ * Um botão da pausa com o foco (Tab) recebe o Enter antes, e vale o botão.
  * A janela perdendo o foco pausa e solta as cores seguradas.
  */
 @Composable
 internal fun rememberGameKeys(
     session: GameSession,
+    controls: Controls,
     isPaused: Boolean,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -64,7 +69,8 @@ internal fun rememberGameKeys(
     val paused by rememberUpdatedState(isPaused)
     val pause by rememberUpdatedState(onPause)
     val resume by rememberUpdatedState(withMenuSound(MenuSound.CONFIRM, onResume))
-    val keyboard = remember(session) { GameKeyboard(session) { if (paused) resume() else pause() } }
+    val keys = gameKeys(controls)
+    val keyboard = remember(session, keys) { GameKeyboard(session, keys) { if (paused) resume() else pause() } }
     val focus = remember { FocusRequester() }
     LaunchedEffect(isPaused) { focus.requestFocus() }
     OnWindowFocusLost {

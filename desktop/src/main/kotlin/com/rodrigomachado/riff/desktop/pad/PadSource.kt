@@ -1,10 +1,11 @@
 package com.rodrigomachado.riff.desktop.pad
 
 /**
- * Uma leitura do controle: os botões apertados (no layout de controle do GLFW, [mapped], ou crus), o analógico
- * esquerdo na vertical (−1 = para cima .. 1 = para baixo) e o chapéu 0 (os bits [HAT_UP]/[HAT_DOWN]; só no modo cru).
+ * Uma leitura do controle: os botões crus apertados ([raw], pelo índice do joystick) e o chapéu 0 (os bits
+ * [HAT_UP]/[HAT_DOWN]) sempre; os apertados no layout de controle do GLFW ([layout]) só quando a base do SDL conhece o
+ * controle (nulo = controle cru); e o analógico esquerdo na vertical (−1 = para cima .. 1 = para baixo).
  */
-data class PadSnapshot(val mapped: Boolean, val buttons: Set<Int>, val leftY: Float = 0f, val hat: Int = 0)
+data class PadSnapshot(val raw: Set<Int>, val hat: Int = 0, val leftY: Float = 0f, val layout: Set<Int>? = null)
 
 /**
  * De onde vem o controle. Tudo é chamado na mesma thread (a do [GlfwGamepad]): [init] uma vez (falso = sem leitura de

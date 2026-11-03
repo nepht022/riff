@@ -28,6 +28,12 @@ data class PadEvent(val action: PadAction, val down: Boolean, val atNanos: Long)
 interface Gamepad {
     val events: Flow<PadEvent>
     val connected: StateFlow<Boolean>
+
+    /**
+     * Cada botão que desce, como o texto gravado na escolha: `m:<índice>` num controle mapeado pelo layout do GLFW,
+     * `r:<índice>` (cru) ou `h:up`/`h:down` (chapéu) num controle fora da base do SDL.
+     */
+    val presses: Flow<String>
 }
 
 /** O controle do PC; nulo no celular (lá não há leitura de controle). */

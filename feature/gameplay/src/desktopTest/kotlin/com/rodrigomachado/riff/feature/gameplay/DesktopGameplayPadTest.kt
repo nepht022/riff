@@ -22,6 +22,7 @@ import org.junit.Test
 private class FakeGamepad : Gamepad {
     override val events = MutableSharedFlow<PadEvent>(extraBufferCapacity = 16)
     override val connected = MutableStateFlow(true)
+    override val presses = MutableSharedFlow<String>(extraBufferCapacity = 16)
 }
 
 /** O controle do PC chega à partida como o teclado: cores e palheta acertam, Start pausa e continua. */

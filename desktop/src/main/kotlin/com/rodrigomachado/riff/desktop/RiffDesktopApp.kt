@@ -53,6 +53,8 @@ fun RiffDesktopApp(graph: DesktopGraph) {
         var previous: Settings? = null
         snapshotFlow { settings.value }.collect { current ->
             if (menuSoundsTurnedOn(previous, current)) playMenuSound(MenuSound.NAVIGATE)
+            // Os botões escolhidos chegam à leitura do controle (a thread dele lê a cada leitura).
+            current?.let { graph.gamepad.setBindings(it.controls.pad) }
             previous = current
         }
     }
