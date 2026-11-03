@@ -40,6 +40,7 @@ import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.HiltResultsViewModel
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.search.HiltSearchViewModel
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.HiltSettingsViewModel
@@ -175,6 +176,7 @@ private fun NavGraphBuilder.searchDestinations(navController: NavHostController)
             onPlay = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name))
             },
+            viewModel = hiltViewModel<HiltSearchViewModel>(),
         )
     }
 }

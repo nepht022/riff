@@ -1,16 +1,24 @@
 plugins {
-    alias(libs.plugins.riff.android.feature)
+    alias(libs.plugins.riff.kmp.feature)
     alias(libs.plugins.roborazzi)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.feature.search"
-}
-
-dependencies {
-    implementation(project(":core:encore"))
-    implementation(project(":core:chart"))
-    // Seletor de pasta do sistema (OpenDocumentTree), para pedir a permissão de gravar.
-    implementation(libs.androidx.activity.compose)
-    testImplementation(testFixtures(project(":core:chart")))
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":core:encore"))
+            implementation(project(":core:chart"))
+        }
+        commonTest.dependencies {
+            // Os pacotes .sng falsos do transporte de teste.
+            implementation(project.dependencies.testFixtures(project(":core:chart")))
+            // O org.json vem com o Android; no PC entra a biblioteca original.
+            compileOnly(libs.org.json)
+        }
+        getByName("desktopTest").dependencies { implementation(libs.org.json) }
+        androidMain.dependencies {
+            // Seletor de pasta do sistema (OpenDocumentTree), para pedir a permissão de gravar.
+            implementation(libs.androidx.activity.compose)
+        }
+    }
 }
