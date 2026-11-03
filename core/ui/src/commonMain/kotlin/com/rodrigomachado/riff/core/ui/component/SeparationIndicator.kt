@@ -135,7 +135,9 @@ fun SeparationIndicatorContent(
     Box(modifier) {
         IconButton(
             onClick = withMenuSound(MenuSound.NAVIGATE) { open = true },
-            modifier = Modifier.testTag(SeparationIndicatorTags.ICON).semantics { contentDescription = description },
+            modifier = Modifier.testTag(SeparationIndicatorTags.ICON)
+                .semantics { contentDescription = description }
+                .focusHighlight(CircleShape),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (status is SeparationStatus.Running) {
@@ -188,6 +190,7 @@ private fun FailurePanel(status: SeparationStatus.Failed, onDismissFailure: () -
                     onClose()
                     onDismissFailure()
                 },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.ui_separation_ok)) }
         },
     )
@@ -226,6 +229,7 @@ private fun QueuePanel(
                         onClose()
                         onCancel()
                     },
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) {
                     Text(
                         stringResource(
@@ -234,7 +238,10 @@ private fun QueuePanel(
                     )
                 }
             } else {
-                TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK, onClose),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.ui_separation_close))
                 }
             }
@@ -246,6 +253,7 @@ private fun QueuePanel(
                         onClose()
                         queue.onCancelAll()
                     },
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) { Text(stringResource(Res.string.ui_separation_cancel_all)) }
             }
         },
@@ -269,7 +277,7 @@ private fun QueueList(queue: SeparationQueueView) {
                 modifier = Modifier.clearAndSetSemantics {
                     contentDescription = remove
                     role = Role.Button
-                },
+                }.focusHighlight(CircleShape),
             ) { Text("✕", color = RiffColors.PaperDim) }
         }
     }

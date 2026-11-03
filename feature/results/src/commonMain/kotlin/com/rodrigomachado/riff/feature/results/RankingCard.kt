@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -14,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -33,7 +35,10 @@ internal fun RankingCard(status: SubmitStatus?, onSeeRanking: () -> Unit, onChoo
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         if (status == SubmitStatus.NoName) {
-            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onChooseName)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onChooseName),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(
                     stringResource(Res.string.results_ranking_no_name),
                     color = RiffColors.Paper,
@@ -45,7 +50,10 @@ internal fun RankingCard(status: SubmitStatus?, onSeeRanking: () -> Unit, onChoo
         line(status)?.let {
             Text(it, style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
         }
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSeeRanking)) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onSeeRanking),
+            modifier = Modifier.focusHighlight(CircleShape),
+        ) {
             Text(stringResource(Res.string.results_see_ranking), color = RiffColors.Paper, fontWeight = FontWeight.Bold)
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ import com.rodrigomachado.riff.core.model.HighwayBackground
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.NoteStyle
 import com.rodrigomachado.riff.core.model.TrackLook
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.stage.FretsPreview
 import com.rodrigomachado.riff.core.ui.stage.HighwayPreview
@@ -94,7 +96,10 @@ internal fun TrackLookSection(look: TrackLook, onLook: (TrackLookChange) -> Unit
                 }
             },
             confirmButton = {
-                TextButton(onClick = withMenuSound(MenuSound.BACK, close)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK, close),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.settings_look_close))
                 }
             },
@@ -163,7 +168,7 @@ private fun currentName(choice: LookChoice, look: TrackLook): String = when (cho
 @Composable
 internal fun ChoiceRow(title: String, value: String, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).clickable(
+        Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).focusHighlight().clickable(
             enabled = enabled,
             onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
         ).padding(vertical = Spacing.md),
@@ -191,7 +196,9 @@ private fun <T> ChoiceList(
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         for (option in options) {
             Row(
-                Modifier.fillMaxWidth().clickable(onClick = withMenuSound(MenuSound.NAVIGATE) { onChoose(option) }),
+                Modifier.fillMaxWidth().focusHighlight().clickable(
+                    onClick = withMenuSound(MenuSound.NAVIGATE) { onChoose(option) },
+                ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -103,7 +105,10 @@ internal fun ControlsTab(
             choosing = Choosing(action, keyboard = false)
         }
     }
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onDefaults)) {
+    TextButton(
+        onClick = withMenuSound(MenuSound.NAVIGATE, onDefaults),
+        modifier = Modifier.focusHighlight(CircleShape),
+    ) {
         Text(stringResource(Res.string.settings_controls_defaults), color = RiffColors.Paper)
     }
     choosing?.let { choice ->
@@ -165,7 +170,10 @@ private fun ChooseDialog(
         title = { Text(stringResource(title, name)) },
         text = { Text(stringResource(Res.string.settings_controls_escape)) },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK, onClose)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, onClose),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.settings_controls_cancel))
             }
         },

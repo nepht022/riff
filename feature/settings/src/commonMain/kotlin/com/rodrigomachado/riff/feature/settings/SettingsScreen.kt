@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -40,6 +41,7 @@ import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
@@ -179,7 +181,7 @@ fun SettingsContent(
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack) {
+                TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
                     Text(stringResource(Res.string.settings_back), color = RiffColors.Paper)
                 }
                 Spacer(Modifier.weight(1f))
@@ -345,7 +347,7 @@ private fun SettingSlider(
                 activeTickColor = RiffColors.Paper,
                 inactiveTickColor = RiffColors.PaperDim,
             ),
-            modifier = modifier,
+            modifier = modifier.focusHighlight(),
         )
     }
 }
@@ -353,7 +355,7 @@ private fun SettingSlider(
 @Composable
 private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(
+        Modifier.fillMaxWidth().focusHighlight().clickable(
             onClick = withMenuSound(MenuSound.NAVIGATE, onCalibrate),
         ).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
@@ -428,7 +430,7 @@ internal fun SwitchRow(
                 disabledUncheckedTrackColor = RiffColors.StageBlack,
                 disabledUncheckedBorderColor = RiffColors.PaperDim,
             ),
-            modifier = Modifier.testTag(tag),
+            modifier = Modifier.testTag(tag).focusHighlight(CircleShape),
         )
     }
 }

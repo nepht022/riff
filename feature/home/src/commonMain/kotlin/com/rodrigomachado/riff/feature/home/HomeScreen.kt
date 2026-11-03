@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -155,7 +157,7 @@ private fun TopIcons(onReport: () -> Unit, onSettings: () -> Unit) {
 private fun CornerIcon(description: String, onClick: () -> Unit, modifier: Modifier, draw: DrawScope.(Color) -> Unit) {
     IconButton(
         onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
-        modifier = modifier.semantics { contentDescription = description },
+        modifier = modifier.semantics { contentDescription = description }.focusHighlight(CircleShape),
     ) {
         HomeIcon(Modifier.size(CORNER_ICON), RiffColors.PaperDim, draw)
     }
@@ -181,7 +183,9 @@ private fun ModeTile(
             disabled()
         }
     } else {
-        Modifier.clickable(role = Role.Button, onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
+        Modifier
+            .focusHighlight(MaterialTheme.shapes.small)
+            .clickable(role = Role.Button, onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
     }
     Column(
         modifier

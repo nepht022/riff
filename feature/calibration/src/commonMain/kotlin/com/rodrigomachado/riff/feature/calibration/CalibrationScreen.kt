@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
 import com.rodrigomachado.riff.core.ui.input.lateByMs
@@ -104,7 +106,10 @@ fun CalibrationContent(
     // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
-            TextButton(onClick = onDone) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
+            TextButton(
+                onClick = onDone,
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
             PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when (state) {
@@ -113,7 +118,7 @@ fun CalibrationContent(
                         stringResource(Res.string.calibration_start),
                         onStart,
                     ) {
-                        TextButton(onClick = onReset) {
+                        TextButton(onClick = onReset, modifier = Modifier.focusHighlight(CircleShape)) {
                             Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
                         }
                     }
@@ -236,14 +241,17 @@ private fun ResultPanel(latencyMs: Int, onNudge: (Int) -> Unit, onSave: () -> Un
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(-NUDGE_MS) },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.calibration_less), color = RiffColors.Paper) }
             TextButton(
                 onClick = withMenuSound(MenuSound.NAVIGATE) { onNudge(NUDGE_MS) },
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.calibration_more), color = RiffColors.Paper) }
         }
         PosterButton(stringResource(Res.string.calibration_save), onClick = onSave, sound = MenuSound.CONFIRM)
         TextButton(
             onClick = withMenuSound(MenuSound.CONFIRM, onRepeat),
+            modifier = Modifier.focusHighlight(CircleShape),
         ) { Text(stringResource(Res.string.calibration_repeat), color = RiffColors.Paper) }
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +64,7 @@ fun <T> DifficultyDialog(
             }
             TextButton(
                 onClick = withMenuSound(MenuSound.BACK, onDismiss),
+                modifier = Modifier.focusHighlight(CircleShape),
             ) { Text(stringResource(Res.string.ui_cancel), color = RiffColors.Paper) }
         }
     }

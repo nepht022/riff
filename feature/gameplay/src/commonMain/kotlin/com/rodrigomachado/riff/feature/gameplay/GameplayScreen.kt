@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +47,7 @@ import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
 import com.rodrigomachado.riff.core.ui.stage.StageCache
@@ -260,7 +262,7 @@ private fun PauseOverlay(
         }
         PosterButton(stringResource(Res.string.gameplay_resume), onClick = onResume, sound = MenuSound.CONFIRM)
         SyncAdjuster(state.songOffsetMs, onAdjustOffset)
-        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT)) {
+        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.gameplay_exit), color = RiffColors.Paper)
         }
     }
@@ -277,7 +279,10 @@ private fun SyncAdjuster(songOffsetMs: Int, onAdjustOffset: (Int) -> Unit) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             for ((label, deltaMs) in SYNC_BUTTONS) {
-                TextButton(onClick = withMenuSound(MenuSound.NAVIGATE) { onAdjustOffset(deltaMs) }) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.NAVIGATE) { onAdjustOffset(deltaMs) },
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(label), color = RiffColors.Paper)
                 }
             }

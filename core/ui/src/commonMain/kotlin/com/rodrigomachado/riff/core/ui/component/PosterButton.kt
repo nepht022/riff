@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -67,6 +68,7 @@ fun PosterButton(
             Modifier
                 .offset(shift, shift)
                 .background(RiffColors.TourRed)
+                .focusHighlight(RectangleShape)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -85,8 +87,9 @@ fun PosterButton(
                 textAlign = TextAlign.Center, // rótulo que quebra em duas linhas continua centralizado
             )
         }
-        // Foco do teclado ou do controle: contorno de papel em volta do botão (a indicação padrão está desligada).
-        if (focused) {
+        // Foco do teclado ou do controle no celular: contorno de papel em volta do botão (a indicação padrão está
+        // desligada). No PC, o destaque comum (focusHighlight) faz esse papel.
+        if (focused && !showsFocusHighlight) {
             Box(
                 Modifier
                     .matchParentSize()

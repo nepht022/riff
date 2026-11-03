@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -78,10 +80,14 @@ internal fun AiSeparationSection(
                         confirming = false
                         onDelete()
                     },
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) { Text(stringResource(Res.string.settings_ai_delete_yes)) }
             },
             dismissButton = {
-                TextButton(onClick = withMenuSound(MenuSound.BACK) { confirming = false }) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK) { confirming = false },
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.settings_ai_delete_no))
                 }
             },
@@ -105,7 +111,7 @@ private fun usageText(usage: SeparationUsage): String = if (usage.songs == 0) {
 @Composable
 private fun ActionRow(title: String, onClick: () -> Unit, value: String? = null, hint: String? = null) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = Spacing.md),
+        Modifier.fillMaxWidth().focusHighlight().clickable(onClick = onClick).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.library
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -18,6 +19,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.feature.library.resources.Res
@@ -41,7 +43,7 @@ private fun String.folded() = Normalizer.normalize(trim(), Normalizer.Form.NFD).
 internal fun MagnifierButton(description: String, onClick: () -> Unit) {
     IconButton(
         onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
-        modifier = Modifier.semantics { contentDescription = description },
+        modifier = Modifier.semantics { contentDescription = description }.focusHighlight(CircleShape),
     ) {
         Canvas(Modifier.size(24.dp)) {
             val stroke = 2.5.dp.toPx()

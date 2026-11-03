@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -63,7 +65,10 @@ internal fun SeparationPrompt(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = withMenuSound(MenuSound.BACK, onDismiss)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK, onDismiss),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.library_back), color = RiffColors.Paper, softWrap = false)
                 }
                 HighlightButton(stringResource(Res.string.library_play_without_separating), onPlayWithout)
@@ -84,5 +89,6 @@ private fun HighlightButton(text: String, onClick: () -> Unit) {
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(containerColor = RiffColors.TourRed, contentColor = RiffColors.Paper),
         contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.sm),
+        modifier = Modifier.focusHighlight(MaterialTheme.shapes.small),
     ) { Text(text, softWrap = false) }
 }

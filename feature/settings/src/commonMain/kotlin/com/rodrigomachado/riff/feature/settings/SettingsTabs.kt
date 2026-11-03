@@ -15,6 +15,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -76,7 +78,7 @@ internal fun SettingsTabBar(tabs: List<SettingsTab>, selected: SettingsTab, onSe
         for (tab in tabs) {
             val isSelected = tab == selected
             Column(
-                Modifier.bringIntoViewRequester(requesters.getValue(tab)).selectable(
+                Modifier.bringIntoViewRequester(requesters.getValue(tab)).focusHighlight().selectable(
                     selected = isSelected,
                     role = Role.Tab,
                     onClick = withMenuSound(MenuSound.NAVIGATE) { onSelect(tab) },
@@ -150,7 +152,7 @@ internal fun GeneralTab(
                     for (option in AppLanguage.entries) {
                         Row(
                             // Cada idioma é uma opção marcada ou não para o TalkBack, como o botão de rádio.
-                            Modifier.fillMaxWidth().selectable(
+                            Modifier.fillMaxWidth().focusHighlight().selectable(
                                 selected = option == language,
                                 role = Role.RadioButton,
                                 onClick = withMenuSound(MenuSound.NAVIGATE) {
@@ -172,7 +174,10 @@ internal fun GeneralTab(
                 }
             },
             confirmButton = {
-                TextButton(onClick = withMenuSound(MenuSound.BACK) { choosing = false }) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK) { choosing = false },
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.settings_look_close))
                 }
             },
