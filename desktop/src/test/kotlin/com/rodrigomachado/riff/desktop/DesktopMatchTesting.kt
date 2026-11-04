@@ -85,6 +85,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))
             graph.chartImporter.import(pcUri(charts))
+            // Estes testes jogam a música inteira: "Sem separar" já respondido e sem perguntar de novo (a pergunta da
+            // IA tem os seus).
+            graph.charts.observeCharts().first().forEach { graph.separations.decline(it.id) }
+            graph.settings.update { it.copy(askSeparationAlways = false) }
         }
         DesktopLocale.applyDefault()
         composeRule.setContent {

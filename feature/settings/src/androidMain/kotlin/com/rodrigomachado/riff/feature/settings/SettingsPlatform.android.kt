@@ -23,3 +23,5 @@ actual fun rememberLanguageRefresh(): () -> Unit {
 }
 
 actual fun keyName(keyCode: Long): String = keyCode.toString()
+
+internal actual val separateOnlyChargingShown: Boolean = true

@@ -35,12 +35,13 @@ abstract class SeparationQueueDao {
     /** Conta mais uma tentativa de [chartId] e devolve quantas já são. */
     @Transaction
     open suspend fun startAttempt(chartId: String): Int {
-        incrementAttempts(chartId)
+        addAttempts(chartId, 1)
         return attemptsOf(chartId) ?: 0
     }
 
-    @Query("UPDATE separation_queue SET attempts = attempts + 1 WHERE chartId = :chartId")
-    protected abstract suspend fun incrementAttempts(chartId: String)
+    /** Soma [delta] às tentativas de [chartId], sem ficar abaixo de zero (-1: o Riff do PC fechado no meio dela). */
+    @Query("UPDATE separation_queue SET attempts = MAX(attempts + :delta, 0) WHERE chartId = :chartId")
+    abstract suspend fun addAttempts(chartId: String, delta: Int)
 
     @Query("SELECT attempts FROM separation_queue WHERE chartId = :chartId")
     protected abstract suspend fun attemptsOf(chartId: String): Int?

@@ -38,6 +38,10 @@ class FakeSeparationQueue(vararg ids: String) : SeparationQueue {
         attempts[chartId] = (attempts[chartId] ?: 0) + 1
         return attempts.getValue(chartId)
     }
+
+    override suspend fun undoAttempt(chartId: String) {
+        attempts[chartId] = ((attempts[chartId] ?: 0) - 1).coerceAtLeast(0)
+    }
 }
 
 class SeparationQueueLoopTest {

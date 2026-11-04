@@ -76,7 +76,7 @@ object DesktopSeparation {
 
     /** O leitor de música do PC (48 kHz) devolvido na taxa do modelo, para medir o atraso do codificador. */
     private fun decoder(randomRead: RandomReadOpener) = PcmSourceOpener { uri ->
-        ResamplingPcmSource(FfmpegPcmSource.open(uri.removePrefix("file://"), randomRead), Demucs.SAMPLE_RATE)
+        ResamplingPcmSource(FfmpegPcmSource.open(uri, randomRead), Demucs.SAMPLE_RATE)
     }
 
     /** As faixas `.m4a`, sem o atraso do codificador (medido em [scratch] na primeira vez). */

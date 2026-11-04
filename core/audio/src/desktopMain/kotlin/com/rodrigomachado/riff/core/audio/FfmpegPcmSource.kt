@@ -282,6 +282,7 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
 
     companion object {
         private const val MICROS_PER_MS = 1_000L
+        private const val FILE_URI = "file://"
         private const val MAX_BAD_PACKETS = 50
         private const val ERROR_TEXT_BYTES = 256L
 
@@ -290,14 +291,16 @@ class FfmpegPcmSource private constructor(private val path: String, private val 
         }
 
         /**
-         * Abre a faixa [uri]: um caminho do PC ou uma entrada de `.sng` ([SngRef]), lida pelo [randomRead].
+         * Abre a faixa [uri]: um caminho do PC, um `file://` + caminho (a guitarra separada por IA, no formato comum
+         * com o celular) ou uma entrada de `.sng` ([SngRef]), lida pelo [randomRead].
          *
          * @throws IOException se o arquivo não existe, não é áudio ou o formato não é conhecido.
          */
         fun open(uri: String, randomRead: RandomReadOpener): FfmpegPcmSource {
             val entry = SngRef.entryOf(uri)
             val temp = entry?.let { (packageFile, name) -> extract(packageFile, name, randomRead) }
-            val source = FfmpegPcmSource(temp?.path ?: uri, temp)
+            // O FFmpeg tiraria só o "file:" (no Windows ficaria "//C:/...").
+            val source = FfmpegPcmSource(temp?.path ?: uri.removePrefix(FILE_URI), temp)
             try {
                 source.openDecoder()
             } catch (e: IOException) {

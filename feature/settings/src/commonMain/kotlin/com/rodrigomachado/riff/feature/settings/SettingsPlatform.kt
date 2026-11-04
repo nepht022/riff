@@ -26,3 +26,9 @@ expect fun rememberLanguageRefresh(): () -> Unit
  * AWT dos 32 bits de baixo ("A", "Up", "Enter"); no celular (sem a aba), o próprio número.
  */
 expect fun keyName(keyCode: Long): String
+
+/**
+ * A linha "Separar só carregando" da aba da IA: no celular; no PC fica escondida e a fila sempre separa (saber se o
+ * notebook está na tomada pede código nativo do Windows).
+ */
+internal expect val separateOnlyChargingShown: Boolean

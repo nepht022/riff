@@ -1,8 +1,8 @@
 package com.rodrigomachado.riff.core.data.folder
 
 import com.rodrigomachado.riff.core.chart.sng.SngWriter
-import com.rodrigomachado.riff.core.data.NoAiSeparations
 import com.rodrigomachado.riff.core.data.PreferencesLibraryFolderStore
+import com.rodrigomachado.riff.core.data.RoomAiSeparationRepository
 import com.rodrigomachado.riff.core.data.RoomChartRepository
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
 import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
@@ -66,6 +66,10 @@ class PcLibraryTest {
     private val rootUri get() = pcUri(root)
     private val charts by lazy { RoomChartRepository(database.chartDao()) }
 
+    /** As separações por IA do PC (nenhuma nestes testes), no mesmo banco. */
+    private fun separations() =
+        RoomAiSeparationRepository(database.aiSeparationDao(), File(temp.root, "separacoes"), Dispatchers.IO)
+
     /** As preferências do PC com a raiz da biblioteca já escolhida. */
     private suspend fun folderStore() = PreferencesLibraryFolderStore(
         RiffPreferences(riffDataStore(File(temp.root, "riff_settings.preferences_pb"), scope)),
@@ -117,7 +121,7 @@ class PcLibraryTest {
         val folders = folderStore()
         val song = charts.observeCharts().first().single { it.title == "Canção" }
 
-        val result = FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO)
+        val result = FolderChartDeleter(charts, FileFolderWriter(), folders, separations(), Dispatchers.IO)
             .delete(listOf(song.id))
 
         assertEquals(1, result.deleted)
@@ -134,7 +138,7 @@ class PcLibraryTest {
         val folders = folderStore()
         val song = charts.observeCharts().first().single { it.title == "Canção" }
 
-        FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO).delete(listOf(song.id))
+        FolderChartDeleter(charts, FileFolderWriter(), folders, separations(), Dispatchers.IO).delete(listOf(song.id))
 
         assertFalse(File(root, "Música Á").exists())
         assertTrue(File(outside, "importante.txt").exists())
@@ -155,7 +159,7 @@ class PcLibraryTest {
         val folders = folderStore()
         val loose = charts.observeCharts().first().single { it.title == "Solto" }
 
-        val result = FolderChartDeleter(charts, FileFolderWriter(), folders, NoAiSeparations, Dispatchers.IO)
+        val result = FolderChartDeleter(charts, FileFolderWriter(), folders, separations(), Dispatchers.IO)
             .delete(listOf(loose.id))
 
         assertEquals(1, result.failed)

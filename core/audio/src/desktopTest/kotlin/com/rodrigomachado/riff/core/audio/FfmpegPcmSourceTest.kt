@@ -75,6 +75,21 @@ class FfmpegPcmSourceTest {
         assertEquals(before, after)
     }
 
+    /**
+     * A guitarra separada por IA chega como `file://` + caminho (o formato comum com o celular). O FFmpeg tiraria só
+     * o `file:` e ficaria com `//C:/...` no Windows: o caminho tem de chegar a ele sem o `file://`. Um caminho
+     * relativo mostra o mesmo defeito em qualquer sistema (`//relativo` é outro lugar).
+     */
+    @Test
+    fun aFileUriOpensTheFileOfThatPath() {
+        val path = fixture("tom_440_48k_estereo.wav")
+        val relative = File(path).relativeTo(File("").absoluteFile).invariantSeparatorsPath
+
+        val samples = FfmpegPcmSource.open("file://$relative", files).use(::decodeAll)
+
+        assertEquals(FfmpegPcmSource.open(path, files).use(::decodeAll).size, samples.size)
+    }
+
     @Test
     fun seekingStartsFromThatFrame() {
         val remaining = FfmpegPcmSource.open(fixture("tom_440_48k_estereo.wav"), files).use { source ->

@@ -8,6 +8,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.rodrigomachado.riff.desktop.pad.pressMenuKey
 import java.awt.Dimension
+import kotlin.system.exitProcess
 
 private const val MIN_WIDTH = 800
 private const val MIN_HEIGHT = 500
@@ -15,12 +16,11 @@ private const val MIN_HEIGHT = 500
 fun main() {
     val graph = DesktopGraph(DesktopPaths.dataDir)
     graph.languages.apply()
-    application {
+    // A janela some na hora; depois, o graph fecha: a separação da vez é cancelada (volta à fila, sem pasta pela
+    // metade) em até ~1,5 s, mesmo com o modelo no meio de um trecho, e o banco fecha.
+    application(exitProcessOnExit = false) {
         Window(
-            onCloseRequest = {
-                graph.close()
-                exitApplication()
-            },
+            onCloseRequest = ::exitApplication,
             title = "Riff",
             state = rememberWindowState(width = 1280.dp, height = 800.dp),
         ) {
@@ -32,4 +32,6 @@ fun main() {
             RiffDesktopApp(graph, sendMenuKey)
         }
     }
+    graph.close()
+    exitProcess(0)
 }

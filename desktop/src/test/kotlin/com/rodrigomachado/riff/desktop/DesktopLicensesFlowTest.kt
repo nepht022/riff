@@ -29,7 +29,7 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * "Licenças e privacidade" no app do PC, pelas Configurações: a privacidade do PC (sem ranking, que é da etapa 4d) e
- * as licenças do que vai no app do PC, abertas pelo teclado.
+ * as licenças do que vai no app do PC (com a guitarra por IA, da etapa 4c), abertas pelo teclado.
  */
 @OptIn(ExperimentalTestApi::class)
 class DesktopLicensesFlowTest {
@@ -54,24 +54,26 @@ class DesktopLicensesFlowTest {
         composeRule.onNodeWithText("Seus mapas, recordes e configurações ficam no PC", substring = true).assertExists()
         assertTrue("a privacidade do PC fala do celular", !exists(hasText("celular", substring = true)))
         assertTrue("a privacidade do PC fala do ranking", !exists(hasText("Ranking", substring = true)))
-        for (name in listOf("LWJGL", "GLFW", "Oswald", "FFmpeg")) {
+        val names = listOf(AI_MODEL, "demucs.onnx", "ONNX Runtime", "JTransforms", "LWJGL", "GLFW", "Oswald", "FFmpeg")
+        for (name in names) {
             scrollTo(name)
             composeRule.onNodeWithText(name).assertExists()
         }
-        // As bibliotecas do Gradle, do aboutlibraries.json gerado no build do app do PC.
+        // As bibliotecas do Gradle, do aboutlibraries.json gerado no build do app do PC; o ONNX Runtime fica só na
+        // lista manual (com o aviso de copyright de verdade).
         scrollTo("Compose Runtime")
-        composeRule.onNodeWithText("Demucs v4 (htdemucs_6s)").assertDoesNotExist()
+        assertTrue("o ONNX Runtime do Gradle repetido", runCatching { scrollTo("onnxruntime") }.isFailure)
     }
 
     @Test
     fun enterOpensALicenseText() {
         openLicenses()
 
-        pressUntilFocused(Key.DirectionDown, hasText("LWJGL"))
+        pressUntilFocused(Key.DirectionDown, hasText(AI_MODEL))
         press(Key.Enter)
 
         composeRule.waitUntilAtLeastOneExists(
-            hasText("Copyright (c) 2012-present Lightweight Java Game Library", substring = true),
+            hasText("Copyright (c) Meta Platforms, Inc. and affiliates.", substring = true),
             TIMEOUT_MS,
         )
         press(Key.Escape)
@@ -97,8 +99,8 @@ class DesktopLicensesFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasText("Licenças e privacidade"), TIMEOUT_MS)
         composeRule.clickOnWindowThread(composeRule.onNodeWithText("Licenças e privacidade"))
         composeRule.waitUntilAtLeastOneExists(hasText("Privacidade"), TIMEOUT_MS)
-        // A lista chega depois (lida fora da thread da janela).
-        composeRule.waitUntil(TIMEOUT_MS) { runCatching { scrollTo("LWJGL") }.isSuccess }
+        // A lista chega depois (lida fora da thread da janela); o modelo da IA é o primeiro da lista manual.
+        composeRule.waitUntil(TIMEOUT_MS) { runCatching { scrollTo(AI_MODEL) }.isSuccess }
         composeRule.waitForIdle()
     }
 
@@ -125,5 +127,6 @@ class DesktopLicensesFlowTest {
     private companion object {
         const val TIMEOUT_MS = 15_000L
         const val MAX_PRESSES = 20
+        const val AI_MODEL = "Demucs v4 (htdemucs_6s)"
     }
 }

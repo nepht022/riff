@@ -7,16 +7,18 @@ import com.rodrigomachado.riff.core.audio.ClipSfxPlayer
 import com.rodrigomachado.riff.core.audio.DesktopPlayers
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.core.data.AiSeparationRepository
+import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
-import com.rodrigomachado.riff.core.data.NoAiSeparations
-import com.rodrigomachado.riff.core.data.NoSeparationScheduler
 import com.rodrigomachado.riff.core.data.PreferencesLibraryFolderStore
 import com.rodrigomachado.riff.core.data.PreferencesSettingsRepository
+import com.rodrigomachado.riff.core.data.RoomAiSeparationRepository
 import com.rodrigomachado.riff.core.data.RoomChartOffsetRepository
 import com.rodrigomachado.riff.core.data.RoomChartRepository
 import com.rodrigomachado.riff.core.data.RoomEncoreDownloads
 import com.rodrigomachado.riff.core.data.RoomScoreRepository
+import com.rodrigomachado.riff.core.data.RoomSeparationQueue
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.download.EncoreChartDownloader
@@ -39,6 +41,11 @@ import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.encore.UrlConnectionTransport
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.separation.DemucsModelFactory
+import com.rodrigomachado.riff.core.separation.DesktopSeparation
+import com.rodrigomachado.riff.core.separation.DesktopSeparationScheduler
+import com.rodrigomachado.riff.core.separation.SeparationProgress
+import com.rodrigomachado.riff.core.ui.component.SeparationControls
 import com.rodrigomachado.riff.desktop.pad.GlfwGamepad
 import com.rodrigomachado.riff.desktop.pad.GlfwPadSource
 import com.rodrigomachado.riff.desktop.pad.PadSource
@@ -65,6 +72,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.io.File
+import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDeviceInfo
 
 /**
  * As dependências do Riff no PC, montadas à mão (no celular quem monta é o Hilt). Banco e preferências ficam em
@@ -88,6 +96,8 @@ class DesktopGraph(
     reportUrl: String = ReportConfig.REPORT_URL,
     /** O POST dos relatos (nos testes, um script falso: nunca um relato de verdade). */
     reportTransport: JsonPost = UrlConnectionJsonPost,
+    /** O modelo da guitarra por IA (nos testes, um falso e rápido: nunca o de 130 MB). */
+    separationModels: DemucsModelFactory = DesktopSeparation.models(),
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
@@ -104,17 +114,62 @@ class DesktopGraph(
     val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
     }
+    private val audioProbe = FolderChartAudioProbe(folderSource, charts, io)
+
+    // A guitarra separada por IA: `separacoes` na pasta de dados (uma pasta por música, como no celular), a fila no
+    // banco e o rascunho (a música decodificada) ao lado. A fila roda só com o Riff aberto e continua ao abrir.
+    private val separationsDir = File(dataDir, "separacoes").apply { mkdirs() }
+    private val separationScratch = File(dataDir, "separacao-temp").apply { mkdirs() }
+    internal val separations: AiSeparationRepository =
+        RoomAiSeparationRepository(database.aiSeparationDao(), separationsDir, io)
+    internal val separationScheduler: DesktopSeparationScheduler = run {
+        val progress = SeparationProgress()
+        val device = SeparationDeviceInfo(separationsDir)
+        val runner = DesktopSeparation.runner(
+            repo = separations,
+            probe = audioProbe,
+            randomRead = randomRead,
+            progress = progress,
+            device = device,
+            scratch = separationScratch,
+            models = separationModels,
+        )
+        DesktopSeparationScheduler(
+            separationQueue = RoomSeparationQueue(database.separationQueueDao()),
+            progress = progress,
+            separate = runner::run,
+            isSeparated = { separations.stateOf(it) == AiSeparationState.SEPARATED },
+            lowMemoryDevice = device.lowMemory,
+            separationsDir = separationsDir,
+            scratch = separationScratch,
+        )
+    }
+
+    /** A palheta do topo das telas e o painel dela (a fila, o progresso, cancelar). */
+    val separationControls: SeparationControls = object : SeparationControls {
+        override val status = separationScheduler.status
+        override val queue = separationScheduler.queue
+        override val waitingForCharger = separationScheduler.waitingForCharger
+
+        override fun cancel(chartId: String) = separationScheduler.cancelCurrent(chartId)
+
+        override fun remove(chartId: String) = separationScheduler.remove(chartId)
+
+        override fun cancelAll() = separationScheduler.cancelAll()
+
+        override fun dismissFailure() = separationScheduler.dismissFailure()
+    }
 
     fun libraryViewModel() = LibraryViewModel(
         chartRepository = charts,
         folderStore = libraryFolderStore,
         importer = chartImporter,
         folderAccess = FileFolderAccess(),
-        separations = NoAiSeparations,
-        scheduler = NoSeparationScheduler,
-        probe = FolderChartAudioProbe(folderSource, charts, io),
+        separations = separations,
+        scheduler = separationScheduler,
+        probe = audioProbe,
         settings = settings,
-        deleter = FolderChartDeleter(charts, FileFolderWriter(), libraryFolderStore, NoAiSeparations, io),
+        deleter = FolderChartDeleter(charts, FileFolderWriter(), libraryFolderStore, separations, io),
     )
 
     // A pesquisa no Encore: baixa para "Baixados pelo Riff" na pasta da biblioteca e importa o pacote na hora.
@@ -144,7 +199,7 @@ class DesktopGraph(
     // A partida: a música (um arquivo ou faixas separadas) pelo FFmpeg e o relógio monotônico do PC.
     private val songPlayers = DesktopPlayers.songPlayers(randomRead, audioOut)
     private val stemPlayers = DesktopPlayers.stemPlayers(randomRead, audioOut)
-    private val trackLoader = FolderChartTrackLoader(folderSource, charts, NoAiSeparations, io)
+    internal val trackLoader = FolderChartTrackLoader(folderSource, charts, separations, io)
     private val chartOffsets = RoomChartOffsetRepository(database.chartOffsetDao())
     private val chartArt = DecodedChartArtImages(FolderChartArtLoader(folderSource, charts, io))
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
@@ -168,8 +223,8 @@ class DesktopGraph(
 
     fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, NoRanking)
 
-    // Sem a IA (a aba some) e sem o ranking (a linha do nome some) no PC: os dois são da etapa 4.
-    fun settingsViewModel() = SettingsViewModel(settings, NoAiSeparations, languages, NoRanking, sfx)
+    // Sem o ranking (a linha do nome some) no PC: é da etapa 4.
+    fun settingsViewModel() = SettingsViewModel(settings, separations, languages, NoRanking, sfx)
 
     fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
 
@@ -190,7 +245,9 @@ class DesktopGraph(
     /** O controle do PC, lido na própria thread desde a abertura do jogo. */
     val gamepad = GlfwGamepad(padSource)
 
+    /** Fecha o Riff: a separação da vez é cancelada (volta à fila, nada pela metade) antes de o banco fechar. */
     override fun close() {
+        separationScheduler.close()
         gamepad.close()
         database.close()
         scope.cancel()

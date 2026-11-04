@@ -25,6 +25,7 @@ import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
+import com.rodrigomachado.riff.core.ui.component.LocalSeparation
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.LocalPadMenuSuspension
@@ -55,10 +56,10 @@ import com.rodrigomachado.riff.feature.settings.SettingsTab
 import java.util.Locale
 
 /**
- * O Riff no PC: tela inicial, Biblioteca, pesquisa no Encore, partida, resultado, Configurações, Reportar e Licenças;
- * o Ranking vem depois. Fora da partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas
- * movem o foco, Esc volta. O controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à
- * janela (nulo: o controle só vale na partida e na escolha de botão).
+ * O Riff no PC: tela inicial, Biblioteca (com a guitarra separada por IA), pesquisa no Encore, partida, resultado,
+ * Configurações, Reportar e Licenças; o Ranking vem depois. Fora da partida (que tem as próprias teclas), cada tela
+ * anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O controle anda também, virando essas teclas
+ * ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só vale na partida e na escolha de botão).
  */
 @Composable
 fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null) {
@@ -84,6 +85,8 @@ fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)
             LocalMenuSound provides playMenuSound,
             LocalGamepad provides graph.gamepad,
             LocalPadMenuSuspension provides padSuspension,
+            // A palheta da separação por IA no topo das telas, como no celular.
+            LocalSeparation provides graph.separationControls,
         ) {
             key(language) { DesktopScreens(graph, navController) }
         }
@@ -192,9 +195,9 @@ private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController
 }
 
 /**
- * As Configurações, a calibração e as Licenças, como no celular, sem o que no PC é da etapa 4: a aba da guitarra por
- * IA e o nome no ranking. No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração
- * só volta às Configurações.
+ * As Configurações (com os Controles e a guitarra por IA), a calibração e as Licenças, como no celular, sem o nome no
+ * ranking (etapa 4). No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração só
+ * volta às Configurações.
  */
 private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navController: NavHostController) {
     composable<SettingsRoute> {
@@ -205,7 +208,7 @@ private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navControl
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
             onRankingName = {},
             onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
-            tabs = SettingsTab.entries - SettingsTab.AI,
+            tabs = SettingsTab.entries,
         )
     }
     composable<CalibrationRoute> {

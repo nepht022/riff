@@ -171,7 +171,7 @@ fun SettingsContent(
     onControlKey: (ControlAction, Long) -> Unit = { _, _ -> },
     onControlPad: (ControlAction, String) -> Unit = { _, _ -> },
     onControlDefaults: () -> Unit = {},
-    /** As abas mostradas, na ordem da barra (no celular, sem a dos Controles; no PC, sem a da IA). */
+    /** As abas mostradas, na ordem da barra (no celular, sem a dos Controles). */
     tabs: List<SettingsTab> = SettingsTab.entries - SettingsTab.CONTROLS,
 ) {
     // Sempre abre em Geral; a aba sobrevive à tela refeita (troca de idioma, rotação).

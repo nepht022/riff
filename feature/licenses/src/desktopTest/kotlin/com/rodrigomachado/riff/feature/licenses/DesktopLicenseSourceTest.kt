@@ -2,7 +2,6 @@ package com.rodrigomachado.riff.feature.licenses
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,13 +25,32 @@ class DesktopLicenseSourceTest {
         assertTrue(content.keys.any { it.startsWith("Gravações de guitarra") })
     }
 
+    /** A guitarra por IA no PC (etapa 4c): o modelo, o ONNX Runtime e a FFT, com os avisos de copyright de verdade. */
     @Test
-    fun onlyThePhoneHasTheAiModel() = runBlocking {
-        val names = source.content().map { it.name }
+    fun thePcHasTheAiModelToo() = runBlocking {
+        val content = source.content().associateBy { it.name }
 
-        for (phoneOnly in listOf("Demucs", "demucs.onnx", "ONNX Runtime", "JTransforms", "JLargeArrays")) {
-            assertFalse("$phoneOnly no PC", names.any { it.startsWith(phoneOnly) })
-        }
+        assertTrue(content.getValue("Demucs v4 (htdemucs_6s)").text.orEmpty().contains("Meta Platforms"))
+        assertTrue(content.getValue("demucs.onnx").text.orEmpty().contains("Sevag H"))
+        assertTrue(content.getValue("ONNX Runtime").text.orEmpty().contains("Microsoft Corporation"))
+        assertNotNull(content["JTransforms"]?.text)
+        assertNotNull(content["JLargeArrays"]?.text)
+    }
+
+    @Test
+    fun theAiLibrariesFromGradleStayOnlyInTheManualList() = runBlocking {
+        val json = JSON.replace(
+            "\"libraries\":[",
+            """"libraries":[
+              {"uniqueId":"com.microsoft.onnxruntime:onnxruntime","artifactVersion":"1.18.0","name":"onnxruntime",
+               "developers":[],"licenses":["BSD-3-Clause"]},
+              {"uniqueId":"com.github.wendykierp:JTransforms","artifactVersion":"3.1","name":"JTransforms",
+               "developers":[],"licenses":["BSD-3-Clause"]},
+              {"uniqueId":"org.visnow:JLargeArrays","artifactVersion":"1.6","name":"JLargeArrays",
+               "developers":[],"licenses":["BSD-3-Clause"]},""",
+        )
+
+        assertEquals(listOf("Compose Runtime"), DesktopLicenseSource { json }.libraries().map { it.name })
     }
 
     @Test
