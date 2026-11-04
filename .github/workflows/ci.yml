@@ -35,5 +35,5 @@ jobs:
         run: >-
           ./gradlew detekt lintDebug lintMultiplatform
           test testAndroidHostTest desktopTest
-          verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm
+          verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm
           koverVerify assembleDebug

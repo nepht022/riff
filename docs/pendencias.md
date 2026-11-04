@@ -94,6 +94,16 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
+
+- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04.
+- Teste real (PC: nome, jogar com e sem palheta, as três tabelas; celular: o ranking de hoje em "Celular", o código de vínculo e o PC usando o mesmo nome): o usuário seguiu sem relatar. O celular precisa do APK de **release** por cima (o banco vai para a v14; o de debug exigiria desinstalar e apagaria os recordes).
+- Vínculo: limite de tentativas só por aparelho (sem limite geral) e sem limite de aparelhos por jogador; código de 6 caracteres (31⁶) com validade de 10 min.
+- `placar`/`musicas` com `tabelas: true` leem as Pontuações inteiras e classificam por tabela e dificuldade: com milhares de linhas pode ficar lento (cache ou índice).
+- Nome trocado em outro aparelho: o celular com o app 0.5.0 guarda o nome antigo até o próximo `reservar`.
+- Vincular com pontuações ainda na fila pode reenviar algumas (inofensivo: o script guarda o melhor).
+- O texto de ajuda do código diz "toque em…" também no PC; o destaque de foco dos chips de tabela no PC não tem screenshot.
+
 ## Riff no Windows, etapa 4c: guitarra por IA no PC (2026-11-04)
 
 - Teste no Windows (separar uma música de verdade, jogar errando, fechar no meio e reabrir): o usuário seguiu sem relatar o resultado.

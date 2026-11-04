@@ -135,7 +135,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 - **Suíte completa antes de cada merge:**
 
   ```bash
-  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
+  ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
   node scripts/relatos_apps_script.test.js
   ```
@@ -165,9 +165,9 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ### Riff no PC (em construção)
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings`, `:feature:calibration`, `:feature:search`, `:feature:report`, `:feature:licenses` e `:core:separation` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; o **Reportar** (envelope da tela inicial; vai para o mesmo Apps Script do celular, com `report.url` do `local.properties` embutido no build, e as informações do PC são sistema, versão do Riff e idioma, sem o nome do computador) e **Configurações → Licenças e privacidade** (lista do PC gerada pelo plugin genérico do AboutLibraries no `:desktop`, mais LWJGL, GLFW, libffi e FFmpeg à mão) também; a **guitarra separada por IA** também (a mesma pergunta, fila e aba "Guitarra IA" do celular; separa só com o Riff aberto e continua a fila na próxima abertura; sem "Separar só carregando"); ranking e o instalador vêm no resto da etapa 4 (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings`, `:feature:calibration`, `:feature:search`, `:feature:report`, `:feature:licenses`, `:feature:ranking` e `:core:separation` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; o **Reportar** (envelope da tela inicial; vai para o mesmo Apps Script do celular, com `report.url` do `local.properties` embutido no build, e as informações do PC são sistema, versão do Riff e idioma, sem o nome do computador) e **Configurações → Licenças e privacidade** (lista do PC gerada pelo plugin genérico do AboutLibraries no `:desktop`, mais LWJGL, GLFW, libffi e FFmpeg à mão) também; a **guitarra separada por IA** também (a mesma pergunta, fila e aba "Guitarra IA" do celular; separa só com o Riff aberto e continua a fila na próxima abertura; sem "Separar só carregando"); o **ranking** também (★ Ranking na tela inicial e "Nome no ranking" nas Configurações; cada partida do PC conta na tabela **PC com palheta** ou **PC sem palheta**, conforme "Tocar com palheta" quando ela começou; as partidas do PC de antes do ranking contam com palheta, o padrão de fábrica); só o instalador vem no resto da etapa 4 (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
 
-**Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na Calibração, aperte qualquer tecla (menos Esc) junto com cada batida; o atraso salvo vale nas partidas. Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita. O ranking ainda não existe no PC.
+**Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na Calibração, aperte qualquer tecla (menos Esc) junto com cada batida; o atraso salvo vale nas partidas. Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita.
 
 **Jogar no PC com controle (base: controle de PS3, cabo USB):** cores **△** (verde), **○** (vermelho), **□** (amarelo), **✕** (azul) e **R1** (laranja); palheta no **direcional ↑/↓** ou no **analógico esquerdo**; **Start** pausa e continua. O controle é lido pelo GLFW (LWJGL), que entende XInput e DirectInput e a base de mapeamentos do SDL; um controle fora dela usa a ordem crua do DualShock 3. Com a janela sem foco o controle não faz nada, e desconectá-lo pausa a partida. Para ver como o Windows enxerga o controle: `./scripts/gw :desktop:runPadCheck` (20 s; imprime cada botão apertado). **Configurações → Controles** (só no PC): "Tocar com palheta" (desligado, apertar a cor na hora basta, como o toque do celular) e, para cada ação (as cinco cores, palheta ↑, palheta ↓ e pausa), clicar a linha e apertar a tecla ou o botão do controle que quiser; escolher um já usado por outra ação troca os dois, Esc cancela, e "Voltar ao padrão" desfaz tudo. Esc sempre pausa e o analógico esquerdo sempre palheta.
 
@@ -230,15 +230,15 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 ### Screenshots
 
 ```bash
-./scripts/gw recordRoborazziDebug   # regrava as referências (todos os módulos) depois de uma mudança visual intencional
-./scripts/gw verifyRoborazziDebug   # compara com as referências
-# Módulos multiplataforma: recordRoborazziAndroidHostTest / verifyRoborazziAndroidHostTest (celular)
-# e recordRoborazziJvm / verifyRoborazziJvm (o app do PC)
+./scripts/gw recordRoborazziAndroidHostTest recordRoborazziDesktop recordRoborazziJvm   # regrava depois de uma mudança visual intencional
+./scripts/gw verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm   # compara com as referências
+# Todos os módulos com telas são multiplataforma: AndroidHostTest (celular), Desktop (o lado PC dos módulos)
+# e Jvm (o app do PC)
 ```
 
 Os testes de tela só rodam de novo quando o código muda: depois de trocar só uma referência, use `--rerun` na tarefa de teste para comparar de verdade.
 
-Rode o `verifyRoborazziDebug` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
+Rode o `verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
 
 ### Desempenho
 
