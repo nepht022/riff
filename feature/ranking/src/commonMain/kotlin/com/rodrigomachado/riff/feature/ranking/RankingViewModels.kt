@@ -1,6 +1,5 @@
 package com.rodrigomachado.riff.feature.ranking
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rodrigomachado.riff.core.data.ranking.ApiAnswer
@@ -11,12 +10,10 @@ import com.rodrigomachado.riff.core.data.ranking.RankingMetric
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.data.ranking.rankBoard
 import com.rodrigomachado.riff.core.model.Difficulty
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class RankingSongsUiState(
     val query: String = "",
@@ -46,8 +43,8 @@ private val ACCENTS = Regex("\\p{Mn}+")
 private fun String.folded() =
     java.text.Normalizer.normalize(trim(), java.text.Normalizer.Form.NFD).replace(ACCENTS, "").lowercase()
 
-@HiltViewModel
-class RankingViewModel @Inject constructor(private val ranking: RankingRepository) : ViewModel() {
+/** As músicas do ranking; no celular o Hilt cria o [HiltRankingViewModel]. */
+open class RankingViewModel(private val ranking: RankingRepository) : ViewModel() {
     private val ui = MutableStateFlow(RankingSongsUiState(notConfigured = !ranking.isConfigured))
     val state: StateFlow<RankingSongsUiState> = ui
 
@@ -80,18 +77,20 @@ data class RankingBoardUiState(
     val offline: Boolean = false,
 )
 
-@HiltViewModel
-class RankingBoardViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+/**
+ * O placar do mapa [chartId], aberto na [difficulty] pedida (nome do enum, como na [RankingBoardRoute]); no celular
+ * o Hilt cria o [HiltRankingBoardViewModel] com os argumentos da rota.
+ */
+open class RankingBoardViewModel(
+    private val chartId: String,
+    title: String,
+    difficulty: String?,
     private val ranking: RankingRepository,
 ) : ViewModel() {
-    private val chartId: String = checkNotNull(savedStateHandle["chartId"])
     private val ui = MutableStateFlow(
         RankingBoardUiState(
-            title = savedStateHandle["title"] ?: "",
-            difficulty = savedStateHandle.get<String>("difficulty")?.let { name ->
-                Difficulty.entries.firstOrNull { it.name == name }
-            },
+            title = title,
+            difficulty = difficulty?.let { name -> Difficulty.entries.firstOrNull { it.name == name } },
         ),
     )
     val state: StateFlow<RankingBoardUiState> = ui

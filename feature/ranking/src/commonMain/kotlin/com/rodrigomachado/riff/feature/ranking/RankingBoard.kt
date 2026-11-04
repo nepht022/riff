@@ -20,10 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.BoardLine
 import com.rodrigomachado.riff.core.data.ranking.RankingMetric
@@ -32,6 +29,21 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import com.rodrigomachado.riff.feature.ranking.resources.Res
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_ascending
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_descending
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_empty
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_loading
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_metric_accuracy
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_metric_clean
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_metric_combo
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_metric_perfect
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_metric_points
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_position
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_search_name
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_you
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -46,11 +58,7 @@ class BoardActions(
 )
 
 @Composable
-fun RankingBoardScreen(
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: RankingBoardViewModel = hiltViewModel(),
-) {
+fun RankingBoardScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel: RankingBoardViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RankingBoardContent(
         state,
@@ -97,21 +105,22 @@ fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modif
                 for (metric in RankingMetric.entries) {
                     Chip(stringResource(metric.label()), metric == state.metric) { actions.onMetric(metric) }
                 }
+                val direction = if (state.descending) Res.string.ranking_descending else Res.string.ranking_ascending
                 Chip(
-                    stringResource(if (state.descending) R.string.ranking_descending else R.string.ranking_ascending),
+                    stringResource(direction),
                     selected = true,
                     onClick = actions.onToggleDirection,
                 )
             }
         }
-        item { SearchField(state.query, stringResource(R.string.ranking_search_name), actions.onQuery) }
+        item { SearchField(state.query, stringResource(Res.string.ranking_search_name), actions.onQuery) }
         if (state.offline) item { Offline(actions.onRetry) }
         val lines = state.board?.lines.orEmpty()
-        if (state.loading && state.board == null) item { Message(stringResource(R.string.ranking_loading)) }
+        if (state.loading && state.board == null) item { Message(stringResource(Res.string.ranking_loading)) }
         if (!state.offline && !state.loading && lines.isEmpty()) {
             item {
                 Message(
-                    stringResource(R.string.ranking_empty),
+                    stringResource(Res.string.ranking_empty),
                 )
             }
         }
@@ -130,19 +139,19 @@ private fun Line(line: BoardLine, metric: RankingMetric) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            stringResource(R.string.ranking_position, line.position),
+            stringResource(Res.string.ranking_position, line.position),
             Modifier.width(POSITION_WIDTH),
             style = MaterialTheme.typography.titleMedium,
             color = RiffColors.PaperDim,
         )
         Text(
-            if (line.you) stringResource(R.string.ranking_you, line.name) else line.name,
+            if (line.you) stringResource(Res.string.ranking_you, line.name) else line.name,
             Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
             color = RiffColors.Paper,
         )
         Text(
-            formatValue(metric, line.value, line.outOf, LocalConfiguration.current.locales[0]),
+            formatValue(metric, line.value, line.outOf, currentLocale()),
             style = MaterialTheme.typography.titleMedium,
             color = RiffColors.Paper,
         )
@@ -163,12 +172,12 @@ internal fun formatValue(
     RankingMetric.COMBO -> value.toLong().toString()
 }
 
-private fun RankingMetric.label(): Int = when (this) {
-    RankingMetric.POINTS -> R.string.ranking_metric_points
-    RankingMetric.ACCURACY -> R.string.ranking_metric_accuracy
-    RankingMetric.COMBO -> R.string.ranking_metric_combo
-    RankingMetric.PERFECT -> R.string.ranking_metric_perfect
-    RankingMetric.CLEAN -> R.string.ranking_metric_clean
+private fun RankingMetric.label(): StringResource = when (this) {
+    RankingMetric.POINTS -> Res.string.ranking_metric_points
+    RankingMetric.ACCURACY -> Res.string.ranking_metric_accuracy
+    RankingMetric.COMBO -> Res.string.ranking_metric_combo
+    RankingMetric.PERFECT -> Res.string.ranking_metric_perfect
+    RankingMetric.CLEAN -> Res.string.ranking_metric_clean
 }
 
 private const val YOU_ALPHA = 0.25f

@@ -12,8 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -25,7 +23,16 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.rodrigomachado.riff.feature.ranking.resources.Res
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_field
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_invalid
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_later
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_limit
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_offline
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_privacy
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_save
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_taken
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_name_title
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +41,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /** Pedir o nome: ranking configurado, ainda sem nome e sem "Agora não" nesta abertura do app. */
 fun shouldAskForName(configured: Boolean, player: Player, askedLater: Boolean): Boolean =
@@ -47,8 +55,8 @@ data class PlayerNameUiState(
     val done: Boolean = false,
 )
 
-@HiltViewModel
-class PlayerNameViewModel @Inject constructor(private val ranking: RankingRepository) : ViewModel() {
+/** O nome do ranking; no celular o Hilt cria o [HiltPlayerNameViewModel]. */
+open class PlayerNameViewModel(private val ranking: RankingRepository) : ViewModel() {
     private val ui = MutableStateFlow(PlayerNameUiState())
     val state: StateFlow<PlayerNameUiState> = ui
 
@@ -104,7 +112,7 @@ class PlayerNameViewModel @Inject constructor(private val ranking: RankingReposi
  * Configurações. Fica no app, fora das telas, para valer no Tocando agora e na Biblioteca.
  */
 @Composable
-fun PlayerNameGate(renaming: Boolean, onRenameClosed: () -> Unit, viewModel: PlayerNameViewModel = hiltViewModel()) {
+fun PlayerNameGate(renaming: Boolean, onRenameClosed: () -> Unit, viewModel: PlayerNameViewModel) {
     val askNow by viewModel.askNow.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.done) {
@@ -141,20 +149,20 @@ fun PlayerNameDialog(
     AlertDialog(
         // Na primeira abertura só fecha por Salvar ou Agora não; na troca, tocar fora cancela.
         onDismissRequest = { onDismiss?.invoke() },
-        title = { Text(stringResource(R.string.ranking_name_title)) },
+        title = { Text(stringResource(Res.string.ranking_name_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = onName,
-                    label = { Text(stringResource(R.string.ranking_name_field)) },
+                    label = { Text(stringResource(Res.string.ranking_name_field)) },
                     singleLine = true,
                     enabled = !state.saving,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 // Quem vê o nome e o que identifica o celular (LGPD: dito antes de enviar).
                 Text(
-                    stringResource(R.string.ranking_name_privacy),
+                    stringResource(Res.string.ranking_name_privacy),
                     style = MaterialTheme.typography.bodySmall,
                     color = RiffColors.PaperDim,
                 )
@@ -169,22 +177,22 @@ fun PlayerNameDialog(
         },
         confirmButton = {
             TextButton(onClick = withMenuSound(MenuSound.CONFIRM, onSave), enabled = !state.saving) {
-                Text(stringResource(R.string.ranking_name_save))
+                Text(stringResource(Res.string.ranking_name_save))
             }
         },
         dismissButton = onLater?.let {
             {
                 TextButton(
                     onClick = withMenuSound(MenuSound.BACK, it),
-                ) { Text(stringResource(R.string.ranking_name_later)) }
+                ) { Text(stringResource(Res.string.ranking_name_later)) }
             }
         },
     )
 }
 
-private fun NameResult.message(): Int = when (this) {
-    NameResult.Taken -> R.string.ranking_name_taken
-    NameResult.Invalid -> R.string.ranking_name_invalid
-    NameResult.Limit -> R.string.ranking_name_limit
-    NameResult.Offline, NameResult.Ok -> R.string.ranking_name_offline
+private fun NameResult.message(): StringResource = when (this) {
+    NameResult.Taken -> Res.string.ranking_name_taken
+    NameResult.Invalid -> Res.string.ranking_name_invalid
+    NameResult.Limit -> Res.string.ranking_name_limit
+    NameResult.Offline, NameResult.Ok -> Res.string.ranking_name_offline
 }

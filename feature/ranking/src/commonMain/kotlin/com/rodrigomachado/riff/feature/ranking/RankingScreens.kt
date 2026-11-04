@@ -21,10 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -32,13 +29,26 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
+import com.rodrigomachado.riff.feature.ranking.resources.Res
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_back
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_empty
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_loading
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_not_configured
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_offline
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_players
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_retry
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_search_song
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_title
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_your_place
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RankingSongsScreen(
     onBack: () -> Unit,
     onSong: (RankedSong) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: RankingViewModel = hiltViewModel(),
+    viewModel: RankingViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RankingSongsContent(state, viewModel::onQuery, onSong, viewModel::load, onBack, modifier)
@@ -60,16 +70,16 @@ fun RankingSongsContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         item { BackButton(onBack) }
-        item { PosterTitle(stringResource(R.string.ranking_title), style = MaterialTheme.typography.displaySmall) }
+        item { PosterTitle(stringResource(Res.string.ranking_title), style = MaterialTheme.typography.displaySmall) }
         if (state.notConfigured) {
-            item { Message(stringResource(R.string.ranking_not_configured)) }
+            item { Message(stringResource(Res.string.ranking_not_configured)) }
             return@LazyColumn
         }
-        item { SearchField(state.query, stringResource(R.string.ranking_search_song), onQuery) }
+        item { SearchField(state.query, stringResource(Res.string.ranking_search_song), onQuery) }
         if (state.offline) item { Offline(onRetry) }
-        if (state.loading && state.songs.isEmpty()) item { Message(stringResource(R.string.ranking_loading)) }
+        if (state.loading && state.songs.isEmpty()) item { Message(stringResource(Res.string.ranking_loading)) }
         if (!state.offline && !state.loading && state.shown.isEmpty()) {
-            item { Message(stringResource(R.string.ranking_empty)) }
+            item { Message(stringResource(Res.string.ranking_empty)) }
         }
         items(state.shown, key = { it.chartId }) { song -> SongCard(song) { onSong(song) } }
     }
@@ -77,8 +87,8 @@ fun RankingSongsContent(
 
 @Composable
 private fun SongCard(song: RankedSong, onClick: () -> Unit) {
-    val players = pluralStringResource(R.plurals.ranking_players, song.players, song.players)
-    val place = song.yourPosition?.let { " · " + stringResource(R.string.ranking_your_place, it) }.orEmpty()
+    val players = pluralStringResource(Res.plurals.ranking_players, song.players, song.players)
+    val place = song.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
     Column(
         Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)).padding(Spacing.md),
@@ -123,9 +133,9 @@ internal fun SearchField(value: String, label: String, onChange: (String) -> Uni
 @Composable
 internal fun Offline(onRetry: () -> Unit) {
     Column {
-        Message(stringResource(R.string.ranking_offline))
+        Message(stringResource(Res.string.ranking_offline))
         TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onRetry)) {
-            Text(stringResource(R.string.ranking_retry), color = RiffColors.Paper)
+            Text(stringResource(Res.string.ranking_retry), color = RiffColors.Paper)
         }
     }
 }
@@ -138,7 +148,7 @@ internal fun Message(text: String) {
 @Composable
 internal fun BackButton(onBack: () -> Unit) {
     // Sem som aqui: a navegação toca o de voltar ao sair da tela.
-    TextButton(onClick = onBack) { Text(stringResource(R.string.ranking_back), color = RiffColors.Paper) }
+    TextButton(onClick = onBack) { Text(stringResource(Res.string.ranking_back), color = RiffColors.Paper) }
 }
 
 private const val SECONDARY_ALPHA = 0.7f

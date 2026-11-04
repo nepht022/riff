@@ -53,7 +53,7 @@ class RankingScreensTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun boardViewModel(difficulty: String? = "HARD") = RankingBoardViewModel(
+    private fun boardViewModel(difficulty: String? = "HARD") = HiltRankingBoardViewModel(
         SavedStateHandle(mapOf("chartId" to "m1", "title" to "Música", "difficulty" to difficulty)),
         ranking,
     )
