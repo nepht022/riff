@@ -120,6 +120,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 | Migração do banco | cada versão do esquema do Room migra sem perder dados (casamentos, ajustes, recordes) | `core/database/src/test/.../MigrationTest.kt` |
 | Golden da IA | a separação da guitarra (Demucs em ONNX) reproduz a saída de referência | `core/separation/src/test` |
 | Script do ranking | o Apps Script roda em Node com uma planilha falsa que imita as conversões do Google Planilhas | `node scripts/ranking_apps_script.test.js` |
+| Script do Reportar | o Apps Script dos relatos roda em Node com o email simulado (linha do aparelho do celular e do PC) | `node scripts/relatos_apps_script.test.js` |
 | Aparelho | medição de sincronia (registro temporário `RiffSync` no `adb logcat`), quadros atrasados e abertura (Macrobenchmark + Baseline Profile) | `scripts/desempenho.sh`, `scripts/quadros_travados.py` |
 
 ### Portões de qualidade
@@ -132,6 +133,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   ```bash
   ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
+  node scripts/relatos_apps_script.test.js
   ```
 
 - **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.

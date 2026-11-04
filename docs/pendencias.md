@@ -97,7 +97,10 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 ## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
 
 - Teste do usuário no Windows ("ótimo"): não confirmou explicitamente se o email do relato mostra o campo novo `sistema` (o script do Reportar não está no repositório; se ele lista os campos pelo nome, ajustar o script — ação do usuário).
-- Licenças do FFmpeg incompletas: as DLLs do bytedeco embutem outras bibliotecas (lame, openssl, libvpx, aom, srt…) cujos avisos não estão na lista do PC. Conferir antes do instalador (4e).
+- **Antes de distribuir o PC (4e), avisos de licença do código nativo embutido:** o FFmpeg do bytedeco (8.1.2, javacpp-presets 1.5.14) liga lame, speex, opencore-amr, vo-amrwbenc, openssl, openh264, libvpx, freetype, harfbuzz, opus, libxml2, srt, libwebp, aom, svt-av1, zimg, libmfx e traz `libwinpthread-1.dll`; o Skiko (`skiko-windows-x64.dll`) embute o Skia (BSD-3) e o ICU (`icudtl.dat`, licença Unicode), e o AboutLibraries só mostra "Apache-2.0". Nenhum desses avisos está na lista do PC. Apontar também o código-fonte exato do FFmpeg (8.1.2 e a tag 1.5.14 do javacpp-presets) no `ffmpeg-lgpl3.txt`. Validação humana recomendada (conformidade).
+- O URL do `local.properties` entra cru no `ReportConfig`/`RankingConfig` gerado: um `"` ou `$` quebraria o build (URLs do Apps Script não têm).
+- Testes do envio no PC que passariam com defeito: o falso não anota a thread nem suspende (o "janela segue respondendo" não prova nada); a espera única por app no PC sem teste; ↓/↑ entre o interruptor dos sons e "Licenças e privacidade" sem teste de teclado.
+- `aboutlibraries.json` na raiz do classpath do PC (outro jar com o mesmo nome venceria); o PC leva textos só do celular (`onnxruntime.txt` ~335 KB, Demucs, JTransforms, JLargeArrays) até a 4c.
 - Os textos de licença novos (LWJGL, GLFW, libffi, FFmpeg/LGPL/GPL) ficam no `composeResources` comum e vão também no APK do celular (~47 KB).
 - `DesktopControlsFlowTest.aKeyChosenInTheSettingsPlaysTheMatch` falhou uma vez numa rodada cheia e passou sozinho: observar.
 - `DeviceInfo.systemField` não acompanha um `copy(system = …)`.
