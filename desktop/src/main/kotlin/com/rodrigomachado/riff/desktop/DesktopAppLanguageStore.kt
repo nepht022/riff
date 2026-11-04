@@ -39,3 +39,6 @@ class DesktopAppLanguageStore(private val file: File) : AppLanguageStore {
         AppLanguage.PORTUGUESE
     }
 }
+
+/** O arquivo do idioma na pasta de dados. */
+internal const val LANGUAGE_FILE = "language.txt"

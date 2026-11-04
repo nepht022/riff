@@ -94,6 +94,21 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4c: guitarra por IA no PC (2026-11-04)
+
+- Teste no Windows (separar uma música de verdade, jogar errando, fechar no meio e reabrir): o usuário seguiu sem relatar o resultado.
+- "Separar só carregando" escondida no PC: a spec queria mostrar num notebook; saber se há bateria no Windows exige código nativo novo.
+- Textos da IA que falam de "celular" no PC: "pode esquentar o celular", "Pode não funcionar neste celular.", "Pouco espaço no celular".
+- As threads nativas do ONNX Runtime ficam em prioridade normal (só a thread que chama é baixa): conferir se a partida engasga com uma separação rodando.
+- O Java do instalador (4e) precisa carregar o ONNX Runtime 1.18 (msvcp140); hoje só conferido no Java do Android Studio.
+- O modelo (130 MB) é lido inteiro para a heap a cada separação (o ORT 1.18 não abre de `ByteBuffer`); agora uma cópia só, direto num array do tamanho do recurso.
+- A conta de threads (`processadores lógicos / 2 - 1`) supõe hyper-threading: num PC sem ele usa metade dos núcleos menos um (num de 4 núcleos, 1 thread).
+- Lacunas de teste do PC: a partida não abre os `.m4a` separados nem confere que errar corta só a guitarra (o teste para no `trackLoader`); "Sem separar" na pergunta sem teste no PC; "apagar o mapa apaga a separação" sem teste no PC (depende do `ON DELETE CASCADE` no driver SQLite do PC).
+- Um Riff só por pasta de dados (`riff.lock`, `FileChannel.tryLock`): o segundo mostra "O Riff já está aberto" e sai, sem trazer a janela do primeiro para a frente; nos ~2 s em que o primeiro fecha, o segundo também é recusado. Dois processos de verdade sem teste (o teste usa dois `DesktopGraph` no mesmo processo).
+- O leitor do PC entrega o último bloco AAC inteiro: até 23 ms a mais no fim das faixas separadas (o começo fica alinhado).
+- No diálogo de dificuldade, a primeira seta foca "Cancelar".
+- `DesktopSettingsScreenshotTest` sem a aba da IA.
+
 ## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
 
 - Teste do usuário no Windows ("ótimo"): não confirmou explicitamente se o email do relato mostra o campo novo `sistema` (o script do Reportar não está no repositório; se ele lista os campos pelo nome, ajustar o script — ação do usuário).

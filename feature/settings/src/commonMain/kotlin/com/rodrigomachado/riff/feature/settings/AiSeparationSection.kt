@@ -41,7 +41,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Guitarra separada por IA: o espaço usado, apagar as separações (com confirmação), perguntar de novo e separar a
- * fila só na tomada.
+ * fila só na tomada (só no celular).
  */
 @Composable
 internal fun AiSeparationSection(
@@ -64,13 +64,15 @@ internal fun AiSeparationSection(
         onChange = onAskAlways,
         tag = SettingsTestTags.ASK_ALWAYS,
     )
-    SwitchRow(
-        title = stringResource(Res.string.settings_ai_only_charging),
-        hint = stringResource(Res.string.settings_ai_only_charging_hint),
-        checked = settings.separateOnlyCharging,
-        onChange = onOnlyCharging,
-        tag = SettingsTestTags.ONLY_CHARGING,
-    )
+    if (separateOnlyChargingShown) {
+        SwitchRow(
+            title = stringResource(Res.string.settings_ai_only_charging),
+            hint = stringResource(Res.string.settings_ai_only_charging_hint),
+            checked = settings.separateOnlyCharging,
+            onChange = onOnlyCharging,
+            tag = SettingsTestTags.ONLY_CHARGING,
+        )
+    }
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },

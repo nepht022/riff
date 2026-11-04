@@ -95,4 +95,17 @@ class SeparationQueueDaoTest {
         assertEquals(1, dao.startAttempt("a"))
         assertEquals(2, dao.startAttempt("a"))
     }
+
+    /** Fechar o Riff no PC no meio de uma separação não é uma tentativa que falhou: ela volta a contar. */
+    @Test
+    fun anUndoneAttemptIsNotCounted() = runTest {
+        charts("a")
+        dao.append(items("a"))
+        dao.startAttempt("a")
+
+        dao.addAttempts("a", -1)
+        dao.addAttempts("a", -1)
+
+        assertEquals(1, dao.startAttempt("a"))
+    }
 }

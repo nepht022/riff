@@ -21,6 +21,9 @@ import javax.inject.Qualifier
 const val SEPARATED_GUITAR = "guitar.m4a"
 const val SEPARATED_BACKING = "backing.m4a"
 
+/** O fim do nome da pasta temporária de uma separação em andamento (`<pasta da música>.tmp`). */
+const val SEPARATION_WORK_SUFFIX = ".tmp"
+
 /** `filesDir/separacoes`: uma pasta por música separada pela IA. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -69,9 +72,6 @@ interface SeparationScheduler {
 
     /** Menos de 4 GB de RAM: a pergunta avisa que pode não funcionar. */
     val lowMemoryDevice: Boolean
-
-    /** Sem a separação neste aparelho (o PC até a etapa 4): a Biblioteca não pergunta antes da partida. */
-    val isAvailable: Boolean get() = true
 
     /** No fim da fila, na ordem dada. */
     fun enqueue(songs: List<QueuedSeparation>)
@@ -141,7 +141,7 @@ class RoomAiSeparationRepository @Inject constructor(
     }
 
     private companion object {
-        const val TMP = ".tmp"
+        const val TMP = SEPARATION_WORK_SUFFIX
 
         /** O id do mapa é uma URI do SAF: vira um nome de pasta seguro. */
         fun dirName(chartId: String): String =
@@ -164,6 +164,9 @@ interface SeparationQueue {
 
     /** Conta mais uma tentativa de separar [chartId] (antes de começar) e devolve quantas já são. */
     suspend fun startAttempt(chartId: String): Int
+
+    /** Desconta a tentativa de [chartId] que parou sem falhar (o Riff do PC fechado no meio dela). */
+    suspend fun undoAttempt(chartId: String)
 }
 
 class RoomSeparationQueue @Inject constructor(private val dao: SeparationQueueDao) : SeparationQueue {
@@ -178,4 +181,6 @@ class RoomSeparationQueue @Inject constructor(private val dao: SeparationQueueDa
     override suspend fun clear() = dao.clear()
 
     override suspend fun startAttempt(chartId: String) = dao.startAttempt(chartId)
+
+    override suspend fun undoAttempt(chartId: String) = dao.addAttempts(chartId, -1)
 }

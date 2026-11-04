@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 /**
  * As licenças do app do PC: a lista manual (o que não vem do Gradle ou vem sem o aviso de copyright de verdade; textos
  * em composeResources/files/licencas) e as bibliotecas do `aboutlibraries.json` que o plugin do AboutLibraries gera
- * no build do `:desktop` ([librariesJson]; null sem o arquivo). Sem a IA (Demucs, ONNX Runtime): chega na etapa 4c.
+ * no build do `:desktop` ([librariesJson]; null sem o arquivo). Com a guitarra por IA (etapa 4c), como no celular.
  */
 class DesktopLicenseSource(private val librariesJson: () -> String?) : LicenseSource {
     override suspend fun content() = withContext(Dispatchers.IO) { CONTENT.toEntries() }
@@ -21,12 +21,22 @@ class DesktopLicenseSource(private val librariesJson: () -> String?) : LicenseSo
     private companion object {
         /** Na lista manual, com o aviso de copyright de verdade (o AboutLibraries traz só o modelo da BSD). */
         val IN_CONTENT = setOf(
+            // A IA: MIT e BSD pedem o aviso de copyright de verdade.
+            "com.microsoft.onnxruntime:onnxruntime",
+            "com.github.wendykierp:JTransforms",
+            "org.visnow:JLargeArrays",
             "org.lwjgl:lwjgl",
             "org.lwjgl:lwjgl-glfw",
             "androidx.datastore:datastore-preferences-external-protobuf",
         )
 
         val CONTENT = listOf(
+            // A guitarra separada por IA: o modelo, a conversão dele para ONNX, quem o roda e a FFT.
+            ManualItem("Demucs v4 (htdemucs_6s)", "Meta Platforms", "MIT", "demucs.txt"),
+            ManualItem("demucs.onnx", "Sevag Hanssian", "MIT", "demucs-onnx.txt"),
+            ManualItem("ONNX Runtime", "Microsoft Corporation", "MIT", "onnxruntime.txt"),
+            ManualItem("JTransforms", "Piotr Wendykier", "BSD 2-Clause", "jtransforms.txt"),
+            ManualItem("JLargeArrays", "University of Warsaw, ICM; visnow.org", "BSD 2-Clause", "jlargearrays.txt"),
             ManualItem("LWJGL", "Lightweight Java Game Library", "BSD 3-Clause", "lwjgl.txt"),
             // Dentro do LWJGL: o GLFW (o controle) e o libffi (no lwjgl.dll).
             ManualItem("GLFW", "Marcus Geelnard, Camilla Löwy", "zlib", "glfw.txt"),
