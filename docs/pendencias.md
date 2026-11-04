@@ -94,6 +94,14 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
+
+- Teste do usuário no Windows ("ótimo"): não confirmou explicitamente se o email do relato mostra o campo novo `sistema` (o script do Reportar não está no repositório; se ele lista os campos pelo nome, ajustar o script — ação do usuário).
+- Licenças do FFmpeg incompletas: as DLLs do bytedeco embutem outras bibliotecas (lame, openssl, libvpx, aom, srt…) cujos avisos não estão na lista do PC. Conferir antes do instalador (4e).
+- Os textos de licença novos (LWJGL, GLFW, libffi, FFmpeg/LGPL/GPL) ficam no `composeResources` comum e vão também no APK do celular (~47 KB).
+- `DesktopControlsFlowTest.aKeyChosenInTheSettingsPlaysTheMatch` falhou uma vez numa rodada cheia e passou sozinho: observar.
+- `DeviceInfo.systemField` não acompanha um `copy(system = …)`.
+
 ## Riff no Windows, etapa 4a: pesquisa no Encore (2026-11-03)
 
 - Teste no Windows com uma pesquisa e um download de verdade: o usuário seguiu sem relatar o resultado.
