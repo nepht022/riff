@@ -314,6 +314,8 @@ class DesktopSeparationFlowTest {
             padSource = NoPadSource,
             encoreTransport = NoInternet,
             separationModels = model,
+            // Com a mínima, o Windows deixa a separação parada por segundos enquanto a suíte ocupa todos os núcleos.
+            separationThreadPriority = Thread.NORM_PRIORITY,
             // Sem o ranking (desligado, como sem ranking.url): não é o que se testa aqui, e nunca o script real.
             rankingUrl = "",
             rankingTransport = OfflineRankingScript,

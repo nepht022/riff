@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
@@ -23,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -32,7 +34,8 @@ import java.util.concurrent.atomic.AtomicReference
  * [SeparationQueueLoop] do celular, numa thread só dela em prioridade baixa (as threads internas do ONNX Runtime
  * ficam normais). Começa ao ser criado: apaga o que uma separação interrompida deixou (e as pastas sem linha no
  * banco) e continua a fila salva. [close] (ao fechar a
- * janela) cancela a da vez sem deixar pasta pela metade e a devolve à fila.
+ * janela) cancela a da vez sem deixar pasta pela metade e a devolve à fila. Reaberto no mesmo processo com a
+ * separação do fechado ainda terminando um trecho, espera ela acabar antes de mexer nas pastas.
  */
 @Suppress("LongParameterList") // a fila, a separação e as pastas de trabalho
 class DesktopSeparationScheduler(
@@ -51,6 +54,8 @@ class DesktopSeparationScheduler(
      */
     private val pruneOrphans: suspend () -> Unit = {},
     private val closeWaitMs: Long = CLOSE_WAIT_MS,
+    /** A da thread da separação: baixa, para não disputar com o jogo (nos testes sob carga, a normal). */
+    threadPriority: Int = Thread.MIN_PRIORITY,
 ) : SeparationScheduler,
     AutoCloseable {
     private val control = SeparationQueueControl()
@@ -61,7 +66,7 @@ class DesktopSeparationScheduler(
     private val worker = Executors.newSingleThreadExecutor { task ->
         Thread(task, "riff-separacao").apply {
             isDaemon = true
-            priority = Thread.MIN_PRIORITY
+            priority = threadPriority
         }
     }.asCoroutineDispatcher()
 
@@ -90,7 +95,14 @@ class DesktopSeparationScheduler(
         onFinished = { _, _ -> }, // o fim (ou a falha) aparece na palheta do topo; no PC não há notificação
     )
 
+    private val folder = separationsDir.absoluteFile.normalize()
+
+    // A separação de um agendador fechado nesta pasta que ainda não acabou o trecho do modelo.
+    private val previous: Job? = stillStopping[folder]
+
     private val running = scope.launch(worker) {
+        // Antes de mexer nas pastas: ao terminar, a velha apaga a pasta temporária dela, a mesma da música na nova.
+        previous?.join()
         deleteLeftovers()
         pruneLeftoverFolders()
         // Cada mudança da fila com música esperando acorda o laço; uma que chega enquanto ele termina fica guardada
@@ -158,13 +170,18 @@ class DesktopSeparationScheduler(
      * Cancela a da vez e espera a limpeza (a pasta temporária apagada) por até [closeWaitMs]. O ONNX Runtime não
      * para no meio de um trecho: se o trecho passar disso, a janela fecha sem esperar — a separação cancelada não
      * guarda nada (a pasta definitiva só nasce no fim) e a pasta temporária sai na próxima abertura. A música fica
-     * na fila, sem contar a tentativa.
+     * na fila, sem contar a tentativa. Um agendador aberto depois disso na mesma pasta (o mesmo processo; o app sai
+     * do processo ao fechar) espera essa separação acabar antes de começar.
      */
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         scope.cancel()
         val cleanedUp = runBlocking { withTimeoutOrNull(closeWaitMs) { running.join() } != null }
-        if (!cleanedUp) separationLog(TAG, "fechou com o modelo no meio de um trecho: a limpeza fica para a próxima")
+        if (!cleanedUp) {
+            separationLog(TAG, "fechou com o modelo no meio de um trecho: a limpeza fica para a próxima")
+            stillStopping[folder] = running
+            running.invokeOnCompletion { stillStopping.remove(folder, running) }
+        }
         attempting.getAndSet(null)?.let { chartId ->
             runBlocking { withTimeoutOrNull(UNDO_WAIT_MS) { separationQueue.undoAttempt(chartId) } }
         }
@@ -184,11 +201,14 @@ class DesktopSeparationScheduler(
         }
     }
 
-    private companion object {
-        const val TAG = "DesktopSeparation"
+    internal companion object {
+        private const val TAG = "DesktopSeparation"
 
         // Fechar a janela leva no máximo isto a mais (mais o desconto da tentativa no banco).
         const val CLOSE_WAIT_MS = 1_500L
-        const val UNDO_WAIT_MS = 300L
+        private const val UNDO_WAIT_MS = 300L
+
+        /** Por pasta de separações: a separação de um agendador fechado que o close() desistiu de esperar. */
+        private val stillStopping = ConcurrentHashMap<File, Job>()
     }
 }

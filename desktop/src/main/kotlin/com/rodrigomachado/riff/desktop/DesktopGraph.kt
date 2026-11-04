@@ -112,6 +112,8 @@ class DesktopGraph(
     reportTransport: JsonPost = UrlConnectionJsonPost,
     /** O modelo da guitarra por IA (nos testes, um falso e rápido: nunca o de 130 MB). */
     separationModels: DemucsModelFactory = DesktopSeparation.models(),
+    /** A prioridade da thread da separação: baixa (nos testes, a normal: com a suíte ocupando o PC, a baixa para). */
+    separationThreadPriority: Int = Thread.MIN_PRIORITY,
     /** O script do ranking (o mesmo do celular, do local.properties; vazio: o ranking fica desligado, como lá). */
     rankingUrl: String = RankingConfig.RANKING_URL,
     /**
@@ -166,6 +168,7 @@ class DesktopGraph(
             separationsDir = separationsDir,
             scratch = separationScratch,
             pruneOrphans = separations::pruneOrphans,
+            threadPriority = separationThreadPriority,
         )
     }
 
