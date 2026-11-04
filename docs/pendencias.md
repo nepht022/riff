@@ -94,6 +94,21 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4a: pesquisa no Encore (2026-11-03)
+
+- Teste no Windows com uma pesquisa e um download de verdade: o usuário seguiu sem relatar o resultado.
+- Download interrompido no PC (fechar a pesquisa no meio, rede caindo) sem teste próprio: o downloader comum apaga o `.part`; conferir que nenhum `.sng` pela metade fica na biblioteca.
+- O seletor de pasta existe repetido na Biblioteca e na pesquisa (a pesquisa abre na pasta atual); juntar em `:core:ui` com um `startAt` opcional.
+- Baseline Profile do celular ainda cita `SearchViewModel_HiltModules` (regenerar com os outros).
+- `.sng.part` com defeito fica aberto (`SngPackage.open` não fecha a origem ao falhar): no Windows o `.part` não é apagado até o coletor de lixo agir.
+- No PC, o aviso "Escolha a mesma pasta e permita" da pesquisa não faz sentido (sem SAF); um texto só do PC ("Escolha a pasta da biblioteca"). Faltam testes do PC sem pasta e com a pasta sumida.
+- Título do seletor de pasta do PC fixo em português ("Pasta dos mapas"), na pesquisa e na Biblioteca.
+- `DesktopSearchKeysTest` muda o `Locale` padrão sem restaurar.
+- Nomes reservados do Windows incompletos (`CONIN$`, `CONOUT$`, `COM¹²³`/`LPT¹²³`).
+- Progresso do download altera a lista da pesquisa na thread de IO (risco de `ConcurrentModificationException` com "Carregar mais"; já existia no celular).
+- PC: o Java não usa o proxy do Windows (`-Djava.net.useSystemProxies=true`) nem os certificados do Windows (antivírus que inspeciona HTTPS quebra a pesquisa); no instalador (4e), incluir `jdk.crypto.ec` se usar `modules(...)`.
+- No teste no Windows: baixar duas vezes o mesmo título (charters diferentes) e uma pasta bem funda (caminho > 260).
+
 ## Riff no Windows, etapa 3c: navegação sem mouse (2026-11-03)
 
 - O controle nos menus (direcional, ✕, ○) só foi testado com controle falso e uma janela de teste: vai junto do teste com o controle (3a).

@@ -7,6 +7,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.io.RandomAccessFile
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -43,10 +44,23 @@ class FileFolderAccess : FolderAccess {
 
 /** Gravação nas pastas do PC (baixar e apagar mapas). */
 class FileFolderWriter : FolderWriter {
+    /**
+     * Um arquivo novo com nome livre, como no celular (`SafFolderWriter.freeName`): com "Nome.sng" ou
+     * "Nome.sng.part" ocupado, "Nome (2).sng.part", "Nome (3).sng.part"… O `createNewFile` é atômico: dois downloads
+     * ao mesmo tempo nunca ficam com o mesmo arquivo (o que perde a corrida tenta o próximo nome).
+     */
     override suspend fun createFile(parentUri: String, subfolder: String, name: String): String {
         val folder = File(parentUri, subfolder).apply { mkdirs() }
-        val file = File(folder, name)
-        if (!file.exists() && !file.createNewFile()) throw IOException("não deu para criar ${file.path}")
+        val final = name.removeSuffix(PART)
+        val base = final.substringBeforeLast('.')
+        val extension = final.substringAfterLast('.', "")
+        val file = generateSequence(1) { it + 1 }
+            .take(MAX_COPIES)
+            .map { n -> if (n == 1) final else "$base ($n).$extension" }
+            .filterNot { File(folder, it).exists() || File(folder, it + PART).exists() }
+            .map { File(folder, if (name.endsWith(PART)) it + PART else it) }
+            .firstOrNull { it.createNewFile() }
+            ?: throw IOException("não deu para criar $name em ${folder.path}")
         return pcUri(file)
     }
 
@@ -54,10 +68,16 @@ class FileFolderWriter : FolderWriter {
 
     override suspend fun nameOf(fileUri: String): String = File(fileUri).name
 
+    /**
+     * Renomeia sem nunca sobrescrever: com o destino ocupado, falha igual em todo sistema (o `renameTo` substituía
+     * fora do Windows e falhava nele). O [createFile] já reservou o nome ("X.sng.part" ocupa "X.sng"), então só um
+     * arquivo posto ali por fora do Riff chega aqui. Sem `ATOMIC_MOVE` de propósito: no Linux e no macOS ele vira o
+     * `rename(2)`, que substitui o destino; sem opções, o Java confere e falha com [FileAlreadyExistsException].
+     */
     override suspend fun rename(fileUri: String, newName: String): String {
         val file = File(fileUri)
         val target = File(file.parentFile, newName)
-        if (!file.renameTo(target)) throw IOException("não deu para renomear ${file.path}")
+        Files.move(file.toPath(), target.toPath())
         return pcUri(target)
     }
 
@@ -81,6 +101,13 @@ class FileFolderWriter : FolderWriter {
             Files.list(path).use { children -> children.toList() }.forEach(::deleteTree)
         }
         Files.delete(path)
+    }
+
+    private companion object {
+        const val PART = ".part"
+
+        /** Um limite para o laço: "Nome (1000).sng" já é sinal de pasta estranha. */
+        const val MAX_COPIES = 1000
     }
 }
 
