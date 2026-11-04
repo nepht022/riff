@@ -31,7 +31,8 @@ android {
     defaultConfig {
         applicationId = "com.rodrigomachado.riff"
         versionCode = 5
-        versionName = "0.5.0"
+        // A versão mora no gradle.properties: o Reportar do PC lê a mesma.
+        versionName = providers.gradleProperty("riff.versionName").get()
         // Só celulares (ARM): as bibliotecas x86 do ONNX Runtime (~80 MB) servem apenas a emuladores e PCs.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }

@@ -32,7 +32,7 @@ import org.junit.rules.TemporaryFolder
 import kotlin.math.abs
 
 /**
- * As Configurações no app do PC: abertas pela tela inicial, sem a aba da IA nem as Licenças (etapa 4); o que se
+ * As Configurações no app do PC: abertas pela tela inicial, sem a aba da IA (etapa 4c) e com as Licenças; o que se
  * muda fica gravado; a calibração pelo teclado salva o atraso e volta às Configurações; trocar o idioma refaz a tela
  * sem perder a pilha.
  */
@@ -60,7 +60,7 @@ class DesktopSettingsFlowTest {
 
         for (tab in listOf("Geral", "Sons", "Jogo", "Visual da pista")) composeRule.onNodeWithText(tab).assertExists()
         composeRule.onNodeWithText("Guitarra IA").assertDoesNotExist()
-        composeRule.onNodeWithText("Licenças e privacidade").assertDoesNotExist()
+        composeRule.onNodeWithText("Licenças e privacidade").assertExists()
     }
 
     @Test

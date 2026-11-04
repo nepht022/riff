@@ -120,6 +120,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 | Migração do banco | cada versão do esquema do Room migra sem perder dados (casamentos, ajustes, recordes) | `core/database/src/test/.../MigrationTest.kt` |
 | Golden da IA | a separação da guitarra (Demucs em ONNX) reproduz a saída de referência | `core/separation/src/test` |
 | Script do ranking | o Apps Script roda em Node com uma planilha falsa que imita as conversões do Google Planilhas | `node scripts/ranking_apps_script.test.js` |
+| Script do Reportar | o Apps Script dos relatos roda em Node com o email simulado (linha do aparelho do celular e do PC) | `node scripts/relatos_apps_script.test.js` |
 | Aparelho | medição de sincronia (registro temporário `RiffSync` no `adb logcat`), quadros atrasados e abertura (Macrobenchmark + Baseline Profile) | `scripts/desempenho.sh`, `scripts/quadros_travados.py` |
 
 ### Portões de qualidade
@@ -132,6 +133,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   ```bash
   ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziDebug verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
+  node scripts/relatos_apps_script.test.js
   ```
 
 - **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.
@@ -159,7 +161,7 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ### Riff no PC (em construção)
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings` e `:feature:calibration` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; ranking, Reportar, Licenças, guitarra por IA e o instalador vêm na etapa 4 (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings`, `:feature:calibration`, `:feature:search`, `:feature:report` e `:feature:licenses` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; o **Reportar** (envelope da tela inicial; vai para o mesmo Apps Script do celular, com `report.url` do `local.properties` embutido no build, e as informações do PC são sistema, versão do Riff e idioma, sem o nome do computador) e **Configurações → Licenças e privacidade** (lista do PC gerada pelo plugin genérico do AboutLibraries no `:desktop`, mais LWJGL, GLFW, libffi e FFmpeg à mão) também; ranking, guitarra por IA e o instalador vêm no resto da etapa 4 (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
 
 **Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na Calibração, aperte qualquer tecla (menos Esc) junto com cada batida; o atraso salvo vale nas partidas. Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita. Ranking e a pergunta da separação por IA ainda não existem no PC.
 
@@ -169,6 +171,7 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:databa
 
 - Os dados do Riff no PC (banco, preferências) ficam em `%APPDATA%\Riff`; a biblioteca do PC é separada da do celular.
 - No celular quem monta as dependências é o Hilt; no PC, o `DesktopGraph`. As telas e os ViewModels são os mesmos (no celular, cada ViewModel ganha uma subclasse `@HiltViewModel` fina).
+- A versão do Riff fica em `gradle.properties` (`riff.versionName`), lida pelo app do celular e pelo Reportar do PC.
 - O Android Lint dos módulos multiplataforma roda com `./scripts/gw lintMultiplatform`.
 - **Áudio no PC:** o FFmpeg (bytedeco) decodifica ogg, opus, mp3 e wav (soltos ou dentro de `.sng`) sempre em 48 kHz estéreo, e o Java Sound toca (16 bits, buffer de 2.048 quadros ≈ 42 ms). Os sons de erro e do menu são os mesmos WAV do celular. Medição: `./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"` toca 20 s cortando a guitarra a cada 2 s e imprime a deriva entre o relógio e a posição da música.
 - **A pista no PC:** o `stage/` do `:core:ui` é todo comum; as texturas (fundos e estampas) são geradas pelo Canvas do Compose, com três detalhes por plataforma (o desfoque, o mipmap e a matriz de perspectiva, que no celular segue o `setPolyToPoly` do Android). As cenas dos testes de tela da pista ficam em `core/ui/src/commonTest` e servem aos dois: as referências do PC ficam em `core/ui/src/test/screenshots/desktop`.
@@ -216,7 +219,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
 | `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
-| `:desktop` | O Riff no PC (Windows), em construção: tela inicial, Biblioteca, partida, Resultado, Configurações e Calibração (`./scripts/gw :desktop:run`) |
+| `:desktop` | O Riff no PC (Windows), em construção: tela inicial, Biblioteca, pesquisa no Encore, partida, Resultado, Configurações, Calibração, Reportar e Licenças (`./scripts/gw :desktop:run`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots

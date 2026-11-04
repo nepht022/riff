@@ -380,7 +380,7 @@ private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
 
 /** Sem som próprio: ao desligar, ainda estariam ligados; o app soa quando eles voltam a ser ligados. */
 @Composable
-internal fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit, switchModifier: Modifier = Modifier) {
     SwitchRow(
         title = stringResource(Res.string.settings_menu_sounds),
         hint = stringResource(Res.string.settings_menu_sounds_hint),
@@ -388,6 +388,7 @@ internal fun MenuSoundsRow(checked: Boolean, onChange: (Boolean) -> Unit) {
         onChange = onChange,
         tag = SettingsTestTags.MENU_SOUNDS,
         sound = null,
+        switchModifier = switchModifier,
     )
 }
 
@@ -400,6 +401,8 @@ internal fun SwitchRow(
     tag: String,
     sound: MenuSound? = MenuSound.NAVIGATE,
     enabled: Boolean = true,
+    /** Do interruptor (o que pega o foco): por exemplo, para as setas do PC acharem ele. */
+    switchModifier: Modifier = Modifier,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = Spacing.sm).alpha(if (enabled) 1f else DISABLED_ALPHA),
@@ -434,7 +437,7 @@ internal fun SwitchRow(
                 disabledUncheckedTrackColor = RiffColors.StageBlack,
                 disabledUncheckedBorderColor = RiffColors.PaperDim,
             ),
-            modifier = Modifier.testTag(tag).focusHighlight(CircleShape),
+            modifier = switchModifier.testTag(tag).focusHighlight(CircleShape),
         )
     }
 }

@@ -40,8 +40,12 @@ function doPost(e) {
     if (contact) lines.push('Contato: ' + contact);
     if (data.aparelho) {
       var d = data.aparelho;
-      lines.push('Riff ' + clean(d.versaoDoApp) + ' · Android ' + clean(d.android) + ' · ' + clean(d.modelo) +
-        ' · ' + clean(d.idioma));
+      // O PC manda "sistema" (ex.: "Windows 11 10.0 (amd64)") e não manda modelo; o celular, "android" e "modelo".
+      var system = d.sistema ? clean(d.sistema) : 'Android ' + clean(d.android);
+      var parts = ['Riff ' + clean(d.versaoDoApp), system];
+      if (clean(d.modelo)) parts.push(clean(d.modelo));
+      parts.push(clean(d.idioma));
+      lines.push(parts.join(' · '));
     }
     var message = {
       to: Session.getEffectiveUser().getEmail(),

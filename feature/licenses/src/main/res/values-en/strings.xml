@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="licenses_back">Back</string>
-    <string name="licenses_title">Licenses and privacy</string>
-    <string name="licenses_privacy">Privacy</string>
-    <string name="licenses_privacy_text">Your charts, records and settings stay on your phone (and in the Android backup, if it is on). What leaves it:\n\n• Ranking: your name, your best scores (with song and artist) and a random code for your phone go to a spreadsheet owned by the developer of Riff on Google and are shown in the ranking to everyone.\n• Report: the text, the email (if you add one) and, if left on, the device information go to the developer, also through Google.\n• Charts: the searches you make go to Encore (enchor.us), where downloads also come from.\n\nTo remove your name and scores from the ranking, ask through Report.</string>
-    <string name="licenses_content">Content and models</string>
-    <string name="licenses_libraries">Libraries</string>
-</resources>

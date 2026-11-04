@@ -14,6 +14,7 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.room) apply false
     alias(libs.plugins.aboutlibraries) apply false
+    alias(libs.plugins.aboutlibraries.jvm) apply false
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
 }

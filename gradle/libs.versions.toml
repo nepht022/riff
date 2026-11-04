@@ -123,6 +123,8 @@ composeMultiplatform-gradlePlugin = { module = "org.jetbrains.compose:compose-gr
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }
+# O mesmo plugin sem o Android: a lista das bibliotecas do app do PC.
+aboutlibraries-jvm = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
 android-test = { id = "com.android.test", version.ref = "agp" }
 baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 android-application = { id = "com.android.application", version.ref = "agp" }

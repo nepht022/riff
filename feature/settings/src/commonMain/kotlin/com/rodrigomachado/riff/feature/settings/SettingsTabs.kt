@@ -32,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusProperties
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +45,7 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
+import com.rodrigomachado.riff.core.ui.input.menuKeysEnabled
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
@@ -128,66 +133,79 @@ internal fun GeneralTab(
     onLicenses: (() -> Unit)? = {},
 ) {
     var choosing by rememberSaveable { mutableStateOf(false) }
-    ChoiceRow(stringResource(Res.string.settings_language), languageName(language)) { choosing = true }
+    // O interruptor dos sons fica à direita, entre linhas largas: no PC ↓ e ↑ das vizinhas pulariam ele.
+    val menuSoundsFocus = remember { FocusRequester() }
+    val aboveSwitch = pcArrow { down = menuSoundsFocus }
+    ChoiceRow(
+        stringResource(Res.string.settings_language),
+        languageName(language),
+        modifier = if (rankingName == null) aboveSwitch else Modifier,
+    ) { choosing = true }
     rankingName?.let {
         ChoiceRow(
             stringResource(Res.string.settings_ranking_name),
             it.name ?: stringResource(Res.string.settings_ranking_choose),
+            modifier = aboveSwitch,
             onClick = onRankingName,
         )
     }
-    MenuSoundsRow(menuSounds, onMenuSounds)
+    MenuSoundsRow(menuSounds, onMenuSounds, switchModifier = Modifier.focusRequester(menuSoundsFocus))
     onLicenses?.let {
         ChoiceRow(
             stringResource(Res.string.settings_licenses),
             stringResource(Res.string.settings_licenses_open),
+            modifier = pcArrow { up = menuSoundsFocus },
             onClick = it,
         )
     }
-    if (choosing) {
-        AlertDialog(
-            onDismissRequest = { choosing = false },
+    if (choosing) LanguageDialog(language, onLanguage) { choosing = false }
+}
 
-            // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+/** A escolha do idioma do jogo. */
+@Composable
+private fun LanguageDialog(language: AppLanguage, onLanguage: (AppLanguage) -> Unit, onClose: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onClose,
 
-            modifier = Modifier.menuKeys(onBack = { choosing = false }),
-            title = { Text(stringResource(Res.string.settings_language)) },
-            text = {
-                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    for (option in AppLanguage.entries) {
-                        Row(
-                            // Cada idioma é uma opção marcada ou não para o TalkBack, como o botão de rádio.
-                            Modifier.fillMaxWidth().focusHighlight().selectable(
-                                selected = option == language,
-                                role = Role.RadioButton,
-                                onClick = withMenuSound(MenuSound.NAVIGATE) {
-                                    choosing = false
-                                    if (option != language) onLanguage(option)
-                                },
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        ) {
-                            RadioButton(
-                                selected = option == language,
-                                onClick = null,
-                                colors = RadioButtonDefaults.colors(selectedColor = RiffColors.TourRed),
-                            )
-                            Text(languageName(option), style = MaterialTheme.typography.titleMedium)
-                        }
+        // No PC as setas andam pelo diálogo, e o Esc o fecha (sem chegar à tela de trás).
+
+        modifier = Modifier.menuKeys(onBack = onClose),
+        title = { Text(stringResource(Res.string.settings_language)) },
+        text = {
+            Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                for (option in AppLanguage.entries) {
+                    Row(
+                        // Cada idioma é uma opção marcada ou não para o TalkBack, como o botão de rádio.
+                        Modifier.fillMaxWidth().focusHighlight().selectable(
+                            selected = option == language,
+                            role = Role.RadioButton,
+                            onClick = withMenuSound(MenuSound.NAVIGATE) {
+                                onClose()
+                                if (option != language) onLanguage(option)
+                            },
+                        ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        RadioButton(
+                            selected = option == language,
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(selectedColor = RiffColors.TourRed),
+                        )
+                        Text(languageName(option), style = MaterialTheme.typography.titleMedium)
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = withMenuSound(MenuSound.BACK) { choosing = false },
-                    modifier = Modifier.focusHighlight(CircleShape),
-                ) {
-                    Text(stringResource(Res.string.settings_look_close))
-                }
-            },
-        )
-    }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, onClose),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
+                Text(stringResource(Res.string.settings_look_close))
+            }
+        },
+    )
 }
 
 /** Cada idioma no próprio idioma: quem trocar sem querer acha o caminho de volta. */
@@ -198,3 +216,7 @@ private fun languageName(language: AppLanguage): String = when (language) {
 
 private val TAB_UNDERLINE_WIDTH = 24.dp
 private val TAB_UNDERLINE_HEIGHT = 3.dp
+
+/** Só nos menus do PC: aonde as setas levam a partir desta linha (no celular, nada muda). */
+private fun pcArrow(scope: FocusProperties.() -> Unit): Modifier =
+    if (menuKeysEnabled) Modifier.focusProperties(scope) else Modifier
