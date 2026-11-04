@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LinearProgressIndicator
@@ -39,7 +40,9 @@ import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyName
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.search.resources.Res
@@ -112,7 +115,9 @@ fun SearchContent(
     var choosing by remember { mutableStateOf<Pair<EncoreChart, ItemState.Ready>?>(null) }
     Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text(stringResource(Res.string.search_back), color = RiffColors.Paper) }
+            TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
+                Text(stringResource(Res.string.search_back), color = RiffColors.Paper)
+            }
             Spacer(Modifier.weight(1f))
             SeparationIndicator()
         }
@@ -147,6 +152,10 @@ fun SearchContent(
     }
 }
 
+/**
+ * O campo da busca e Pesquisar. Nos menus do PC ↑/↓ saem do campo (o campo de uma linha as usaria para levar o cursor
+ * ao começo ou ao fim, e o foco ficaria preso, como no filtro da Biblioteca); Enter pesquisa.
+ */
 @Composable
 private fun QueryRow(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit) {
     val search = withMenuSound(MenuSound.NAVIGATE, onSearch)
@@ -158,7 +167,7 @@ private fun QueryRow(query: String, onQueryChange: (String) -> Unit, onSearch: (
             placeholder = { Text(stringResource(Res.string.search_hint)) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { search() }),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.upDownLeave().weight(1f),
         )
         PosterButton(stringResource(Res.string.search_action), onClick = onSearch, sound = MenuSound.NAVIGATE)
     }
@@ -182,7 +191,10 @@ private fun SearchFailure(error: SearchError, query: String, onRetry: () -> Unit
         }
         Text(message, color = RiffColors.Paper)
         if (error == SearchError.UNAVAILABLE) {
-            TextButton(onClick = withMenuSound(MenuSound.CONFIRM, onRetry)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM, onRetry),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.search_retry), color = RiffColors.Paper)
             }
         }
@@ -208,7 +220,10 @@ private fun Results(
                 if (state.isSearching) {
                     LoadingState()
                 } else {
-                    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onLoadMore)) {
+                    TextButton(
+                        onClick = withMenuSound(MenuSound.NAVIGATE, onLoadMore),
+                        modifier = Modifier.focusHighlight(CircleShape),
+                    ) {
                         Text(stringResource(Res.string.search_more), color = RiffColors.Paper)
                     }
                 }
@@ -282,7 +297,10 @@ private fun ItemAction(
 
         is ItemState.Failed -> Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(state.reason.message()), color = RiffColors.Paper, modifier = Modifier.weight(1f))
-            TextButton(onClick = withMenuSound(MenuSound.CONFIRM) { onDownload(item.chart) }) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM) { onDownload(item.chart) },
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.search_retry), color = RiffColors.Paper)
             }
         }

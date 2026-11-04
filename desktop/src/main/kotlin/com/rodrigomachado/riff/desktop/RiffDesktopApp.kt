@@ -42,16 +42,18 @@ import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.search.SearchRoute
+import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
 import com.rodrigomachado.riff.feature.settings.SettingsScreen
 import com.rodrigomachado.riff.feature.settings.SettingsTab
 import java.util.Locale
 
 /**
- * O Riff no PC: tela inicial, Biblioteca, partida, resultado e Configurações; Ranking e Reportar vêm depois. Fora da
- * partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O
- * controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só
- * vale na partida e na escolha de botão).
+ * O Riff no PC: tela inicial, Biblioteca, pesquisa no Encore, partida, resultado e Configurações; Ranking e Reportar
+ * vêm depois. Fora da partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o
+ * foco, Esc volta. O controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela
+ * (nulo: o controle só vale na partida e na escolha de botão).
  */
 @Composable
 fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null) {
@@ -120,13 +122,33 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
                         navController.navigate(GameplayRoute(chartId, difficulty.name))
                     },
                     onBack = { navController.popBackStack() },
+                    onSearch = dropUnlessResumed { navController.navigate(SearchRoute()) },
                     modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
                     viewModel = viewModel { graph.libraryViewModel() },
                 )
             }
+            searchDestination(graph, navController)
             matchDestinations(graph, navController)
             settingsDestinations(graph, navController)
         }
+    }
+}
+
+/**
+ * A pesquisa no Encore, aberta pela Biblioteca, como no celular: "Jogar" de um mapa baixado abre a partida por cima
+ * da pesquisa (o Resultado volta a ela); Voltar e Esc voltam à Biblioteca, que já tem os mapas baixados.
+ */
+private fun NavGraphBuilder.searchDestination(graph: DesktopGraph, navController: NavHostController) {
+    composable<SearchRoute> { entry ->
+        val route = entry.toRoute<SearchRoute>()
+        SearchScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onPlay = dropUnlessResumed { chartId, difficulty ->
+                navController.navigate(GameplayRoute(chartId, difficulty.name))
+            },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            viewModel = viewModel { graph.searchViewModel(route.query) },
+        )
     }
 }
 

@@ -14,9 +14,11 @@ import com.rodrigomachado.riff.core.data.PreferencesLibraryFolderStore
 import com.rodrigomachado.riff.core.data.PreferencesSettingsRepository
 import com.rodrigomachado.riff.core.data.RoomChartOffsetRepository
 import com.rodrigomachado.riff.core.data.RoomChartRepository
+import com.rodrigomachado.riff.core.data.RoomEncoreDownloads
 import com.rodrigomachado.riff.core.data.RoomScoreRepository
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SettingsRepository
+import com.rodrigomachado.riff.core.data.download.EncoreChartDownloader
 import com.rodrigomachado.riff.core.data.folder.FileFolderAccess
 import com.rodrigomachado.riff.core.data.folder.FileFolderSource
 import com.rodrigomachado.riff.core.data.folder.FileFolderWriter
@@ -31,6 +33,9 @@ import com.rodrigomachado.riff.core.data.ranking.NoRanking
 import com.rodrigomachado.riff.core.database.riffDatabase
 import com.rodrigomachado.riff.core.datastore.RiffPreferences
 import com.rodrigomachado.riff.core.datastore.riffDataStore
+import com.rodrigomachado.riff.core.encore.EncoreClient
+import com.rodrigomachado.riff.core.encore.HttpTransport
+import com.rodrigomachado.riff.core.encore.UrlConnectionTransport
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.desktop.pad.GlfwGamepad
@@ -43,6 +48,7 @@ import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
 import com.rodrigomachado.riff.feature.results.ResultsViewModel
+import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +72,8 @@ class DesktopGraph(
     private val clickTrack: ClickTrackPlayer = AudioClickTrackPlayer(audioOut),
     /** O controle (nos testes, uma fonte sem controle: o CI não tem tela para o GLFW). */
     padSource: PadSource = GlfwPadSource(),
+    /** A conversa com o Encore (nos testes, um Encore falso: nunca a rede). */
+    encoreTransport: HttpTransport = UrlConnectionTransport(),
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
@@ -93,6 +101,30 @@ class DesktopGraph(
         probe = FolderChartAudioProbe(folderSource, charts, io),
         settings = settings,
         deleter = FolderChartDeleter(charts, FileFolderWriter(), libraryFolderStore, NoAiSeparations, io),
+    )
+
+    // A pesquisa no Encore: baixa para "Baixados pelo Riff" na pasta da biblioteca e importa o pacote na hora.
+    private val encore = EncoreClient(encoreTransport, io)
+    private val encoreDownloads = RoomEncoreDownloads(database.encoreChartDao())
+    private val downloader = EncoreChartDownloader(
+        encore = encore,
+        folders = libraryFolderStore,
+        access = FileFolderAccess(),
+        writer = FileFolderWriter(),
+        importer = chartImporter,
+        downloads = encoreDownloads,
+        dispatcher = io,
+        opener = randomRead,
+    )
+
+    /** A pesquisa aberta pela Biblioteca ([query] vazia) ou já com uma busca. */
+    fun searchViewModel(query: String?) = SearchViewModel(
+        initialQuery = query.orEmpty(),
+        encore = encore,
+        downloader = downloader,
+        downloads = encoreDownloads,
+        folderAccess = FileFolderAccess(),
+        folders = libraryFolderStore,
     )
 
     // A partida: a música (um arquivo ou faixas separadas) pelo FFmpeg e o relógio monotônico do PC.

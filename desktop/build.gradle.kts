@@ -37,6 +37,8 @@ dependencies {
     implementation(project(":feature:results"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:calibration"))
+    implementation(project(":feature:search"))
+    implementation(project(":core:encore"))
     implementation(project(":core:game"))
     implementation(project(":core:data"))
     implementation(project(":core:audio"))
@@ -58,6 +60,8 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(compose.desktop.uiTestJUnit4)
     testImplementation(libs.roborazzi.compose.desktop)
+    // Os pacotes .sng do Encore falso da pesquisa.
+    testImplementation(testFixtures(project(":core:chart")))
 }
 
 compose.desktop {

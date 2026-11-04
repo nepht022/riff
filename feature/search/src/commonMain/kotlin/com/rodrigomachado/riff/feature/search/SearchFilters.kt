@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -45,7 +47,10 @@ internal fun FilterRow(state: SearchUiState, onShowVersions: (Boolean) -> Unit, 
         Choice(stringResource(Res.string.search_versions), selected = state.versions) { onShowVersions(true) }
     }
     Row(
-        Modifier.fillMaxWidth().toggleable(state.onlySeparateGuitar, role = Role.Switch, onValueChange = onlyGuitar),
+        Modifier
+            .fillMaxWidth()
+            .focusHighlight()
+            .toggleable(state.onlySeparateGuitar, role = Role.Switch, onValueChange = onlyGuitar),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -73,6 +78,7 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .heightIn(min = 48.dp)
+            .focusHighlight()
             .selectable(selected, role = Role.Tab, onClick = withMenuSound(MenuSound.NAVIGATE, onClick)),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -103,7 +109,10 @@ internal fun GuitarSearchStatus(search: GuitarSearch, nothingShown: Boolean, onS
 
         nothingShown -> Column {
             Text(stringResource(Res.string.search_guitar_none, search.checked), color = RiffColors.Paper)
-            TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onSearchMore)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onSearchMore),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.search_guitar_more), color = RiffColors.Paper)
             }
         }

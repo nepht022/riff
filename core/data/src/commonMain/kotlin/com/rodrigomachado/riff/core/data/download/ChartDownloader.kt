@@ -78,13 +78,24 @@ class EncoreChartDownloader @Inject constructor(
         throw ChartDownloadException(reason, e)
     }
 
-    /** "Artista - Nome.sng", sem os caracteres que as pastas não aceitam. */
-    private fun fileName(chart: EncoreChart): String =
-        "${chart.artist} - ${chart.name}".replace(INVALID, "_").trim().take(MAX_NAME) + ".sng"
+    private fun fileName(chart: EncoreChart): String = downloadFileName(chart.artist, chart.name)
 
     private companion object {
         const val PART = ".part"
-        const val MAX_NAME = 120
-        val INVALID = Regex("""[\\/:*?"<>|]""")
     }
 }
+
+/**
+ * "Artista - Nome.sng", sem os caracteres que as pastas não aceitam (os do Windows e os de controle). Um nome que o
+ * Windows reserva para dispositivos (CON, NUL, COM1…) ganha um "_" na frente: o Windows lê só até o primeiro ponto,
+ * e "Nul. - CON.sng" seria o NUL. Os outros nomes ficam como sempre foram.
+ */
+internal fun downloadFileName(artist: String, name: String): String {
+    val base = "$artist - $name".replace(INVALID, "_").trim().take(MAX_NAME)
+    val device = base.substringBefore('.').trimEnd().uppercase() in RESERVED
+    return (if (device) "_$base" else base) + ".sng"
+}
+
+private const val MAX_NAME = 120
+private val INVALID = Regex("""[\\/:*?"<>|\u0000-\u001F]""")
+private val RESERVED = setOf("CON", "PRN", "AUX", "NUL") + (1..9).flatMap { listOf("COM$it", "LPT$it") }

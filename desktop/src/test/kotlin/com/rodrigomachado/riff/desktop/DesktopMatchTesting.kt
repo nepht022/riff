@@ -23,6 +23,8 @@ import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.core.encore.HttpResponse
+import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialogTestTags
@@ -36,6 +38,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.net.UnknownHostException
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -57,9 +60,13 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
 
     /**
      * O app na tela inicial, com a pasta de mapas já importada; com [pad], o controle já lido, e as teclas que ele
-     * manda aos menus por [sendMenuKey].
+     * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede).
      */
-    fun openApp(pad: PadSource = NoPadSource, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null): DesktopGraph {
+    fun openApp(
+        pad: PadSource = NoPadSource,
+        sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null,
+        encore: HttpTransport = NoInternet,
+    ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
             File(this, "notes.chart").writeText(CHART)
@@ -72,6 +79,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             audioOut = audioOut,
             sfx = SfxPlayerFactory { SilentSfx },
             padSource = pad,
+            encoreTransport = encore,
         ).also { opened = it }
         graph.gamepad.start()
         runBlocking {
@@ -97,6 +105,11 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
     /** Biblioteca → a música → a única dificuldade → a partida. */
     fun startTheSong() {
         composeRule.clickOnWindowThread(composeRule.onNodeWithText(TITLE))
+        chooseTheOnlyDifficulty()
+    }
+
+    /** Com a escolha da dificuldade aberta (pela Biblioteca ou pelo Jogar da pesquisa): a única → a partida. */
+    fun chooseTheOnlyDifficulty() {
         composeRule.waitUntilAtLeastOneExists(hasTestTag(DifficultyDialogTestTags.OPTION), TIMEOUT_MS)
         composeRule.mainClock.autoAdvance = false
         composeRule.clickOnWindowThread(composeRule.onNodeWithTag(DifficultyDialogTestTags.OPTION))
@@ -210,8 +223,16 @@ internal object SilentSfx : SfxPlayer {
     override fun release() = Unit
 }
 
+/** O Encore sem internet: toda conversa falha como uma rede fora do ar. */
+internal object NoInternet : HttpTransport {
+    override suspend fun post(url: String, json: String): HttpResponse = throw UnknownHostException("api.enchor.us")
+
+    override suspend fun get(url: String, range: LongRange?): HttpResponse =
+        throw UnknownHostException("files.enchor.us")
+}
+
 /** Um WAV de 16 bits, mono, 48 kHz, com um lá (440 Hz) de [durationMs]. */
-private fun writeTone(file: File, durationMs: Int) {
+internal fun writeTone(file: File, durationMs: Int) {
     val rate = 48_000
     val samples = rate * durationMs / 1_000
     DataOutputStream(FileOutputStream(file).buffered()).use { out ->
