@@ -28,6 +28,7 @@ import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
+import com.rodrigomachado.riff.feature.licenses.HiltLicensesViewModel
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
 import com.rodrigomachado.riff.feature.licenses.LicensesScreen
 import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
@@ -35,6 +36,7 @@ import com.rodrigomachado.riff.feature.ranking.RankingBoardRoute
 import com.rodrigomachado.riff.feature.ranking.RankingBoardScreen
 import com.rodrigomachado.riff.feature.ranking.RankingRoute
 import com.rodrigomachado.riff.feature.ranking.RankingSongsScreen
+import com.rodrigomachado.riff.feature.report.HiltReportViewModel
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.HiltResultsViewModel
@@ -197,10 +199,16 @@ private fun NavGraphBuilder.settingsDestinations(
         )
     }
     composable<LicensesRoute> {
-        LicensesScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+        LicensesScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltLicensesViewModel>(),
+        )
     }
     composable<ReportRoute> {
-        ReportScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+        ReportScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltReportViewModel>(),
+        )
     }
     composable<CalibrationRoute> {
         CalibrationScreen(
