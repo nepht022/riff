@@ -185,13 +185,15 @@ class DesktopSeparationFlowTest {
         graph.close()
         graphs -= graph
 
-        assertTrue("sobrou pasta temporária", temporaryFolders().isEmpty())
+        // A pasta temporária some no fechamento quando a limpeza cabe no prazo do close(); com o PC carregado ela
+        // pode sobrar, e a próxima abertura a apaga. Pela metade na pasta definitiva, nunca.
         assertTrue("pasta definitiva pela metade", separatedFolders().isEmpty())
 
         // Reaberto com os mesmos dados (e o modelo rápido), a fila continua de onde parou.
         val reopened = openGraph(importCharts = false)
         composeRule.waitUntil(LONG_TIMEOUT_MS) { runBlocking { chartId in reopened.separations.separatedIds.first() } }
         assertEquals(1, separatedFolders().size)
+        assertTrue("sobrou pasta temporária depois de reabrir", temporaryFolders().isEmpty())
         composeRule.waitUntil(TIMEOUT_MS) { reopened.separationScheduler.queue.value.isEmpty() }
     }
 
