@@ -111,7 +111,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
 
-- Teste do usuário no Windows ("ótimo"): não confirmou explicitamente se o email do relato mostra o campo novo `sistema` (o script do Reportar não está no repositório; se ele lista os campos pelo nome, ajustar o script — ação do usuário).
+- Script do Reportar corrigido (linha do sistema no PC) e republicado pelo usuário em 2026-11-04; falta ver um email de relato do PC com "Windows …".
 - **Antes de distribuir o PC (4e), avisos de licença do código nativo embutido:** o FFmpeg do bytedeco (8.1.2, javacpp-presets 1.5.14) liga lame, speex, opencore-amr, vo-amrwbenc, openssl, openh264, libvpx, freetype, harfbuzz, opus, libxml2, srt, libwebp, aom, svt-av1, zimg, libmfx e traz `libwinpthread-1.dll`; o Skiko (`skiko-windows-x64.dll`) embute o Skia (BSD-3) e o ICU (`icudtl.dat`, licença Unicode), e o AboutLibraries só mostra "Apache-2.0". Nenhum desses avisos está na lista do PC. Apontar também o código-fonte exato do FFmpeg (8.1.2 e a tag 1.5.14 do javacpp-presets) no `ffmpeg-lgpl3.txt`. Validação humana recomendada (conformidade).
 - O URL do `local.properties` entra cru no `ReportConfig`/`RankingConfig` gerado: um `"` ou `$` quebraria o build (URLs do Apps Script não têm).
 - Testes do envio no PC que passariam com defeito: o falso não anota a thread nem suspende (o "janela segue respondendo" não prova nada); a espera única por app no PC sem teste; ↓/↑ entre o interruptor dos sons e "Licenças e privacidade" sem teste de teclado.

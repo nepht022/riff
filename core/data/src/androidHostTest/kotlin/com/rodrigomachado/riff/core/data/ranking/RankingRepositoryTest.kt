@@ -654,10 +654,14 @@ class RankingRepositoryTest {
         assertEquals(RankingTable.PC_STRUM, RankingTable.PC_STRUM.forThisDevice())
     }
 
-    /** Decisão 5: no PC, as partidas de antes da 4d (que a migração marcou "celular") contam sem palheta. */
+    /**
+     * Decisão 5: no PC, as partidas de antes da 4d (que a migração marcou "celular") contam com palheta, o padrão de
+     * fábrica.
+     */
     @Test
-    fun onThePcTheOldPhoneMarkMeansWithoutStrum() {
-        assertEquals(RankingTable.PC_NO_STRUM, RankingTable.PHONE.forDevice(pc = true))
+    fun onThePcTheOldPhoneMarkMeansWithStrum() {
+        assertEquals(RankingTable.PC_STRUM, RankingTable.PHONE.forDevice(pc = true))
+        assertEquals(RankingTable.PC_NO_STRUM, RankingTable.PC_NO_STRUM.forDevice(pc = true))
         assertEquals(RankingTable.PC_STRUM, RankingTable.PC_STRUM.forDevice(pc = true))
         assertEquals(RankingTable.PHONE, RankingTable.PHONE.forDevice(pc = false))
     }

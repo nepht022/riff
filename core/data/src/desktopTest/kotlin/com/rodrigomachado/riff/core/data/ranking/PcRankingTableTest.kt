@@ -6,14 +6,17 @@ import com.rodrigomachado.riff.core.model.RankingTable
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Decisão 5 no PC: o que a migração marcou "celular" é de antes da 4d e conta sem palheta (o padrão do PC). */
+/**
+ * Decisão 5 no PC: o que a migração marcou "celular" é de antes da 4d e conta com palheta (o padrão de fábrica do
+ * PC).
+ */
 class PcRankingTableTest {
     private fun score(table: String) = ScoreEntity(1, "m", "HARD", 1, 1f, 1, 1, 0, 0, 0, null, table)
 
     @Test
-    fun anOldPcMatchCountsWithoutStrum() {
-        assertEquals(RankingTable.PC_NO_STRUM, RankingTable.PHONE.forThisDevice())
-        assertEquals(RankingTable.PC_NO_STRUM, score("celular").toModel()?.rankingTable)
+    fun anOldPcMatchCountsWithStrum() {
+        assertEquals(RankingTable.PC_STRUM, RankingTable.PHONE.forThisDevice())
+        assertEquals(RankingTable.PC_STRUM, score("celular").toModel()?.rankingTable)
     }
 
     @Test

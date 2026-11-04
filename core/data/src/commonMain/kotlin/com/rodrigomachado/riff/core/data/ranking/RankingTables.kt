@@ -4,13 +4,14 @@ import com.rodrigomachado.riff.core.model.RankingTable
 
 /**
  * A tabela de uma partida gravada, lida neste aparelho. A migração do banco (versão 14) marcou todas as partidas de
- * antes como "celular"; no PC elas são de antes do ranking chegar lá e contam como sem palheta. A regra fica só aqui.
+ * antes como "celular"; no PC elas são de antes do ranking chegar lá e contam com palheta, o padrão de fábrica do
+ * PC. A regra fica só aqui.
  */
 fun RankingTable.forThisDevice(): RankingTable = forDevice(pc = runsOnPc)
 
 /** [forThisDevice] com o aparelho dito: [pc] verdadeiro no app do PC. */
 fun RankingTable.forDevice(pc: Boolean): RankingTable =
-    if (pc && this == RankingTable.PHONE) RankingTable.PC_NO_STRUM else this
+    if (pc && this == RankingTable.PHONE) RankingTable.PC_STRUM else this
 
 /**
  * A tabela gravada no banco ([RankingTable.wire]) lida neste aparelho; uma que este app não conhece (gravada por um
