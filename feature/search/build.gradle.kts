@@ -15,7 +15,12 @@ kotlin {
             // O org.json vem com o Android; no PC entra a biblioteca original.
             compileOnly(libs.org.json)
         }
-        getByName("desktopTest").dependencies { implementation(libs.org.json) }
+        getByName("desktopTest").dependencies {
+            implementation(libs.org.json)
+            // A janela de teste do Compose (a pesquisa só com o teclado).
+            implementation(compose.desktop.currentOs)
+            implementation(compose.desktop.uiTestJUnit4)
+        }
         androidMain.dependencies {
             // Seletor de pasta do sistema (OpenDocumentTree), para pedir a permissão de gravar.
             implementation(libs.androidx.activity.compose)
