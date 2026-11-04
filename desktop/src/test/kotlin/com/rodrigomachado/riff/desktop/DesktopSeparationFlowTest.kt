@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -195,6 +196,51 @@ class DesktopSeparationFlowTest {
         assertEquals(1, separatedFolders().size)
         assertTrue("sobrou pasta temporária depois de reabrir", temporaryFolders().isEmpty())
         composeRule.waitUntil(TIMEOUT_MS) { reopened.separationScheduler.queue.value.isEmpty() }
+    }
+
+    /**
+     * Um Riff só por pasta de dados: o segundo é recusado antes de abrir o banco e a fila (não apaga a pasta
+     * temporária da separação em andamento no primeiro); com o primeiro fechado, abre.
+     */
+    @Test
+    fun aSecondRiffOnTheSameDataIsRefusedUntilTheFirstCloses() {
+        model.blockFromCall(1)
+        val first = openGraph()
+        val chartId = chartIdOf(first, FIRST)
+        first.separationScheduler.enqueue(listOf(QueuedSeparation(chartId, FIRST)))
+        assertTrue(model.blocked.await(TIMEOUT_MS, TimeUnit.MILLISECONDS))
+        val decoded = File(data, "separacao-temp").listFiles().orEmpty().toList()
+
+        assertThrows(RiffAlreadyOpenException::class.java) { openGraph(importCharts = false) }
+
+        assertEquals("a pasta temporária do primeiro", 1, temporaryFolders().size)
+        assertTrue("o rascunho do primeiro", decoded.all { it.exists() })
+        model.release()
+        composeRule.waitUntil(LONG_TIMEOUT_MS) { runBlocking { chartId in first.separations.separatedIds.first() } }
+        first.close()
+        graphs -= first
+
+        val second = openGraph(importCharts = false)
+        assertTrue(runBlocking { chartId in second.separations.separatedIds.first() })
+    }
+
+    /** Fechar entre guardar a pasta e anotar no banco deixa uma pasta sem linha: a próxima abertura a apaga. */
+    @Test
+    fun aSeparationFolderWithoutARowIsDeletedOnOpening() {
+        val graph = openGraph()
+        val chartId = chartIdOf(graph, FIRST)
+        graph.separationScheduler.enqueue(listOf(QueuedSeparation(chartId, FIRST)))
+        composeRule.waitUntil(LONG_TIMEOUT_MS) { runBlocking { chartId in graph.separations.separatedIds.first() } }
+        graph.close()
+        graphs -= graph
+        val orphan = File(separations, "0123456789abcdef0123456789abcdef01234567").apply { mkdirs() }
+        File(orphan, SEPARATED_GUITAR).writeText("sem linha no banco")
+
+        val reopened = openGraph(importCharts = false)
+
+        composeRule.waitUntil(TIMEOUT_MS) { !orphan.exists() }
+        assertTrue("a separação válida ficou", runBlocking { reopened.separations.separatedFiles(chartId) } != null)
+        assertEquals(1, separatedFolders().size)
     }
 
     /** A aba "Guitarra IA" no PC, pelo teclado: o espaço usado e "Apagar separações"; sem "Separar só carregando". */

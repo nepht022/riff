@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.data.game.ChartAudioProbe
 import java.io.File
 import java.io.IOException
 import java.lang.management.ManagementFactory
+import java.net.URL
 
 /** O PC (decisões 6 e 7 da etapa 4c): a memória física total e o espaço livre na pasta das separações. */
 class DesktopDeviceInfo(private val dir: File, override val totalRamBytes: Long = physicalMemoryBytes()) : DeviceInfo {
@@ -38,6 +39,7 @@ object DesktopSeparation {
     /** O `.onnx` do celular, copiado para os recursos do `:desktop` no build. */
     const val MODEL_RESOURCE = "/riff/${Demucs.MODEL_ASSET}"
     private const val TAG = "DesktopSeparation"
+    private const val MAX_ARRAY_BYTES = Int.MAX_VALUE - 8L
 
     // O atraso do codificador AAC do FFmpeg, medido uma vez por processo (na primeira separação).
     @Volatile private var encoderDelay: Int? = null
@@ -58,7 +60,7 @@ object DesktopSeparation {
         threads: Int = threads(),
         opener: DemucsModelOpener = DemucsModelOpener { bytes, n, arena -> OrtDemucsModel(bytes, n, arena) },
     ): DemucsModelFactory = DemucsModelFactory { useArena ->
-        val bytes = DesktopSeparation::class.java.getResourceAsStream(resource)?.use { it.readBytes() }
+        val bytes = DesktopSeparation::class.java.getResource(resource)?.let(::readModel)
             ?: throw IOException("o modelo da IA ($resource) não está nos recursos do Riff")
         separationLog(
             TAG,
@@ -71,6 +73,24 @@ object DesktopSeparation {
             throw IOException("o ONNX Runtime não carregou neste PC", e)
         } catch (e: OrtException) {
             throw IOException("o ONNX Runtime não abriu o modelo da IA", e)
+        }
+    }
+
+    /**
+     * Os bytes do modelo em [url], direto num array do tamanho do recurso (o `readBytes` passaria por um buffer e uma
+     * cópia: o modelo duas vezes na heap). Sem o tamanho (ou grande demais para um array), o `readBytes`.
+     */
+    internal fun readModel(url: URL): ByteArray {
+        val connection = url.openConnection()
+        val size = connection.contentLengthLong
+        return connection.getInputStream().use { input ->
+            if (size !in 0..MAX_ARRAY_BYTES) return@use input.readBytes()
+            val bytes = ByteArray(size.toInt())
+            val read = input.readNBytes(bytes, 0, bytes.size)
+            if (read != bytes.size || input.read() != -1) {
+                throw IOException("o modelo da IA ($url) não tem os $size bytes esperados")
+            }
+            bytes
         }
     }
 

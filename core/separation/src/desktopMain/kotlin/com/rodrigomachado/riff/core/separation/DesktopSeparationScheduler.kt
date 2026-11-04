@@ -29,8 +29,9 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * A fila de separações no PC (decisão 4 da etapa 4c): fica no banco e roda só com o Riff aberto, pela mesma
- * [SeparationQueueLoop] do celular, numa thread só dela em prioridade baixa (a janela e o áudio seguem fluidos).
- * Começa ao ser criado: apaga o que uma separação interrompida deixou e continua a fila salva. [close] (ao fechar a
+ * [SeparationQueueLoop] do celular, numa thread só dela em prioridade baixa (as threads internas do ONNX Runtime
+ * ficam normais). Começa ao ser criado: apaga o que uma separação interrompida deixou (e as pastas sem linha no
+ * banco) e continua a fila salva. [close] (ao fechar a
  * janela) cancela a da vez sem deixar pasta pela metade e a devolve à fila.
  */
 @Suppress("LongParameterList") // a fila, a separação e as pastas de trabalho
@@ -44,6 +45,11 @@ class DesktopSeparationScheduler(
     private val separationsDir: File,
     /** A pasta de rascunho da separação (a música decodificada): esvaziada ao abrir. */
     private val scratch: File,
+    /**
+     * Apaga as pastas de separação sem linha no banco (o Riff fechado entre guardar a pasta e anotá-la), ao abrir,
+     * antes da fila.
+     */
+    private val pruneOrphans: suspend () -> Unit = {},
     private val closeWaitMs: Long = CLOSE_WAIT_MS,
 ) : SeparationScheduler,
     AutoCloseable {
@@ -86,6 +92,7 @@ class DesktopSeparationScheduler(
 
     private val running = scope.launch(worker) {
         deleteLeftovers()
+        pruneLeftoverFolders()
         // Cada mudança da fila com música esperando acorda o laço; uma que chega enquanto ele termina fica guardada
         // (canal de uma vaga) e o acorda de novo.
         for (signal in wake) runQueue()
@@ -111,6 +118,17 @@ class DesktopSeparationScheduler(
         separationsDir.listFiles { file -> file.name.endsWith(SEPARATION_WORK_SUFFIX) }
             ?.forEach { it.deleteRecursively() }
         scratch.listFiles()?.forEach { it.deleteRecursively() }
+    }
+
+    private suspend fun pruneLeftoverFolders() {
+        try {
+            pruneOrphans()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // O banco falhou: a pasta sem linha fica até a próxima abertura; a fila segue.
+            separationLog(TAG, "não deu para apagar as separações sem linha no banco", e)
+        }
     }
 
     override fun enqueue(songs: List<QueuedSeparation>) {

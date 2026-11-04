@@ -73,9 +73,6 @@ interface SeparationScheduler {
     /** Menos de 4 GB de RAM: a pergunta avisa que pode não funcionar. */
     val lowMemoryDevice: Boolean
 
-    /** Sem a separação neste aparelho (o PC até a etapa 4): a Biblioteca não pergunta antes da partida. */
-    val isAvailable: Boolean get() = true
-
     /** No fim da fila, na ordem dada. */
     fun enqueue(songs: List<QueuedSeparation>)
 

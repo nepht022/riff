@@ -99,7 +99,6 @@ class DesktopSeparationSchedulerTest {
 
         assertFalse(scheduler.waitingForCharger.value)
         assertTrue(scheduler.lowMemoryDevice)
-        assertTrue(scheduler.isAvailable)
     }
 
     @Test

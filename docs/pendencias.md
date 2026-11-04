@@ -101,7 +101,10 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Textos da IA que falam de "celular" no PC: "pode esquentar o celular", "Pode não funcionar neste celular.", "Pouco espaço no celular".
 - As threads nativas do ONNX Runtime ficam em prioridade normal (só a thread que chama é baixa): conferir se a partida engasga com uma separação rodando.
 - O Java do instalador (4e) precisa carregar o ONNX Runtime 1.18 (msvcp140); hoje só conferido no Java do Android Studio.
-- O modelo (130 MB) é lido inteiro para a heap a cada separação (o ORT 1.18 não abre de `ByteBuffer`).
+- O modelo (130 MB) é lido inteiro para a heap a cada separação (o ORT 1.18 não abre de `ByteBuffer`); agora uma cópia só, direto num array do tamanho do recurso.
+- A conta de threads (`processadores lógicos / 2 - 1`) supõe hyper-threading: num PC sem ele usa metade dos núcleos menos um (num de 4 núcleos, 1 thread).
+- Lacunas de teste do PC: a partida não abre os `.m4a` separados nem confere que errar corta só a guitarra (o teste para no `trackLoader`); "Sem separar" na pergunta sem teste no PC; "apagar o mapa apaga a separação" sem teste no PC (depende do `ON DELETE CASCADE` no driver SQLite do PC).
+- Um Riff só por pasta de dados (`riff.lock`, `FileChannel.tryLock`): o segundo mostra "O Riff já está aberto" e sai, sem trazer a janela do primeiro para a frente; nos ~2 s em que o primeiro fecha, o segundo também é recusado. Dois processos de verdade sem teste (o teste usa dois `DesktopGraph` no mesmo processo).
 - O leitor do PC entrega o último bloco AAC inteiro: até 23 ms a mais no fim das faixas separadas (o começo fica alinhado).
 - No diálogo de dificuldade, a primeira seta foca "Cancelar".
 - `DesktopSettingsScreenshotTest` sem a aba da IA.

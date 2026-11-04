@@ -76,7 +76,8 @@ import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDe
 
 /**
  * As dependências do Riff no PC, montadas à mão (no celular quem monta é o Hilt). Banco e preferências ficam em
- * [dataDir]; feche ao sair.
+ * [dataDir]; feche ao sair. Um só por [dataDir]: com outro aberto, falha com [RiffAlreadyOpenException] antes de abrir
+ * o banco e a fila.
  */
 class DesktopGraph(
     dataDir: File,
@@ -99,6 +100,8 @@ class DesktopGraph(
     /** O modelo da guitarra por IA (nos testes, um falso e rápido: nunca o de 130 MB). */
     separationModels: DemucsModelFactory = DesktopSeparation.models(),
 ) : AutoCloseable {
+    // Primeiro a trava: o segundo Riff não chega a abrir o banco nem a apagar os temporários da separação do primeiro.
+    private val instanceLock = InstanceLock.tryAcquire(dataDir) ?: throw RiffAlreadyOpenException(dataDir)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
     private val preferences = RiffPreferences(riffDataStore(File(dataDir, "riff_settings.preferences_pb"), scope))
@@ -109,7 +112,7 @@ class DesktopGraph(
     private val randomRead = FileRandomReadOpener()
     private val folderSource = SngFolderSource(FileFolderSource(), randomRead)
     val settings: SettingsRepository = PreferencesSettingsRepository(preferences)
-    val languages = DesktopAppLanguageStore(File(dataDir, "language.txt"))
+    val languages = DesktopAppLanguageStore(File(dataDir, LANGUAGE_FILE))
     val libraryFolderStore: LibraryFolderStore = PreferencesLibraryFolderStore(preferences)
     val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
@@ -142,6 +145,7 @@ class DesktopGraph(
             lowMemoryDevice = device.lowMemory,
             separationsDir = separationsDir,
             scratch = separationScratch,
+            pruneOrphans = separations::pruneOrphans,
         )
     }
 
@@ -245,14 +249,24 @@ class DesktopGraph(
     /** O controle do PC, lido na própria thread desde a abertura do jogo. */
     val gamepad = GlfwGamepad(padSource)
 
-    /** Fecha o Riff: a separação da vez é cancelada (volta à fila, nada pela metade) antes de o banco fechar. */
+    /**
+     * Fecha o Riff: a separação da vez é cancelada (volta à fila, nada pela metade) antes de o banco fechar; a trava
+     * sai por último (um Riff aberto nesse meio-tempo é recusado).
+     */
     override fun close() {
-        separationScheduler.close()
-        gamepad.close()
-        database.close()
-        scope.cancel()
+        try {
+            separationScheduler.close()
+            gamepad.close()
+            database.close()
+            scope.cancel()
+        } finally {
+            instanceLock.close()
+        }
     }
 }
 
 private const val NANOS_PER_MS = 1_000_000L
 private const val LIBRARIES_JSON = "/aboutlibraries.json"
+
+/** Outro Riff já está aberto com a mesma pasta de dados. */
+class RiffAlreadyOpenException(dataDir: File) : IllegalStateException("o Riff já está aberto com $dataDir")
