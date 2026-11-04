@@ -171,9 +171,15 @@ private fun currentName(choice: LookChoice, look: TrackLook): String = when (cho
 }
 
 @Composable
-internal fun ChoiceRow(title: String, value: String, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun ChoiceRow(
+    title: String,
+    value: String,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).focusHighlight().clickable(
+        modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).focusHighlight().clickable(
             enabled = enabled,
             onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
         ).padding(vertical = Spacing.md),

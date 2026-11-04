@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -33,7 +34,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.tabLeaves
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.report.resources.Res
@@ -106,7 +110,7 @@ fun ReportContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         // Sem som aqui: a navegação toca o de voltar ao sair da tela (com ele, soava duas vezes).
-        TextButton(onClick = onBack) {
+        TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.report_back), color = RiffColors.Paper)
         }
         PosterTitle(stringResource(Res.string.report_title), style = MaterialTheme.typography.displaySmall)
@@ -157,6 +161,7 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
                 selected = kind == state.kind,
                 onClick = withMenuSound(MenuSound.NAVIGATE) { inputs.onKind(kind) },
                 label = { Text(kindName(kind)) },
+                modifier = Modifier.focusHighlight(FilterChipDefaults.shape),
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = RiffColors.TourRed,
                     selectedLabelColor = RiffColors.Paper,
@@ -172,7 +177,8 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
         onValueChange = inputs.onText,
         label = { Text(stringResource(textLabel(state.kind))) },
         minLines = TEXT_LINES,
-        modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.TEXT),
+        // No PC ↑/↓ andam no texto (várias linhas); Tab e Shift+Tab saem do campo.
+        modifier = Modifier.tabLeaves().fillMaxWidth().testTag(ReportTestTags.TEXT),
     )
     if (state.kind == ReportKind.OTHER) {
         OutlinedTextField(
@@ -180,7 +186,8 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
             onValueChange = inputs.onCustomCategory,
             label = { Text(stringResource(Res.string.report_custom_category)) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.CUSTOM_CATEGORY),
+            // Uma linha: no PC ↑/↓ saem do campo, como no filtro da Biblioteca.
+            modifier = Modifier.upDownLeave().fillMaxWidth().testTag(ReportTestTags.CUSTOM_CATEGORY),
         )
     }
     OutlinedTextField(
@@ -197,7 +204,7 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
         isError = state.contactInvalid,
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        modifier = Modifier.fillMaxWidth().testTag(ReportTestTags.CONTACT),
+        modifier = Modifier.upDownLeave().fillMaxWidth().testTag(ReportTestTags.CONTACT),
     )
     // Para onde vai e para que serve o email, antes de enviar (LGPD).
     Text(
@@ -213,7 +220,7 @@ private fun ReportForm(state: ReportUiState, inputs: ReportInputs) {
 private fun DeviceRow(device: DeviceInfo, include: Boolean, onChange: (Boolean) -> Unit) {
     // A linha toda liga e desliga, e o leitor de tela lê o nome junto com o estado.
     Row(
-        Modifier.fillMaxWidth().toggleable(
+        Modifier.fillMaxWidth().focusHighlight().toggleable(
             value = include,
             role = Role.Switch,
             onValueChange = withMenuSound(MenuSound.NAVIGATE, onChange),

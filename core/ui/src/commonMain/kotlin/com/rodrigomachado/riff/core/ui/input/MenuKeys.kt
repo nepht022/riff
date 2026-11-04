@@ -8,6 +8,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyInputModifierNode
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
@@ -137,6 +138,40 @@ private class UpDownLeaveNode :
             else -> return false
         }
         if (event.type == KeyEventType.KeyDown) currentValueOf(LocalFocusManager).moveFocus(direction)
+        return true
+    }
+
+    override fun onKeyEvent(event: KeyEvent): Boolean = false
+}
+
+/**
+ * Num campo de várias linhas, onde ↑/↓ andam no texto, nos menus do PC Tab e Shift+Tab levam o foco ao próximo item
+ * e ao anterior (sem escrever a tabulação): a saída do campo pelo teclado. Vem antes do componente. No celular é
+ * `this`.
+ */
+fun Modifier.tabLeaves(): Modifier = if (menuKeysEnabled) this then TabLeavesElement else this
+
+private data object TabLeavesElement : ModifierNodeElement<TabLeavesNode>() {
+    override fun create() = TabLeavesNode()
+
+    override fun update(node: TabLeavesNode) = Unit
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "tabLeaves"
+    }
+}
+
+private class TabLeavesNode :
+    Modifier.Node(),
+    KeyInputModifierNode,
+    CompositionLocalConsumerModifierNode {
+    // Antes do campo: ele não vê o Tab (nem o caractere que viria dele).
+    override fun onPreKeyEvent(event: KeyEvent): Boolean {
+        if (event.key != Key.Tab) return false
+        if (event.type == KeyEventType.KeyDown) {
+            val direction = if (event.isShiftPressed) FocusDirection.Previous else FocusDirection.Next
+            currentValueOf(LocalFocusManager).moveFocus(direction)
+        }
         return true
     }
 

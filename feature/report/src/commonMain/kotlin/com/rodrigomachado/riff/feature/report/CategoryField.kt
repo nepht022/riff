@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -27,7 +28,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.report.resources.Res
@@ -47,6 +50,7 @@ internal fun CategoryField(
     Row(
         Modifier.fillMaxWidth()
             .border(1.dp, if (selected == null) RiffColors.PaperDim else RiffColors.Paper, FIELD_SHAPE)
+            .focusHighlight(FIELD_SHAPE)
             .clickable(role = Role.DropdownList, onClick = withMenuSound(MenuSound.NAVIGATE) { open = true })
             .padding(horizontal = Spacing.md, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
@@ -62,6 +66,8 @@ internal fun CategoryField(
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
+            // No PC as setas andam pela lista, Enter escolhe e o Esc fecha só a lista (sem sair do Reportar).
+            modifier = Modifier.menuKeys(onBack = { open = false }),
             title = { Text(stringResource(Res.string.report_category_title)) },
             text = {
                 Column(
@@ -69,35 +75,43 @@ internal fun CategoryField(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     for (category in categories) {
-                        Row(
-                            // "Selecionado" é lido pelo leitor de tela na opção marcada.
-                            Modifier.fillMaxWidth().selectable(
-                                selected = category == selected,
-                                role = Role.RadioButton,
-                                onClick = withMenuSound(MenuSound.NAVIGATE) {
-                                    open = false
-                                    onChoose(category)
-                                },
-                            ).padding(vertical = Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        ) {
-                            RadioButton(
-                                selected = category == selected,
-                                onClick = null,
-                                colors = RadioButtonDefaults.colors(selectedColor = RiffColors.TourRed),
-                            )
-                            Text(categoryName(category), style = MaterialTheme.typography.bodyLarge)
+                        CategoryOption(category, category == selected) {
+                            open = false
+                            onChoose(category)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = withMenuSound(MenuSound.BACK) { open = false }) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.BACK) { open = false },
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.report_category_close))
                 }
             },
         )
+    }
+}
+
+/** Uma opção da lista; "Selecionado" é lido pelo leitor de tela na marcada. */
+@Composable
+private fun CategoryOption(category: ReportCategory, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().focusHighlight().selectable(
+            selected = selected,
+            role = Role.RadioButton,
+            onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
+        ).padding(vertical = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null,
+            colors = RadioButtonDefaults.colors(selectedColor = RiffColors.TourRed),
+        )
+        Text(categoryName(category), style = MaterialTheme.typography.bodyLarge)
     }
 }
 

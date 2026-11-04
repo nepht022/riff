@@ -18,6 +18,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.roborazzi)
+    alias(libs.plugins.aboutlibraries.jvm)
 }
 
 java {
@@ -38,6 +39,8 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:calibration"))
     implementation(project(":feature:search"))
+    implementation(project(":feature:report"))
+    implementation(project(":feature:licenses"))
     implementation(project(":core:encore"))
     implementation(project(":core:game"))
     implementation(project(":core:data"))
@@ -63,6 +66,16 @@ dependencies {
     // Os pacotes .sng do Encore falso da pesquisa.
     testImplementation(testFixtures(project(":core:chart")))
 }
+
+// A lista das bibliotecas que vão no app do PC (o que o Gradle põe no runtimeClasspath), gerada no build pelo
+// AboutLibraries e lida pela tela de Licenças nos recursos (aboutlibraries.json). O celular tem a sua, no :app.
+val librariesDir = layout.buildDirectory.dir("generated/aboutLibraries/desktop")
+aboutLibraries {
+    export {
+        outputFile = librariesDir.map { it.file("aboutlibraries.json") }
+    }
+}
+sourceSets["main"].resources.srcDir(files(librariesDir).builtBy("exportLibraryDefinitions"))
 
 compose.desktop {
     application {

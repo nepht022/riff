@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -40,6 +41,10 @@ import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
+import com.rodrigomachado.riff.feature.licenses.LicensesRoute
+import com.rodrigomachado.riff.feature.licenses.LicensesScreen
+import com.rodrigomachado.riff.feature.report.ReportRoute
+import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
@@ -50,10 +55,10 @@ import com.rodrigomachado.riff.feature.settings.SettingsTab
 import java.util.Locale
 
 /**
- * O Riff no PC: tela inicial, Biblioteca, pesquisa no Encore, partida, resultado e Configurações; Ranking e Reportar
- * vêm depois. Fora da partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o
- * foco, Esc volta. O controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela
- * (nulo: o controle só vale na partida e na escolha de botão).
+ * O Riff no PC: tela inicial, Biblioteca, pesquisa no Encore, partida, resultado, Configurações, Reportar e Licenças;
+ * o Ranking vem depois. Fora da partida (que tem as próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas
+ * movem o foco, Esc volta. O controle anda também, virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à
+ * janela (nulo: o controle só vale na partida e na escolha de botão).
  */
 @Composable
 fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null) {
@@ -111,7 +116,7 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
                     onSolo = { navController.navigate(LibraryRoute) },
                     onRanking = {},
                     onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
-                    onReport = {},
+                    onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
                     // Na tela inicial o Esc não faz nada (fechar o jogo é pela janela).
                     modifier = Modifier.menuKeys(onBack = null),
                 )
@@ -130,6 +135,7 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
             searchDestination(graph, navController)
             matchDestinations(graph, navController)
             settingsDestinations(graph, navController)
+            reportDestination(graph, navController)
         }
     }
 }
@@ -186,8 +192,8 @@ private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController
 }
 
 /**
- * As Configurações e a calibração, como no celular, sem o que no PC é da etapa 4: a aba da guitarra por IA, o nome no
- * ranking e as Licenças. No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração
+ * As Configurações, a calibração e as Licenças, como no celular, sem o que no PC é da etapa 4: a aba da guitarra por
+ * IA e o nome no ranking. No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração
  * só volta às Configurações.
  */
 private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navController: NavHostController) {
@@ -198,7 +204,7 @@ private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navControl
             viewModel = viewModel { graph.settingsViewModel() },
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
             onRankingName = {},
-            onLicenses = null,
+            onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
             tabs = SettingsTab.entries - SettingsTab.AI,
         )
     }
@@ -208,6 +214,27 @@ private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navControl
             viewModel = viewModel { graph.calibrationViewModel() },
             // Medindo, o Esc fica na área de medição (para a medição); fora dela, volta.
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+        )
+    }
+    composable<LicensesRoute> {
+        LicensesScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            viewModel = viewModel { graph.licensesViewModel() },
+        )
+    }
+}
+
+/**
+ * O Reportar, aberto pelo envelope da tela inicial: o mesmo formulário e o mesmo script do celular. O que foi escrito
+ * fica enquanto a tela existir (trocar o idioma não apaga). Esc volta; com a lista de categorias aberta, só a fecha.
+ */
+private fun NavGraphBuilder.reportDestination(graph: DesktopGraph, navController: NavHostController) {
+    composable<ReportRoute> {
+        ReportScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            viewModel = viewModel { graph.reportViewModel(createSavedStateHandle()) },
         )
     }
 }

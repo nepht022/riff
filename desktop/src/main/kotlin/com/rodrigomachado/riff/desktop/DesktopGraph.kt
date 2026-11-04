@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.desktop
 
+import androidx.lifecycle.SavedStateHandle
 import com.rodrigomachado.riff.core.audio.AudioSinkFactory
 import com.rodrigomachado.riff.core.audio.ClipMenuSounds
 import com.rodrigomachado.riff.core.audio.ClipSfxPlayer
@@ -47,6 +48,15 @@ import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
+import com.rodrigomachado.riff.feature.licenses.DesktopLicenseSource
+import com.rodrigomachado.riff.feature.licenses.LicensesViewModel
+import com.rodrigomachado.riff.feature.report.AppsScriptReportSender
+import com.rodrigomachado.riff.feature.report.DesktopDeviceInfo
+import com.rodrigomachado.riff.feature.report.JsonPost
+import com.rodrigomachado.riff.feature.report.ReportConfig
+import com.rodrigomachado.riff.feature.report.ReportCooldown
+import com.rodrigomachado.riff.feature.report.ReportViewModel
+import com.rodrigomachado.riff.feature.report.UrlConnectionJsonPost
 import com.rodrigomachado.riff.feature.results.ResultsViewModel
 import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
@@ -74,6 +84,10 @@ class DesktopGraph(
     padSource: PadSource = GlfwPadSource(),
     /** A conversa com o Encore (nos testes, um Encore falso: nunca a rede). */
     encoreTransport: HttpTransport = UrlConnectionTransport(),
+    /** O script do Reportar (o mesmo do celular, do local.properties; vazio: o envio não está configurado). */
+    reportUrl: String = ReportConfig.REPORT_URL,
+    /** O POST dos relatos (nos testes, um script falso: nunca um relato de verdade). */
+    reportTransport: JsonPost = UrlConnectionJsonPost,
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val database = riffDatabase(File(dataDir, "riff.db"))
@@ -159,6 +173,20 @@ class DesktopGraph(
 
     fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
 
+    // O Reportar: o mesmo script do celular; a espera entre relatos vale para o app inteiro (um só relógio).
+    private val reportSender = AppsScriptReportSender(reportUrl, reportTransport)
+    private val reportCooldown = ReportCooldown()
+    private val deviceInfo = DesktopDeviceInfo(language = { languages.current.tag })
+
+    /** O formulário do Reportar; [saved] guarda o que foi escrito enquanto a tela existir. */
+    fun reportViewModel(saved: SavedStateHandle = SavedStateHandle()) =
+        ReportViewModel(saved, reportSender, reportCooldown, deviceInfo)
+
+    /** Licenças e privacidade: a lista das bibliotecas gerada no build do app do PC (aboutlibraries.json). */
+    fun licensesViewModel() = LicensesViewModel(
+        DesktopLicenseSource { DesktopGraph::class.java.getResource(LIBRARIES_JSON)?.readText() },
+    )
+
     /** O controle do PC, lido na própria thread desde a abertura do jogo. */
     val gamepad = GlfwGamepad(padSource)
 
@@ -170,3 +198,4 @@ class DesktopGraph(
 }
 
 private const val NANOS_PER_MS = 1_000_000L
+private const val LIBRARIES_JSON = "/aboutlibraries.json"

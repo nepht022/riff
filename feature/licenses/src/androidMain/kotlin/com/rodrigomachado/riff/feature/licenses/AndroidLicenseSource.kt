@@ -3,7 +3,6 @@ package com.rodrigomachado.riff.feature.licenses
 import android.content.Context
 import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.util.withContext
-import com.rodrigomachado.riff.feature.licenses.resources.Res
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,28 +17,11 @@ import javax.inject.Inject
  * AboutLibraries.
  */
 class AndroidLicenseSource @Inject constructor(@ApplicationContext private val context: Context) : LicenseSource {
-    override suspend fun content() = withContext(Dispatchers.IO) {
-        CONTENT.map { LicenseEntry(it.name, it.author, it.license, it.file?.let { file -> licenseText(file) }) }
-    }
+    override suspend fun content() = withContext(Dispatchers.IO) { CONTENT.toEntries() }
 
     override suspend fun libraries() = withContext(Dispatchers.IO) {
-        Libs.Builder().withContext(context).build().libraries
-            .filter { it.uniqueId !in IN_CONTENT }
-            .map { library ->
-                val licenses = library.licenses
-                LicenseEntry(
-                    name = library.name,
-                    author = library.organization?.name ?: library.developers.mapNotNull { it.name }.joinToString(),
-                    license = licenses.joinToString { it.name },
-                    text = licenses.mapNotNull { it.licenseContent }.joinToString("\n\n").ifBlank { null },
-                )
-            }
-            .sortedBy { it.name.lowercase() }
+        Libs.Builder().withContext(context).build().libraries.toEntries(IN_CONTENT)
     }
-
-    private suspend fun licenseText(file: String) = Res.readBytes("files/licencas/$file").decodeToString()
-
-    private data class Item(val name: String, val author: String, val license: String, val file: String?)
 
     private companion object {
         /** Itens que ficam só na lista manual, com o aviso de copyright de verdade. */
@@ -55,21 +37,26 @@ class AndroidLicenseSource @Inject constructor(@ApplicationContext private val c
         )
 
         val CONTENT = listOf(
-            Item("Demucs v4 (htdemucs_6s)", "Meta Platforms", "MIT", "demucs.txt"),
-            Item("demucs.onnx", "Sevag Hanssian", "MIT", "demucs-onnx.txt"),
-            Item("ONNX Runtime", "Microsoft Corporation", "MIT", "onnxruntime.txt"),
-            Item("JTransforms", "Piotr Wendykier", "BSD 2-Clause", "jtransforms.txt"),
-            Item("JLargeArrays", "University of Warsaw, ICM; visnow.org", "BSD 2-Clause", "jlargearrays.txt"),
-            Item("Protocol Buffers", "Google", "BSD 3-Clause", "protobuf.txt"),
-            Item("New Rocker", "Pablo Impallari, Brenda Gallo", "SIL Open Font License 1.1", "new-rocker-ofl.txt"),
-            Item("Oswald", "The Oswald Project Authors", "SIL Open Font License 1.1", "oswald-ofl.txt"),
-            Item(
+            ManualItem("Demucs v4 (htdemucs_6s)", "Meta Platforms", "MIT", "demucs.txt"),
+            ManualItem("demucs.onnx", "Sevag Hanssian", "MIT", "demucs-onnx.txt"),
+            ManualItem("ONNX Runtime", "Microsoft Corporation", "MIT", "onnxruntime.txt"),
+            ManualItem("JTransforms", "Piotr Wendykier", "BSD 2-Clause", "jtransforms.txt"),
+            ManualItem("JLargeArrays", "University of Warsaw, ICM; visnow.org", "BSD 2-Clause", "jlargearrays.txt"),
+            ManualItem("Protocol Buffers", "Google", "BSD 3-Clause", "protobuf.txt"),
+            ManualItem(
+                "New Rocker",
+                "Pablo Impallari, Brenda Gallo",
+                "SIL Open Font License 1.1",
+                "new-rocker-ofl.txt",
+            ),
+            ManualItem("Oswald", "The Oswald Project Authors", "SIL Open Font License 1.1", "oswald-ofl.txt"),
+            ManualItem(
                 "Gravações de guitarra (Freesound)",
                 "chiller345, SpeedY, gazbooth, Joao_Janz",
                 "CC0 1.0",
                 "cc0-1.0.txt",
             ),
-            Item("Mapas do Encore (enchor.us)", "Comunidade do Clone Hero", "De cada autor", null),
+            ManualItem("Mapas do Encore (enchor.us)", "Comunidade do Clone Hero", "De cada autor", null),
         )
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -33,7 +35,6 @@ import com.rodrigomachado.riff.feature.licenses.resources.licenses_back
 import com.rodrigomachado.riff.feature.licenses.resources.licenses_content
 import com.rodrigomachado.riff.feature.licenses.resources.licenses_libraries
 import com.rodrigomachado.riff.feature.licenses.resources.licenses_privacy
-import com.rodrigomachado.riff.feature.licenses.resources.licenses_privacy_text
 import com.rodrigomachado.riff.feature.licenses.resources.licenses_title
 import org.jetbrains.compose.resources.stringResource
 
@@ -58,13 +59,15 @@ fun LicensesContent(state: LicensesUiState, onBack: () -> Unit, modifier: Modifi
     ) {
         // Sem som aqui: a navegação toca o de voltar ao sair da tela.
         item {
-            TextButton(onClick = onBack) { Text(stringResource(Res.string.licenses_back), color = RiffColors.Paper) }
+            TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
+                Text(stringResource(Res.string.licenses_back), color = RiffColors.Paper)
+            }
         }
         item { PosterTitle(stringResource(Res.string.licenses_title), style = MaterialTheme.typography.displaySmall) }
         item { Heading(stringResource(Res.string.licenses_privacy)) }
         item {
             Text(
-                stringResource(Res.string.licenses_privacy_text),
+                stringResource(privacyText),
                 style = MaterialTheme.typography.bodyMedium,
                 color = RiffColors.Paper,
             )
@@ -82,8 +85,9 @@ private fun LazyListScope.entries(
 ) {
     if (list.isEmpty()) return
     item { Heading(title) }
-    for (entry in list) {
-        val key = "$title/${entry.name}"
+    for ((index, entry) in list.withIndex()) {
+        // Com a posição: no PC há nomes repetidos (o androidx e o fork da JetBrains, como "Lifecycle Runtime").
+        val key = "$title/$index/${entry.name}"
         val open = key in opened
         item(key = key) { Entry(entry) { toggle(key) } }
         val text = entry.text
@@ -121,7 +125,9 @@ private fun Entry(entry: LicenseEntry, onToggle: () -> Unit) {
                 if (text == null) {
                     Modifier
                 } else {
-                    Modifier.clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onToggle))
+                    // No PC o item com texto é focado pelas setas e abre com o Enter.
+                    Modifier.focusHighlight(MaterialTheme.shapes.small)
+                        .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onToggle))
                 },
             )
             .padding(Spacing.md),
