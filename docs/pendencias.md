@@ -94,6 +94,13 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4a: pesquisa no Encore (2026-11-03)
+
+- Teste no Windows com uma pesquisa e um download de verdade: o usuário seguiu sem relatar o resultado.
+- Download interrompido no PC (fechar a pesquisa no meio, rede caindo) sem teste próprio: o downloader comum apaga o `.part`; conferir que nenhum `.sng` pela metade fica na biblioteca.
+- O seletor de pasta existe repetido na Biblioteca e na pesquisa (a pesquisa abre na pasta atual); juntar em `:core:ui` com um `startAt` opcional.
+- Baseline Profile do celular ainda cita `SearchViewModel_HiltModules` (regenerar com os outros).
+
 ## Riff no Windows, etapa 3c: navegação sem mouse (2026-11-03)
 
 - O controle nos menus (direcional, ✕, ○) só foi testado com controle falso e uma janela de teste: vai junto do teste com o controle (3a).
