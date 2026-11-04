@@ -22,6 +22,36 @@ class RankingScreenshotTest {
     }
 
     @Test
+    fun linkCode() = snapshot("Ranking_link_code") {
+        PlayerNameDialog(
+            PlayerNameUiState(
+                name = "Rodrigo",
+                hasName = true,
+                step = NameStep.SHOW_CODE,
+                linkCode = "K7QM4X",
+                secondsLeft = 545,
+            ),
+            onName = {},
+            onSave = {},
+            onLater = null,
+        )
+    }
+
+    @Test
+    fun linkEnter() = snapshot("Ranking_link_enter") {
+        PlayerNameDialog(
+            PlayerNameUiState(
+                step = NameStep.ENTER_CODE,
+                code = "k7qm4x",
+                linkError = com.rodrigomachado.riff.core.data.ranking.LinkResult.InvalidCode,
+            ),
+            onName = {},
+            onSave = {},
+            onLater = {},
+        )
+    }
+
+    @Test
     fun songs() = snapshot("Ranking_songs") {
         RankingSongsContent(
             RankingSongsUiState(

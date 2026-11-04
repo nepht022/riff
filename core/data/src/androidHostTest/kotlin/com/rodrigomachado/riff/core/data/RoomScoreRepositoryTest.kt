@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.rodrigomachado.riff.core.database.ChartEntity
 import com.rodrigomachado.riff.core.database.RiffDatabase
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -51,5 +52,15 @@ class RoomScoreRepositoryTest {
 
         assertEquals(bestId, scores.best("a", Difficulty.EXPERT)?.id)
         assertNull(scores.best("a", Difficulty.EASY))
+    }
+
+    /** A partida guarda a tabela em que conta no ranking. */
+    @Test
+    fun theRankingTableIsSaved() = runTest {
+        db.chartDao().replace(ChartEntity("a", "t", "b", null, null, null, "u", "CHART", 1), emptyList())
+
+        val id = scores.save(record(1_200).copy(rankingTable = RankingTable.PC_STRUM))
+
+        assertEquals(RankingTable.PC_STRUM, scores.get(id)?.rankingTable)
     }
 }

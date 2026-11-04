@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -38,23 +41,37 @@ import com.rodrigomachado.riff.feature.ranking.resources.ranking_offline
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_players
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_retry
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_search_song
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_nobody
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_pc_no_strum
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_pc_strum
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_phone
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_title
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_your_place
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
+/** [onSong] leva a tabela escolhida, para o placar abrir nela. */
 @Composable
 fun RankingSongsScreen(
     onBack: () -> Unit,
-    onSong: (RankedSong) -> Unit,
+    onSong: (RankedSong, RankingTable) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RankingViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    RankingSongsContent(state, viewModel::onQuery, onSong, viewModel::load, onBack, modifier)
+    RankingSongsContent(
+        state,
+        viewModel::onQuery,
+        { onSong(it, state.table) },
+        viewModel::load,
+        onBack,
+        modifier,
+        viewModel::onTable,
+    )
 }
 
-/** As músicas com pontuação no ranking (maquete D), com a busca por música ou artista. */
+/** As músicas com pontuação no ranking (maquete D), com a busca por música ou artista e a troca de tabela. */
 @Composable
 fun RankingSongsContent(
     state: RankingSongsUiState,
@@ -63,6 +80,7 @@ fun RankingSongsContent(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onTable: (RankingTable) -> Unit = {},
 ) {
     LazyColumn(
         modifier.fillMaxSize(),
@@ -75,20 +93,24 @@ fun RankingSongsContent(
             item { Message(stringResource(Res.string.ranking_not_configured)) }
             return@LazyColumn
         }
+        item { TableChips(state.table, onTable) }
         item { SearchField(state.query, stringResource(Res.string.ranking_search_song), onQuery) }
         if (state.offline) item { Offline(onRetry) }
         if (state.loading && state.songs.isEmpty()) item { Message(stringResource(Res.string.ranking_loading)) }
         if (!state.offline && !state.loading && state.shown.isEmpty()) {
             item { Message(stringResource(Res.string.ranking_empty)) }
         }
-        items(state.shown, key = { it.chartId }) { song -> SongCard(song) { onSong(song) } }
+        items(state.shown, key = { it.chartId }) { song -> SongCard(song, state.table) { onSong(song) } }
     }
 }
 
+/** Os números da [table]; uma música só com gente nas outras tabelas diz que ninguém está nesta. */
 @Composable
-private fun SongCard(song: RankedSong, onClick: () -> Unit) {
-    val players = pluralStringResource(Res.plurals.ranking_players, song.players, song.players)
-    val place = song.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
+private fun SongCard(song: RankedSong, table: RankingTable, onClick: () -> Unit) {
+    val standing = song.inTable(table)
+    val players = standing?.let { pluralStringResource(Res.plurals.ranking_players, it.players, it.players) }
+        ?: stringResource(Res.string.ranking_table_nobody)
+    val place = standing?.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
     Column(
         Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)).padding(Spacing.md),
@@ -100,6 +122,26 @@ private fun SongCard(song: RankedSong, onClick: () -> Unit) {
             color = RiffColors.Ink.copy(alpha = SECONDARY_ALPHA),
         )
     }
+}
+
+/** As três tabelas do ranking, uma por vez (decisão 6 da 4d). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun TableChips(selected: RankingTable, onTable: (RankingTable) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+        verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
+    ) {
+        for (table in RankingTable.entries) {
+            Chip(stringResource(table.label()), table == selected) { onTable(table) }
+        }
+    }
+}
+
+private fun RankingTable.label(): StringResource = when (this) {
+    RankingTable.PHONE -> Res.string.ranking_table_phone
+    RankingTable.PC_STRUM -> Res.string.ranking_table_pc_strum
+    RankingTable.PC_NO_STRUM -> Res.string.ranking_table_pc_no_strum
 }
 
 @Composable

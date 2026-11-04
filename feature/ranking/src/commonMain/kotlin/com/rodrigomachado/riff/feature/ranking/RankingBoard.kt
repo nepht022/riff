@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.BoardLine
 import com.rodrigomachado.riff.core.data.ranking.RankingMetric
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -55,6 +56,7 @@ class BoardActions(
     val onQuery: (String) -> Unit = {},
     val onRetry: () -> Unit = {},
     val onBack: () -> Unit = {},
+    val onTable: (RankingTable) -> Unit = {},
 )
 
 @Composable
@@ -69,12 +71,13 @@ fun RankingBoardScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewMo
             viewModel::onQuery,
             { viewModel.load() },
             onBack,
+            viewModel::onTable,
         ),
         modifier,
     )
 }
 
-/** O placar de um mapa (maquete E): dificuldade, número, sentido, busca por nome e você destacado. */
+/** O placar de um mapa (maquete E): tabela, dificuldade, número, sentido, busca por nome e você destacado. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modifier: Modifier = Modifier) {
@@ -85,6 +88,7 @@ fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modif
     ) {
         item { BackButton(actions.onBack) }
         item { PosterTitle(state.title, style = MaterialTheme.typography.headlineSmall) }
+        item { TableChips(state.table, actions.onTable) }
         item {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),

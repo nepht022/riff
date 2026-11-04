@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.ranking
 
 import com.rodrigomachado.riff.core.data.ranking.ApiAnswer
 import com.rodrigomachado.riff.core.data.ranking.BoardEntry
+import com.rodrigomachado.riff.core.data.ranking.LinkResult
 import com.rodrigomachado.riff.core.data.ranking.NameResult
 import com.rodrigomachado.riff.core.data.ranking.Player
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
@@ -20,6 +21,9 @@ class FakeRanking(override var isConfigured: Boolean = true) : RankingRepository
     var boardAnswer: ApiAnswer<List<BoardEntry>> = ApiAnswer.Ok(emptyList())
     val songQueries = mutableListOf<String>()
     val boardQueries = mutableListOf<String>()
+    var codeAnswer: LinkResult = LinkResult.Code("ABC234", 600)
+    var linkAnswer: LinkResult = LinkResult.Linked("Rodrigo")
+    val linkedCodes = mutableListOf<String>()
 
     override fun askLater() {
         askedLater.value = true
@@ -45,5 +49,12 @@ class FakeRanking(override var isConfigured: Boolean = true) : RankingRepository
     override suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>> {
         boardQueries += chartId
         return boardAnswer
+    }
+    override suspend fun linkCode(): LinkResult = codeAnswer
+
+    override suspend fun link(code: String): LinkResult {
+        linkedCodes += code
+        (linkAnswer as? LinkResult.Linked)?.let { player.value = Player(it.name, "k") }
+        return linkAnswer
     }
 }

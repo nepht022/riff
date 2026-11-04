@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.data.ranking.RankingMetric
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.data.ranking.rankBoard
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -21,6 +22,8 @@ data class RankingSongsUiState(
     val songs: List<RankedSong> = emptyList(),
     val offline: Boolean = false,
     val notConfigured: Boolean = false,
+    /** A tabela dos números de cada música; a lista mostra as músicas com alguém em qualquer tabela. */
+    val table: RankingTable = RankingTable.PHONE,
 ) {
     /** A lista vem uma vez do script; a busca (música ou artista, sem acento) é feita aqui, na hora. */
     val shown: List<RankedSong>
@@ -43,9 +46,13 @@ private val ACCENTS = Regex("\\p{Mn}+")
 private fun String.folded() =
     java.text.Normalizer.normalize(trim(), java.text.Normalizer.Form.NFD).replace(ACCENTS, "").lowercase()
 
-/** As músicas do ranking; no celular o Hilt cria o [HiltRankingViewModel]. */
-open class RankingViewModel(private val ranking: RankingRepository) : ViewModel() {
-    private val ui = MutableStateFlow(RankingSongsUiState(notConfigured = !ranking.isConfigured))
+/**
+ * As músicas do ranking, abertas na [table] do aparelho (vem de fora: o PC diz a do modo atual); no celular o Hilt
+ * cria o [HiltRankingViewModel].
+ */
+open class RankingViewModel(private val ranking: RankingRepository, table: RankingTable = RankingTable.PHONE) :
+    ViewModel() {
+    private val ui = MutableStateFlow(RankingSongsUiState(notConfigured = !ranking.isConfigured, table = table))
     val state: StateFlow<RankingSongsUiState> = ui
 
     init {
@@ -53,6 +60,9 @@ open class RankingViewModel(private val ranking: RankingRepository) : ViewModel(
     }
 
     fun onQuery(query: String) = ui.update { it.copy(query = query) }
+
+    /** A lista já tem todas as tabelas: trocar não volta ao script. */
+    fun onTable(table: RankingTable) = ui.update { it.copy(table = table) }
 
     fun load() {
         viewModelScope.launch {
@@ -75,22 +85,26 @@ data class RankingBoardUiState(
     val board: Board? = null,
     val loading: Boolean = false,
     val offline: Boolean = false,
+    val table: RankingTable = RankingTable.PHONE,
 )
 
 /**
- * O placar do mapa [chartId], aberto na [difficulty] pedida (nome do enum, como na [RankingBoardRoute]); no celular
- * o Hilt cria o [HiltRankingBoardViewModel] com os argumentos da rota.
+ * O placar do mapa [chartId], aberto na [difficulty] pedida (nome do enum, como na [RankingBoardRoute]) e na [table]
+ * que vem de fora (a do aparelho, ou a escolhida na lista); no celular o Hilt cria o [HiltRankingBoardViewModel] com
+ * os argumentos da rota.
  */
 open class RankingBoardViewModel(
     private val chartId: String,
     title: String,
     difficulty: String?,
     private val ranking: RankingRepository,
+    table: RankingTable = RankingTable.PHONE,
 ) : ViewModel() {
     private val ui = MutableStateFlow(
         RankingBoardUiState(
             title = title,
             difficulty = difficulty?.let { name -> Difficulty.entries.firstOrNull { it.name == name } },
+            table = table,
         ),
     )
     val state: StateFlow<RankingBoardUiState> = ui
@@ -110,6 +124,9 @@ open class RankingBoardViewModel(
 
     fun onQuery(query: String) = change { it.copy(query = query) }
 
+    /** Todas as tabelas vêm juntas do script: trocar só remonta o placar. */
+    fun onTable(table: RankingTable) = change { it.copy(table = table) }
+
     fun load() {
         viewModelScope.launch {
             ui.update { it.copy(loading = true, offline = false) }
@@ -127,6 +144,7 @@ open class RankingBoardViewModel(
     private fun change(transform: (RankingBoardUiState) -> RankingBoardUiState) = ui.update {
         val next = transform(it)
         if (next.loading || next.offline) return@update next
-        next.copy(board = rankBoard(entries, next.difficulty, next.metric, next.descending, next.query))
+        val inTable = entries.filter { entry -> entry.table == next.table }
+        next.copy(board = rankBoard(inTable, next.difficulty, next.metric, next.descending, next.query))
     }
 }

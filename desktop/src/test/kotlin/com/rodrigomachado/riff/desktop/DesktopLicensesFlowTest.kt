@@ -52,8 +52,10 @@ class DesktopLicensesFlowTest {
         openLicenses()
 
         composeRule.onNodeWithText("Seus mapas, recordes e configurações ficam no PC", substring = true).assertExists()
-        assertTrue("a privacidade do PC fala do celular", !exists(hasText("celular", substring = true)))
-        assertTrue("a privacidade do PC fala do ranking", !exists(hasText("Ranking", substring = true)))
+        assertTrue("a privacidade do PC é a do celular", !exists(hasText("backup do Android", substring = true)))
+        // O ranking chega ao PC na 4d: o texto diz o que vai para a planilha e o que o vínculo faz.
+        composeRule.onNodeWithText("um código aleatório de cada aparelho", substring = true).assertExists()
+        composeRule.onNodeWithText("juntar vários aparelhos sob o mesmo nome", substring = true).assertExists()
         val names = listOf(AI_MODEL, "demucs.onnx", "ONNX Runtime", "JTransforms", "LWJGL", "GLFW", "Oswald", "FFmpeg")
         for (name in names) {
             scrollTo(name)

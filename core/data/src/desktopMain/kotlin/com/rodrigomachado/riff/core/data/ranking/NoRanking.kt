@@ -30,4 +30,8 @@ object NoRanking : RankingRepository {
     override suspend fun songs(query: String): ApiAnswer<List<RankedSong>> = ApiAnswer.Offline
 
     override suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>> = ApiAnswer.Offline
+
+    override suspend fun linkCode(): LinkResult = LinkResult.Offline
+
+    override suspend fun link(code: String): LinkResult = LinkResult.Offline
 }

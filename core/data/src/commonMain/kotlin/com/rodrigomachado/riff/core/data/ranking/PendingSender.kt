@@ -85,4 +85,5 @@ internal fun RankingPendingEntity.toSubmission() = Submission(
     perfect,
     cleanMs,
     notes,
+    storedTable(rankingTable),
 )

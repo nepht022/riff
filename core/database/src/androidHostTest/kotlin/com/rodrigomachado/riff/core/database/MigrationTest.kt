@@ -303,4 +303,41 @@ class MigrationTest {
             close()
         }
     }
+
+    /** As partidas e a fila do ranking ganham a tabela; as de antes ficam no "celular" (no PC a regra está no app). */
+    @Test
+    fun version13BecomesVersion14WithTheRankingTableOnScoresAndQueue() {
+        helper.createDatabase(13).apply {
+            execSQL(
+                "INSERT INTO charts (id, title, artist, album, charter, durationMs, folderUri, format, " +
+                    "lastSeenScanId, separateGuitar) VALUES ('a', 'T', 'B', NULL, NULL, NULL, 'u', 'CHART', 1, 0)",
+            )
+            execSQL(
+                "INSERT INTO scores (chartId, difficulty, score, accuracy, maxCombo, perfect, good, miss, " +
+                    "playedAtEpochMs, cleanStreakMs) VALUES ('a', 'HARD', 100, 1.0, 1, 1, 0, 0, 1, 500)",
+            )
+            execSQL(
+                "INSERT INTO ranking_pending (scoreId, chartId, difficulty, title, artist, points, accuracy, combo, " +
+                    "perfect, cleanMs, createdAtEpochMs, notes) " +
+                    "VALUES (1, 'a', 'HARD', 'T', 'A', 100, 0.9, 5, 4, NULL, 1, 9)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(14).apply {
+            prepare("SELECT score, cleanStreakMs, rankingTable FROM scores").use {
+                it.step()
+                assertEquals(100L, it.getLong(0))
+                assertEquals(500L, it.getLong(1))
+                assertEquals("celular", it.getText(2))
+            }
+            prepare("SELECT points, notes, rankingTable FROM ranking_pending").use {
+                it.step()
+                assertEquals(100L, it.getLong(0))
+                assertEquals(9L, it.getLong(1))
+                assertEquals("celular", it.getText(2))
+            }
+            close()
+        }
+    }
 }

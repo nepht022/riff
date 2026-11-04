@@ -127,7 +127,7 @@ class PlayerNameTest {
 
         composeRule.onNodeWithText(
             "Seu nome e suas melhores pontuações ficam visíveis para todos que jogam o Riff. " +
-                "O celular é identificado por um código aleatório.",
+                "Cada aparelho é identificado por um código aleatório.",
         ).assertExists()
         composeRule.onNodeWithText("Muitas tentativas agora: tente de novo daqui a uma hora").assertExists()
     }

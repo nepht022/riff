@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
@@ -26,6 +27,8 @@ data class RankingPendingEntity(
     val createdAtEpochMs: Long,
     /** Total de notas da partida; nulo nas filas de antes da medida. */
     val notes: Int? = null,
+    /** A tabela do ranking em que a pontuação conta; as filas de antes da versão 14 ficam "celular". */
+    @ColumnInfo(defaultValue = RANKING_TABLE_PHONE) val rankingTable: String = RANKING_TABLE_PHONE,
 )
 
 @Dao

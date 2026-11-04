@@ -125,7 +125,9 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
     composable<RankingRoute> {
         RankingSongsScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
-            onSong = dropUnlessResumed { song -> navController.navigate(RankingBoardRoute(song.chartId, song.title)) },
+            onSong = dropUnlessResumed { song, table ->
+                navController.navigate(RankingBoardRoute(song.chartId, song.title, table = table.name))
+            },
             viewModel = hiltViewModel<HiltRankingViewModel>(),
         )
     }

@@ -4,6 +4,7 @@ import com.rodrigomachado.riff.core.data.folder.FolderAccessLostException
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -374,5 +375,30 @@ class GameplayViewModelTest : GameplayViewModelTestBase() {
 
         val ready = vm.uiState.value as GameplayUiState.Ready
         assertNull(ready.art)
+    }
+
+    @Test
+    fun onThePhoneTheMatchCountsInThePhoneTable() = runTest {
+        loader.result = { playable() }
+        val viewModel = viewModel()
+
+        viewModel.onSessionFinished()
+
+        assertEquals(RankingTable.PHONE, scores.saved.single().rankingTable)
+        assertEquals(RankingTable.PHONE, ranking.submitted.single().first.rankingTable)
+    }
+
+    /** No PC, a tabela é a do modo em que a partida foi jogada, não a de quando ela termina. */
+    @Test
+    fun onThePcTheMatchCountsInTheTableOfItsMode() = runTest {
+        loader.result = { playable() }
+        settings.update { it.copy(controls = it.controls.copy(strum = false)) }
+        val viewModel = pcViewModel()
+        settings.update { it.copy(controls = it.controls.copy(strum = true)) }
+
+        viewModel.onSessionFinished()
+
+        assertEquals(RankingTable.PC_NO_STRUM, scores.saved.single().rankingTable)
+        assertEquals(RankingTable.PC_NO_STRUM, ranking.submitted.single().first.rankingTable)
     }
 }

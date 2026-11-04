@@ -55,7 +55,12 @@ data class ScoreEntity(
     val playedAtEpochMs: Long,
     /** "Tempo sem errar" em ms; nulo nas partidas de antes da medida. */
     val cleanStreakMs: Long? = null,
+    /** A tabela do ranking (`RankingTable.wire`); as partidas de antes da versão 14 ficam "celular". */
+    @ColumnInfo(defaultValue = RANKING_TABLE_PHONE) val rankingTable: String = RANKING_TABLE_PHONE,
 )
+
+/** O nome da tabela do celular no protocolo do ranking: o padrão das colunas de tabela (versão 14). */
+const val RANKING_TABLE_PHONE = "celular"
 
 /** Ajuste fino de sincronia de um mapa da biblioteca (ms somados ao relógio). Sai junto com o mapa. */
 @Entity(
