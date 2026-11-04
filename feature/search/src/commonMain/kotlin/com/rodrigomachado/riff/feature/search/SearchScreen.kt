@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.search
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,12 +20,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.input.ImeAction
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.download.ChartDownloadException.Reason
@@ -42,6 +48,7 @@ import com.rodrigomachado.riff.core.ui.component.TrackCard
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeysEnabled
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -261,6 +268,11 @@ private fun ResultCard(
     }
 }
 
+/**
+ * O botão do item (Baixar, a barra, Jogar ou Tentar de novo). No PC o foco do teclado segue o item quando ele muda
+ * de estado: o Baixar some ao baixar e, sem isso, o foco voltaria à tela e a próxima seta recomeçaria no Voltar.
+ * Enquanto baixa, a barra é focável (com o destaque); pronto, o foco passa ao Jogar. No celular nada disso existe.
+ */
 @Composable
 private fun ItemAction(
     item: ResultItem,
@@ -268,19 +280,23 @@ private fun ItemAction(
     onDownload: (EncoreChart) -> Unit,
     onChoose: (EncoreChart, ItemState.Ready) -> Unit,
 ) {
+    val follow = followFocus(item.state)
     when (val state = item.state) {
         ItemState.Available -> if (canWrite) {
             PosterButton(
                 stringResource(Res.string.search_download),
                 onClick = { onDownload(item.chart) },
                 sound = MenuSound.CONFIRM,
+                modifier = follow,
             )
         }
 
         is ItemState.Downloading -> LinearProgressIndicator(
             progress = { state.progress },
             color = RiffColors.TourRed,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(
+                if (menuKeysEnabled) follow.focusHighlight(RectangleShape).focusable() else Modifier,
+            ),
         )
 
         is ItemState.Ready -> Row(
@@ -292,6 +308,7 @@ private fun ItemAction(
                 stringResource(Res.string.search_play),
                 onClick = { onChoose(item.chart, state) },
                 sound = MenuSound.CONFIRM,
+                modifier = follow,
             )
         }
 
@@ -299,12 +316,30 @@ private fun ItemAction(
             Text(stringResource(state.reason.message()), color = RiffColors.Paper, modifier = Modifier.weight(1f))
             TextButton(
                 onClick = withMenuSound(MenuSound.CONFIRM) { onDownload(item.chart) },
-                modifier = Modifier.focusHighlight(CircleShape),
+                modifier = follow.focusHighlight(CircleShape),
             ) {
                 Text(stringResource(Res.string.search_retry), color = RiffColors.Paper)
             }
         }
     }
+}
+
+/**
+ * O foco que segue o item (só no PC): o modificador vai no elemento focável de cada estado. Se o elemento do estado
+ * anterior tinha o foco, o do novo estado o recebe. O "tinha o foco" é lido na composição da troca, antes de o
+ * elemento antigo sair (ao sair, ele perde o foco e anotaria `false`).
+ */
+@Composable
+private fun followFocus(state: ItemState): Modifier {
+    if (!menuKeysEnabled) return Modifier
+    val requester = remember { FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val kind = state::class
+    val hadFocus = remember(kind) { focused }
+    LaunchedEffect(kind) {
+        if (hadFocus) requester.requestFocus()
+    }
+    return Modifier.focusRequester(requester).onFocusChanged { focused = it.hasFocus }
 }
 
 private fun Reason.message(): StringResource = when (this) {
