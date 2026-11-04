@@ -23,6 +23,7 @@ import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
 import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.core.data.ranking.RankingTransport
 import com.rodrigomachado.riff.core.encore.HttpResponse
 import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -60,12 +61,18 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
 
     /**
      * O app na tela inicial, com a pasta de mapas já importada; com [pad], o controle já lido, e as teclas que ele
-     * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede).
+     * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede). O
+     * ranking fica ligado e fala com o script falso [ranking] (o padrão: sem internet) em [rankingUrl] (vazio:
+     * desligado, como sem `ranking.url`); sem [askForName], o pedido do nome da primeira abertura já foi respondido com
+     * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes).
      */
     fun openApp(
         pad: PadSource = NoPadSource,
         sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null,
         encore: HttpTransport = NoInternet,
+        ranking: RankingTransport = OfflineRankingScript,
+        rankingUrl: String = TEST_RANKING_URL,
+        askForName: Boolean = false,
     ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
@@ -80,7 +87,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             sfx = SfxPlayerFactory { SilentSfx },
             padSource = pad,
             encoreTransport = encore,
+            rankingUrl = rankingUrl,
+            rankingTransport = ranking,
         ).also { opened = it }
+        if (!askForName) graph.ranking.askLater()
         graph.gamepad.start()
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))

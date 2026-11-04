@@ -7,7 +7,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -21,8 +23,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.rodrigomachado.riff.core.audio.menuSoundsTurnedOn
 import com.rodrigomachado.riff.core.audio.playMenuSound
+import com.rodrigomachado.riff.core.model.Controls
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalSeparation
@@ -44,10 +48,17 @@ import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
 import com.rodrigomachado.riff.feature.licenses.LicensesScreen
+import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
+import com.rodrigomachado.riff.feature.ranking.PlayerNameViewModel
+import com.rodrigomachado.riff.feature.ranking.RankingBoardRoute
+import com.rodrigomachado.riff.feature.ranking.RankingBoardScreen
+import com.rodrigomachado.riff.feature.ranking.RankingRoute
+import com.rodrigomachado.riff.feature.ranking.RankingSongsScreen
 import com.rodrigomachado.riff.feature.report.ReportRoute
 import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.results.ResultsUiState
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
@@ -57,9 +68,10 @@ import java.util.Locale
 
 /**
  * O Riff no PC: tela inicial, Biblioteca (com a guitarra separada por IA), pesquisa no Encore, partida, resultado,
- * Configurações, Reportar e Licenças; o Ranking vem depois. Fora da partida (que tem as próprias teclas), cada tela
- * anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O controle anda também, virando essas teclas
- * ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só vale na partida e na escolha de botão).
+ * Ranking (com o nome e o vínculo por código), Configurações, Reportar e Licenças. Fora da partida (que tem as
+ * próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O controle anda também,
+ * virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só vale na partida e na
+ * escolha de botão).
  */
 @Composable
 fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null) {
@@ -80,6 +92,10 @@ fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)
     if (sendMenuKey != null) PadOnTheMenus(graph, padSuspension, sendMenuKey)
     // Trocar o idioma refaz as telas já no idioma novo (os textos leem o Locale padrão), com a mesma pilha.
     val language by graph.languages.language.collectAsState()
+    // O nome do ranking vive com o app (o pedido da primeira abertura não volta ao trocar o idioma).
+    val playerName = remember(graph) { graph.playerNameViewModel() }
+    // A tabela do modo atual ("Tocar com palheta"), lida na hora de abrir o Ranking; antes de ler, a de fábrica.
+    val currentTable = remember(graph) { { RankingTable.pc(settings.value?.controls?.strum ?: Controls().strum) } }
     RiffTheme {
         CompositionLocalProvider(
             LocalMenuSound provides playMenuSound,
@@ -88,7 +104,7 @@ fun RiffDesktopApp(graph: DesktopGraph, sendMenuKey: ((awtKeyCode: Int) -> Unit)
             // A palheta da separação por IA no topo das telas, como no celular.
             LocalSeparation provides graph.separationControls,
         ) {
-            key(language) { DesktopScreens(graph, navController) }
+            key(language) { DesktopScreens(graph, navController, playerName, currentTable) }
         }
     }
 }
@@ -110,14 +126,25 @@ private fun PadOnTheMenus(graph: DesktopGraph, suspension: PadMenuSuspension, se
     }
 }
 
+/**
+ * As telas e, por cima delas, o nome do ranking como no celular: pedido na primeira abertura (ranking configurado e
+ * ainda sem nome) e trocado pelas Configurações ou pelo convite do Resultado ([renaming]).
+ */
 @Composable
-private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController) {
+private fun DesktopScreens(
+    graph: DesktopGraph,
+    navController: NavHostController,
+    playerName: PlayerNameViewModel,
+    currentTable: () -> RankingTable,
+) {
+    var renaming by remember { mutableStateOf(false) }
+    val chooseName = { renaming = true }
     StageBackground(Modifier.fillMaxSize()) {
         NavHost(navController, startDestination = HomeRoute) {
             composable<HomeRoute> {
                 HomeScreen(
                     onSolo = { navController.navigate(LibraryRoute) },
-                    onRanking = {},
+                    onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
                     onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
                     onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
                     // Na tela inicial o Esc não faz nada (fechar o jogo é pela janela).
@@ -136,10 +163,44 @@ private fun DesktopScreens(graph: DesktopGraph, navController: NavHostController
                 )
             }
             searchDestination(graph, navController)
-            matchDestinations(graph, navController)
-            settingsDestinations(graph, navController)
+            matchDestinations(graph, navController, chooseName)
+            rankingDestinations(graph, navController, currentTable)
+            settingsDestinations(graph, navController, chooseName)
             reportDestination(graph, navController)
         }
+    }
+    PlayerNameGate(renaming = renaming, onRenameClosed = { renaming = false }, viewModel = playerName)
+}
+
+/**
+ * O ranking: as músicas, abertas na tabela do modo atual ([currentTable]), e o placar de cada uma, na tabela escolhida
+ * na lista (ou, vindo do Resultado, na da partida). Esc volta; os chips de tabela andam com as setas e Enter.
+ */
+private fun NavGraphBuilder.rankingDestinations(
+    graph: DesktopGraph,
+    navController: NavHostController,
+    currentTable: () -> RankingTable,
+) {
+    composable<RankingRoute> {
+        RankingSongsScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onSong = dropUnlessResumed { song, table ->
+                navController.navigate(RankingBoardRoute(song.chartId, song.title, table = table.name))
+            },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            viewModel = viewModel { graph.rankingViewModel(currentTable()) },
+        )
+    }
+    composable<RankingBoardRoute> { entry ->
+        val route = entry.toRoute<RankingBoardRoute>()
+        RankingBoardScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            viewModel = viewModel {
+                val table = RankingTable.entries.firstOrNull { it.name == route.table } ?: currentTable()
+                graph.rankingBoardViewModel(route.chartId, route.title, route.difficulty, table)
+            },
+        )
     }
 }
 
@@ -163,10 +224,15 @@ private fun NavGraphBuilder.searchDestination(graph: DesktopGraph, navController
 
 /**
  * A partida e o resultado, com a mesma pilha do celular: o Resultado toma o lugar da partida e "Jogar de novo", o do
- * Resultado (Biblioteca → Partida → Resultado → Biblioteca, sem tela repetida). O ranking no PC é da etapa 4: o
- * Resultado não mostra o cartão, e as ações dele não fazem nada.
+ * Resultado (Biblioteca → Partida → Resultado → Biblioteca, sem tela repetida). O Resultado mostra o ranking como
+ * no celular (a posição, "vai quando der" ou o convite para escolher um nome, [onChooseName]); "Ver ranking" abre o
+ * placar na tabela da partida.
  */
-private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController: NavHostController) {
+private fun NavGraphBuilder.matchDestinations(
+    graph: DesktopGraph,
+    navController: NavHostController,
+    onChooseName: () -> Unit,
+) {
     composable<GameplayRoute> { entry ->
         val route = entry.toRoute<GameplayRoute>()
         GameplayScreen(
@@ -181,6 +247,7 @@ private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController
     }
     composable<ResultsRoute> { entry ->
         val route = entry.toRoute<ResultsRoute>()
+        val results = viewModel { graph.resultsViewModel(route.scoreId) }
         ResultsScreen(
             onPlayAgain = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name)) {
@@ -188,25 +255,34 @@ private fun NavGraphBuilder.matchDestinations(graph: DesktopGraph, navController
                 }
             },
             onDone = dropUnlessResumed { navController.popBackStack() },
-            viewModel = viewModel { graph.resultsViewModel(route.scoreId) },
+            onChooseName = onChooseName,
+            onSeeRanking = dropUnlessResumed { chartId, title, difficulty ->
+                val table = (results.uiState.value as? ResultsUiState.Ready)?.record?.rankingTable
+                navController.navigate(RankingBoardRoute(chartId, title, difficulty.name, table?.name))
+            },
+            viewModel = results,
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
         )
     }
 }
 
 /**
- * As Configurações (com os Controles e a guitarra por IA), a calibração e as Licenças, como no celular, sem o nome no
- * ranking (etapa 4). No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a calibração só
- * volta às Configurações.
+ * As Configurações (com os Controles, a guitarra por IA e o nome no ranking, [onRankingName]), a calibração e as
+ * Licenças, como no celular. No PC a volta não tem som (não há o `BackNavigation` do celular), então Salvar a
+ * calibração só volta às Configurações.
  */
-private fun NavGraphBuilder.settingsDestinations(graph: DesktopGraph, navController: NavHostController) {
+private fun NavGraphBuilder.settingsDestinations(
+    graph: DesktopGraph,
+    navController: NavHostController,
+    onRankingName: () -> Unit,
+) {
     composable<SettingsRoute> {
         SettingsScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
             onCalibrate = dropUnlessResumed { navController.navigate(CalibrationRoute) },
             viewModel = viewModel { graph.settingsViewModel() },
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
-            onRankingName = {},
+            onRankingName = onRankingName,
             onLicenses = dropUnlessResumed { navController.navigate(LicensesRoute) },
             tabs = SettingsTab.entries,
         )

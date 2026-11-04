@@ -13,6 +13,7 @@ import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
 import com.rodrigomachado.riff.core.data.PreferencesLibraryFolderStore
 import com.rodrigomachado.riff.core.data.PreferencesSettingsRepository
+import com.rodrigomachado.riff.core.data.RankingConfig
 import com.rodrigomachado.riff.core.data.RoomAiSeparationRepository
 import com.rodrigomachado.riff.core.data.RoomChartOffsetRepository
 import com.rodrigomachado.riff.core.data.RoomChartRepository
@@ -32,7 +33,13 @@ import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
 import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
-import com.rodrigomachado.riff.core.data.ranking.NoRanking
+import com.rodrigomachado.riff.core.data.ranking.AppsScriptRankingRepository
+import com.rodrigomachado.riff.core.data.ranking.DataStorePlayerStore
+import com.rodrigomachado.riff.core.data.ranking.RankingApi
+import com.rodrigomachado.riff.core.data.ranking.RankingRepository
+import com.rodrigomachado.riff.core.data.ranking.RankingTransport
+import com.rodrigomachado.riff.core.data.ranking.RoomScoreHistory
+import com.rodrigomachado.riff.core.data.ranking.UrlConnectionRankingTransport
 import com.rodrigomachado.riff.core.database.riffDatabase
 import com.rodrigomachado.riff.core.datastore.RiffPreferences
 import com.rodrigomachado.riff.core.datastore.riffDataStore
@@ -41,6 +48,7 @@ import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.encore.UrlConnectionTransport
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.separation.DemucsModelFactory
 import com.rodrigomachado.riff.core.separation.DesktopSeparation
 import com.rodrigomachado.riff.core.separation.DesktopSeparationScheduler
@@ -57,6 +65,9 @@ import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
 import com.rodrigomachado.riff.feature.licenses.DesktopLicenseSource
 import com.rodrigomachado.riff.feature.licenses.LicensesViewModel
+import com.rodrigomachado.riff.feature.ranking.PlayerNameViewModel
+import com.rodrigomachado.riff.feature.ranking.RankingBoardViewModel
+import com.rodrigomachado.riff.feature.ranking.RankingViewModel
 import com.rodrigomachado.riff.feature.report.AppsScriptReportSender
 import com.rodrigomachado.riff.feature.report.DesktopDeviceInfo
 import com.rodrigomachado.riff.feature.report.JsonPost
@@ -71,6 +82,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.File
 import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDeviceInfo
 
@@ -79,6 +91,7 @@ import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDe
  * [dataDir]; feche ao sair. Um só por [dataDir]: com outro aberto, falha com [RiffAlreadyOpenException] antes de abrir
  * o banco e a fila.
  */
+@Suppress("TooManyFunctions") // uma fábrica por tela, como os módulos do Hilt no celular
 class DesktopGraph(
     dataDir: File,
     /** Os sons dos botões (nos testes, um que só anota). */
@@ -99,6 +112,13 @@ class DesktopGraph(
     reportTransport: JsonPost = UrlConnectionJsonPost,
     /** O modelo da guitarra por IA (nos testes, um falso e rápido: nunca o de 130 MB). */
     separationModels: DemucsModelFactory = DesktopSeparation.models(),
+    /** O script do ranking (o mesmo do celular, do local.properties; vazio: o ranking fica desligado, como lá). */
+    rankingUrl: String = RankingConfig.RANKING_URL,
+    /**
+     * O POST do ranking (nos testes, um script falso: nunca o de verdade). O padrão é o HTTP do Java fora da thread
+     * da janela, que segue o redirecionamento do Apps Script como o do Reportar.
+     */
+    rankingTransport: RankingTransport = UrlConnectionRankingTransport,
 ) : AutoCloseable {
     // Primeiro a trava: o segundo Riff não chega a abrir o banco nem a apagar os temporários da separação do primeiro.
     private val instanceLock = InstanceLock.tryAcquire(dataDir) ?: throw RiffAlreadyOpenException(dataDir)
@@ -208,6 +228,22 @@ class DesktopGraph(
     private val chartArt = DecodedChartArtImages(FolderChartArtLoader(folderSource, charts, io))
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
 
+    // O ranking, como no celular: o nome e a chave do PC nas preferências, o histórico do banco do PC e a fila no
+    // banco; o envio continua no escopo do app depois de a tela sair. A tabela de cada partida vem do modo dela.
+    internal val ranking: RankingRepository = AppsScriptRankingRepository(
+        RankingApi(rankingUrl, rankingTransport),
+        DataStorePlayerStore(preferences),
+        RoomScoreHistory(database.scoreDao()),
+        database.rankingPendingDao(),
+        charts,
+        scope,
+    )
+
+    init {
+        // O que ficou na fila (sem internet, ou sem nome) sai ao abrir o Riff, como no celular.
+        scope.launch { ranking.flush() }
+    }
+
     fun gameplayViewModel(chartId: String, difficulty: Difficulty) = GameplayViewModel(
         chartId = chartId,
         difficulty = difficulty,
@@ -221,14 +257,24 @@ class DesktopGraph(
         timeSource = clock,
         interruptionsFactory = DesktopPlayers.interruptions,
         artImages = chartArt,
-        // O ranking no PC é da etapa 4: nada enviado, e o Resultado sem o cartão.
-        ranking = NoRanking,
+        ranking = ranking,
+        // No PC, a tabela do modo da partida ("Tocar com palheta" de quando ela começou).
+        rankingTable = { RankingTable.pc(it.controls.strum) },
     )
 
-    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, NoRanking)
+    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
 
-    // Sem o ranking (a linha do nome some) no PC: é da etapa 4.
-    fun settingsViewModel() = SettingsViewModel(settings, separations, languages, NoRanking, sfx)
+    fun settingsViewModel() = SettingsViewModel(settings, separations, languages, ranking, sfx)
+
+    /** O nome do ranking (o pedido da primeira abertura e a troca pelas Configurações, com o vínculo por código). */
+    fun playerNameViewModel() = PlayerNameViewModel(ranking)
+
+    /** As músicas do ranking, abertas na [table] (a do modo atual). */
+    fun rankingViewModel(table: RankingTable) = RankingViewModel(ranking, table)
+
+    /** O placar de um mapa, aberto na [difficulty] (nome do enum, ou nula) e na [table]. */
+    fun rankingBoardViewModel(chartId: String, title: String, difficulty: String?, table: RankingTable) =
+        RankingBoardViewModel(chartId, title, difficulty, ranking, table)
 
     fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
 

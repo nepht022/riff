@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.ranking
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +25,10 @@ import com.rodrigomachado.riff.core.data.ranking.Player
 import com.rodrigomachado.riff.core.data.ranking.PlayerNames
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.menuKeys
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.ranking.resources.Res
@@ -296,6 +300,8 @@ private fun NameDialog(
     AlertDialog(
         // Na primeira abertura só fecha por Salvar ou Agora não; na troca, tocar fora cancela.
         onDismissRequest = { onDismiss?.invoke() },
+        // No PC as setas andam pelo diálogo; o Esc cancela a troca ou, na primeira abertura, é o "Agora não".
+        modifier = Modifier.menuKeys(onBack = onDismiss ?: onLater),
         title = { Text(stringResource(Res.string.ranking_name_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -305,7 +311,7 @@ private fun NameDialog(
                     label = { Text(stringResource(Res.string.ranking_name_field)) },
                     singleLine = true,
                     enabled = !state.saving,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.upDownLeave().fillMaxWidth(),
                 )
                 // Quem vê o nome e o que identifica o aparelho (LGPD: dito antes de enviar).
                 Text(
@@ -320,7 +326,11 @@ private fun NameDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.CONFIRM, onSave), enabled = !state.saving) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM, onSave),
+                enabled = !state.saving,
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.ranking_name_save))
             }
         },
@@ -328,6 +338,7 @@ private fun NameDialog(
             {
                 TextButton(
                     onClick = withMenuSound(MenuSound.BACK, it),
+                    modifier = Modifier.focusHighlight(CircleShape),
                 ) { Text(stringResource(Res.string.ranking_name_later)) }
             }
         },
@@ -340,6 +351,8 @@ private fun ShowCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, l
     val expired = state.linkCode != null && state.secondsLeft <= 0
     AlertDialog(
         onDismissRequest = { onDismiss?.invoke() },
+        // No PC o Esc volta ao nome, como o Pronto.
+        modifier = Modifier.menuKeys(onBack = link.onBack),
         title = { Text(stringResource(Res.string.ranking_link_code_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -369,13 +382,19 @@ private fun ShowCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, l
             }
         },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK, link.onBack)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, link.onBack),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.ranking_link_done))
             }
         },
         dismissButton = if (expired || state.linkError != null) {
             {
-                TextButton(onClick = withMenuSound(MenuSound.CONFIRM, link.onShowCode)) {
+                TextButton(
+                    onClick = withMenuSound(MenuSound.CONFIRM, link.onShowCode),
+                    modifier = Modifier.focusHighlight(CircleShape),
+                ) {
                     Text(stringResource(Res.string.ranking_link_new_code))
                 }
             }
@@ -390,6 +409,8 @@ private fun ShowCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, l
 private fun EnterCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, link: LinkActions) {
     AlertDialog(
         onDismissRequest = { onDismiss?.invoke() },
+        // No PC o Esc volta ao nome, como o Voltar.
+        modifier = Modifier.menuKeys(onBack = link.onBack),
         title = { Text(stringResource(Res.string.ranking_link_enter_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -400,7 +421,7 @@ private fun EnterCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, 
                     singleLine = true,
                     enabled = !state.saving,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.upDownLeave().fillMaxWidth(),
                 )
                 Text(
                     stringResource(Res.string.ranking_link_enter_hint),
@@ -411,12 +432,19 @@ private fun EnterCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, 
             }
         },
         confirmButton = {
-            TextButton(onClick = withMenuSound(MenuSound.CONFIRM, link.onLink), enabled = !state.saving) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.CONFIRM, link.onLink),
+                enabled = !state.saving,
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.ranking_link_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = withMenuSound(MenuSound.BACK, link.onBack)) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.BACK, link.onBack),
+                modifier = Modifier.focusHighlight(CircleShape),
+            ) {
                 Text(stringResource(Res.string.ranking_back))
             }
         },
@@ -430,7 +458,9 @@ private fun ErrorText(text: String) {
 
 @Composable
 private fun LinkButton(text: String, onClick: () -> Unit) {
-    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)) { Text(text) }
+    TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onClick), modifier = Modifier.focusHighlight(CircleShape)) {
+        Text(text)
+    }
 }
 
 /** 545 → "9:05". */

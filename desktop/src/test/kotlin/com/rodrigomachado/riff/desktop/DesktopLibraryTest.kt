@@ -38,7 +38,13 @@ class DesktopLibraryTest {
             File(this, "song.ogg").writeBytes(ByteArray(10))
         }
         File(charts, "quebrada").apply { mkdirs() }.run { File(this, "notes.chart").writeText("não é mapa") }
-        val graph = DesktopGraph(temp.newFolder("dados"), padSource = NoPadSource).also { graph = it }
+        val graph = DesktopGraph(
+            temp.newFolder("dados"),
+            padSource = NoPadSource,
+            // Sem o ranking (desligado, como sem ranking.url): nunca o script real.
+            rankingUrl = "",
+            rankingTransport = OfflineRankingScript,
+        ).also { graph = it }
         // A pasta já escolhida e importada (o seletor do PC é uma janela do sistema, conferida à mão).
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))

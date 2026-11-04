@@ -156,7 +156,7 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
     }
 }
 
-/** HTTP do próprio Android. O Apps Script responde com um redirecionamento, que o Android segue sozinho. */
+/** HTTP do Java, fora da thread da tela (celular e PC): o redirecionamento do Apps Script é seguido sozinho. */
 object UrlConnectionRankingTransport : RankingTransport {
     // O Apps Script parado demora a acordar.
     private const val TIMEOUT_MS = 30_000

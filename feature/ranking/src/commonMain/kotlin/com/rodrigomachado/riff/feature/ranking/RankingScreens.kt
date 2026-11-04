@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -23,13 +24,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.ranking.resources.Res
@@ -112,7 +117,8 @@ private fun SongCard(song: RankedSong, table: RankingTable, onClick: () -> Unit)
         ?: stringResource(Res.string.ranking_table_nobody)
     val place = standing?.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
     Column(
-        Modifier.fillMaxWidth().background(RiffColors.Paper, MaterialTheme.shapes.small)
+        Modifier.fillMaxWidth().focusHighlight(MaterialTheme.shapes.small)
+            .background(RiffColors.Paper, MaterialTheme.shapes.small)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick)).padding(Spacing.md),
     ) {
         Text(song.title, style = MaterialTheme.typography.titleMedium, color = RiffColors.Ink)
@@ -124,7 +130,7 @@ private fun SongCard(song: RankedSong, table: RankingTable, onClick: () -> Unit)
     }
 }
 
-/** As três tabelas do ranking, uma por vez (decisão 6 da 4d). */
+/** As três tabelas do ranking, uma por vez (decisão 6 da 4d). No PC, ←/→ andam entre elas e Enter escolhe. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TableChips(selected: RankingTable, onTable: (RankingTable) -> Unit) {
@@ -144,11 +150,14 @@ private fun RankingTable.label(): StringResource = when (this) {
     RankingTable.PC_NO_STRUM -> Res.string.ranking_table_pc_no_strum
 }
 
+/** Um filtro do ranking; [selected] também para a acessibilidade (e para os testes do PC). */
 @Composable
 internal fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     val shape = MaterialTheme.shapes.small
     Box(
-        Modifier.background(if (selected) RiffColors.TourRed else Color.Transparent, shape)
+        Modifier.semantics { this.selected = selected }
+            .focusHighlight(shape)
+            .background(if (selected) RiffColors.TourRed else Color.Transparent, shape)
             .border(1.dp, if (selected) RiffColors.TourRed else RiffColors.PaperDim, shape)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
             .padding(horizontal = CHIP_PADDING_H, vertical = CHIP_PADDING_V),
@@ -162,7 +171,8 @@ internal fun SearchField(value: String, label: String, onChange: (String) -> Uni
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        // No PC ↑/↓ saem do campo (o de uma linha as usaria para o cursor, e o foco ficaria preso nele).
+        modifier = Modifier.upDownLeave().fillMaxWidth(),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = RiffColors.Paper,
             unfocusedTextColor = RiffColors.Paper,
@@ -176,7 +186,10 @@ internal fun SearchField(value: String, label: String, onChange: (String) -> Uni
 internal fun Offline(onRetry: () -> Unit) {
     Column {
         Message(stringResource(Res.string.ranking_offline))
-        TextButton(onClick = withMenuSound(MenuSound.NAVIGATE, onRetry)) {
+        TextButton(
+            onClick = withMenuSound(MenuSound.NAVIGATE, onRetry),
+            modifier = Modifier.focusHighlight(CircleShape),
+        ) {
             Text(stringResource(Res.string.ranking_retry), color = RiffColors.Paper)
         }
     }
@@ -190,7 +203,9 @@ internal fun Message(text: String) {
 @Composable
 internal fun BackButton(onBack: () -> Unit) {
     // Sem som aqui: a navegação toca o de voltar ao sair da tela.
-    TextButton(onClick = onBack) { Text(stringResource(Res.string.ranking_back), color = RiffColors.Paper) }
+    TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
+        Text(stringResource(Res.string.ranking_back), color = RiffColors.Paper)
+    }
 }
 
 private const val SECONDARY_ALPHA = 0.7f

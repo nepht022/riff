@@ -28,7 +28,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 /**
- * "Licenças e privacidade" no app do PC, pelas Configurações: a privacidade do PC (sem ranking, que é da etapa 4d) e
+ * "Licenças e privacidade" no app do PC, pelas Configurações: a privacidade do PC (com o ranking e o vínculo) e
  * as licenças do que vai no app do PC (com a guitarra por IA, da etapa 4c), abertas pelo teclado.
  */
 @OptIn(ExperimentalTestApi::class)
@@ -53,7 +53,7 @@ class DesktopLicensesFlowTest {
 
         composeRule.onNodeWithText("Seus mapas, recordes e configurações ficam no PC", substring = true).assertExists()
         assertTrue("a privacidade do PC é a do celular", !exists(hasText("backup do Android", substring = true)))
-        // O ranking chega ao PC na 4d: o texto diz o que vai para a planilha e o que o vínculo faz.
+        // O ranking do PC: o texto diz o que vai para a planilha e o que o vínculo faz.
         composeRule.onNodeWithText("um código aleatório de cada aparelho", substring = true).assertExists()
         composeRule.onNodeWithText("juntar vários aparelhos sob o mesmo nome", substring = true).assertExists()
         val names = listOf(AI_MODEL, "demucs.onnx", "ONNX Runtime", "JTransforms", "LWJGL", "GLFW", "Oswald", "FFmpeg")
@@ -89,6 +89,9 @@ class DesktopLicensesFlowTest {
             menuSounds = MenuSoundPlayer { _, _ -> },
             sfx = SfxPlayerFactory { SilentSfx },
             padSource = NoPadSource,
+            // Sem o ranking (desligado, como sem ranking.url): não é o que se testa aqui, e nunca o script real.
+            rankingUrl = "",
+            rankingTransport = OfflineRankingScript,
         ).also { graph = it }
         DesktopLocale.applyDefault()
         composeRule.setContent {
