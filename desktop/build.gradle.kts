@@ -48,6 +48,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
+    implementation(project(":core:separation"))
     implementation(libs.jetbrains.navigation.compose)
     implementation(libs.jetbrains.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.core)
@@ -77,6 +78,12 @@ aboutLibraries {
 }
 sourceSets["main"].resources.srcDir(files(librariesDir).builtBy("exportLibraryDefinitions"))
 
+// O modelo da IA (130 MB, Git LFS) é o mesmo asset do APK: copiado para os recursos (`/riff/...`) no build, sem
+// uma segunda cópia no git.
+tasks.processResources {
+    from(rootDir.resolve("core/separation/src/main/assets/htdemucs_6s_seg4.onnx")) { into("riff") }
+}
+
 compose.desktop {
     application {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
@@ -88,6 +95,13 @@ tasks.register<JavaExec>("runPadCheck") {
     group = "riff"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.rodrigomachado.riff.desktop.pad.PadCheckKt")
+}
+
+// Medição da separação por IA no PC: ./scripts/gw :desktop:runSeparationCheck --args="<pasta do mapa ou .sng>"
+tasks.register<JavaExec>("runSeparationCheck") {
+    group = "riff"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.rodrigomachado.riff.desktop.SeparationCheckKt")
 }
 
 // Medição do áudio no PC: ./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"

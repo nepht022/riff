@@ -33,6 +33,12 @@ kotlin {
         }
         getByName("desktopMain").dependencies {
             implementation(libs.onnxruntime.jvm)
+            // O AAC das faixas pelo FFmpeg do :core:audio (as bibliotecas nativas vêm dele).
+            implementation(libs.bytedeco.ffmpeg)
+            implementation(libs.bytedeco.javacpp)
+        }
+        getByName("desktopTest").dependencies {
+            implementation(project.dependencies.testFixtures(project(":core:chart")))
         }
         commonTest.dependencies {
             implementation(libs.junit4)
