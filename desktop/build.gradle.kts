@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.swing)
     implementation(project(":core:chart"))
     implementation(libs.androidx.room.runtime)
+    // A conferência das peças nativas (InstallCheck) chama o ONNX Runtime e o SQLite embutido direto; os dois já vêm
+    // no runtime pelo :core:separation e pelo :core:database, na mesma versão.
+    implementation(libs.onnxruntime.jvm)
+    implementation(libs.androidx.sqlite.bundled)
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.mp.material3)
     listOf(libs.lwjgl.core, libs.lwjgl.glfw).forEach { library ->
@@ -112,4 +116,12 @@ tasks.register<JavaExec>("runAudioCheck") {
     group = "riff"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.rodrigomachado.riff.desktop.AudioCheckKt")
+}
+
+// Conferência das peças nativas no Java do build: ./scripts/gw :desktop:runInstallCheck (seis linhas `ok`; no JBR do
+// Android Studio o tls falha, porque ele não traz o jdk.crypto.mscapi dos certificados do Windows)
+tasks.register<JavaExec>("runInstallCheck") {
+    group = "riff"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.rodrigomachado.riff.desktop.InstallCheckKt")
 }
