@@ -102,7 +102,8 @@ class InstallCheckTest {
   - `jvmArgs += listOf("-Djava.net.useSystemProxies=true", "-Djavax.net.ssl.trustStoreType=Windows-ROOT")`
   - `targetFormats(TargetFormat.Msi)`, `packageName = "Riff"`, `packageVersion = providers.gradleProperty("riff.versionName")`, `vendor = "Rodrigo Machado"`, `description = "Riff — jogo de ritmo com guitarra"`
   - `windows { perUserInstall = true; menu = true; menuGroup = "Riff"; shortcut = true; dirChooser = false; upgradeUuid = "5b0f1a7e-3c2d-4e8a-9f61-7d2b4c8e1a90"; iconFile.set(project.file("icons/riff.ico")) }`
-  - `modules(...)`: saída de `./scripts/gw :desktop:suggestRuntimeModules` + `"jdk.crypto.ec"`, `"jdk.unsupported"`; comentário dizendo que a lista vem dali.
+  - `modules(...)`: saída de `./scripts/gw :desktop:suggestRuntimeModules` + `"jdk.crypto.ec"`, `"jdk.crypto.mscapi"` (o `Windows-ROOT`; o JBR do build não tem, achado na Task 1), `"jdk.unsupported"`; comentário dizendo que a lista vem dali.
+  - O `javaHome` do Temurin vale também para o `:desktop:run` (o `jvmArgs` com `Windows-ROOT` quebraria o HTTPS do `run` no JBR): conferir que o `run` usa o Temurin.
 
 - [ ] **Step 1: Write the failing test** (`DistributableTest`, ignorado com `Assume` quando a pasta não existe, para o `:desktop:test` comum não depender do empacotamento):
 
@@ -122,6 +123,7 @@ class InstallCheckTest {
     assertTrue(text.contains("JAVA_VERSION=\"21"))
     assertTrue(text.contains("jdk.crypto.ec"))
     assertTrue(text.contains("jdk.unsupported"))
+    assertTrue(text.contains("jdk.crypto.mscapi"))
 }
 
 @Test fun theModelGoesInsideTheApp() {
