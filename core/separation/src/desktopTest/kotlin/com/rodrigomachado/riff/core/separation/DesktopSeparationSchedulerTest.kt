@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.util.Collections
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +40,7 @@ class DesktopSeparationSchedulerTest {
 
     private fun scheduler(
         queue: FakeSeparationQueue,
+        closeWaitMs: Long = DesktopSeparationScheduler.CLOSE_WAIT_MS,
         separate: suspend (chartId: String) -> Boolean = { chartId ->
             separated += chartId
             true
@@ -51,6 +53,9 @@ class DesktopSeparationSchedulerTest {
         lowMemoryDevice = true,
         separationsDir = separations,
         scratch = scratch,
+        closeWaitMs = closeWaitMs,
+        // Com a mínima, o Windows deixa a thread parada por segundos enquanto a suíte ocupa todos os núcleos.
+        threadPriority = Thread.NORM_PRIORITY,
     ).also { opened = it }
 
     /** Como o runner: grava numa pasta `.tmp` e a apaga se não terminar. */
@@ -118,7 +123,8 @@ class DesktopSeparationSchedulerTest {
     @Test
     fun closingWaitsForTheCleanupAndPutsTheSongBackInTheQueue() {
         val queue = FakeSeparationQueue("a", "b")
-        val scheduler = scheduler(queue) { chartId ->
+        // Sem o prazo do close() no caminho (o teste seguinte confere o prazo): ele espera a limpeza.
+        val scheduler = scheduler(queue, closeWaitMs = TIMEOUT_MS) { chartId ->
             separateInWorkDir(chartId) {
                 // Um modelo que confere o cancelamento entre trechos curtos.
                 while (true) {
@@ -157,6 +163,43 @@ class DesktopSeparationSchedulerTest {
         assertFalse("nenhuma pasta definitiva", File(separations, "a").exists())
         assertEquals(listOf("a"), queue.items.value.map { it.chartId })
         assertEquals(0, queue.attemptsOf("a"))
+    }
+
+    /**
+     * O close() que desistiu de esperar deixa a separação velha terminando o trecho do modelo. O Riff reaberto no
+     * mesmo processo espera ela acabar: ao acabar, ela apaga a pasta temporária dela — o mesmo nome da pasta da
+     * separação nova da mesma música.
+     */
+    @Test
+    fun reopeningWaitsForTheSeparationThatClosingGaveUpOn() {
+        val chunkEnds = CountDownLatch(1)
+        val oldFinished = CountDownLatch(1)
+        val old = scheduler(FakeSeparationQueue("a"), closeWaitMs = GIVE_UP_MS) { chartId ->
+            try {
+                separateInWorkDir(chartId) {
+                    // O trecho acaba quando a nova começa a gravar (ou sozinho, se ela esperar a velha).
+                    chunkEnds.await(CHUNK_MS, TimeUnit.MILLISECONDS)
+                    currentCoroutineContext().ensureActive()
+                }
+            } finally {
+                oldFinished.countDown()
+            }
+        }
+        assertTrue(started.await(TIMEOUT_MS, TimeUnit.MILLISECONDS))
+        old.close() // o modelo preso no trecho: desiste de esperar
+
+        val newKept = CompletableFuture<Boolean>()
+        scheduler(FakeSeparationQueue("a")) { chartId ->
+            val work = File(separations, "$chartId.tmp").apply { mkdirs() }
+            val guitar = File(work, "guitar.m4a").apply { writeText("nova") }
+            chunkEnds.countDown()
+            assertTrue(oldFinished.await(TIMEOUT_MS, TimeUnit.MILLISECONDS))
+            newKept.complete(guitar.isFile)
+            work.deleteRecursively()
+            true
+        }
+
+        assertTrue("a velha apagou a pasta temporária da nova", newKept.get(TIMEOUT_MS, TimeUnit.MILLISECONDS))
     }
 
     @Test
@@ -212,6 +255,8 @@ class DesktopSeparationSchedulerTest {
         const val SHORT_CHUNK_MS = 20L
         const val LONG_CHUNK_MS = 8_000L
         const val MAX_CLOSE_MS = 2_000L
+        const val GIVE_UP_MS = 100L
+        const val CHUNK_MS = 2_000L
         const val NANOS_PER_MS = 1_000_000L
 
         /** Como uma chamada nativa: nem a interrupção da thread a para. */

@@ -1,8 +1,14 @@
 plugins {
-    alias(libs.plugins.riff.android.feature)
+    alias(libs.plugins.riff.kmp.feature)
     alias(libs.plugins.roborazzi)
 }
 
-android {
-    namespace = "com.rodrigomachado.riff.feature.ranking"
+kotlin {
+    sourceSets {
+        getByName("desktopTest").dependencies {
+            // A janela de teste do Compose (as teclas e o foco dos menus do PC).
+            implementation(compose.desktop.currentOs)
+            implementation(compose.desktop.uiTestJUnit4)
+        }
+    }
 }

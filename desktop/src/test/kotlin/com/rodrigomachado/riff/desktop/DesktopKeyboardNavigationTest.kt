@@ -232,6 +232,9 @@ class DesktopKeyboardNavigationTest {
             // A medição da calibração só acaba quando o teste sai.
             clickTrack = ClickTrackPlayer { awaitCancellation() },
             padSource = NoPadSource,
+            // Sem o ranking (desligado, como sem ranking.url): não é o que se testa aqui, e nunca o script real.
+            rankingUrl = "",
+            rankingTransport = OfflineRankingScript,
         ).also { graph = it }
         if (charts > 0) {
             val folder = temp.newFolder("mapas")

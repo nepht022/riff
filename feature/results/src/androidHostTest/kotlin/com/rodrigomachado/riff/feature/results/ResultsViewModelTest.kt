@@ -55,6 +55,10 @@ class RecordingRanking(override val isConfigured: Boolean = true) :
     override suspend fun songs(query: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
 
     override suspend fun board(chartId: String) = com.rodrigomachado.riff.core.data.ranking.ApiAnswer.Offline
+
+    override suspend fun linkCode() = com.rodrigomachado.riff.core.data.ranking.LinkResult.Offline
+
+    override suspend fun link(code: String) = com.rodrigomachado.riff.core.data.ranking.LinkResult.Offline
 }
 
 class FakeCharts : ChartRepository {

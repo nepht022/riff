@@ -37,7 +37,15 @@ class RiffDesktopAppTest {
     val temp = TemporaryFolder()
 
     private val system = Locale.getDefault()
-    private val graph by lazy { DesktopGraph(temp.newFolder("dados"), padSource = NoPadSource) }
+    private val graph by lazy {
+        DesktopGraph(
+            temp.newFolder("dados"),
+            padSource = NoPadSource,
+            // Sem o ranking (desligado, como sem ranking.url): nunca o script real.
+            rankingUrl = "",
+            rankingTransport = OfflineRankingScript,
+        )
+    }
 
     @After
     fun restore() {

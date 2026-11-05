@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":feature:search"))
     implementation(project(":feature:report"))
     implementation(project(":feature:licenses"))
+    implementation(project(":feature:ranking"))
     implementation(project(":core:encore"))
     implementation(project(":core:game"))
     implementation(project(":core:data"))
@@ -62,6 +63,8 @@ dependencies {
         runtimeOnly(library.map { "${it.module}:${it.versionConstraint.requiredVersion}:$lwjglNatives" })
     }
     testImplementation(libs.junit4)
+    // O JSON dos pedidos ao script falso do ranking (o mesmo org.json do :core:data no PC).
+    testImplementation(libs.org.json)
     testImplementation(compose.desktop.uiTestJUnit4)
     testImplementation(libs.roborazzi.compose.desktop)
     // Os pacotes .sng do Encore falso da pesquisa.

@@ -94,6 +94,20 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
+
+- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04. **O script do ranking mudou de novo na revisão final** (`seuNome` nas respostas, limites gerais do vínculo): falta republicar. Compatível com o app 0.5.0 (só campos novos no topo das respostas do `enviar`/`enviarVarios`, que ele ignora; no `placar`/`musicas` só com `tabelas: true`).
+- App novo com o script antigo (de antes da 4d): as partidas do PC vão sem tabela reconhecida e o script as grava como Celular. Quem republicar o script depois de alguém jogar no PC fica com essas pontuações na tabela Celular.
+- Teste real (PC: nome, jogar com e sem palheta, as três tabelas; celular: o ranking de hoje em "Celular", o código de vínculo e o PC usando o mesmo nome): o usuário seguiu sem relatar. O celular precisa do APK de **release** por cima (o banco vai para a v14; o de debug exigiria desinstalar e apagaria os recordes).
+- Vínculo: 5 tentativas por aparelho por hora, mais 100 códigos errados e 100 aparelhos sem nome vinculados por hora somando todos; sem limite de aparelhos por jogador; código de 6 caracteres (31⁶) com validade de 10 min.
+- `placar`/`musicas` com `tabelas: true` leem as Pontuações inteiras e classificam por tabela e dificuldade: com milhares de linhas pode ficar lento (cache ou índice).
+- Nome trocado em outro aparelho: o app novo atualiza o nome guardado pelo `seuNome` no próximo envio, placar ou lista de músicas (até lá mostra o antigo); o celular com o app 0.5.0 (não lê o campo) guarda o nome antigo até o próximo `reservar`.
+- `deleteScores` (vincular um aparelho que era o único do jogador, `removerJogador`) apaga linha a linha dentro do lock: com muitas pontuações pode demorar e segurar os outros pedidos.
+- Voltar/Esc durante "Vincular" zera o `saving` com o pedido ainda em andamento: a resposta chega depois e pode fechar o diálogo (vinculado) ou mostrar o erro no passo do nome.
+- Com o PC totalmente ocupado, a separação por IA (prioridade mínima) fica parada: intencional (a partida e o resto do PC vêm primeiro).
+- Vincular com pontuações ainda na fila pode reenviar algumas (inofensivo: o script guarda o melhor).
+- O texto de ajuda do código diz "toque em…" também no PC; o destaque de foco dos chips de tabela no PC não tem screenshot.
+
 ## Riff no Windows, etapa 4c: guitarra por IA no PC (2026-11-04)
 
 - Teste no Windows (separar uma música de verdade, jogar errando, fechar no meio e reabrir): o usuário seguiu sem relatar o resultado.
@@ -111,7 +125,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
 
-- Teste do usuário no Windows ("ótimo"): não confirmou explicitamente se o email do relato mostra o campo novo `sistema` (o script do Reportar não está no repositório; se ele lista os campos pelo nome, ajustar o script — ação do usuário).
+- Script do Reportar corrigido (linha do sistema no PC) e republicado pelo usuário em 2026-11-04; falta ver um email de relato do PC com "Windows …".
 - **Antes de distribuir o PC (4e), avisos de licença do código nativo embutido:** o FFmpeg do bytedeco (8.1.2, javacpp-presets 1.5.14) liga lame, speex, opencore-amr, vo-amrwbenc, openssl, openh264, libvpx, freetype, harfbuzz, opus, libxml2, srt, libwebp, aom, svt-av1, zimg, libmfx e traz `libwinpthread-1.dll`; o Skiko (`skiko-windows-x64.dll`) embute o Skia (BSD-3) e o ICU (`icudtl.dat`, licença Unicode), e o AboutLibraries só mostra "Apache-2.0". Nenhum desses avisos está na lista do PC. Apontar também o código-fonte exato do FFmpeg (8.1.2 e a tag 1.5.14 do javacpp-presets) no `ffmpeg-lgpl3.txt`. Validação humana recomendada (conformidade).
 - O URL do `local.properties` entra cru no `ReportConfig`/`RankingConfig` gerado: um `"` ou `$` quebraria o build (URLs do Apps Script não têm).
 - Testes do envio no PC que passariam com defeito: o falso não anota a thread nem suspende (o "janela segue respondendo" não prova nada); a espera única por app no PC sem teste; ↓/↑ entre o interruptor dos sons e "Licenças e privacidade" sem teste de teclado.

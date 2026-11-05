@@ -73,6 +73,11 @@ class LicensesTest {
             substring = true,
         )
             .performScrollTo().assertExists()
+        // O ranking guarda um código de cada aparelho; o vínculo junta aparelhos sob o mesmo nome (decisão 7 da 4d).
+        composeRule.onNodeWithText("um código aleatório de cada aparelho", substring = true)
+            .performScrollTo().assertExists()
+        composeRule.onNodeWithText("juntar vários aparelhos sob o mesmo nome", substring = true)
+            .performScrollTo().assertExists()
         composeRule.onNodeWithText(
             "as buscas que você faz na pesquisa vão para o Encore (enchor.us)",
             substring = true,

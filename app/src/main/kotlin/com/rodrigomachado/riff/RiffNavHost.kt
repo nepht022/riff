@@ -31,6 +31,9 @@ import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.licenses.HiltLicensesViewModel
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
 import com.rodrigomachado.riff.feature.licenses.LicensesScreen
+import com.rodrigomachado.riff.feature.ranking.HiltPlayerNameViewModel
+import com.rodrigomachado.riff.feature.ranking.HiltRankingBoardViewModel
+import com.rodrigomachado.riff.feature.ranking.HiltRankingViewModel
 import com.rodrigomachado.riff.feature.ranking.PlayerNameGate
 import com.rodrigomachado.riff.feature.ranking.RankingBoardRoute
 import com.rodrigomachado.riff.feature.ranking.RankingBoardScreen
@@ -77,7 +80,11 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         matchDestinations(navController) { renamingPlayer = true }
     }
     // O nome do ranking na primeira abertura, por cima da tela inicial ou da Biblioteca.
-    PlayerNameGate(renaming = renamingPlayer, onRenameClosed = { renamingPlayer = false })
+    PlayerNameGate(
+        renaming = renamingPlayer,
+        onRenameClosed = { renamingPlayer = false },
+        viewModel = hiltViewModel<HiltPlayerNameViewModel>(),
+    )
 }
 
 /** O som de voltar entre telas e a Biblioteca aberta pela notificação da separação. */
@@ -118,11 +125,17 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
     composable<RankingRoute> {
         RankingSongsScreen(
             onBack = dropUnlessResumed { navController.popBackStack() },
-            onSong = dropUnlessResumed { song -> navController.navigate(RankingBoardRoute(song.chartId, song.title)) },
+            onSong = dropUnlessResumed { song, table ->
+                navController.navigate(RankingBoardRoute(song.chartId, song.title, table = table.name))
+            },
+            viewModel = hiltViewModel<HiltRankingViewModel>(),
         )
     }
     composable<RankingBoardRoute> {
-        RankingBoardScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+        RankingBoardScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltRankingBoardViewModel>(),
+        )
     }
 }
 

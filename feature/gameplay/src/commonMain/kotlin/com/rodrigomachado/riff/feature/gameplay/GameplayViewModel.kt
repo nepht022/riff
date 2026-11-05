@@ -22,6 +22,7 @@ import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.CancellationException
@@ -64,7 +65,11 @@ sealed interface GameplayUiState {
     data class Finished(val scoreId: Long) : GameplayUiState
 }
 
-/** A partida de [chartId] em [difficulty]. No celular, o Hilt cria pela `HiltGameplayViewModel`; no PC, o app. */
+/**
+ * A partida de [chartId] em [difficulty]. No celular, o Hilt cria pela `HiltGameplayViewModel`; no PC, o app.
+ * [rankingTable]: a tabela do ranking em que a partida conta, pelas configurações lidas ao começar (no celular,
+ * sempre a do celular; no PC, `RankingTable.pc(settings.controls.strum)`).
+ */
 open class GameplayViewModel(
     private val chartId: String,
     private val difficulty: Difficulty,
@@ -79,6 +84,7 @@ open class GameplayViewModel(
     private val interruptionsFactory: PlaybackInterruptionsFactory,
     private val artImages: ChartArtImages,
     private val ranking: RankingRepository,
+    private val rankingTable: (Settings) -> RankingTable = { RankingTable.PHONE },
 ) : ViewModel() {
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
@@ -233,6 +239,8 @@ open class GameplayViewModel(
             miss = engine.count(Judgment.MISS),
             playedAtEpochMs = System.currentTimeMillis(),
             cleanStreakMs = engine.longestCleanMs,
+            // As configurações de quando a partida começou: trocar a palheta depois não muda a tabela.
+            rankingTable = rankingTable(ready.settings),
         )
         viewModelScope.launch {
             val scoreId = scores.save(record)

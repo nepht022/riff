@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.data
 
+import com.rodrigomachado.riff.core.data.ranking.storedTable
 import com.rodrigomachado.riff.core.database.ScoreDao
 import com.rodrigomachado.riff.core.database.ScoreEntity
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -28,11 +29,13 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
 
 private fun ScoreRecord.toEntity() = ScoreEntity(
     0, chartId, difficulty.name, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs, cleanStreakMs,
+    rankingTable.wire,
 )
 
 internal fun ScoreEntity.toModel(): ScoreRecord? {
     val level = Difficulty.entries.firstOrNull { it.name == difficulty } ?: return null
     return ScoreRecord(
         id, chartId, level, score, accuracy, maxCombo, perfect, good, miss, playedAtEpochMs, cleanStreakMs,
+        storedTable(rankingTable),
     )
 }

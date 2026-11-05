@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.data.ranking
 
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -16,7 +17,11 @@ fun interface RankingTransport {
 }
 
 sealed interface ApiAnswer<out T> {
-    data class Ok<T>(val value: T) : ApiAnswer<T>
+    /**
+     * [yourName]: o nome atual do jogador deste aparelho ("seuNome"), quando o script manda — trocado em outro
+     * aparelho do mesmo jogador, chega aqui.
+     */
+    data class Ok<T>(val value: T, val yourName: String? = null) : ApiAnswer<T>
 
     /** O script respondeu e recusou (nome em uso, limite...). */
     data class Refused(val reason: String) : ApiAnswer<Nothing>
@@ -26,6 +31,7 @@ sealed interface ApiAnswer<out T> {
 }
 
 /** O protocolo do scripts/ranking_apps_script.gs. Sem endereço no build, tudo é [ApiAnswer.Offline]. */
+@Suppress("TooManyFunctions") // uma função por ação do script, mais a leitura do JSON de cada uma
 class RankingApi(private val url: String, private val transport: RankingTransport) {
     val isConfigured: Boolean get() = url.startsWith("https://")
 
@@ -52,39 +58,61 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
         }
     }
 
-    suspend fun songs(key: String, query: String): ApiAnswer<List<RankedSong>> =
-        call(JSONObject().put("acao", "musicas").put("chave", key).put("busca", query)) { json ->
-            val list = json.getJSONArray("musicas")
-            (0 until list.length()).map { list.getJSONObject(it) }.map {
-                RankedSong(
-                    it.getString("mapa"),
-                    it.optString("titulo"),
-                    it.optString("artista"),
-                    it.getInt("jogadores"),
-                    if (it.isNull("suaPosicao")) null else it.getInt("suaPosicao"),
-                )
-            }
+    /** As músicas com alguém em qualquer tabela, com quem está em cada uma ([RankedSong.inTable]). */
+    suspend fun songs(key: String, query: String): ApiAnswer<List<RankedSong>> = call(
+        JSONObject().put("acao", "musicas").put("chave", key).put("busca", query).put("tabelas", true),
+    ) { json ->
+        val list = json.getJSONArray("musicas")
+        (0 until list.length()).map { list.getJSONObject(it) }.map {
+            RankedSong(
+                it.getString("mapa"),
+                it.optString("titulo"),
+                it.optString("artista"),
+                it.getInt("jogadores"),
+                it.position(),
+                it.optJSONObject("tabelas")?.standings().orEmpty(),
+            )
+        }
+    }
+
+    /**
+     * Todas as linhas do mapa, de todas as dificuldades e tabelas: o placar é montado no celular ([rankBoard]). Sem
+     * a tabela (o script de antes da 4d), a linha é do celular; uma tabela desconhecida fica de fora.
+     */
+    suspend fun board(key: String, chartId: String): ApiAnswer<List<BoardEntry>> = call(
+        JSONObject().put("acao", "placar").put("chave", key).put("mapa", chartId).put("tabelas", true),
+    ) { json ->
+        val lines = json.getJSONArray("linhas")
+        (0 until lines.length()).map { lines.getJSONObject(it) }.mapNotNull { line ->
+            val difficulty = difficultyOf(line.getString("dificuldade")) ?: return@mapNotNull null
+            val table = RankingTable.fromWire(line.optString("tabela")) ?: return@mapNotNull null
+            BoardEntry(
+                line.getString("nome"),
+                line.getBoolean("voce"),
+                difficulty,
+                line.number("pontos"),
+                line.number("precisao"),
+                line.number("combo"),
+                line.number("perfeitos"),
+                line.number("semErrar"),
+                line.number("notas")?.toInt(),
+                table,
+            )
+        }
+    }
+
+    /**
+     * Um código para usar o nome deste aparelho em outro. O script de antes da 4d responde [ApiAnswer.Refused]
+     * "pedido".
+     */
+    suspend fun linkCode(key: String): ApiAnswer<LinkCode> =
+        call(JSONObject().put("acao", "codigo").put("chave", key)) {
+            LinkCode(it.getString("codigo"), it.getInt("validoPor"))
         }
 
-    /** Todas as linhas do mapa, de todas as dificuldades: o placar é montado no celular ([rankBoard]). */
-    suspend fun board(key: String, chartId: String): ApiAnswer<List<BoardEntry>> =
-        call(JSONObject().put("acao", "placar").put("chave", key).put("mapa", chartId)) { json ->
-            val lines = json.getJSONArray("linhas")
-            (0 until lines.length()).map { lines.getJSONObject(it) }.mapNotNull { line ->
-                val difficulty = difficultyOf(line.getString("dificuldade")) ?: return@mapNotNull null
-                BoardEntry(
-                    line.getString("nome"),
-                    line.getBoolean("voce"),
-                    difficulty,
-                    line.number("pontos"),
-                    line.number("precisao"),
-                    line.number("combo"),
-                    line.number("perfeitos"),
-                    line.number("semErrar"),
-                    line.number("notas")?.toInt(),
-                )
-            }
-        }
+    /** Este aparelho passa a ser do jogador do [code]: devolve o nome. */
+    suspend fun link(key: String, code: String): ApiAnswer<String> =
+        call(JSONObject().put("acao", "vincular").put("chave", key).put("codigo", code)) { it.getString("nome") }
 
     private fun JSONObject.placed() =
         if (isNull("posicao")) null else SubmitStatus.Placed(getInt("posicao"), getInt("total"))
@@ -95,8 +123,20 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
         .put("precisao", accuracy.toDouble()).put("combo", combo)
         .put("perfeitos", perfect).put("semErrar", cleanMs ?: JSONObject.NULL)
         .put("notas", notes ?: JSONObject.NULL)
+        .put("tabela", table.wire)
+
+    private fun JSONObject.position(): Int? = if (isNull("suaPosicao")) null else getInt("suaPosicao")
+
+    private fun JSONObject.standings(): Map<RankingTable, TableStanding> = keys().asSequence().mapNotNull { wire ->
+        val table = RankingTable.fromWire(wire) ?: return@mapNotNull null
+        val standing = getJSONObject(wire)
+        table to TableStanding(standing.getInt("jogadores"), standing.position())
+    }.toMap()
 
     private fun JSONObject.number(name: String): Double? = if (isNull(name)) null else getDouble(name)
+
+    /** "seuNome": nos envios e, com "tabelas", no placar e nas músicas (o script de antes não manda). */
+    private fun JSONObject.yourName(): String? = if (isNull("seuNome")) null else getString("seuNome").ifEmpty { null }
 
     @Suppress("SwallowedException") // sem rede ou resposta estranha: o envio fica na fila e tenta de novo
     private suspend fun <T> call(request: JSONObject, read: (JSONObject) -> T): ApiAnswer<T> {
@@ -106,7 +146,7 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
             val json = JSONObject(body)
             when {
                 code !in HTTP_OK -> ApiAnswer.Offline
-                json.optBoolean("ok") -> ApiAnswer.Ok(read(json))
+                json.optBoolean("ok") -> ApiAnswer.Ok(read(json), json.yourName())
                 else -> ApiAnswer.Refused(json.optString("motivo"))
             }
         } catch (e: IOException) {
@@ -123,7 +163,7 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
     }
 }
 
-/** HTTP do próprio Android. O Apps Script responde com um redirecionamento, que o Android segue sozinho. */
+/** HTTP do Java, fora da thread da tela (celular e PC): o redirecionamento do Apps Script é seguido sozinho. */
 object UrlConnectionRankingTransport : RankingTransport {
     // O Apps Script parado demora a acordar.
     private const val TIMEOUT_MS = 30_000

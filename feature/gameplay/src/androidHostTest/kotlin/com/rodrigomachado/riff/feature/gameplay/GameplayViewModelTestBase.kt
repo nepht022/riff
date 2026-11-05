@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.data.game.PlayableChart
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -78,6 +79,24 @@ abstract class GameplayViewModelTestBase {
             art
         },
         ranking,
+    )
+
+    /** Como o PC monta a partida: a tabela do ranking vem do modo daquela partida (com ou sem palheta). */
+    protected fun pcViewModel(): GameplayViewModel = GameplayViewModel(
+        "a",
+        Difficulty.EXPERT,
+        loader,
+        settings,
+        scores,
+        chartOffsets,
+        { player },
+        { _, _ -> stemPlayer },
+        { sfx },
+        time,
+        { interruptions },
+        { art },
+        ranking,
+        rankingTable = { RankingTable.pc(it.controls.strum) },
     )
 
     protected fun playable(audio: String? = "raiz/a/song.ogg") =

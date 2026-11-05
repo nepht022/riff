@@ -128,6 +128,9 @@ class DesktopSettingsFlowTest {
             sfx = SfxPlayerFactory { SilentSfx },
             clickTrack = ClickTrackPlayer { clicks.await() },
             padSource = NoPadSource,
+            // Sem o ranking (desligado, como sem ranking.url): não é o que se testa aqui, e nunca o script real.
+            rankingUrl = "",
+            rankingTransport = OfflineRankingScript,
         ).also { graph = it }
         DesktopLocale.applyDefault()
         composeRule.setContent {

@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.database.RankingPendingEntity
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,25 @@ class FakeRankingServer : RankingTransport {
     /** O script novo recusa o lote inteiro com um motivo próprio (não é o "pedido" do script antigo). */
     var batchRefusal: String? = null
 
+    /** O script de antes da 4d: não conhece "codigo" nem "vincular" (responde "pedido"). */
+    var before4d = false
+
+    /** Códigos de vínculo ativos: código → nome do jogador. */
+    val codes = mutableMapOf<String, String>()
+
+    /** Aparelhos que entraram num jogador pelo código: chave → nome. */
+    val linked = mutableMapOf<String, String>()
+
+    /** O script recusa vínculos (5 tentativas por hora). */
+    var linkLimit = false
+
+    /** O nome atual do jogador (trocado em outro aparelho): vai como "seuNome" nos envios, no placar e nas músicas. */
+    var currentName: String? = null
+
+    private fun withName(json: String) = currentName?.let { json.removeSuffix("}") + ""","seuNome":"$it"}""" } ?: json
+
+    private fun hasName(key: String) = key in names.values || key in linked
+
     override suspend fun post(url: String, json: String): Pair<Int, String> {
         val body = JSONObject(json)
         calls += body
@@ -54,32 +74,37 @@ class FakeRankingServer : RankingTransport {
         val key = body.optString("chave")
         if (key in removed) return 200 to """{"ok":false,"motivo":"removido"}"""
         val answer = when (body.getString("acao")) {
-            "reservar" -> if (nameLimit) {
-                """{"ok":false,"motivo":"limite"}"""
-            } else {
-                val name = body.getString("nome").trim()
-                val owner = names[name.lowercase()]
-                if (owner != null && owner != key) {
-                    """{"ok":false,"motivo":"nome_em_uso"}"""
-                } else {
-                    names.entries.removeAll { it.value == key }
-                    names[name.lowercase()] = key
-                    if (loseAnswer) throw IOException("resposta perdida")
-                    """{"ok":true,"nome":"$name"}"""
-                }
-            }
+            "reservar" -> reserve(body, key)
 
-            "enviar" -> if (key in names.values) {
-                """{"ok":true,"posicao":3,"total":27}"""
+            "enviar" -> if (hasName(key)) {
+                withName("""{"ok":true,"posicao":3,"total":27}""")
             } else {
                 """{"ok":false,"motivo":"sem_nome"}"""
             }
 
             "enviarVarios" -> batch(body, key)
 
+            "codigo" -> if (before4d) """{"ok":false,"motivo":"pedido"}""" else code(key)
+
+            "vincular" -> if (before4d) """{"ok":false,"motivo":"pedido"}""" else link(body, key)
+
+            // Listas vazias: aqui só importa o "seuNome".
+            "placar", "musicas" -> withName("""{"ok":true,"linhas":[],"musicas":[]}""")
+
             else -> """{"ok":false,"motivo":"pedido"}"""
         }
         return 200 to answer
+    }
+
+    private fun reserve(body: JSONObject, key: String): String {
+        if (nameLimit) return """{"ok":false,"motivo":"limite"}"""
+        val name = body.getString("nome").trim()
+        val owner = names[name.lowercase()]
+        if (owner != null && owner != key) return """{"ok":false,"motivo":"nome_em_uso"}"""
+        names.entries.removeAll { it.value == key }
+        names[name.lowercase()] = key
+        if (loseAnswer) throw IOException("resposta perdida")
+        return """{"ok":true,"nome":"$name"}"""
     }
 
     private fun batch(body: JSONObject, key: String) = when {
@@ -87,13 +112,28 @@ class FakeRankingServer : RankingTransport {
 
         batchRefusal != null -> """{"ok":false,"motivo":"$batchRefusal"}"""
 
-        key !in names.values -> """{"ok":false,"motivo":"sem_nome"}"""
+        !hasName(key) -> """{"ok":false,"motivo":"sem_nome"}"""
 
         else -> {
             val placed = """{"ok":true,"posicao":3,"total":27}"""
             val results = List(body.getJSONArray("envios").length()) { placed }
-            """{"ok":true,"resultados":[${results.joinToString(",")}]}"""
+            withName("""{"ok":true,"resultados":[${results.joinToString(",")}]}""")
         }
+    }
+
+    private fun code(key: String): String {
+        val name = names.entries.firstOrNull { it.value == key }?.key ?: linked[key]
+            ?: return """{"ok":false,"motivo":"sem_nome"}"""
+        codes["ABC234"] = name
+        return """{"ok":true,"codigo":"ABC234","validoAte":"2026-11-04T12:10:00.000Z","validoPor":600}"""
+    }
+
+    private fun link(body: JSONObject, key: String): String {
+        if (linkLimit) return """{"ok":false,"motivo":"limite"}"""
+        val name = codes.remove(body.getString("codigo")) ?: return """{"ok":false,"motivo":"codigo_invalido"}"""
+        names.entries.removeAll { it.value == key } // o nome próprio do aparelho fica livre
+        linked[key] = name
+        return """{"ok":true,"nome":"$name"}"""
     }
 
     fun sent(action: String) = calls.filter { it.getString("acao") == action }
@@ -143,8 +183,10 @@ class FakeCharts(ids: List<String>) : ChartRepository {
 
 class FakePlayers : PlayerStore {
     override val player = MutableStateFlow(Player(null, null))
+    var saves = 0
 
     override suspend fun save(name: String, key: String) {
+        saves++
         player.value = Player(name, key)
     }
 
@@ -177,8 +219,14 @@ class RankingRepositoryTest {
     private val players = FakePlayers()
     private val history = FakeHistory()
 
-    private fun record(id: Long, chartId: String = "m1", score: Long = 100, combo: Int = 50, clean: Long? = 30_000) =
-        ScoreRecord(id, chartId, Difficulty.HARD, score, 0.9f, combo, 40, 5, 2, 0, clean)
+    private fun record(
+        id: Long,
+        chartId: String = "m1",
+        score: Long = 100,
+        combo: Int = 50,
+        clean: Long? = 30_000,
+        table: RankingTable = RankingTable.PHONE,
+    ) = ScoreRecord(id, chartId, Difficulty.HARD, score, 0.9f, combo, 40, 5, 2, 0, clean, table)
 
     private fun TestScope.repository(url: String = "https://script/exec") = AppsScriptRankingRepository(
         RankingApi(url, server),
@@ -478,5 +526,228 @@ class RankingRepositoryTest {
 
         assertFalse(repository().askedLater.value)
         assertEquals(Player(null, null), players.player.first())
+    }
+
+    /** "É o melhor?" só dentro da tabela da partida: o recorde do celular não segura a primeira do PC. */
+    @Test
+    fun theBestIsPerTable() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        history.records += record(1, score = 1_000, combo = 500)
+        val ranking = repository()
+
+        val pc = record(2, score = 100, combo = 10, clean = 1, table = RankingTable.PC_STRUM)
+        ranking.submitIfBest(pc.also { history.records += it }, "Música", "Banda")
+        runCurrent()
+        val phone = record(3, score = 500, combo = 10, clean = 1)
+        ranking.submitIfBest(phone.also { history.records += it }, "Música", "Banda")
+        runCurrent()
+
+        assertEquals(SubmitStatus.Placed(3, 27), ranking.statusFor(2).value)
+        assertEquals(SubmitStatus.NotBest, ranking.statusFor(3).value)
+        assertEquals(listOf("pc_palheta"), server.submitted().map { it.getString("tabela") })
+    }
+
+    @Test
+    fun theHistoryGoesWithTheTableOfEachMatch() = runTest {
+        history.records += listOf(
+            record(1, score = 100),
+            record(2, score = 300, table = RankingTable.PC_STRUM),
+            record(3, score = 200, table = RankingTable.PC_STRUM),
+        )
+        val ranking = repository()
+
+        ranking.register("Rodrigo")
+        runCurrent()
+
+        val sent = server.submitted().associate { it.getString("tabela") to it.getInt("pontos") }
+        assertEquals(mapOf("celular" to 100, "pc_palheta" to 300), sent)
+    }
+
+    /** O código vem do script; sem nome, nem pergunta. */
+    @Test
+    fun aLinkCodeIsAskedForThePlayerOfThisDevice() = runTest {
+        val ranking = repository()
+        assertEquals(LinkResult.NoName, ranking.linkCode())
+        assertTrue(server.calls.isEmpty())
+
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+
+        assertEquals(LinkResult.Code("ABC234", 600), ranking.linkCode())
+        assertEquals("chave-1", server.sent("codigo").single().getString("chave"))
+    }
+
+    /** No outro aparelho: o código (minúsculas e traço valem) traz o nome, que fica salvo, e o histórico vai junto. */
+    @Test
+    fun linkingSavesTheNameAndSendsTheHistory() = runTest {
+        server.codes["ABC234"] = "Rodrigo"
+        history.records += record(1, score = 100, table = RankingTable.PC_NO_STRUM)
+        val ranking = repository()
+
+        assertEquals(LinkResult.Linked("Rodrigo"), ranking.link(" abc-234 "))
+        runCurrent()
+
+        assertEquals("ABC234", server.sent("vincular").single().getString("codigo"))
+        assertEquals("chave-1", server.sent("vincular").single().getString("chave"))
+        assertEquals(Player("Rodrigo", "chave-1"), players.player.value)
+        assertEquals(listOf("pc_sem_palheta"), server.submitted().map { it.getString("tabela") })
+        assertTrue(pending.all().isEmpty())
+    }
+
+    /** Já com nome próprio: o script tira as pontuações dele, então o histórico vai de novo, agora no outro nome. */
+    @Test
+    fun linkingADeviceThatHadANameSendsTheHistoryAgain() = runTest {
+        players.player.value = Player("Digo", "chave-9")
+        server.names["digo"] = "chave-9"
+        server.codes["ABC234"] = "Rodrigo"
+        history.records += record(1, score = 100)
+        val ranking = repository()
+
+        assertEquals(LinkResult.Linked("Rodrigo"), ranking.link("ABC234"))
+        runCurrent()
+
+        assertEquals(Player("Rodrigo", "chave-9"), players.player.value)
+        assertEquals(1, server.submitted().size)
+    }
+
+    @Test
+    fun aWrongCodeKeepsEverything() = runTest {
+        players.player.value = Player("Digo", "chave-9")
+        val ranking = repository()
+
+        assertEquals(LinkResult.InvalidCode, ranking.link("ZZZ999"))
+        assertEquals(LinkResult.InvalidCode, ranking.link("AB")) // curto: nem pergunta
+        assertEquals(1, server.sent("vincular").size)
+        assertEquals(Player("Digo", "chave-9"), players.player.value)
+        assertTrue(server.submitted().isEmpty())
+    }
+
+    @Test
+    fun linkErrorsSaySo() = runTest {
+        val ranking = repository()
+
+        server.linkLimit = true
+        assertEquals(LinkResult.Limit, ranking.link("ABC234"))
+        server.linkLimit = false
+        server.offline = true
+        assertEquals(LinkResult.Offline, ranking.link("ABC234"))
+        assertNull(players.player.value.name)
+    }
+
+    /** O app novo com o script de antes da 4d (ainda não republicado): avisa, não trava. */
+    @Test
+    fun theOldScriptMeansTheRankingIsOutdated() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.names["rodrigo"] = "chave-1"
+        server.before4d = true
+        val ranking = repository()
+
+        assertEquals(LinkResult.Outdated, ranking.linkCode())
+        assertEquals(LinkResult.Outdated, ranking.link("ABC234"))
+        assertEquals(Player("Rodrigo", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aRemovedDeviceLeavesWhenLinking() = runTest {
+        players.player.value = Player("Rodrigo", "chave-1")
+        server.removed += "chave-1"
+        val ranking = repository()
+
+        assertEquals(LinkResult.Removed, ranking.link("ABC234"))
+        assertEquals(Player(null, null), players.player.value)
+    }
+
+    /** O mesmo jogador com o nome trocado em outro aparelho: este aparelho fica com Ana até o script dizer. */
+    private fun nameChangedElsewhere() {
+        players.player.value = Player("Ana", "chave-1")
+        server.names["ana"] = "chave-1"
+        server.currentName = "Aninha"
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheBoard() = runTest {
+        nameChangedElsewhere()
+
+        repository().board("m1")
+
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheSongs() = runTest {
+        nameChangedElsewhere()
+
+        repository().songs("")
+
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithASubmission() = runTest {
+        nameChangedElsewhere()
+
+        repository().submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.submitted().size)
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheOldScriptsOneByOneSubmission() = runTest {
+        nameChangedElsewhere()
+        server.oldScript = true
+
+        repository().submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.sent("enviar").size)
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun theSameNameIsNotSavedAgain() = runTest {
+        nameChangedElsewhere()
+        server.currentName = "Ana"
+        val ranking = repository()
+
+        ranking.board("m1")
+        ranking.songs("")
+        ranking.submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.submitted().size)
+        assertEquals(0, players.saves)
+        assertEquals(Player("Ana", "chave-1"), players.player.value)
+    }
+
+    /** Sem o campo (o script de antes desta versão), nada muda. */
+    @Test
+    fun withoutTheNameInTheAnswerNothingChanges() = runTest {
+        nameChangedElsewhere()
+        server.currentName = null
+
+        repository().board("m1")
+
+        assertEquals(0, players.saves)
+    }
+
+    @Test
+    fun onThePhoneEveryTableStaysAsSaved() {
+        assertEquals(RankingTable.PHONE, RankingTable.PHONE.forThisDevice())
+        assertEquals(RankingTable.PC_STRUM, RankingTable.PC_STRUM.forThisDevice())
+    }
+
+    /**
+     * Decisão 5: no PC, as partidas de antes da 4d (que a migração marcou "celular") contam com palheta, o padrão de
+     * fábrica.
+     */
+    @Test
+    fun onThePcTheOldPhoneMarkMeansWithStrum() {
+        assertEquals(RankingTable.PC_STRUM, RankingTable.PHONE.forDevice(pc = true))
+        assertEquals(RankingTable.PC_NO_STRUM, RankingTable.PC_NO_STRUM.forDevice(pc = true))
+        assertEquals(RankingTable.PC_STRUM, RankingTable.PC_STRUM.forDevice(pc = true))
+        assertEquals(RankingTable.PHONE, RankingTable.PHONE.forDevice(pc = false))
     }
 }

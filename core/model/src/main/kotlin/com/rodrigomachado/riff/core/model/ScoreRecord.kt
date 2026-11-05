@@ -13,4 +13,6 @@ data class ScoreRecord(
     val playedAtEpochMs: Long,
     /** "Tempo sem errar": o maior trecho sem erro, em ms do mapa; `null` em partidas de antes da medida. */
     val cleanStreakMs: Long? = null,
+    /** A tabela do ranking em que a partida conta (no PC, conforme a palheta daquela partida). */
+    val rankingTable: RankingTable = RankingTable.PHONE,
 )

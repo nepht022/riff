@@ -45,9 +45,18 @@ interface RankingRepository {
 
     /** Todas as linhas do mapa; o placar é montado no celular ([rankBoard]). */
     suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>>
+
+    /** "Usar este nome em outro aparelho": um código que vale alguns minutos. */
+    suspend fun linkCode(): LinkResult
+
+    /**
+     * "Já tenho um nome em outro aparelho": com o [code] de lá, este aparelho passa a usar aquele nome e envia o seu
+     * histórico (como ao pôr o nome).
+     */
+    suspend fun link(code: String): LinkResult
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions") // uma função por pedido da interface, mais a fila e o vínculo
 @Singleton
 class AppsScriptRankingRepository(
     private val api: RankingApi,
@@ -106,11 +115,58 @@ class AppsScriptRankingRepository(
         }
     }
 
+    override suspend fun linkCode(): LinkResult {
+        val (name, key) = players.player.first()
+        if (name == null || key == null) return LinkResult.NoName
+        return when (val answer = api.linkCode(key)) {
+            is ApiAnswer.Ok -> LinkResult.Code(answer.value.code, answer.value.validForSeconds)
+            is ApiAnswer.Refused -> refusedLink(answer.reason)
+            ApiAnswer.Offline -> LinkResult.Offline
+        }
+    }
+
+    override suspend fun link(code: String): LinkResult {
+        val clean = code.filterNot { it.isWhitespace() || it == '-' }.uppercase()
+        if (clean.length != LINK_CODE_LENGTH) return LinkResult.InvalidCode
+        // Como ao reservar: a chave fica guardada antes, para a resposta perdida não deixar o aparelho sem ela.
+        val key = players.player.first().key ?: keys().also { players.saveKey(it) }
+        return when (val answer = api.link(key, clean)) {
+            is ApiAnswer.Ok -> {
+                players.save(answer.value, key)
+                // O script tirou as pontuações do nome antigo deste aparelho (se só ele o usava): vão de novo.
+                queueHistory()
+                scope.launch { flush() }
+                LinkResult.Linked(answer.value)
+            }
+
+            is ApiAnswer.Refused -> refusedLink(answer.reason)
+
+            ApiAnswer.Offline -> LinkResult.Offline
+        }
+    }
+
+    private suspend fun refusedLink(reason: String): LinkResult = when (reason) {
+        "codigo_invalido" -> LinkResult.InvalidCode
+
+        "limite" -> LinkResult.Limit
+
+        "sem_nome" -> LinkResult.NoName
+
+        "removido" -> LinkResult.Removed.also { leave() }
+
+        // O script de antes da 4d não conhece o vínculo.
+        "pedido" -> LinkResult.Outdated
+
+        else -> LinkResult.Offline // erro do script: tentar de novo depois
+    }
+
     override fun submitIfBest(record: ScoreRecord, title: String, artist: String) {
         if (!api.isConfigured) return
         val status = statusOf(record.id)
         scope.launch {
-            val earlier = history.of(record.chartId, record.difficulty).filter { it.id != record.id }
+            // "É o melhor?" só dentro da tabela da partida (o recorde local continua um só).
+            val earlier = history.of(record.chartId, record.difficulty)
+                .filter { it.id != record.id && it.rankingTable == record.rankingTable }
             if (!record.improves(earlier)) {
                 status.value = SubmitStatus.NotBest
                 flush() // o que ficou na fila sai ao terminar qualquer partida (spec §4)
@@ -135,9 +191,10 @@ class AppsScriptRankingRepository(
     override suspend fun flush() = sending.withLock {
         var registeredAgain = false
         while (true) {
-            val (name, key) = players.player.first()
+            val before = players.player.first()
+            val (name, key) = before
             if (name == null || key == null) return@withLock
-            val outcome = sender.send(key)
+            val outcome = sender.send(key) { adoptName(before, it) }
             if (outcome == Outcome.REMOVED) return@withLock leave()
             // O dono apagou o jogador da planilha: reserva o mesmo nome de novo (uma vez) e tenta outra vez.
             if (outcome != Outcome.NO_NAME || registeredAgain || !registerAgain(name, key)) return@withLock
@@ -163,13 +220,31 @@ class AppsScriptRankingRepository(
         pending.all().forEach { pending.delete(it.id) }
     }
 
-    override suspend fun songs(query: String) = api.songs(players.player.first().key.orEmpty(), query)
+    override suspend fun songs(query: String): ApiAnswer<List<RankedSong>> {
+        val before = players.player.first()
+        return api.songs(before.key.orEmpty(), query).also { adoptName(before, it) }
+    }
 
-    override suspend fun board(chartId: String) = api.board(players.player.first().key.orEmpty(), chartId)
+    override suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>> {
+        val before = players.player.first()
+        return api.board(before.key.orEmpty(), chartId).also { adoptName(before, it) }
+    }
 
-    /** Os melhores de cada número por mapa e dificuldade, inclusive os de antes de ter nome. */
+    /**
+     * O nome trocado em outro aparelho do mesmo jogador: o script manda o atual nas respostas e ele fica guardado
+     * aqui também. Só quando este aparelho tem nome e nada mudou aqui durante o pedido (uma troca feita neste
+     * aparelho enquanto isso vale mais que a resposta antiga).
+     */
+    private suspend fun adoptName(before: Player, answer: ApiAnswer<*>) {
+        val current = (answer as? ApiAnswer.Ok)?.yourName ?: return
+        val key = before.key ?: return
+        if (before.name == null || current == before.name || players.player.first() != before) return
+        players.save(current, key)
+    }
+
+    /** Os melhores de cada número por mapa, dificuldade e tabela, inclusive os de antes de ter nome. */
     private suspend fun queueHistory() {
-        history.all().groupBy { it.chartId to it.difficulty }.forEach { (target, records) ->
+        history.all().groupBy { Triple(it.chartId, it.difficulty, it.rankingTable) }.forEach { (target, records) ->
             val chart = charts.getChart(target.first) ?: return@forEach // mapa que saiu da biblioteca
             pending.insert(records.best(chart.title, chart.artist).toPending(scoreId = null))
         }
@@ -201,6 +276,7 @@ private fun List<ScoreRecord>.best(title: String, artist: String) = Submission(
     maxOf { it.perfect },
     mapNotNull { it.cleanStreakMs }.maxOrNull(),
     maxOf { it.notes },
+    first().rankingTable,
 )
 
 /** Título e artista vêm do mapa, de qualquer tamanho: cortados, a pontuação cabe no pedido do script (4000). */
@@ -215,9 +291,13 @@ private fun ScoreRecord.toSubmission(title: String, artist: String) = Submission
     perfect,
     cleanStreakMs,
     notes,
+    rankingTable,
 )
 
 private const val MAX_NAME_CHARS = 200
+
+/** O código de vínculo do script: 6 caracteres. */
+private const val LINK_CODE_LENGTH = 6
 
 /** Todas as notas da partida: no fim, cada uma foi perfeita, boa ou erro. */
 private val ScoreRecord.notes: Int get() = perfect + good + miss
@@ -235,6 +315,7 @@ private fun Submission.toPending(scoreId: Long?) = RankingPendingEntity(
     cleanMs = cleanMs,
     createdAtEpochMs = System.currentTimeMillis(),
     notes = notes,
+    rankingTable = table.wire,
 )
 
 /** O escopo do app para o ranking: o envio continua depois de a tela da partida sair. */

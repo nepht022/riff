@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ranking_title">Ranking</string>
+    <string name="ranking_name_title">Digite seu nome</string>
+    <string name="ranking_name_field">Nome</string>
+    <string name="ranking_name_save">Salvar</string>
+    <string name="ranking_name_later">Agora não</string>
+    <string name="ranking_name_taken">Esse nome já é de outra pessoa</string>
+    <string name="ranking_name_invalid">Use de 3 a 20 letras, números, espaço, _ ou -</string>
+    <string name="ranking_name_offline">Sem internet: tente de novo depois</string>
+    <string name="ranking_name_limit">Muitas tentativas agora: tente de novo daqui a uma hora</string>
+    <string name="ranking_name_privacy">Seu nome e suas melhores pontuações ficam visíveis para todos que jogam o Riff. Cada aparelho é identificado por um código aleatório.</string>
+    <string name="ranking_back">Voltar</string>
+    <string name="ranking_search_song">Pesquisar música ou artista</string>
+    <string name="ranking_search_name">Pesquisar nome</string>
+    <string name="ranking_your_place">Você em %1$dº</string>
+    <string name="ranking_you">%1$s (você)</string>
+    <string name="ranking_position">%1$dº</string>
+    <string name="ranking_metric_points">Pontos</string>
+    <string name="ranking_metric_accuracy">Precisão</string>
+    <string name="ranking_metric_combo">Combo</string>
+    <string name="ranking_metric_perfect">Perfeitos</string>
+    <string name="ranking_metric_clean">Tempo sem errar</string>
+    <string name="ranking_descending">↓ maior</string>
+    <string name="ranking_ascending">↑ menor</string>
+    <string name="ranking_offline">Sem conexão com o ranking</string>
+    <string name="ranking_retry">Tentar de novo</string>
+    <string name="ranking_not_configured">Ranking não configurado</string>
+    <string name="ranking_empty">Ninguém no ranking ainda</string>
+    <string name="ranking_loading">Carregando…</string>
+    <string name="ranking_table_phone">Celular</string>
+    <string name="ranking_table_pc_strum">PC com palheta</string>
+    <string name="ranking_table_pc_no_strum">PC sem palheta</string>
+    <string name="ranking_table_nobody">ninguém nesta tabela</string>
+    <string name="ranking_link_share">Usar este nome em outro aparelho</string>
+    <string name="ranking_link_enter">Já tenho um nome em outro aparelho</string>
+    <string name="ranking_link_code_title">Código do seu nome</string>
+    <string name="ranking_link_code_hint">No outro aparelho, toque em “Já tenho um nome em outro aparelho” e digite este código.</string>
+    <string name="ranking_link_valid_for">Vale por %1$s</string>
+    <string name="ranking_link_expired">O código venceu</string>
+    <string name="ranking_link_new_code">Pedir outro</string>
+    <string name="ranking_link_done">Pronto</string>
+    <string name="ranking_link_enter_title">Código do outro aparelho</string>
+    <string name="ranking_link_enter_hint">No aparelho que já tem o nome, toque em “Usar este nome em outro aparelho” e digite aqui o código que aparecer.</string>
+    <string name="ranking_link_enter_replaces">Se só este aparelho usa o nome atual, ele fica livre e as pontuações dele saem do ranking. As partidas deste aparelho voltam com o nome novo.</string>
+    <string name="ranking_link_field">Código</string>
+    <string name="ranking_link_confirm">Vincular</string>
+    <string name="ranking_link_invalid">Código errado ou vencido</string>
+    <string name="ranking_link_outdated">O ranking precisa ser atualizado. Tente de novo mais tarde.</string>
+    <string name="ranking_link_no_name">Este aparelho ainda não tem nome no ranking</string>
+    <string name="ranking_link_removed">Este aparelho foi tirado do ranking</string>
+    <plurals name="ranking_players">
+        <item quantity="one">%1$d jogador com pontuação</item>
+        <item quantity="other">%1$d jogadores com pontuação</item>
+    </plurals>
+</resources>

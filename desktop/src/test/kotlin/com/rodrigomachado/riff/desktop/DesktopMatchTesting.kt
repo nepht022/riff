@@ -19,10 +19,13 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.rodrigomachado.riff.core.audio.AudioSink
 import com.rodrigomachado.riff.core.audio.AudioSinkFactory
+import com.rodrigomachado.riff.core.audio.FfmpegPcmSource
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.core.data.folder.FileRandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.core.data.ranking.RankingTransport
 import com.rodrigomachado.riff.core.encore.HttpResponse
 import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -60,18 +63,25 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
 
     /**
      * O app na tela inicial, com a pasta de mapas já importada; com [pad], o controle já lido, e as teclas que ele
-     * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede).
+     * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede). O
+     * ranking fica ligado e fala com o script falso [ranking] (o padrão: sem internet) em [rankingUrl] (vazio:
+     * desligado, como sem `ranking.url`); sem [askForName], o pedido do nome da primeira abertura já foi respondido com
+     * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes).
      */
     fun openApp(
         pad: PadSource = NoPadSource,
         sendMenuKey: ((awtKeyCode: Int) -> Unit)? = null,
         encore: HttpTransport = NoInternet,
+        ranking: RankingTransport = OfflineRankingScript,
+        rankingUrl: String = TEST_RANKING_URL,
+        askForName: Boolean = false,
     ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
             File(this, "notes.chart").writeText(CHART)
             writeTone(File(this, "song.wav"), SONG_MS)
         }
+        LoadedFfmpeg.ensure()
         val audioOut = AudioSinkFactory { rate -> RealTimeSink(rate).also { synchronized(sinks) { sinks += it } } }
         val graph = DesktopGraph(
             temp.newFolder("dados"),
@@ -80,7 +90,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             sfx = SfxPlayerFactory { SilentSfx },
             padSource = pad,
             encoreTransport = encore,
+            rankingUrl = rankingUrl,
+            rankingTransport = ranking,
         ).also { opened = it }
+        if (!askForName) graph.ranking.askLater()
         graph.gamepad.start()
         runBlocking {
             graph.libraryFolderStore.setRootUri(pcUri(charts))
@@ -210,6 +223,28 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             }
         """.trimIndent()
     }
+}
+
+/**
+ * O FFmpeg carregado neste processo antes da primeira partida. A primeira abertura carrega as bibliotecas nativas (o
+ * JavaCPP procura cada uma no classpath e no disco): ~2,5 s com a máquina livre e 15 a 20 s com ela ocupada, uma vez
+ * só por processo, e caía no prazo da primeira partida (a música carregando, ainda sem o palco). Aberto aqui, fora do
+ * prazo, o prazo conta só a partida.
+ */
+private object LoadedFfmpeg {
+    private const val TONE_MS = 100
+
+    init {
+        val tone = File.createTempFile("riff-ffmpeg", ".wav")
+        try {
+            writeTone(tone, TONE_MS)
+            FfmpegPcmSource.open(tone.path, FileRandomReadOpener()).close()
+        } finally {
+            tone.delete()
+        }
+    }
+
+    fun ensure() = Unit
 }
 
 /** A janela do teste sempre com foco (ela não disputa o foco do sistema). */

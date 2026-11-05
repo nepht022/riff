@@ -19,12 +19,17 @@ internal class PendingSender(
     /** Falso depois de o script responder que não conhece o envio em lote (até o app abrir de novo). */
     @Volatile private var batches = true
 
-    suspend fun send(key: String): Outcome = if (batches) sendInBatches(key) else sendOneByOne(key)
+    /** [onAnswer]: cada resposta do script (traz o nome atual do jogador, que pode ter mudado em outro aparelho). */
+    suspend fun send(key: String, onAnswer: suspend (ApiAnswer<*>) -> Unit = {}): Outcome =
+        if (batches) sendInBatches(key, onAnswer) else sendOneByOne(key, onAnswer)
 
-    private suspend fun sendInBatches(key: String): Outcome {
+    private suspend fun sendInBatches(key: String, onAnswer: suspend (ApiAnswer<*>) -> Unit): Outcome {
         for (chunk in pending.all().chunked(BATCH)) {
             when (val answer = api.submitMany(key, chunk.map { it.toSubmission() })) {
-                is ApiAnswer.Ok -> chunk.zip(answer.value).forEach { (entry, result) -> settle(entry, result) }
+                is ApiAnswer.Ok -> {
+                    chunk.zip(answer.value).forEach { (entry, result) -> settle(entry, result) }
+                    onAnswer(answer)
+                }
 
                 is ApiAnswer.Refused -> return when (answer.reason) {
                     "sem_nome" -> Outcome.NO_NAME
@@ -32,7 +37,7 @@ internal class PendingSender(
                     "removido" -> Outcome.REMOVED
 
                     // O script de antes do "enviarVarios" (ainda não republicado): uma por vez.
-                    "pedido" -> sendOneByOne(key).also { batches = false }
+                    "pedido" -> sendOneByOne(key, onAnswer).also { batches = false }
 
                     else -> Outcome.WAIT
                 }
@@ -43,9 +48,10 @@ internal class PendingSender(
         return Outcome.SENT
     }
 
-    private suspend fun sendOneByOne(key: String): Outcome {
+    private suspend fun sendOneByOne(key: String, onAnswer: suspend (ApiAnswer<*>) -> Unit): Outcome {
         for (entry in pending.all()) {
             val answer = api.submit(key, entry.toSubmission())
+            onAnswer(answer)
             if (answer is ApiAnswer.Refused && answer.reason == "sem_nome") return Outcome.NO_NAME
             if (answer is ApiAnswer.Refused && answer.reason == "removido") return Outcome.REMOVED
             if (!settle(entry, answer)) return Outcome.WAIT
@@ -85,4 +91,5 @@ internal fun RankingPendingEntity.toSubmission() = Submission(
     perfect,
     cleanMs,
     notes,
+    storedTable(rankingTable),
 )
