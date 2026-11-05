@@ -72,7 +72,7 @@ salas/{CODIGO}
 ```
 
 - **Código:** 4 letras de um alfabeto sem ambíguas (`ABCDEFGHJKMNPQRSTUVWXYZ`: sem I, L, O e sem números): 23⁴ ≈ 280 mil códigos. Criar tenta um código aleatório com escrita condicional (só se `salas/{CODIGO}` não existe); colidiu, tenta outro.
-- **Validade:** sala sem atividade por 2 h é considerada morta; o app que cria uma sala apaga até 5 salas mortas que encontrar (limpeza oportunista, sem servidor próprio). As regras deixam qualquer autenticado apagar só salas com `criadaEm` mais velha que 2 h e sem `estado: "partida"`.
+- **Validade:** sala sem atividade por 2 h é considerada morta; quem sorteia o código de uma sala morta a apaga e fica com o código (as regras do RTDB não deixam listar salas com segurança). As regras deixam qualquer autenticado apagar só salas com `atividadeEm` mais velho que 2 h. O limite de 4 é garantido por vagas (`vagas/v1..v4`), já que as regras não contam filhos.
 
 ### Regras do banco (`firebase/database.rules.json`)
 

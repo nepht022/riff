@@ -17,7 +17,7 @@
 - Testes nunca falam com o Firebase de verdade.
 - Código: 4 letras do alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ` (23 letras: sem `I`, `L`, `O`; números fora) = 23⁴ = 279.841 códigos.
 - Até **4** jogadores; nome até **20** caracteres (o do ranking).
-- Sala morta: sem atividade por **2 h**; quem cria apaga até **5** salas mortas.
+- Sala morta: sem atividade por **2 h**; quem sorteia o código de uma sala morta a apaga e fica com o código.
 - Jogador que some na sala: **60 s** sem escrever (batimento a cada 20 s).
 - Mesmos padrões das features KMP existentes (`riff.kmp.feature`/`riff.kmp.library`, strings em `composeResources`, testes de Android em `androidHostTest`, PC em `desktopTest`); textos em português; detekt (linhas até 120).
 - Criar o projeto do Firebase, ligar o login anônimo e publicar as regras são **ações do usuário**.
@@ -30,6 +30,12 @@
 4. **Dono sai:** o app do dono, ao sair, grava como `dono` o jogador com o menor `entrouEm` (se houver) e se remove; sem ninguém, apaga a sala. Dono que some (60 s sem `vistoEm`): o jogador mais antigo vivo assume (as regras deixam qualquer jogador trocar o `dono` só quando o `vistoEm` do dono atual tem mais de 60 s).
 5. **Streaming:** um `GET salas/{CODIGO}.json?auth=…` com `Accept: text/event-stream`; eventos `put`/`patch` aplicados numa árvore JSON local; `keep-alive` ignorado; `cancel`/`auth_revoked` → renovar o token e reabrir; queda → reabrir com espera 1, 2, 4… até 30 s.
 6. **Token:** `refreshToken` e `uid` nas preferências do DataStore (`room_refresh_token`, `room_uid`); `idToken` só na memória, renovado 5 min antes de vencer.
+
+## Mudanças depois da Task 1 (as regras do RTDB não contam filhos nem limitam listagens)
+
+- **Vagas:** a sala tem `vagas/{v1..v4}: uid` e cada jogador tem `vaga: "vN"` (obrigatório). Criar grava `vagas: {v1: dono}`. Entrar é um `PATCH salas/{C}` só com `{"jogadores/{uid}": {…, vaga}, "vagas/vN": uid, "atividadeEm": ServerTime.NOW}`; vaga livre = vazia ou cujo uid não aponta para ela; recusado (401/403) → reler e tentar outra vaga; sem vaga → `Full`. Sair apaga `jogadores/{uid}` e `vagas/vN` juntos (o dono grava o novo `dono` na mesma escrita). Detalhes e testes em `firebase/rules.test.mjs`.
+- **Limpeza de salas mortas:** ninguém lista `salas`. Ao criar, `412` no código sorteado → ler a sala; morta (`atividadeEm` > 2 h) → apagar e criar com o mesmo código; viva → outro código. O teste `createCleansUpToFiveStaleRooms` vira `createTakesOverAStaleCode` (e `createRetriesWhenTheCodeIsTaken` continua para a viva).
+- **Campos extras na sala são recusados:** a M2 precisa acrescentar `musica`, `rodada`, `inicio`, `placar` às regras.
 
 ## Review Focus
 
@@ -111,7 +117,7 @@
 
 - [ ] **Step 1: Write the failing tests:**
   - `RoomCodesTest`: `randomUsesOnlyTheAlphabet` (10.000 códigos, 4 letras, sem `I L O`), `normalizeUppercasesAndTrims` (`" abcd "` → `"ABCD"`), `normalizeRefusesAmbiguousAndWrongLength` (`"ABCO"`, `"AB1D"`, `"ABC"`, `"ABCDE"` → null).
-  - `RoomRepositoryTest`: `createWritesOwnerAndFirstPlayer`, `createRetriesWhenTheCodeIsTaken` (o falso já tem `salas/AAAA`; o `Random` falso sorteia `AAAA` e depois `BBBB` → `Created("BBBB")`), `createCleansUpToFiveStaleRooms` (7 salas com `atividadeEm` de 3 h → 5 apagadas, a fresca fica), `joinAddsMe`, `joinUnknownCodeSaysNotFound`, `joinFullRoomSaysFull`, `joinTwiceKeepsOneEntry`, `leaveAsOwnerPassesToOldestPlayer`, `leaveAsLastPlayerDeletesTheRoom`, `goneOwnerIsReplacedByOldestLivePlayer`, `observeEmitsPlayersInJoinOrder`, `observeEmitsNullWhenRoomIsDeleted`, `playerSilentFor60sIsGone`, `noInternetOnCreateSaysNoConnection`.
+  - `RoomRepositoryTest`: `createWritesOwnerAndFirstPlayer`, `createRetriesWhenTheCodeIsTaken` (o falso já tem `salas/AAAA`; o `Random` falso sorteia `AAAA` e depois `BBBB` → `Created("BBBB")`), `createTakesOverAStaleCode` (o falso tem `salas/AAAA` com `atividadeEm` de 3 h; o sorteio dá `AAAA` → apaga e cria `AAAA`), `joinAddsMe`, `joinUnknownCodeSaysNotFound`, `joinFullRoomSaysFull`, `joinTwiceKeepsOneEntry`, `leaveAsOwnerPassesToOldestPlayer`, `leaveAsLastPlayerDeletesTheRoom`, `goneOwnerIsReplacedByOldestLivePlayer`, `observeEmitsPlayersInJoinOrder`, `observeEmitsNullWhenRoomIsDeleted`, `playerSilentFor60sIsGone`, `noInternetOnCreateSaysNoConnection`.
 - [ ] **Step 2:** FAIL.
 - [ ] **Step 3:** implementar.
 - [ ] **Step 4:** passam; detekt; kover do módulo no mesmo nível dos outros `:core:*`.
