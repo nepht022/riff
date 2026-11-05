@@ -42,6 +42,7 @@
     <string name="ranking_link_done">Pronto</string>
     <string name="ranking_link_enter_title">Código do outro aparelho</string>
     <string name="ranking_link_enter_hint">No aparelho que já tem o nome, toque em “Usar este nome em outro aparelho” e digite aqui o código que aparecer.</string>
+    <string name="ranking_link_enter_replaces">Se só este aparelho usa o nome atual, ele fica livre e as pontuações dele saem do ranking. As partidas deste aparelho voltam com o nome novo.</string>
     <string name="ranking_link_field">Código</string>
     <string name="ranking_link_confirm">Vincular</string>
     <string name="ranking_link_invalid">Código errado ou vencido</string>

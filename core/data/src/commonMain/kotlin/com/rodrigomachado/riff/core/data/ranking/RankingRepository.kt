@@ -191,9 +191,10 @@ class AppsScriptRankingRepository(
     override suspend fun flush() = sending.withLock {
         var registeredAgain = false
         while (true) {
-            val (name, key) = players.player.first()
+            val before = players.player.first()
+            val (name, key) = before
             if (name == null || key == null) return@withLock
-            val outcome = sender.send(key)
+            val outcome = sender.send(key) { adoptName(before, it) }
             if (outcome == Outcome.REMOVED) return@withLock leave()
             // O dono apagou o jogador da planilha: reserva o mesmo nome de novo (uma vez) e tenta outra vez.
             if (outcome != Outcome.NO_NAME || registeredAgain || !registerAgain(name, key)) return@withLock
@@ -219,9 +220,27 @@ class AppsScriptRankingRepository(
         pending.all().forEach { pending.delete(it.id) }
     }
 
-    override suspend fun songs(query: String) = api.songs(players.player.first().key.orEmpty(), query)
+    override suspend fun songs(query: String): ApiAnswer<List<RankedSong>> {
+        val before = players.player.first()
+        return api.songs(before.key.orEmpty(), query).also { adoptName(before, it) }
+    }
 
-    override suspend fun board(chartId: String) = api.board(players.player.first().key.orEmpty(), chartId)
+    override suspend fun board(chartId: String): ApiAnswer<List<BoardEntry>> {
+        val before = players.player.first()
+        return api.board(before.key.orEmpty(), chartId).also { adoptName(before, it) }
+    }
+
+    /**
+     * O nome trocado em outro aparelho do mesmo jogador: o script manda o atual nas respostas e ele fica guardado
+     * aqui também. Só quando este aparelho tem nome e nada mudou aqui durante o pedido (uma troca feita neste
+     * aparelho enquanto isso vale mais que a resposta antiga).
+     */
+    private suspend fun adoptName(before: Player, answer: ApiAnswer<*>) {
+        val current = (answer as? ApiAnswer.Ok)?.yourName ?: return
+        val key = before.key ?: return
+        if (before.name == null || current == before.name || players.player.first() != before) return
+        players.save(current, key)
+    }
 
     /** Os melhores de cada número por mapa, dificuldade e tabela, inclusive os de antes de ter nome. */
     private suspend fun queueHistory() {

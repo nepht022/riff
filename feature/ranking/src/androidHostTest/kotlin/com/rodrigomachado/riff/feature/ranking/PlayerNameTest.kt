@@ -1,8 +1,12 @@
 package com.rodrigomachado.riff.feature.ranking
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.rodrigomachado.riff.core.data.ranking.NameResult
 import com.rodrigomachado.riff.core.data.ranking.Player
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -27,6 +31,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class PlayerNameTest {
+    private companion object {
+        const val WARNING = "Se só este aparelho usa o nome atual, ele fica livre e as pontuações dele saem do " +
+            "ranking. As partidas deste aparelho voltam com o nome novo."
+    }
+
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -160,6 +169,62 @@ class PlayerNameTest {
 
         assertEquals("Rodrigo", vm.state.value.name)
         assertEquals(null, vm.state.value.error)
+    }
+
+    /** O ViewModel dura o app inteiro: pôr o nome e reabrir o diálogo já oferece levá-lo a outro aparelho. */
+    @Test
+    fun afterSavingTheNameTheReopenedDialogOffersToShareIt() = runTest {
+        val vm = PlayerNameViewModel(ranking)
+        vm.onName("Rodrigo")
+        vm.save()
+
+        vm.reset()
+
+        assertTrue(vm.state.value.hasName)
+    }
+
+    /** O nome que some (tirado do ranking) também some do diálogo. */
+    @Test
+    fun aNameThatGoesAwayStopsOfferingToShareIt() = runTest {
+        ranking.player.value = Player("Rodrigo", "k")
+        val vm = PlayerNameViewModel(ranking)
+
+        ranking.player.value = Player(null, null)
+        vm.reset()
+
+        assertFalse(vm.state.value.hasName)
+    }
+
+    @Test
+    fun theShareButtonShowsUpWhenTheDialogIsReopenedAfterSavingTheName() {
+        val vm = PlayerNameViewModel(ranking)
+        var renaming by mutableStateOf(false)
+        composeRule.setContent {
+            RiffTheme { PlayerNameGate(renaming = renaming, onRenameClosed = { renaming = false }, viewModel = vm) }
+        }
+        composeRule.onNodeWithText("Usar este nome em outro aparelho").assertDoesNotExist()
+
+        composeRule.onNodeWithText("Nome").performTextInput("Rodrigo")
+        composeRule.onNodeWithText("Salvar").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Salvar").assertDoesNotExist()
+        renaming = true // Configurações → trocar o nome
+
+        composeRule.onNodeWithText("Usar este nome em outro aparelho").assertExists()
+    }
+
+    /** Vincular um aparelho que já tem nome tira esse nome dele: o passo do código avisa antes. */
+    @Test
+    fun enteringACodeOnADeviceWithANameWarnsWhatHappensToIt() {
+        var state by mutableStateOf(PlayerNameUiState(name = "Rodrigo", hasName = true, step = NameStep.ENTER_CODE))
+        composeRule.setContent {
+            RiffTheme { PlayerNameDialog(state, onName = {}, onSave = {}, onLater = null) }
+        }
+        composeRule.onNodeWithText(WARNING).assertExists()
+
+        state = PlayerNameUiState(step = NameStep.ENTER_CODE)
+
+        composeRule.onNodeWithText(WARNING).assertDoesNotExist()
     }
 
     /** O nome gravado chega depois de a pessoa começar a digitar: o que ela digitou fica. */

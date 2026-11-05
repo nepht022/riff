@@ -34,19 +34,22 @@
  * - reservar {chave, nome} → {ok, nome}. Põe ou troca o nome do jogador do aparelho (em todos os aparelhos dele; o
  *   antigo fica livre). Erros: nome_invalido, nome_em_uso (de outro jogador), limite, removido, pedido.
  * - enviar {chave, mapa, titulo, artista, dificuldade, pontos, precisao, combo, perfeitos, semErrar, notas, tabela?}
- *   → {ok, posicao, total}: posição em pontos naquele mapa, dificuldade e tabela. tabela ausente/vazia = celular;
- *   desconhecida = pedido. Erros: sem_nome, limite, removido, pedido.
+ *   → {ok, posicao, total, seuNome}: posição em pontos naquele mapa, dificuldade e tabela. tabela ausente/vazia =
+ *   celular; desconhecida = pedido. Erros: sem_nome, limite, removido, pedido.
  * - enviarVarios {chave, envios: [até 50 como no enviar, sem acao/chave]} → {ok, resultados: [{ok, posicao, total} |
- *   {ok:false, motivo:'pedido'}]}. Erros do pedido: lote_invalido (lista vazia, > 50 ou chave curta), sem_nome,
- *   limite, removido.
+ *   {ok:false, motivo:'pedido'}], seuNome}. Erros do pedido: lote_invalido (lista vazia, > 50 ou chave curta),
+ *   sem_nome, limite, removido.
+ * - seuNome: o nome atual do jogador deste aparelho (trocado em qualquer aparelho dele), para o app atualizar o nome
+ *   guardado. Vem no enviar e no enviarVarios (o app 0.5.0 lê só os campos que conhece) e, só com tabelas:true, no
+ *   musicas e no placar; não vem quando o aparelho não tem nome.
  * - musicas {chave, busca, tabelas?} → {ok, musicas: [{mapa, titulo, artista, jogadores, suaPosicao, tabelas?}]}.
  *   Sem tabelas:true (app 0.5.0): só a tabela celular, sem o campo tabelas. Com tabelas:true: as músicas com alguém
  *   em qualquer tabela; jogadores = jogadores distintos somando as tabelas; suaPosicao = a melhor posição sua (em
  *   pontos) em qualquer tabela e dificuldade, ou null; tabelas = {celular|pc_palheta|pc_sem_palheta: {jogadores,
- *   suaPosicao}} só com as tabelas que têm alguém naquela música.
+ *   suaPosicao}} só com as tabelas que têm alguém naquela música; mais seuNome.
  * - placar {chave, mapa, tabelas?} → {ok, linhas: [{nome, voce, dificuldade, pontos, precisao, combo, perfeitos,
  *   semErrar, notas, tabela?}]}. Sem tabelas:true: só as linhas celular, sem o campo tabela. Com tabelas:true: todas,
- *   cada uma com a tabela. voce = a linha é do seu jogador (de qualquer aparelho dele).
+ *   cada uma com a tabela, mais seuNome. voce = a linha é do seu jogador (de qualquer aparelho dele).
  * - codigo {chave} → {ok, codigo, validoAte, validoPor}: código de vínculo do jogador deste aparelho — 6 caracteres
  *   de ABCDEFGHJKMNPQRSTUVWXYZ23456789, uso único, vale validoPor = 600 segundos (validoAte em ISO 8601, UTC; use o
  *   validoPor para a contagem, o relógio do aparelho pode estar errado). Um ativo por jogador: pedir de novo (de
@@ -56,8 +59,9 @@
  *   inteiro (o nome fica livre e as pontuações dele saem da planilha; o app reenvia o histórico local depois); se o
  *   jogador antigo tinha outros aparelhos, só este aparelho sai dele (nome e pontuações ficam com os outros).
  *   Vincular ao próprio jogador só confirma (gasta o código). Erros: codigo_invalido (errado, vencido, já usado ou de
- *   jogador removido — a mesma resposta), limite (5 tentativas por aparelho por hora, certas ou erradas), removido,
- *   pedido.
+ *   jogador removido — a mesma resposta), limite (5 tentativas por aparelho por hora, certas ou erradas; 100 códigos
+ *   errados por hora somando todos os aparelhos; 100 aparelhos sem nome vinculados por hora somando todos — a recusa
+ *   por limite não gasta o código), removido, pedido.
  * - Script de antes da 4d: codigo e vincular respondem pedido; placar/musicas ignoram tabelas (só existe celular).
  */
 
@@ -71,6 +75,8 @@ var NAMES_PER_HOUR_ALL = 100; // nomes novos por hora somando todos: o endereço
 var SCORES_PER_HOUR = 300; // pontuações por aparelho (um lote conta cada uma)
 var CODES_PER_HOUR = 5;   // códigos de vínculo pedidos por aparelho
 var LINKS_PER_HOUR = 5;   // tentativas de vínculo por aparelho (erradas contam): 31^6 códigos, 5 chutes por hora
+var WRONG_CODES_PER_HOUR_ALL = 100; // códigos errados por hora somando todos: muitos aparelhos não somam chutes
+var LINKED_PER_HOUR_ALL = 100; // aparelhos sem nome que entram num jogador por vínculo, por hora somando todos
 var CODE_SECONDS = 600;
 var CODE_LENGTH = 6;
 var CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sem I, L, O, 0 e 1 (fáceis de confundir)
@@ -219,20 +225,27 @@ function randomCode() {
  */
 function link(rawCode, hash) {
   if (isRemoved(hash)) return { ok: false, motivo: 'removido' };
-  if (overLimit('vincular:' + hash, LINKS_PER_HOUR)) return { ok: false, motivo: 'limite' };
+  if (overLimit('vincular:' + hash, LINKS_PER_HOUR) || overLimit('vincularErrados', WRONG_CODES_PER_HOUR_ALL)) {
+    return { ok: false, motivo: 'limite' };
+  }
+  var sheet = tab(PLAYERS);
+  var rows = sheet.getDataRange().getValues(); // sem filtrar: os índices são os números das linhas
+  var mine = deviceRow(rows, hash);
+  // Antes de olhar o código: a recusa não gasta o código certo.
+  if (mine < 0 && overLimit('vinculados', LINKED_PER_HOUR_ALL)) return { ok: false, motivo: 'limite' };
   countUse('vincular:' + hash, 1);
   var code = rawCode.toUpperCase().replace(/[\s-]/g, '');
   var cache = CacheService.getScriptCache();
   var target = code.length === CODE_LENGTH ? cache.get('vinculo:' + code) : null;
-  if (!target) return { ok: false, motivo: 'codigo_invalido' };
-  var sheet = tab(PLAYERS);
-  var rows = sheet.getDataRange().getValues(); // sem filtrar: os índices são os números das linhas
+  if (!target) {
+    countUse('vincularErrados', 1);
+    return { ok: false, motivo: 'codigo_invalido' };
+  }
   var targetRow = null;
   rows.forEach(function (row) { if (playerIdOf(row) === target) targetRow = row; });
   forgetCode(target); // uso único (e o jogador removido no meio do caminho também gasta)
   if (!targetRow) return { ok: false, motivo: 'codigo_invalido' };
   var name = String(targetRow[P.nome]);
-  var mine = deviceRow(rows, hash);
   if (mine >= 0 && playerIdOf(rows[mine]) === target) return { ok: true, nome: name };
   var now = new Date().toISOString();
   var created = now;
@@ -247,6 +260,7 @@ function link(rawCode, hash) {
     }
   }
   sheet.appendRow([safe(name), safe(name.toLowerCase()), hash, created, now, target]);
+  if (mine < 0) countUse('vinculados', 1);
   return { ok: true, nome: name };
 }
 
@@ -266,34 +280,38 @@ function deleteScores(players) {
 
 /** Uma pontuação: guarda o melhor de cada número e devolve a posição em pontos naquele mapa, dificuldade e tabela. */
 function submit(data, hash) {
-  var player = refuseSubmit(hash, 1);
-  if (typeof player !== 'string') return player;
-  return storeAll([data], player)[0];
+  var who = refuseSubmit(hash, 1);
+  if (!who.player) return who;
+  var result = storeAll([data], who.player)[0];
+  if (result.ok) result.seuNome = who.name;
+  return result;
 }
 
 /** Várias pontuações num pedido: um resultado por envio, na mesma ordem. */
 function submitMany(list, hash) {
   // Motivo próprio: o app volta a mandar uma por vez só quando ouve "pedido" (o script antigo não conhece o lote).
   if (!Array.isArray(list) || list.length === 0 || list.length > MAX_BATCH) return { ok: false, motivo: 'lote_invalido' };
-  var player = refuseSubmit(hash, list.length);
-  if (typeof player !== 'string') return player;
-  return { ok: true, resultados: storeAll(list, player) };
+  var who = refuseSubmit(hash, list.length);
+  if (!who.player) return who;
+  return { ok: true, resultados: storeAll(list, who.player), seuNome: who.name };
 }
 
 /**
  * Removido, sem nome ou passou do limite (pedidos e pontuações por hora, por aparelho): devolve a recusa. Senão conta
- * o uso e devolve o id do jogador do aparelho.
+ * o uso e devolve {player, name}: o id do jogador do aparelho e o nome atual dele.
  */
 function refuseSubmit(hash, scores) {
   if (isRemoved(hash)) return { ok: false, motivo: 'removido' };
-  var player = playerOf(hash);
-  if (!player) return { ok: false, motivo: 'sem_nome' };
+  var rows = tab(PLAYERS).getDataRange().getValues();
+  var mine = deviceRow(rows, hash);
+  if (mine < 0) return { ok: false, motivo: 'sem_nome' };
+  var player = playerIdOf(rows[mine]);
   if (overLimit('envios:' + hash, MAX_PER_HOUR) || overLimit('pontuacoes:' + hash, SCORES_PER_HOUR, scores)) {
     return { ok: false, motivo: 'limite' };
   }
   countUse('envios:' + hash, 1);
   countUse('pontuacoes:' + hash, scores);
-  return player;
+  return { player: player, name: String(rows[mine][P.nome]) };
 }
 
 /**
@@ -408,7 +426,9 @@ function songs(query, hash, all) {
   var rows = filled(tab(SCORES).getDataRange().getValues(), S.mapa).filter(function (row) {
     return all || tableOf(row) === PHONE;
   });
-  var player = playerOf(hash);
+  var players = tab(PLAYERS).getDataRange().getValues();
+  var mineRow = deviceRow(players, hash);
+  var player = mineRow < 0 ? null : playerIdOf(players[mineRow]);
   var bySong = {};
   rows.forEach(function (row) {
     var song = bySong[row[S.mapa]] || (bySong[row[S.mapa]] = { mapa: row[S.mapa], titulo: row[S.titulo],
@@ -444,7 +464,9 @@ function songs(query, hash, all) {
     return !wanted || (song.titulo + ' ' + song.artista).toLowerCase().indexOf(wanted) >= 0;
   });
   list.sort(function (a, b) { return b.jogadores - a.jogadores || String(a.titulo).localeCompare(String(b.titulo)); });
-  return { ok: true, musicas: list };
+  var result = { ok: true, musicas: list };
+  if (all && mineRow >= 0) result.seuNome = String(players[mineRow][P.nome]);
+  return result;
 }
 
 /**
@@ -479,7 +501,9 @@ function board(map, hash, all) {
     if (all) line.tabela = table;
     lines.push(line);
   });
-  return { ok: true, linhas: lines };
+  var result = { ok: true, linhas: lines };
+  if (all && mine >= 0) result.seuNome = String(players[mine][P.nome]);
+  return result;
 }
 
 function number(value) {

@@ -9,6 +9,10 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
         }
+        // O teste de migração do PC cria o banco antigo pelos esquemas exportados.
+        getByName("desktopTest").dependencies {
+            implementation(libs.androidx.room.testing)
+        }
         getByName("androidHostTest").dependencies {
             implementation(libs.androidx.test.core)
             implementation(libs.androidx.room.testing)

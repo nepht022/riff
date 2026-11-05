@@ -17,7 +17,11 @@ fun interface RankingTransport {
 }
 
 sealed interface ApiAnswer<out T> {
-    data class Ok<T>(val value: T) : ApiAnswer<T>
+    /**
+     * [yourName]: o nome atual do jogador deste aparelho ("seuNome"), quando o script manda — trocado em outro
+     * aparelho do mesmo jogador, chega aqui.
+     */
+    data class Ok<T>(val value: T, val yourName: String? = null) : ApiAnswer<T>
 
     /** O script respondeu e recusou (nome em uso, limite...). */
     data class Refused(val reason: String) : ApiAnswer<Nothing>
@@ -131,6 +135,9 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
 
     private fun JSONObject.number(name: String): Double? = if (isNull(name)) null else getDouble(name)
 
+    /** "seuNome": nos envios e, com "tabelas", no placar e nas músicas (o script de antes não manda). */
+    private fun JSONObject.yourName(): String? = if (isNull("seuNome")) null else getString("seuNome").ifEmpty { null }
+
     @Suppress("SwallowedException") // sem rede ou resposta estranha: o envio fica na fila e tenta de novo
     private suspend fun <T> call(request: JSONObject, read: (JSONObject) -> T): ApiAnswer<T> {
         if (!isConfigured) return ApiAnswer.Offline
@@ -139,7 +146,7 @@ class RankingApi(private val url: String, private val transport: RankingTranspor
             val json = JSONObject(body)
             when {
                 code !in HTTP_OK -> ApiAnswer.Offline
-                json.optBoolean("ok") -> ApiAnswer.Ok(read(json))
+                json.optBoolean("ok") -> ApiAnswer.Ok(read(json), json.yourName())
                 else -> ApiAnswer.Refused(json.optString("motivo"))
             }
         } catch (e: IOException) {

@@ -96,11 +96,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
 
-- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04.
+- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04. **O script do ranking mudou de novo na revisão final** (`seuNome` nas respostas, limites gerais do vínculo): falta republicar. Compatível com o app 0.5.0 (só campos novos no topo das respostas do `enviar`/`enviarVarios`, que ele ignora; no `placar`/`musicas` só com `tabelas: true`).
+- App novo com o script antigo (de antes da 4d): as partidas do PC vão sem tabela reconhecida e o script as grava como Celular. Quem republicar o script depois de alguém jogar no PC fica com essas pontuações na tabela Celular.
 - Teste real (PC: nome, jogar com e sem palheta, as três tabelas; celular: o ranking de hoje em "Celular", o código de vínculo e o PC usando o mesmo nome): o usuário seguiu sem relatar. O celular precisa do APK de **release** por cima (o banco vai para a v14; o de debug exigiria desinstalar e apagaria os recordes).
-- Vínculo: limite de tentativas só por aparelho (sem limite geral) e sem limite de aparelhos por jogador; código de 6 caracteres (31⁶) com validade de 10 min.
+- Vínculo: 5 tentativas por aparelho por hora, mais 100 códigos errados e 100 aparelhos sem nome vinculados por hora somando todos; sem limite de aparelhos por jogador; código de 6 caracteres (31⁶) com validade de 10 min.
 - `placar`/`musicas` com `tabelas: true` leem as Pontuações inteiras e classificam por tabela e dificuldade: com milhares de linhas pode ficar lento (cache ou índice).
-- Nome trocado em outro aparelho: o celular com o app 0.5.0 guarda o nome antigo até o próximo `reservar`.
+- Nome trocado em outro aparelho: o app novo atualiza o nome guardado pelo `seuNome` no próximo envio, placar ou lista de músicas (até lá mostra o antigo); o celular com o app 0.5.0 (não lê o campo) guarda o nome antigo até o próximo `reservar`.
+- `deleteScores` (vincular um aparelho que era o único do jogador, `removerJogador`) apaga linha a linha dentro do lock: com muitas pontuações pode demorar e segurar os outros pedidos.
+- Voltar/Esc durante "Vincular" zera o `saving` com o pedido ainda em andamento: a resposta chega depois e pode fechar o diálogo (vinculado) ou mostrar o erro no passo do nome.
+- Com o PC totalmente ocupado, a separação por IA (prioridade mínima) fica parada: intencional (a partida e o resto do PC vêm primeiro).
 - Vincular com pontuações ainda na fila pode reenviar algumas (inofensivo: o script guarda o melhor).
 - O texto de ajuda do código diz "toque em…" também no PC; o destaque de foco dos chips de tabela no PC não tem screenshot.
 

@@ -59,6 +59,11 @@ class FakeRankingServer : RankingTransport {
     /** O script recusa vínculos (5 tentativas por hora). */
     var linkLimit = false
 
+    /** O nome atual do jogador (trocado em outro aparelho): vai como "seuNome" nos envios, no placar e nas músicas. */
+    var currentName: String? = null
+
+    private fun withName(json: String) = currentName?.let { json.removeSuffix("}") + ""","seuNome":"$it"}""" } ?: json
+
     private fun hasName(key: String) = key in names.values || key in linked
 
     override suspend fun post(url: String, json: String): Pair<Int, String> {
@@ -72,7 +77,7 @@ class FakeRankingServer : RankingTransport {
             "reservar" -> reserve(body, key)
 
             "enviar" -> if (hasName(key)) {
-                """{"ok":true,"posicao":3,"total":27}"""
+                withName("""{"ok":true,"posicao":3,"total":27}""")
             } else {
                 """{"ok":false,"motivo":"sem_nome"}"""
             }
@@ -82,6 +87,9 @@ class FakeRankingServer : RankingTransport {
             "codigo" -> if (before4d) """{"ok":false,"motivo":"pedido"}""" else code(key)
 
             "vincular" -> if (before4d) """{"ok":false,"motivo":"pedido"}""" else link(body, key)
+
+            // Listas vazias: aqui só importa o "seuNome".
+            "placar", "musicas" -> withName("""{"ok":true,"linhas":[],"musicas":[]}""")
 
             else -> """{"ok":false,"motivo":"pedido"}"""
         }
@@ -109,7 +117,7 @@ class FakeRankingServer : RankingTransport {
         else -> {
             val placed = """{"ok":true,"posicao":3,"total":27}"""
             val results = List(body.getJSONArray("envios").length()) { placed }
-            """{"ok":true,"resultados":[${results.joinToString(",")}]}"""
+            withName("""{"ok":true,"resultados":[${results.joinToString(",")}]}""")
         }
     }
 
@@ -175,8 +183,10 @@ class FakeCharts(ids: List<String>) : ChartRepository {
 
 class FakePlayers : PlayerStore {
     override val player = MutableStateFlow(Player(null, null))
+    var saves = 0
 
     override suspend fun save(name: String, key: String) {
+        saves++
         player.value = Player(name, key)
     }
 
@@ -646,6 +656,81 @@ class RankingRepositoryTest {
 
         assertEquals(LinkResult.Removed, ranking.link("ABC234"))
         assertEquals(Player(null, null), players.player.value)
+    }
+
+    /** O mesmo jogador com o nome trocado em outro aparelho: este aparelho fica com Ana até o script dizer. */
+    private fun nameChangedElsewhere() {
+        players.player.value = Player("Ana", "chave-1")
+        server.names["ana"] = "chave-1"
+        server.currentName = "Aninha"
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheBoard() = runTest {
+        nameChangedElsewhere()
+
+        repository().board("m1")
+
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheSongs() = runTest {
+        nameChangedElsewhere()
+
+        repository().songs("")
+
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithASubmission() = runTest {
+        nameChangedElsewhere()
+
+        repository().submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.submitted().size)
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun aNameChangedOnAnotherDeviceArrivesWithTheOldScriptsOneByOneSubmission() = runTest {
+        nameChangedElsewhere()
+        server.oldScript = true
+
+        repository().submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.sent("enviar").size)
+        assertEquals(Player("Aninha", "chave-1"), players.player.value)
+    }
+
+    @Test
+    fun theSameNameIsNotSavedAgain() = runTest {
+        nameChangedElsewhere()
+        server.currentName = "Ana"
+        val ranking = repository()
+
+        ranking.board("m1")
+        ranking.songs("")
+        ranking.submitIfBest(record(1), "T", "A")
+        runCurrent()
+
+        assertEquals(1, server.submitted().size)
+        assertEquals(0, players.saves)
+        assertEquals(Player("Ana", "chave-1"), players.player.value)
+    }
+
+    /** Sem o campo (o script de antes desta versão), nada muda. */
+    @Test
+    fun withoutTheNameInTheAnswerNothingChanges() = runTest {
+        nameChangedElsewhere()
+        server.currentName = null
+
+        repository().board("m1")
+
+        assertEquals(0, players.saves)
     }
 
     @Test

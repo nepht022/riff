@@ -42,6 +42,7 @@
     <string name="ranking_link_done">Done</string>
     <string name="ranking_link_enter_title">Code from the other device</string>
     <string name="ranking_link_enter_hint">On the device that already has the name, tap “Use this name on another device” and enter the code it shows here.</string>
+    <string name="ranking_link_enter_replaces">If only this device uses its current name, that name becomes free and its scores leave the ranking. This device’s games come back under the new name.</string>
     <string name="ranking_link_field">Code</string>
     <string name="ranking_link_confirm">Link</string>
     <string name="ranking_link_invalid">Wrong or expired code</string>

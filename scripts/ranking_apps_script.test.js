@@ -533,6 +533,86 @@ const tests = {
     c.call(play(K('B')));
     assert.deepStrictEqual(boardOf(c, K('C')).map((l) => [l.nome, l.voce]), [['Beto', false]]);
   },
+
+  // --- revisão da 4d: o nome trocado em outro aparelho chega a este ---
+  seuNomeVemNoPlacarENasMusicasSoComTabelas() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    c.call({ acao: 'vincular', chave: K('B'), codigo: c.call({ acao: 'codigo', chave: K('A') }).codigo });
+    c.call(play(K('A')));
+    c.call({ acao: 'reservar', nome: 'Aninha', chave: K('B') }); // trocado no outro aparelho
+    const board = c.call({ acao: 'placar', chave: K('A'), mapa: 'm1', tabelas: true });
+    assert.strictEqual(board.seuNome, 'Aninha');
+    const songs = c.call({ acao: 'musicas', chave: K('A'), busca: '', tabelas: true });
+    assert.strictEqual(songs.seuNome, 'Aninha');
+    // O app 0.5.0 (sem "tabelas") recebe a mesma resposta de antes.
+    assert.ok(!('seuNome' in c.call({ acao: 'placar', chave: K('A'), mapa: 'm1' })));
+    assert.ok(!('seuNome' in c.call({ acao: 'musicas', chave: K('A'), busca: '' })));
+    // Sem nome neste aparelho, sem o campo.
+    assert.ok(!('seuNome' in c.call({ acao: 'placar', chave: K('C'), mapa: 'm1', tabelas: true })));
+    assert.ok(!('seuNome' in c.call({ acao: 'musicas', chave: K('C'), busca: '', tabelas: true })));
+  },
+  seuNomeVemNosEnvios() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    c.call({ acao: 'vincular', chave: K('B'), codigo: c.call({ acao: 'codigo', chave: K('A') }).codigo });
+    assert.strictEqual(c.call(play(K('A'))).seuNome, 'Ana');
+    c.call({ acao: 'reservar', nome: 'Aninha', chave: K('B') });
+    const one = c.call(play(K('A')));
+    assert.deepStrictEqual([one.ok, one.posicao, one.total, one.seuNome], [true, 1, 1, 'Aninha']);
+    const many = c.call({ acao: 'enviarVarios', chave: K('A'), envios: [play(K('A'))] });
+    assert.deepStrictEqual([many.ok, many.resultados.length, many.seuNome], [true, 1, 'Aninha']);
+    assert.ok(!('seuNome' in many.resultados[0]));
+  },
+
+  // --- revisão da 4d: limites do vínculo somando todos ---
+  codigosErradosTemLimiteSomandoTodos() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    const code = c.call({ acao: 'codigo', chave: K('A') }).codigo;
+    const wrong = code === 'AAAAAA' ? 'BBBBBB' : 'AAAAAA';
+    // 20 aparelhos com 5 tentativas cada (o limite de cada um): 100 erradas na hora.
+    for (let i = 0; i < 100; i++) {
+      const device = String(Math.floor(i / 5)).padStart(36, 'v');
+      assert.strictEqual(c.call({ acao: 'vincular', chave: device, codigo: wrong }).motivo, 'codigo_invalido');
+    }
+    // Nem o código certo passa até a hora virar (e ele não é gasto).
+    assert.strictEqual(c.call({ acao: 'vincular', chave: K('C'), codigo: code }).motivo, 'limite');
+    c.advance(3600 * 1000);
+    const fresh = c.call({ acao: 'codigo', chave: K('A') }).codigo;
+    assert.deepStrictEqual(c.call({ acao: 'vincular', chave: K('C'), codigo: fresh }), { ok: true, nome: 'Ana' });
+  },
+  codigosCertosNaoGastamOLimiteDeErrados() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    c.call({ acao: 'reservar', nome: 'Bia', chave: K('B') });
+    for (let i = 0; i < 120; i++) {
+      // A e B trocam de jogador e voltam: aparelhos que já têm nome não contam como novos.
+      const from = i % 2 ? K('B') : K('A');
+      const to = i % 2 ? K('A') : K('B');
+      c.advance(i % 5 === 4 ? 3600 * 1000 : 0); // o limite por aparelho (5 por hora) não é o que se testa aqui
+      const answer = c.call({ acao: 'vincular', chave: to, codigo: c.call({ acao: 'codigo', chave: from }).codigo });
+      assert.strictEqual(answer.ok, true, 'vínculo ' + i + ': ' + answer.motivo);
+    }
+  },
+  aparelhosNovosVinculadosTemLimiteSomandoTodos() {
+    const c = newContext();
+    c.call({ acao: 'reservar', nome: 'Ana', chave: K('A') });
+    c.call({ acao: 'reservar', nome: 'Bia', chave: K('B') });
+    const device = (i) => String(i).padStart(36, 'n');
+    let owner = K('A');
+    // Cada aparelho novo pede o código para o próximo (o limite de códigos é por aparelho).
+    for (let i = 0; i < 100; i++) {
+      const code = c.call({ acao: 'codigo', chave: owner }).codigo;
+      const answer = c.call({ acao: 'vincular', chave: device(i), codigo: code });
+      assert.strictEqual(answer.ok, true, 'aparelho ' + i + ': ' + answer.motivo);
+      owner = device(i);
+    }
+    const code = c.call({ acao: 'codigo', chave: owner }).codigo;
+    assert.strictEqual(c.call({ acao: 'vincular', chave: device(100), codigo: code }).motivo, 'limite');
+    // O código não foi gasto, e um aparelho que já tem nome ainda entra.
+    assert.deepStrictEqual(c.call({ acao: 'vincular', chave: K('B'), codigo: code }), { ok: true, nome: 'Ana' });
+  },
 };
 
 let failed = 0;

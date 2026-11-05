@@ -39,6 +39,7 @@ import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_confirm
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_done
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_enter
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_enter_hint
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_enter_replaces
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_enter_title
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_expired
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_field
@@ -65,7 +66,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -106,18 +109,19 @@ open class PlayerNameViewModel(private val ranking: RankingRepository) : ViewMod
     init {
         // O nome atual no campo (trocar o nome começa dele), lido fora da thread da tela; o que já foi digitado vale.
         viewModelScope.launch { fillWithSavedName(keepTyped = true) }
+        // O ViewModel dura o app inteiro: "tem nome" segue o gravado (posto, vinculado ou tirado nesta sessão).
+        viewModelScope.launch {
+            ranking.player.map { it.name != null }.distinctUntilChanged().collect { has ->
+                ui.update { it.copy(hasName = has) }
+            }
+        }
     }
 
     private suspend fun fillWithSavedName(keepTyped: Boolean) {
         val saved = ranking.player.first().name.orEmpty()
-        val hasName = saved.isNotEmpty()
         // O que já foi digitado (e o passo do vínculo, se a pessoa já foi para ele) fica.
         ui.update {
-            if (keepTyped) {
-                it.copy(name = it.name.ifEmpty { saved }, hasName = hasName)
-            } else {
-                PlayerNameUiState(saved, hasName = hasName)
-            }
+            if (keepTyped) it.copy(name = it.name.ifEmpty { saved }) else PlayerNameUiState(saved, hasName = it.hasName)
         }
     }
 
@@ -204,7 +208,7 @@ open class PlayerNameViewModel(private val ranking: RankingRepository) : ViewMod
         viewModelScope.launch {
             when (val result = ranking.link(code)) {
                 is LinkResult.Linked -> ui.update {
-                    it.copy(saving = false, name = result.name, hasName = true, done = true)
+                    it.copy(saving = false, name = result.name, done = true)
                 }
 
                 else -> ui.update { it.copy(saving = false, linkError = result) }
@@ -428,6 +432,14 @@ private fun EnterCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, 
                     style = MaterialTheme.typography.bodySmall,
                     color = RiffColors.PaperDim,
                 )
+                // O nome deste aparelho sai dele (o script libera o nome se só ele o usava): dito antes de vincular.
+                if (state.hasName) {
+                    Text(
+                        stringResource(Res.string.ranking_link_enter_replaces),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = RiffColors.PaperDim,
+                    )
+                }
                 state.linkError?.let { ErrorText(stringResource(it.message())) }
             }
         },

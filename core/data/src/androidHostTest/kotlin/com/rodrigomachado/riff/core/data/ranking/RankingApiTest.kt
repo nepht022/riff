@@ -57,6 +57,27 @@ class RankingApiTest {
         assertEquals(null, songs[1].yourPosition)
     }
 
+    /** O nome trocado em outro aparelho do jogador vem nas respostas ("seuNome"); sem o campo, nulo. */
+    @Test
+    fun answersCarryYourCurrentName() = runTest {
+        val api = RankingApi("https://x", server)
+        server.answer = """{"ok":true,"linhas":[],"seuNome":"Aninha"}"""
+        assertEquals("Aninha", (api.board("k", "m1") as ApiAnswer.Ok).yourName)
+        server.answer = """{"ok":true,"musicas":[],"seuNome":"Aninha"}"""
+        assertEquals("Aninha", (api.songs("k", "") as ApiAnswer.Ok).yourName)
+        server.answer = """{"ok":true,"posicao":1,"total":2,"seuNome":"Aninha"}"""
+        assertEquals("Aninha", (api.submit("k", submission()) as ApiAnswer.Ok).yourName)
+        server.answer = """{"ok":true,"resultados":[{"ok":true,"posicao":1,"total":2}],"seuNome":"Aninha"}"""
+        assertEquals("Aninha", (api.submitMany("k", listOf(submission())) as ApiAnswer.Ok).yourName)
+
+        server.answer = """{"ok":true,"linhas":[]}"""
+        assertEquals(null, (api.board("k", "m1") as ApiAnswer.Ok).yourName)
+        server.answer = """{"ok":true,"linhas":[],"seuNome":null}"""
+        assertEquals(null, (api.board("k", "m1") as ApiAnswer.Ok).yourName)
+    }
+
+    private fun submission() = Submission("m1", Difficulty.HARD, "T", "A", 100, 0.9f, 5, 70, null)
+
     @Test
     fun aRefusalCarriesTheReason() = runTest {
         server.answer = """{"ok":false,"motivo":"nome_em_uso"}"""
