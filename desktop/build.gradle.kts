@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.ByteArrayOutputStream
+import java.time.Duration
 
 // O Riff no PC (Windows): a mesma base de telas do celular, com Compose Multiplatform para desktop.
 
@@ -95,15 +96,17 @@ tasks.processResources {
     from("icons/riff.svg") { into("riff") }
 }
 
+// O Java que vai no instalador (e que roda o :desktop:run e o :desktop:runInstallCheck): o Temurin 21 baixado pela
+// toolchain do Gradle. O JBR do build não tem o jpackage nem o jdk.crypto.mscapi; o Oracle JDK não é redistribuível.
+val temurin21 = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+    vendor = JvmVendorSpec.ADOPTIUM
+}
+
 compose.desktop {
     application {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
-        // O Java que vai no instalador (e que roda o :desktop:run): o Temurin 21 baixado pela toolchain do Gradle. O
-        // JBR do build não tem o jpackage nem o jdk.crypto.mscapi; o Oracle JDK não é redistribuível.
-        javaHome = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(21)
-            vendor = JvmVendorSpec.ADOPTIUM
-        }.get().metadata.installationPath.asFile.absolutePath
+        javaHome = temurin21.get().metadata.installationPath.asFile.absolutePath
         // Proxy e certificados do Windows (antivírus ou rede que inspecionam o HTTPS).
         jvmArgs += listOf("-Djava.net.useSystemProxies=true", "-Djavax.net.ssl.trustStoreType=Windows-ROOT")
         nativeDistributions {
@@ -138,9 +141,10 @@ compose.desktop {
 }
 
 // A conferência das peças nativas dentro do app empacotado, no Java que vai junto: ./scripts/gw
-// :desktop:verifyDistributable (seis linhas `ok`; falha com qualquer `FALHOU`). O jlink do Compose tira o java.exe do
-// runtime; por isso a conferência roda por um segundo lançador do jpackage (RiffCheck.exe, cópia do Riff.exe, com o
-// RiffCheck.cfg trocando a classe principal), numa cópia do app: o mesmo runtime e as mesmas opções da JVM do Riff.
+// :desktop:verifyDistributable (uma linha `ok` por peça e o `total`; falha com qualquer `FALHOU`). O jlink do Compose
+// tira o java.exe do runtime; por isso a conferência roda por um segundo lançador do jpackage (RiffCheck.exe, cópia
+// do Riff.exe, com o RiffCheck.cfg trocando a classe principal), numa cópia do app: o mesmo runtime e as mesmas
+// opções da JVM do Riff.
 val distributable = layout.buildDirectory.dir("compose/binaries/main/app/Riff")
 val distributableCheck = layout.buildDirectory.dir("compose/check/Riff")
 val prepareDistributableCheck = tasks.register<Sync>("prepareDistributableCheck") {
@@ -160,6 +164,8 @@ tasks.register<Exec>("verifyDistributable") {
     workingDir(distributableCheck)
     // O caminho do repositório tem espaços: o executável vai inteiro, sem passar por uma linha de comando.
     executable(distributableCheck.get().file("RiffCheck.exe").asFile.absolutePath)
+    // O lançador sem console pode abrir uma caixa de erro (classe faltando) e esperar alguém fechar.
+    timeout.set(Duration.ofMinutes(5))
     val output = ByteArrayOutputStream()
     standardOutput = output
     isIgnoreExitValue = true
@@ -167,9 +173,12 @@ tasks.register<Exec>("verifyDistributable") {
         val text = output.toString()
         print(text)
         val code = executionResult.get().exitValue
-        val oks = text.lines().count { it.startsWith("ok ") }
-        check(code == 0 && oks == 6 && !text.contains("FALHOU")) {
-            "a conferência do app empacotado falhou (código $code, $oks ok)"
+        val lines = text.lines().map { it.trim() }
+        val oks = lines.count { it.startsWith("ok ") }
+        // O total vem do próprio InstallCheck: uma peça nova não exige mudar a conta aqui.
+        val total = lines.lastOrNull { it.startsWith("total ") }?.removePrefix("total ")?.toIntOrNull()
+        check(code == 0 && total != null && oks == total && !text.contains("FALHOU")) {
+            "a conferência do app empacotado falhou (código $code, $oks ok de ${total ?: "?"})"
         }
     }
 }
@@ -195,10 +204,11 @@ tasks.register<JavaExec>("runAudioCheck") {
     mainClass.set("com.rodrigomachado.riff.desktop.AudioCheckKt")
 }
 
-// Conferência das peças nativas no Java do build: ./scripts/gw :desktop:runInstallCheck (seis linhas `ok`; no JBR do
-// Android Studio o tls falha, porque ele não traz o jdk.crypto.mscapi dos certificados do Windows)
+// Conferência das peças nativas no Temurin 21 do instalador (fora do pacote): ./scripts/gw :desktop:runInstallCheck
+// (uma linha `ok` por peça e o `total`)
 tasks.register<JavaExec>("runInstallCheck") {
     group = "riff"
+    javaLauncher.set(temurin21)
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.rodrigomachado.riff.desktop.InstallCheckKt")
 }

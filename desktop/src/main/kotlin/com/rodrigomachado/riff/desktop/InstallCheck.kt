@@ -22,17 +22,20 @@ import kotlin.io.path.createTempDirectory
 import kotlin.system.exitProcess
 
 /**
- * Confere as peças nativas do app do PC: `./scripts/gw :desktop:runInstallCheck` (no Java do build) ou o executável
- * de conferência dentro do app empacotado (no Java que vai junto). Imprime `ok <peça>` ou `FALHOU <peça>: <erro>`
- * por linha e sai com 1 se alguma falhou.
+ * Confere as peças nativas do app do PC: `./scripts/gw :desktop:runInstallCheck` (no Temurin 21 que vai no
+ * instalador) ou o executável de conferência dentro do app empacotado (no Java que vai junto). Imprime `ok <peça>` ou
+ * `FALHOU <peça>: <erro>` por linha e `total <n>` no fim, e sai com 1 se alguma falhou.
  */
 fun main() {
-    val failures = InstallCheck.run(createTempDirectory("riff-check").toFile())
-    val failed = failures.associateBy { it.part }
-    InstallCheck.PARTS.forEach { part ->
-        println(failed[part]?.let { "FALHOU $part: ${it.error}" } ?: "ok $part")
+    val work = createTempDirectory("riff-check").toFile()
+    val failures = try {
+        InstallCheck.run(work)
+    } finally {
+        work.deleteRecursively()
     }
-    if (failures.isNotEmpty()) exitProcess(1)
+    InstallCheck.report(failures).forEach(::println)
+    // O lançador do jpackage pode ficar esperando threads do AWT ou do GLFW: a saída é explícita nos dois casos.
+    exitProcess(if (failures.isEmpty()) 0 else 1)
 }
 
 /**
@@ -45,6 +48,13 @@ object InstallCheck {
 
     /** As peças, na ordem em que são conferidas e impressas. */
     val PARTS = listOf("onnxruntime", "modelo", "ffmpeg", "sqlite", "glfw", "tls")
+
+    /** As linhas impressas: `ok <peça>` ou `FALHOU <peça>: <erro>`, na ordem de [PARTS], e `total <n>` no fim. */
+    fun report(failures: List<Failure>): List<String> {
+        val failed = failures.associateBy { it.part }
+        return PARTS.map { part -> failed[part]?.let { "FALHOU $part: ${it.error}" } ?: "ok $part" } +
+            "total ${PARTS.size}"
+    }
 
     /** As peças que não carregaram; vazia quando tudo carregou. */
     fun run(work: File): List<Failure> = listOf<Pair<String, () -> Unit>>(

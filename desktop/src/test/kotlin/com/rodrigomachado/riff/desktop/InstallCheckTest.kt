@@ -43,3 +43,16 @@ class InstallCheckTest {
         assertEquals(setOf("ffmpeg", "sqlite") + buildJavaGaps, parts)
     }
 }
+
+/** As linhas que o `verifyDistributable` lê: uma por peça e o total no fim (vale em qualquer sistema). */
+class InstallCheckReportTest {
+    @Test
+    fun theReportHasOneLinePerPartAndTheTotal() {
+        val lines = InstallCheck.report(listOf(InstallCheck.Failure("ffmpeg", "sem DLL")))
+        val parts = InstallCheck.PARTS
+        assertEquals(parts.size + 1, lines.size)
+        assertEquals("FALHOU ffmpeg: sem DLL", lines[parts.indexOf("ffmpeg")])
+        assertEquals(parts.size - 1, lines.count { it.startsWith("ok ") })
+        assertEquals("total ${parts.size}", lines.last())
+    }
+}
