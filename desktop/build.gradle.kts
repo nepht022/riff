@@ -1,4 +1,6 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.ByteArrayOutputStream
 
 // O Riff no PC (Windows): a mesma base de telas do celular, com Compose Multiplatform para desktop.
 
@@ -89,11 +91,86 @@ sourceSets["main"].resources.srcDir(files(librariesDir).builtBy("exportLibraryDe
 // uma segunda cópia no git.
 tasks.processResources {
     from(rootDir.resolve("core/separation/src/main/assets/htdemucs_6s_seg4.onnx")) { into("riff") }
+    // O ícone da janela: o mesmo desenho do instalador (desktop/icons), sem uma segunda cópia no git.
+    from("icons/riff.svg") { into("riff") }
 }
 
 compose.desktop {
     application {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
+        // O Java que vai no instalador (e que roda o :desktop:run): o Temurin 21 baixado pela toolchain do Gradle. O
+        // JBR do build não tem o jpackage nem o jdk.crypto.mscapi; o Oracle JDK não é redistribuível.
+        javaHome = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(21)
+            vendor = JvmVendorSpec.ADOPTIUM
+        }.get().metadata.installationPath.asFile.absolutePath
+        // Proxy e certificados do Windows (antivírus ou rede que inspecionam o HTTPS).
+        jvmArgs += listOf("-Djava.net.useSystemProxies=true", "-Djavax.net.ssl.trustStoreType=Windows-ROOT")
+        nativeDistributions {
+            targetFormats(TargetFormat.Msi)
+            packageName = "Riff"
+            packageVersion = providers.gradleProperty("riff.versionName").get()
+            vendor = "Rodrigo Machado"
+            description = "Riff — jogo de ritmo com guitarra"
+            // Os módulos do Java empacotado: os do ./scripts/gw :desktop:suggestRuntimeModules mais o jdk.crypto.ec
+            // (curvas do HTTPS), o jdk.crypto.mscapi (o KeyStore Windows-ROOT) e o jdk.unsupported (garantidos). O
+            // :desktop:verifyDistributable prova que bastam.
+            modules(
+                "java.instrument",
+                "jdk.management",
+                "jdk.unsupported",
+                "jdk.crypto.ec",
+                "jdk.crypto.mscapi",
+            )
+            windows {
+                // Instala no perfil do usuário, sem pedir administrador; atalho no menu Iniciar e na área de trabalho.
+                perUserInstall = true
+                menu = true
+                menuGroup = "Riff"
+                shortcut = true
+                dirChooser = false
+                // Fixo: um .msi novo substitui o antigo.
+                upgradeUuid = "5b0f1a7e-3c2d-4e8a-9f61-7d2b4c8e1a90"
+                iconFile.set(project.file("icons/riff.ico"))
+            }
+        }
+    }
+}
+
+// A conferência das peças nativas dentro do app empacotado, no Java que vai junto: ./scripts/gw
+// :desktop:verifyDistributable (seis linhas `ok`; falha com qualquer `FALHOU`). O jlink do Compose tira o java.exe do
+// runtime; por isso a conferência roda por um segundo lançador do jpackage (RiffCheck.exe, cópia do Riff.exe, com o
+// RiffCheck.cfg trocando a classe principal), numa cópia do app: o mesmo runtime e as mesmas opções da JVM do Riff.
+val distributable = layout.buildDirectory.dir("compose/binaries/main/app/Riff")
+val distributableCheck = layout.buildDirectory.dir("compose/check/Riff")
+val prepareDistributableCheck = tasks.register<Sync>("prepareDistributableCheck") {
+    dependsOn("createDistributable")
+    from(distributable)
+    from(distributable.map { it.file("Riff.exe") }) { rename { "RiffCheck.exe" } }
+    from(distributable.map { it.file("app/Riff.cfg") }) {
+        into("app")
+        rename { "RiffCheck.cfg" }
+        filter { it.replace("desktop.MainKt", "desktop.InstallCheckKt") }
+    }
+    into(distributableCheck)
+}
+tasks.register<Exec>("verifyDistributable") {
+    group = "riff"
+    dependsOn(prepareDistributableCheck)
+    workingDir(distributableCheck)
+    // O caminho do repositório tem espaços: o executável vai inteiro, sem passar por uma linha de comando.
+    executable(distributableCheck.get().file("RiffCheck.exe").asFile.absolutePath)
+    val output = ByteArrayOutputStream()
+    standardOutput = output
+    isIgnoreExitValue = true
+    doLast {
+        val text = output.toString()
+        print(text)
+        val code = executionResult.get().exitValue
+        val oks = text.lines().count { it.startsWith("ok ") }
+        check(code == 0 && oks == 6 && !text.contains("FALHOU")) {
+            "a conferência do app empacotado falhou (código $code, $oks ok)"
+        }
     }
 }
 
@@ -124,4 +201,12 @@ tasks.register<JavaExec>("runInstallCheck") {
     group = "riff"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.rodrigomachado.riff.desktop.InstallCheckKt")
+}
+
+// O DistributableTest lê o app empacotado (pulado quando ele não existe): a pasta é entrada do teste, para ele rodar
+// de novo quando o pacote muda.
+tasks.test {
+    inputs.files(fileTree(layout.buildDirectory.dir("compose/binaries/main/app")))
+        .withPropertyName("distributable").optional()
+    mustRunAfter("createDistributable")
 }

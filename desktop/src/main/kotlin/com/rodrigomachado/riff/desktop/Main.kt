@@ -1,7 +1,10 @@
 package com.rodrigomachado.riff.desktop
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -31,6 +34,7 @@ fun main() {
         Window(
             onCloseRequest = ::exitApplication,
             title = "Riff",
+            icon = windowIcon(),
             state = rememberWindowState(width = 1280.dp, height = 800.dp),
         ) {
             window.minimumSize = Dimension(MIN_WIDTH, MIN_HEIGHT)
@@ -44,6 +48,14 @@ fun main() {
     graph.close()
     exitProcess(0)
 }
+
+/**
+ * O ícone da janela: o mesmo desenho do instalador (desktop/icons/riff.svg, copiado para os recursos no build). A
+ * leitura do classpath está deprecada em favor da biblioteca de recursos do Compose, que o app do PC não usa.
+ */
+@Suppress("DEPRECATION")
+@Composable
+private fun windowIcon(): Painter = painterResource("riff/riff.svg")
 
 /** O aviso de que o Riff já está aberto, no idioma escolhido no jogo. */
 private fun alreadyOpen(dataDir: File) {
