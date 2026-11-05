@@ -19,9 +19,11 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.rodrigomachado.riff.core.audio.AudioSink
 import com.rodrigomachado.riff.core.audio.AudioSinkFactory
+import com.rodrigomachado.riff.core.audio.FfmpegPcmSource
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
+import com.rodrigomachado.riff.core.data.folder.FileRandomReadOpener
 import com.rodrigomachado.riff.core.data.folder.pcUri
 import com.rodrigomachado.riff.core.data.ranking.RankingTransport
 import com.rodrigomachado.riff.core.encore.HttpResponse
@@ -79,6 +81,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             File(this, "notes.chart").writeText(CHART)
             writeTone(File(this, "song.wav"), SONG_MS)
         }
+        LoadedFfmpeg.ensure()
         val audioOut = AudioSinkFactory { rate -> RealTimeSink(rate).also { synchronized(sinks) { sinks += it } } }
         val graph = DesktopGraph(
             temp.newFolder("dados"),
@@ -220,6 +223,28 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             }
         """.trimIndent()
     }
+}
+
+/**
+ * O FFmpeg carregado neste processo antes da primeira partida. A primeira abertura carrega as bibliotecas nativas (o
+ * JavaCPP procura cada uma no classpath e no disco): ~2,5 s com a máquina livre e 15 a 20 s com ela ocupada, uma vez
+ * só por processo, e caía no prazo da primeira partida (a música carregando, ainda sem o palco). Aberto aqui, fora do
+ * prazo, o prazo conta só a partida.
+ */
+private object LoadedFfmpeg {
+    private const val TONE_MS = 100
+
+    init {
+        val tone = File.createTempFile("riff-ffmpeg", ".wav")
+        try {
+            writeTone(tone, TONE_MS)
+            FfmpegPcmSource.open(tone.path, FileRandomReadOpener()).close()
+        } finally {
+            tone.delete()
+        }
+    }
+
+    fun ensure() = Unit
 }
 
 /** A janela do teste sempre com foco (ela não disputa o foco do sistema). */
