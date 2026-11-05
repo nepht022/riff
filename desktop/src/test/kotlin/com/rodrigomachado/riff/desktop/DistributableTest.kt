@@ -33,6 +33,7 @@ class DistributableTest {
         assertTrue(text, text.contains("jdk.crypto.ec"))
         assertTrue(text, text.contains("jdk.unsupported"))
         assertTrue(text, text.contains("jdk.crypto.mscapi"))
+        assertTrue(text, text.contains("jdk.localedata"))
     }
 
     @Test

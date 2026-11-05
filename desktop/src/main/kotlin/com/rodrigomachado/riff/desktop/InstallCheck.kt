@@ -15,6 +15,8 @@ import java.nio.ByteOrder
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.spec.ECGenParameterSpec
+import java.text.NumberFormat
+import java.util.Locale
 import javax.crypto.KeyAgreement
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -47,7 +49,7 @@ object InstallCheck {
     data class Failure(val part: String, val error: String)
 
     /** As peças, na ordem em que são conferidas e impressas. */
-    val PARTS = listOf("onnxruntime", "modelo", "ffmpeg", "sqlite", "glfw", "tls")
+    val PARTS = listOf("onnxruntime", "modelo", "ffmpeg", "sqlite", "glfw", "tls", "locale")
 
     /** As linhas impressas: `ok <peça>` ou `FALHOU <peça>: <erro>`, na ordem de [PARTS], e `total <n>` no fim. */
     fun report(failures: List<Failure>): List<String> {
@@ -64,6 +66,7 @@ object InstallCheck {
         "sqlite" to { sqlite(work) },
         "glfw" to ::glfw,
         "tls" to ::tls,
+        "locale" to ::locale,
     ).mapNotNull { (part, check) -> attempt(part, check) }
 
     // Uma biblioteca nativa ausente chega como UnsatisfiedLinkError (um Error): tudo vira falha da peça.
@@ -139,6 +142,18 @@ object InstallCheck {
         SSLContext.getInstance("TLSv1.3").init(null, trust.trustManagers, null)
     }
 
+    /**
+     * Os números em português (`jdk.localedata`): sem o módulo, o pt-BR cai nos dados da raiz e o app mostra
+     * "1,234" e "1.5 MB".
+     */
+    private fun locale() {
+        val pt = Locale.forLanguageTag("pt-BR")
+        val integer = NumberFormat.getIntegerInstance(pt).format(LOCALE_INTEGER)
+        check(integer == "1.234") { "o inteiro em pt-BR saiu $integer" }
+        val decimal = String.format(pt, "%.1f", LOCALE_DECIMAL)
+        check(decimal == "1,5") { "o decimal em pt-BR saiu $decimal" }
+    }
+
     /** 100 ms de silêncio, PCM de 16 bits, mono, 48 kHz. */
     private fun silentWav(): ByteArray {
         val dataBytes = WAV_RATE / WAV_MS_DIVISOR * 2
@@ -159,6 +174,8 @@ object InstallCheck {
     private const val WAV_RATE = 48_000
     private const val WAV_MS_DIVISOR = 10
     private const val WAV_HEADER_BYTES = 44
+    private const val LOCALE_INTEGER = 1234
+    private const val LOCALE_DECIMAL = 1.5
 }
 
 /**

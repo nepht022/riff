@@ -116,14 +116,17 @@ compose.desktop {
             vendor = "Rodrigo Machado"
             description = "Riff — jogo de ritmo com guitarra"
             // Os módulos do Java empacotado: os do ./scripts/gw :desktop:suggestRuntimeModules mais o jdk.crypto.ec
-            // (curvas do HTTPS), o jdk.crypto.mscapi (o KeyStore Windows-ROOT) e o jdk.unsupported (garantidos). O
-            // :desktop:verifyDistributable prova que bastam.
+            // (curvas do HTTPS), o jdk.crypto.mscapi (o KeyStore Windows-ROOT), o jdk.localedata (números e datas em
+            // português) e o jdk.unsupported (garantidos). O suggest (jdeps) não vê módulos carregados por serviço,
+            // como esses três primeiros: sem eles o app abre, mas sem a parte. O :desktop:verifyDistributable prova
+            // que bastam.
             modules(
                 "java.instrument",
                 "jdk.management",
                 "jdk.unsupported",
                 "jdk.crypto.ec",
                 "jdk.crypto.mscapi",
+                "jdk.localedata",
             )
             windows {
                 // Instala no perfil do usuário, sem pedir administrador; atalho no menu Iniciar e na área de trabalho.
