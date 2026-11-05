@@ -51,6 +51,8 @@ kotlin {
         }
         getByName("desktopMain").dependencies { implementation(libs.org.json) }
         commonTest.dependencies {
+            // O Firebase falso (FakeFirebase), que o :feature:room e o :desktop também usam.
+            implementation(project(":core:room:testing"))
             implementation(libs.junit4)
             implementation(libs.kotlinx.coroutines.test)
             compileOnly(libs.org.json)

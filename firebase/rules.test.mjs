@@ -342,3 +342,39 @@ test('freshRoomCanBeDeletedOnlyByOwner', async () => {
   await assertSucceeds(db('ana').ref('salas/ABCD').remove());
   assert.equal(await lerSemRegras('salas/ABCD'), null);
 });
+
+// --- as escritas do RoomRepository (core/room), exatamente como o app as faz ---
+
+test('repositoryJoinLeaveAndHeartbeatWritesAreAccepted', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: { entrouEm: 1000 } } });
+  // Batimento: vistoEm e atividadeEm numa escrita só.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/vistoEm': AGORA, atividadeEm: AGORA }));
+  // Fora da sala o batimento é recusado (não cria um jogador pela metade); o app nem tenta.
+  await assertFails(db('zeca').ref('salas/ABCD').update({ 'jogadores/zeca/vistoEm': AGORA, atividadeEm: AGORA }));
+  // Entrar de novo: mesma vaga, o mesmo entrouEm, e a atividade.
+  await assertSucceeds(
+    db('bia').ref('salas/ABCD').update({
+      'jogadores/bia': jogador('Bia', { vaga: 'v2', entrouEm: 1000 }),
+      'vagas/v2': 'bia',
+      atividadeEm: AGORA,
+    }),
+  );
+  // Convidado saindo: o jogador e a vaga.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia': null, 'vagas/v2': null }));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.deepEqual(Object.keys(sala.jogadores), ['ana']);
+  assert.deepEqual(sala.vagas, { v1: 'ana' });
+});
+
+test('repositoryOwnerTakeoverAndLastLeaveAreAccepted', async () => {
+  const agora = Date.now();
+  // O dono sumiu: o jogador vivo mais antigo grava o dono num PATCH da sala.
+  await semear('ABCD', { jogadores: { ana: { vistoEm: agora - 90_000 }, bia: {} } });
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ dono: 'bia' }));
+  // O último a sair, com o dono fora da sala: fica com o dono e apaga a sala.
+  await semear('EFGH', { dono: 'ana', jogadores: { bia: {} } });
+  await assertFails(db('bia').ref('salas/EFGH').remove());
+  await assertSucceeds(db('bia').ref('salas/EFGH').update({ dono: 'bia' }));
+  await assertSucceeds(db('bia').ref('salas/EFGH').remove());
+  assert.equal(await lerSemRegras('salas/EFGH'), null);
+});
