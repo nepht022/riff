@@ -98,10 +98,11 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 - **Conformidade (validação humana antes de distribuir):** as DLLs do Visual C++/UCRT da Microsoft (no `runtime\bin` e no `javacpp-…-windows-x86_64.jar`) sem aviso próprio; a GPL 2 do OpenJDK aponta o código-fonte (sem oferta por escrito); FreeType pela FTL; linhas de copyright tiradas de README/cabeçalho (OpenSSL, SRT, LAME, cabeçalhos do Vulkan); winpthreads do `master` e ICU do fork do Chromium (74-2); patentes de codecs (MP3, AMR, H.264) ao distribuir.
 - Teste real do instalador no Windows (instalar, abrir com os dados de hoje, jogar, controle, Encore, ranking, Licenças, IA, instalar por cima, desinstalar mantendo `%APPDATA%\Riff`): pendente.
-- A toolchain do Temurin 21 é resolvida na configuração do `:desktop`: todo build que configura o módulo (CI em Linux também) baixa um Temurin 21 na primeira vez.
-- O `verifyDistributable` roda uma cópia do `Riff.exe` com outra classe principal (o runtime empacotado não tem `java.exe`): se a classe faltar, o lançador sem console pode abrir uma caixa de erro e travar a task.
+- A toolchain do Temurin 21 é resolvida na configuração do `:desktop`. No CI não pesa: o Temurin 21 do `setup-java` é encontrado pelo Gradle. O risco real é o primeiro sync do Android Studio ou um build `--offline` sem o JDK em `~/.gradle/jdks`: a resolução falha e quebra a configuração do build todo (não só do `:desktop`).
+- `.msi` recompilado com a mesma versão instalado por cima pode dar o erro 1638 do Windows Installer: cada `.msi` distribuído precisa de um `riff.versionName` novo (a conferir no teste manual).
+- Fora da lista de módulos do Java empacotado: `jdk.accessibility` (leitores de tela pela ponte de acessibilidade do Java) e `java.security.jgss` (proxy com autenticação Kerberos/Negotiate). Só a lista atual foi provada pelo `verifyDistributable`.
 - O ícone da janela usa `painterResource` (deprecado no Compose 1.12) com `@Suppress`.
-- O `.msi` (~258 MB) leva o modelo da IA (130 MB) mesmo para quem não usa a IA.
+- O `.msi` (~268 MB) leva o modelo da IA (130 MB) mesmo para quem não usa a IA.
 - Sem assinatura de código (o aviso do SmartScreen fica para depois, como na especificação).
 
 ## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
