@@ -1,0 +1,82 @@
+{
+  "rules": {
+    // Nada fora de salas/ é legível ou gravável.
+    ".read": false,
+    ".write": false,
+    "salas": {
+      // Ninguém lista salas: o código é o segredo da sala. (Uma listagem só das salas mortas dependeria de
+      // comparar query.endAt com now, e o emulador recusa qualquer < ou <= sobre query.endAt; ver firebase/README.md.)
+      "$codigo": {
+        ".read": "auth != null",
+        // O .write deste nível vale para a sala inteira (em cascata), então só cobre os dois casos de sala inteira:
+        // criar (não existe; quem cria é o dono e jogador; tempos do servidor; as vagas garantem que ele é o único
+        // jogador) e apagar (o dono, ou qualquer autenticado se a sala está morta há mais de 2 h).
+        // Qualquer outra escrita cai nas regras dos filhos.
+        ".write": "auth != null && ((!data.exists() && newData.child('dono').val() == auth.uid && newData.child('estado').val() == 'sala' && newData.child('criadaEm').val() == now && newData.child('atividadeEm').val() == now && newData.child('jogadores').child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('dono').val() == auth.uid || data.child('atividadeEm').val() < now - 7200000)))",
+        // Código: 4 letras de ABCDEFGHJKMNPQRSTUVWXYZ (sem I, L, O; sem números).
+        ".validate": "$codigo.matches(/^[A-HJKMNP-Z]{4}$/) && newData.hasChildren(['dono', 'estado', 'criadaEm', 'atividadeEm'])",
+        "dono": {
+          // O dono passa adiante quando quiser; um jogador da sala assume se o dono sumiu (vistoEm há mais de 60 s)
+          // ou não está mais entre os jogadores.
+          ".write": "auth != null && data.exists() && newData.exists() && (data.val() == auth.uid || (data.parent().child('jogadores').child(auth.uid).exists() && (!data.parent().child('jogadores').child(data.val()).exists() || now - data.parent().child('jogadores').child(data.val()).child('vistoEm').val() > 60000)))",
+          // O novo dono é um jogador da sala (depois da escrita).
+          ".validate": "newData.isString() && newData.parent().child('jogadores').child(newData.val()).exists()"
+        },
+        "estado": {
+          ".write": "auth != null && newData.exists() && data.parent().child('dono').val() == auth.uid",
+          ".validate": "newData.isString() && newData.val().matches(/^(sala|contagem|partida|fim)$/)"
+        },
+        "criadaEm": {
+          ".write": "auth != null && newData.exists() && data.parent().child('dono').val() == auth.uid",
+          ".validate": "newData.isNumber() && newData.val() == now"
+        },
+        "atividadeEm": {
+          // Qualquer jogador da sala (inclusive quem entra na mesma escrita), sempre com o tempo do servidor.
+          ".write": "auth != null && newData.exists() && newData.parent().child('jogadores').child(auth.uid).exists()",
+          ".validate": "newData.isNumber() && newData.val() == now"
+        },
+        // Vagas: as regras do Realtime Database não contam filhos, então o limite de 4 jogadores vem de 4 vagas
+        // (v1 a v4). Cada jogador ocupa uma vaga com o próprio uid e aponta para ela em jogadores/{uid}/vaga; um
+        // jogador sem a vaga dele é recusado, e uma vaga só guarda um uid, então nunca há mais de 4.
+        "vagas": {
+          "$vaga": {
+            // Ocupar: vaga livre, já sua, ou abandonada (o uid que está nela não aponta mais para ela).
+            // Liberar: só uma vaga cujo jogador não aponta mais para ela (sai da sala na mesma escrita, por exemplo).
+            ".write": "auth != null && data.parent().parent().child('dono').exists() && (!data.exists() || data.val() == auth.uid || newData.parent().parent().child('jogadores').child(data.val()).child('vaga').val() != $vaga) && (newData.exists() || newData.parent().parent().child('jogadores').child(data.val()).child('vaga').val() != $vaga)",
+            ".validate": "$vaga.matches(/^v[1-4]$/) && newData.val() == auth.uid && newData.parent().parent().child('jogadores').child(auth.uid).child('vaga').val() == $vaga"
+          }
+        },
+        "jogadores": {
+          "$uid": {
+            // Cada um escreve só a si mesmo, numa sala que existe; o dono pode remover qualquer jogador.
+            ".write": "auth != null && ((auth.uid == $uid && data.parent().parent().child('dono').exists()) || (data.exists() && !newData.exists() && data.parent().parent().child('dono').val() == auth.uid))",
+            // Entrar exige ocupar a vaga indicada na mesma escrita (ver "vagas").
+            ".validate": "newData.hasChildren(['nome', 'aparelho', 'vaga', 'entrouEm', 'vistoEm']) && newData.parent().parent().child('vagas').child(newData.child('vaga').val()).val() == $uid",
+            "nome": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
+            },
+            "aparelho": {
+              ".validate": "newData.isString() && newData.val().matches(/^(celular|pc)$/)"
+            },
+            "vaga": {
+              ".validate": "newData.isString() && newData.val().matches(/^v[1-4]$/)"
+            },
+            // Tempos do servidor; regravar o mesmo valor (entrar de novo mantendo o entrouEm) também vale.
+            "entrouEm": {
+              ".validate": "newData.isNumber() && (newData.val() == now || newData.val() == data.val())"
+            },
+            "vistoEm": {
+              ".validate": "newData.isNumber() && (newData.val() == now || newData.val() == data.val())"
+            },
+            "$outro": {
+              ".validate": false
+            }
+          }
+        },
+        "$outro": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}
