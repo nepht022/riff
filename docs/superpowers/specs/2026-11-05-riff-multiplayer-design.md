@@ -71,7 +71,7 @@ salas/{CODIGO}
   placar/{rodada}/{uid}: { pontos, combo, acertos, notas, terminou, saiu }
 ```
 
-- **Código:** 4 letras de um alfabeto sem ambíguas (sem I, L, O, 0, 1): 24⁴ ≈ 330 mil códigos. Criar tenta um código aleatório com escrita condicional (só se `salas/{CODIGO}` não existe); colidiu, tenta outro.
+- **Código:** 4 letras de um alfabeto sem ambíguas (`ABCDEFGHJKMNPQRSTUVWXYZ`: sem I, L, O e sem números): 23⁴ ≈ 280 mil códigos. Criar tenta um código aleatório com escrita condicional (só se `salas/{CODIGO}` não existe); colidiu, tenta outro.
 - **Validade:** sala sem atividade por 2 h é considerada morta; o app que cria uma sala apaga até 5 salas mortas que encontrar (limpeza oportunista, sem servidor próprio). As regras deixam qualquer autenticado apagar só salas com `criadaEm` mais velha que 2 h e sem `estado: "partida"`.
 
 ### Regras do banco (`firebase/database.rules.json`)
