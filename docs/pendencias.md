@@ -104,6 +104,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - O ícone da janela usa `painterResource` (deprecado no Compose 1.12) com `@Suppress`.
 - O `.msi` (~268 MB) leva o modelo da IA (130 MB) mesmo para quem não usa a IA.
 - Sem assinatura de código (o aviso do SmartScreen fica para depois, como na especificação).
+- Instáveis sob carga pesada (rodada cheia com o `packageMsi` junto), passam sozinhos 3/3, código fora da 4e: `DesktopSeparationSchedulerTest.reopeningWaitsForTheSeparationThatClosingGaveUpOn` e `ResamplingPcmSourceTest.aMinuteOfStereoResamplesQuickly` (limite de 4 s). Investigar com a mensagem de falha guardada.
 
 ## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
 
