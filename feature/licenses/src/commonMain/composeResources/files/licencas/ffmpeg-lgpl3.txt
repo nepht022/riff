@@ -3,7 +3,18 @@ Copyright (c) the FFmpeg developers (https://ffmpeg.org)
 
 Built by JavaCPP Presets 1.5.14 (https://github.com/bytedeco/javacpp-presets) with
 --enable-version3 and without --enable-gpl: licensed under the GNU Lesser General
-Public License, version 3 or later. Source code: https://ffmpeg.org/download.html
+Public License, version 3 or later.
+
+Código-fonte exato do FFmpeg que vai no app:
+- FFmpeg 8.1.2: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.bz2
+- A receita do build (configure, versões e patches das bibliotecas ligadas
+  dentro dele), na tag 1.5.14 do JavaCPP Presets:
+  https://github.com/bytedeco/javacpp-presets/tree/1.5.14/ffmpeg
+- O jar com as bibliotecas compiladas: org.bytedeco:ffmpeg:8.1.2-1.5.14
+  (Maven Central), com o código-fonte do JavaCPP em
+  https://github.com/bytedeco/javacpp/tree/1.5.14
+No PC, as bibliotecas ligadas dentro do FFmpeg estão em "Bibliotecas dentro
+do FFmpeg".
 
                    GNU LESSER GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007

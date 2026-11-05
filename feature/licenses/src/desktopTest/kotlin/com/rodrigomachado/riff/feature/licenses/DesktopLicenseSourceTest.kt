@@ -37,6 +37,40 @@ class DesktopLicenseSourceTest {
         assertNotNull(content["JLargeArrays"]?.text)
     }
 
+    /** O código nativo que vai no instalador do PC (etapa 4e): o Java, o que vem dentro do FFmpeg e do Skiko. */
+    @Test
+    fun theNativeCodeInsideThePcAppHasItsNotices() = runBlocking {
+        val content = DesktopLicenseSource { null }.content().associateBy { it.name }
+
+        for (name in listOf("OpenJDK (Java do app)", "Bibliotecas dentro do FFmpeg", "Skia", "ICU")) {
+            assertNotNull("$name na lista do PC", content[name]?.text)
+        }
+        val openJdk = content.getValue("OpenJDK (Java do app)").text.orEmpty()
+        assertTrue(openJdk.contains("\"CLASSPATH\" EXCEPTION TO THE GPL"))
+        assertTrue(content.getValue("Skia").text.orEmpty().contains("Copyright (c) 2011 Google Inc."))
+        assertTrue(content.getValue("ICU").text.orEmpty().contains("UNICODE LICENSE V3"))
+    }
+
+    @Test
+    fun theFfmpegNoticeSaysWhereTheSourceIs() = runBlocking {
+        val text = source.content().single { it.name == "FFmpeg" }.text.orEmpty()
+
+        // O código-fonte exato: o FFmpeg 8.1.2 e a receita do build na tag 1.5.14 do javacpp-presets.
+        assertTrue(text.contains("https://ffmpeg.org/releases/ffmpeg-8.1.2.tar"))
+        assertTrue(text.contains("https://github.com/bytedeco/javacpp-presets/tree/1.5.14/ffmpeg"))
+    }
+
+    @Test
+    fun everyLibraryInsideFfmpegIsNamed() = runBlocking {
+        val text = source.content().single { it.name == "Bibliotecas dentro do FFmpeg" }.text.orEmpty()
+
+        listOf(
+            "LAME", "Speex", "opencore-amr", "vo-amrwbenc", "OpenSSL", "OpenH264", "libvpx", "FreeType",
+            "HarfBuzz", "Opus", "libxml2", "SRT", "libwebp", "AOM", "SVT-AV1", "zimg", "libmfx", "winpthreads",
+            "zlib", "nv-codec-headers",
+        ).forEach { assertTrue("$it no aviso", text.contains(it, ignoreCase = true)) }
+    }
+
     @Test
     fun theAiLibrariesFromGradleStayOnlyInTheManualList() = runBlocking {
         val json = JSON.replace(
