@@ -7,6 +7,11 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Baixa o JDK das toolchains (o Temurin 21 que empacota o app do PC; o JBR do build não tem o jpackage).
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

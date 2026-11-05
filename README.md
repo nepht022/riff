@@ -163,9 +163,9 @@ Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
 ## Desenvolvimento
 
-### Riff no PC (em construção)
+### Riff no PC
 
-O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings`, `:feature:calibration`, `:feature:search`, `:feature:report`, `:feature:licenses`, `:feature:ranking` e `:core:separation` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; o **Reportar** (envelope da tela inicial; vai para o mesmo Apps Script do celular, com `report.url` do `local.properties` embutido no build, e as informações do PC são sistema, versão do Riff e idioma, sem o nome do computador) e **Configurações → Licenças e privacidade** (lista do PC gerada pelo plugin genérico do AboutLibraries no `:desktop`, mais LWJGL, GLFW, libffi e FFmpeg à mão) também; a **guitarra separada por IA** também (a mesma pergunta, fila e aba "Guitarra IA" do celular; separa só com o Riff aberto e continua a fila na próxima abertura; sem "Separar só carregando"); o **ranking** também (★ Ranking na tela inicial e "Nome no ranking" nas Configurações; cada partida do PC conta na tabela **PC com palheta** ou **PC sem palheta**, conforme "Tocar com palheta" quando ela começou; as partidas do PC de antes do ranking contam com palheta, o padrão de fábrica); só o instalador vem no resto da etapa 4 (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
+O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:database`, `:core:datastore`, `:core:data`, `:core:encore`, `:core:audio`, `:feature:home`, `:feature:library`, `:feature:gameplay`, `:feature:results`, `:feature:settings`, `:feature:calibration`, `:feature:search`, `:feature:report`, `:feature:licenses`, `:feature:ranking` e `:core:separation` são multiplataforma (Android e PC), e `:desktop` é o app do PC. No PC já dá para jogar: **Sozinho → Escolher pasta** importa as pastas de mapas e os `.sng` de uma pasta do computador, e uma música abre a partida e o Resultado com o recorde. As **Configurações** (Geral, Sons, Jogo e Visual da pista; o idioma fica em `%APPDATA%\Riff\language.txt`) e a **Calibração** também funcionam no PC; a **pesquisa no Encore** (Biblioteca → Pesquisar Mapas: baixa o `.sng` para "Baixados pelo Riff" dentro da pasta da biblioteca) também; o **Reportar** (envelope da tela inicial; vai para o mesmo Apps Script do celular, com `report.url` do `local.properties` embutido no build, e as informações do PC são sistema, versão do Riff e idioma, sem o nome do computador) e **Configurações → Licenças e privacidade** (lista do PC gerada pelo plugin genérico do AboutLibraries no `:desktop`, mais LWJGL, GLFW, libffi e FFmpeg à mão) também; a **guitarra separada por IA** também (a mesma pergunta, fila e aba "Guitarra IA" do celular; separa só com o Riff aberto e continua a fila na próxima abertura; sem "Separar só carregando"); o **ranking** também (★ Ranking na tela inicial e "Nome no ranking" nas Configurações; cada partida do PC conta na tabela **PC com palheta** ou **PC sem palheta**, conforme "Tocar com palheta" quando ela começou; as partidas do PC de antes do ranking contam com palheta, o padrão de fábrica); e o **instalador** `.msi` (especificação em `docs/superpowers/specs/2026-10-31-riff-windows-design.md`).
 
 **Jogar no PC (teclado, como no Clone Hero):** cores **A** (verde), **S** (vermelho), **J** (amarelo), **K** (azul) e **L** (laranja); palheta **↑** ou **↓**; pausa e continuar **Enter** ou **Esc**. Segure as cores da nota (ou do acorde) e palhete na hora; HOPO depois de um acerto e tap valem só apertando ou soltando a cor. Segurar uma tecla não repete. A partida pausa sozinha se a janela perde o foco (Alt+Tab). Na Calibração, aperte qualquer tecla (menos Esc) junto com cada batida; o atraso salvo vale nas partidas. Na janela deitada a pista fica no meio, com o placar e o combo à esquerda e o multiplicador à direita.
 
@@ -186,6 +186,16 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:databa
 ```bash
 ./scripts/gw :desktop:run   # abre a janela do Riff no Windows
 ```
+
+**Instalador do Windows:** `./scripts/gw :desktop:packageMsi` gera `desktop/build/compose/binaries/main/msi/Riff-<versão>.msi` (~268 MB; a versão é o `riff.versionName`). Instala só para o usuário (sem administrador), com atalho na área de trabalho e no menu Iniciar; um `.msi` novo substitui o antigo (`upgradeUuid` fixo; cada `.msi` distribuído precisa de um `riff.versionName` novo, porque um recompilado com a mesma versão por cima pode dar o erro 1638 do Windows Installer), e instalar, atualizar ou desinstalar não mexe em `%APPDATA%\Riff`. O pacote leva o próprio Java: um **Temurin 21** baixado pela toolchain do Gradle (o JBR do Android Studio, que compila, não tem o `jdk.jpackage` nem o `jdk.crypto.mscapi`), com os módulos listados no `desktop/build.gradle.kts` e as DLLs do Visual C++ no `runtime\bin` (o ONNX Runtime 1.18 precisa do `msvcp140.dll`). O app instalado usa o proxy do Windows (`-Djava.net.useSystemProxies=true`) e confia nos certificados do Java (`cacerts`) e nos do Windows (`Windows-ROOT`, de antivírus ou redes que inspecionam o HTTPS) juntos, pelo `TrustBothStores` no começo do `main`; o `:desktop:run` também roda nesse Java. Sem assinatura de código: o Windows mostra o aviso de app desconhecido ("Mais informações" → "Executar assim mesmo").
+
+```bash
+./scripts/gw :desktop:runInstallCheck       # confere ONNX Runtime, modelo, FFmpeg, SQLite, GLFW, TLS e números em português no Temurin 21
+./scripts/gw :desktop:verifyDistributable   # a mesma conferência dentro do app empacotado (createDistributable)
+./scripts/gw :desktop:packageMsi            # o instalador
+```
+
+Publicar no GitHub Releases é só quando for pedido: `gh release create v<versão> desktop/build/compose/binaries/main/msi/Riff-<versão>.msi --title "Riff <versão>" --notes-file <notas>`.
 
 ### Comandos
 
@@ -224,7 +234,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
 | `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
-| `:desktop` | O Riff no PC (Windows), em construção: tela inicial, Biblioteca, pesquisa no Encore, partida, Resultado, Configurações, Calibração, Reportar e Licenças (`./scripts/gw :desktop:run`) |
+| `:desktop` | O Riff no PC (Windows): tela inicial, Biblioteca, pesquisa no Encore, partida, Resultado, Configurações, Calibração, Reportar, Licenças, guitarra por IA, ranking e o instalador `.msi` (`./scripts/gw :desktop:run`, `:desktop:packageMsi`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
 ### Screenshots

@@ -94,11 +94,23 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Riff no Windows, etapa 4e: instalador (2026-11-05)
+
+- **Conformidade (validação humana antes de distribuir):** as DLLs do Visual C++/UCRT da Microsoft (no `runtime\bin` e no `javacpp-…-windows-x86_64.jar`) sem aviso próprio; a GPL 2 do OpenJDK aponta o código-fonte (sem oferta por escrito); FreeType pela FTL; linhas de copyright tiradas de README/cabeçalho (OpenSSL, SRT, LAME, cabeçalhos do Vulkan); winpthreads do `master` e ICU do fork do Chromium (74-2); patentes de codecs (MP3, AMR, H.264) ao distribuir.
+- Teste real do instalador no Windows aceito pelo usuário em 2026-11-05 (instalou, usou, desinstalou; `%APPDATA%\Riff` mantido). O controle físico e o erro 1638 (outro `.msi` com a mesma versão por cima) não foram relatados à parte.
+- A toolchain do Temurin 21 é resolvida na configuração do `:desktop`. No CI não pesa: o Temurin 21 do `setup-java` é encontrado pelo Gradle. O risco real é o primeiro sync do Android Studio ou um build `--offline` sem o JDK em `~/.gradle/jdks`: a resolução falha e quebra a configuração do build todo (não só do `:desktop`).
+- `.msi` recompilado com a mesma versão instalado por cima pode dar o erro 1638 do Windows Installer: cada `.msi` distribuído precisa de um `riff.versionName` novo (a conferir no teste manual).
+- Fora da lista de módulos do Java empacotado: `jdk.accessibility` (leitores de tela pela ponte de acessibilidade do Java) e `java.security.jgss` (proxy com autenticação Kerberos/Negotiate). Só a lista atual foi provada pelo `verifyDistributable`.
+- O ícone da janela usa `painterResource` (deprecado no Compose 1.12) com `@Suppress`.
+- O `.msi` (~268 MB) leva o modelo da IA (130 MB) mesmo para quem não usa a IA.
+- Sem assinatura de código (o aviso do SmartScreen fica para depois, como na especificação).
+- Instáveis sob carga pesada (rodada cheia com o `packageMsi` junto), passam sozinhos 3/3, código fora da 4e: `DesktopSeparationSchedulerTest.reopeningWaitsForTheSeparationThatClosingGaveUpOn` e `ResamplingPcmSourceTest.aMinuteOfStereoResamplesQuickly` (limite de 4 s). Investigar com a mensagem de falha guardada.
+
 ## Riff no Windows, etapa 4d: ranking com três tabelas e o mesmo nome em vários aparelhos (2026-11-04)
 
-- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04. **O script do ranking mudou de novo na revisão final** (`seuNome` nas respostas, limites gerais do vínculo): falta republicar. Compatível com o app 0.5.0 (só campos novos no topo das respostas do `enviar`/`enviarVarios`, que ele ignora; no `placar`/`musicas` só com `tabelas: true`).
+- Scripts do ranking e do Reportar republicados pelo usuário em 2026-11-04, e o do ranking de novo depois da revisão final (`seuNome` nas respostas, limites gerais do vínculo; conferido no ar em 2026-11-04). Compatível com o app 0.5.0 (só campos novos no topo das respostas do `enviar`/`enviarVarios`, que ele ignora; no `placar`/`musicas` só com `tabelas: true`).
 - App novo com o script antigo (de antes da 4d): as partidas do PC vão sem tabela reconhecida e o script as grava como Celular. Quem republicar o script depois de alguém jogar no PC fica com essas pontuações na tabela Celular.
-- Teste real (PC: nome, jogar com e sem palheta, as três tabelas; celular: o ranking de hoje em "Celular", o código de vínculo e o PC usando o mesmo nome): o usuário seguiu sem relatar. O celular precisa do APK de **release** por cima (o banco vai para a v14; o de debug exigiria desinstalar e apagaria os recordes).
+- Teste real no PC aceito pelo usuário em 2026-11-04. Celular (o ranking de hoje em "Celular", o código de vínculo e o PC usando o mesmo nome): pendente. O celular precisa do APK de **release** por cima (o banco vai para a v14; o de debug exigiria desinstalar e apagaria os recordes).
 - Vínculo: 5 tentativas por aparelho por hora, mais 100 códigos errados e 100 aparelhos sem nome vinculados por hora somando todos; sem limite de aparelhos por jogador; código de 6 caracteres (31⁶) com validade de 10 min.
 - `placar`/`musicas` com `tabelas: true` leem as Pontuações inteiras e classificam por tabela e dificuldade: com milhares de linhas pode ficar lento (cache ou índice).
 - Nome trocado em outro aparelho: o app novo atualiza o nome guardado pelo `seuNome` no próximo envio, placar ou lista de músicas (até lá mostra o antigo); o celular com o app 0.5.0 (não lê o campo) guarda o nome antigo até o próximo `reservar`.
@@ -114,7 +126,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - "Separar só carregando" escondida no PC: a spec queria mostrar num notebook; saber se há bateria no Windows exige código nativo novo.
 - Textos da IA que falam de "celular" no PC: "pode esquentar o celular", "Pode não funcionar neste celular.", "Pouco espaço no celular".
 - As threads nativas do ONNX Runtime ficam em prioridade normal (só a thread que chama é baixa): conferir se a partida engasga com uma separação rodando.
-- O Java do instalador (4e) precisa carregar o ONNX Runtime 1.18 (msvcp140); hoje só conferido no Java do Android Studio.
 - O modelo (130 MB) é lido inteiro para a heap a cada separação (o ORT 1.18 não abre de `ByteBuffer`); agora uma cópia só, direto num array do tamanho do recurso.
 - A conta de threads (`processadores lógicos / 2 - 1`) supõe hyper-threading: num PC sem ele usa metade dos núcleos menos um (num de 4 núcleos, 1 thread).
 - Lacunas de teste do PC: a partida não abre os `.m4a` separados nem confere que errar corta só a guitarra (o teste para no `trackLoader`); "Sem separar" na pergunta sem teste no PC; "apagar o mapa apaga a separação" sem teste no PC (depende do `ON DELETE CASCADE` no driver SQLite do PC).
@@ -126,12 +137,11 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 ## Riff no Windows, etapa 4b: Reportar e Licenças no PC (2026-11-04)
 
 - Script do Reportar corrigido (linha do sistema no PC) e republicado pelo usuário em 2026-11-04; falta ver um email de relato do PC com "Windows …".
-- **Antes de distribuir o PC (4e), avisos de licença do código nativo embutido:** o FFmpeg do bytedeco (8.1.2, javacpp-presets 1.5.14) liga lame, speex, opencore-amr, vo-amrwbenc, openssl, openh264, libvpx, freetype, harfbuzz, opus, libxml2, srt, libwebp, aom, svt-av1, zimg, libmfx e traz `libwinpthread-1.dll`; o Skiko (`skiko-windows-x64.dll`) embute o Skia (BSD-3) e o ICU (`icudtl.dat`, licença Unicode), e o AboutLibraries só mostra "Apache-2.0". Nenhum desses avisos está na lista do PC. Apontar também o código-fonte exato do FFmpeg (8.1.2 e a tag 1.5.14 do javacpp-presets) no `ffmpeg-lgpl3.txt`. Validação humana recomendada (conformidade).
+- Avisos de licença do código nativo do PC: feitos na 4e (ver a seção da 4e).
 - O URL do `local.properties` entra cru no `ReportConfig`/`RankingConfig` gerado: um `"` ou `$` quebraria o build (URLs do Apps Script não têm).
 - Testes do envio no PC que passariam com defeito: o falso não anota a thread nem suspende (o "janela segue respondendo" não prova nada); a espera única por app no PC sem teste; ↓/↑ entre o interruptor dos sons e "Licenças e privacidade" sem teste de teclado.
 - `aboutlibraries.json` na raiz do classpath do PC (outro jar com o mesmo nome venceria); o PC leva textos só do celular (`onnxruntime.txt` ~335 KB, Demucs, JTransforms, JLargeArrays) até a 4c.
 - Os textos de licença novos (LWJGL, GLFW, libffi, FFmpeg/LGPL/GPL) ficam no `composeResources` comum e vão também no APK do celular (~47 KB).
-- `DesktopControlsFlowTest.aKeyChosenInTheSettingsPlaysTheMatch` falhou uma vez numa rodada cheia e passou sozinho: observar.
 - `DeviceInfo.systemField` não acompanha um `copy(system = …)`.
 
 ## Riff no Windows, etapa 4a: pesquisa no Encore (2026-11-03)
@@ -146,7 +156,6 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - `DesktopSearchKeysTest` muda o `Locale` padrão sem restaurar.
 - Nomes reservados do Windows incompletos (`CONIN$`, `CONOUT$`, `COM¹²³`/`LPT¹²³`).
 - Progresso do download altera a lista da pesquisa na thread de IO (risco de `ConcurrentModificationException` com "Carregar mais"; já existia no celular).
-- PC: o Java não usa o proxy do Windows (`-Djava.net.useSystemProxies=true`) nem os certificados do Windows (antivírus que inspeciona HTTPS quebra a pesquisa); no instalador (4e), incluir `jdk.crypto.ec` se usar `modules(...)`.
 - No teste no Windows: baixar duas vezes o mesmo título (charters diferentes) e uma pasta bem funda (caminho > 260).
 
 ## Riff no Windows, etapa 3c: navegação sem mouse (2026-11-03)

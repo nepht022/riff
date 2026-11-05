@@ -43,6 +43,22 @@ class DesktopLicenseSource(private val librariesJson: () -> String?) : LicenseSo
             ManualItem("libffi", "Anthony Green, Red Hat, Inc and others", "MIT", "libffi.txt"),
             // O áudio das músicas: o FFmpeg compilado pelo JavaCPP Presets (bytedeco), LGPL 3 (--enable-version3).
             ManualItem("FFmpeg", "The FFmpeg developers", "LGPL 3.0 ou posterior", "ffmpeg-lgpl3.txt"),
+            // O código nativo do instalador (etapa 4e); textos só do PC, em desktopMain/composeResources.
+            ManualItem(
+                "Bibliotecas dentro do FFmpeg",
+                "Vários autores",
+                "Várias (ver texto)",
+                "ffmpeg-bibliotecas.txt",
+            ),
+            ManualItem(
+                "OpenJDK (Java do app)",
+                "Oracle e colaboradores do OpenJDK; Eclipse Adoptium",
+                "GPL 2.0 com Classpath Exception",
+                "openjdk-gpl2-ce.txt",
+            ),
+            // Dentro do skiko-windows-x64.dll: o Skia (com as bibliotecas dele) e o ICU (icudtl.dat).
+            ManualItem("Skia", "Google", "BSD 3-Clause", "skia.txt"),
+            ManualItem("ICU", "Unicode, Inc.", "Unicode License v3", "icu.txt"),
             ManualItem("Protocol Buffers", "Google", "BSD 3-Clause", "protobuf.txt"),
             ManualItem(
                 "New Rocker",
