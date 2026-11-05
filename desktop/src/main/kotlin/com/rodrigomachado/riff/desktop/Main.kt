@@ -20,6 +20,8 @@ private const val MIN_WIDTH = 800
 private const val MIN_HEIGHT = 500
 
 fun main() {
+    // Antes de qualquer HTTPS: as raízes do Java e as do Windows.
+    TrustBothStores.install()
     val graph = try {
         DesktopGraph(DesktopPaths.dataDir)
     } catch (_: RiffAlreadyOpenException) {

@@ -107,8 +107,9 @@ compose.desktop {
     application {
         mainClass = "com.rodrigomachado.riff.desktop.MainKt"
         javaHome = temurin21.get().metadata.installationPath.asFile.absolutePath
-        // Proxy e certificados do Windows (antivírus ou rede que inspecionam o HTTPS).
-        jvmArgs += listOf("-Djava.net.useSystemProxies=true", "-Djavax.net.ssl.trustStoreType=Windows-ROOT")
+        // O proxy do Windows. Os certificados do Windows entram pelo TrustBothStores, junto com o cacerts: o
+        // -Djavax.net.ssl.trustStoreType=Windows-ROOT trocaria um pelo outro.
+        jvmArgs += listOf("-Djava.net.useSystemProxies=true")
         nativeDistributions {
             targetFormats(TargetFormat.Msi)
             packageName = "Riff"

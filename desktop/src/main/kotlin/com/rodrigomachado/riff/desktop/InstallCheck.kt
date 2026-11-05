@@ -19,7 +19,6 @@ import java.text.NumberFormat
 import java.util.Locale
 import javax.crypto.KeyAgreement
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
 import kotlin.io.path.createTempDirectory
 import kotlin.system.exitProcess
 
@@ -124,12 +123,27 @@ object InstallCheck {
         GLFW.glfwTerminate()
     }
 
-    /** Os certificados do Windows, o ECDH (`jdk.crypto.ec`) e o TLS 1.3 confiando neles. */
+    /**
+     * O HTTPS confiando no `cacerts` do Java e no `Windows-ROOT` juntos (o [TrustBothStores] como `SSLContext`
+     * padrão), o ECDH (`jdk.crypto.ec`) e o TLS 1.3. Sem rede.
+     */
     private fun tls() {
         // O Windows-ROOT vem do módulo jdk.crypto.mscapi; sem ele, o erro do KeyStore só diria "not found".
         check(ModuleLayer.boot().findModule(MSCAPI_MODULE).isPresent) { "$MSCAPI_MODULE fora do Java" }
-        val roots = KeyStore.getInstance("Windows-ROOT").apply { load(null) }
-        check(roots.size() > 0) { "o Windows-ROOT veio sem certificados" }
+        val windows = TrustBothStores.windowsRoots() ?: error("o ${TrustBothStores.WINDOWS_STORE} não abriu")
+        check(windows.size() > 0) { "o ${TrustBothStores.WINDOWS_STORE} veio sem certificados" }
+        val installed = TrustBothStores.install()
+        check(SSLContext.getDefault() === installed.context) { "o SSLContext padrão não é o do Riff" }
+        val issuers = installed.trust.acceptedIssuers.toSet()
+        // O arquivo do Java, lido direto: uma opção da JVM que troque a lista padrão não esconde a falta dele.
+        val cacertsFile = File(System.getProperty("java.home"), "lib/security/cacerts")
+        val cacerts = TrustBothStores.certificates(KeyStore.getInstance(cacertsFile, null as CharArray?))
+        check(cacerts.isNotEmpty()) { "o cacerts veio vazio" }
+        check(issuers.size >= cacerts.size) {
+            "${issuers.size} raízes aceitas, menos que as ${cacerts.size} do cacerts"
+        }
+        check(issuers.containsAll(cacerts)) { "faltam raízes do cacerts" }
+        check(issuers.containsAll(TrustBothStores.certificates(windows))) { "faltam raízes do Windows-ROOT" }
         val keys = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }
         val mine = keys.generateKeyPair()
         val theirs = keys.generateKeyPair()
@@ -138,8 +152,7 @@ object InstallCheck {
             doPhase(theirs.public, true)
             generateSecret()
         }
-        val trust = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(roots) }
-        SSLContext.getInstance("TLSv1.3").init(null, trust.trustManagers, null)
+        SSLContext.getInstance("TLSv1.3").init(null, arrayOf(installed.trust), null)
     }
 
     /**

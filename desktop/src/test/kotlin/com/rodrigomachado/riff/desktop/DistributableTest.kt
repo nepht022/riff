@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.desktop
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -34,6 +35,16 @@ class DistributableTest {
         assertTrue(text, text.contains("jdk.unsupported"))
         assertTrue(text, text.contains("jdk.crypto.mscapi"))
         assertTrue(text, text.contains("jdk.localedata"))
+    }
+
+    /** O `trustStoreType=Windows-ROOT` trocaria o `cacerts` pelas raízes do Windows (o TrustBothStores junta tudo). */
+    @Test
+    fun theAppKeepsTheJavaRoots() {
+        val cfg = File(APP, "app/Riff.cfg")
+        assumeTrue(cfg.isFile)
+        val text = cfg.readText()
+        assertTrue(text, text.contains("-Djava.net.useSystemProxies=true"))
+        assertFalse(text, text.contains("trustStoreType"))
     }
 
     @Test
