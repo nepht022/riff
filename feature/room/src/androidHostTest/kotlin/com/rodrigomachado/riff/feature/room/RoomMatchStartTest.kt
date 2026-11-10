@@ -25,8 +25,11 @@ class RoomMatchStartTest {
     private var now = SERVER_T0
     private val fake = FakeFirebase(clock = { now }, uid = "u1")
 
+    /** Quanto o relógio de parede foi acertado (pela rede) depois de aberto o teste. */
+    private var wallCorrection = 0L
+
     /** O relógio de parede do aparelho: 5 min atrasado em relação ao servidor. */
-    private val wallClock = { now - DEVICE_BEHIND_MS }
+    private val wallClock = { now - DEVICE_BEHIND_MS + wallCorrection }
 
     /** O relógio da partida (monotônico, desde que o aparelho ligou): nada a ver com os outros dois. */
     private val gameClock = { now - SERVER_T0 + GAME_T0 }
@@ -71,6 +74,27 @@ class RoomMatchStartTest {
         // O começo é 3 s depois de agora no servidor: no relógio da partida, 3 s depois de agora também, mesmo com o
         // relógio de parede 5 min atrasado.
         assertEquals(gameClock() + 3_000, at)
+    }
+
+    /**
+     * O relógio de parede acertado pela rede entre o carregou e o começo (o offset medido no carregou ficou errado):
+     * o começo é medido de novo e continua certo no relógio da partida.
+     */
+    @Test
+    fun aWallClockCorrectedAfterLoadingDoesNotMoveTheStart() = runTest {
+        seed(
+            player("u1", loadedRound = 1),
+            player("bia", loadedRound = 1),
+            owner = "bia",
+            state = "partida",
+            startAt = now + 3_000,
+        )
+        val start = matchStart()
+        start.loaded()
+
+        wallCorrection = DEVICE_BEHIND_MS // o relógio de parede agora está certo
+
+        assertEquals(gameClock() + 3_000, start.awaitStart())
     }
 
     @Test
@@ -181,10 +205,13 @@ class RoomMatchStartTest {
         start.loaded()
         start.awaitStart()
 
+        val streams = fake.streamsOpened
+
         start.finished()
 
         assertEquals("sala", room()!!.getString("estado"))
         assertFalse(me().has("saiu"))
+        assertEquals(streams, fake.streamsOpened)
     }
 
     @Test
@@ -200,10 +227,12 @@ class RoomMatchStartTest {
         start.loaded()
         start.awaitStart()
         val writes = fake.writes.size
+        val streams = fake.streamsOpened
 
         start.finished()
 
         assertEquals(writes, fake.writes.size)
+        assertEquals(streams, fake.streamsOpened) // saber se sou o dono não abre outro streaming
         assertEquals("partida", room()!!.getString("estado"))
     }
 

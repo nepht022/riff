@@ -240,6 +240,15 @@ class RoomRepository(
         }
     }
 
+    /** Se sou o dono da sala [code] agora (uma leitura só do `dono`, sem streaming); null = sem internet ou recusado. */
+    suspend fun isOwner(code: String): Boolean? = try {
+        db.get("${RoomFormat.path(code)}/$OWNER") == auth.uid()
+    } catch (_: NoConnection) {
+        null
+    } catch (_: RoomHttpError) {
+        null
+    }
+
     /** De volta à sala (o dono, ao sair da partida): sem começo marcado. Sem internet ou recusado, nada. */
     suspend fun backToLobby(code: String) = quietly { db.patch(RoomFormat.path(code), RoundFormat.backToLobby()) }
 

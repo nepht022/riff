@@ -16,7 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * O começo da partida da sala [code], rodada [round], pelo [RoomRepository] (Decisões 2–4 do plano da M2):
- * - [loaded] mede o relógio do servidor de novo ([RoomRepository.measureClock]) e marca o `carregou` da rodada;
+ * - [loaded] mede o relógio do servidor ([RoomRepository.measureClock]) e marca o `carregou` da rodada;
  * - [awaitStart] espera o `inicio` aparecer na sala observada; enquanto espera, se este aparelho é o dono (também o
  *   dono novo que assumiu no meio), confere a cada 1 s se já dá para marcar o começo
  *   ([RoomRepository.scheduleStartIfDue]);
@@ -24,8 +24,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * [clock] é o relógio da partida (o `TimeSource` da `GameSession`: no celular, `SystemClock.elapsedRealtime`), que não
  * é o relógio de parede do [RoomRepository] (`System.currentTimeMillis`). O instante devolvido é convertido direto da
- * hora do servidor para ele: `clock() + (inicio − serverNow())`, lendo os dois relógios no mesmo momento; assim o
- * relógio de parede errado (o offset compensa) ou acertado pela rede depois da medida não muda o começo.
+ * hora do servidor para ele: `clock() + (inicio − serverNow())`, lendo os dois relógios no mesmo momento. O relógio de
+ * parede errado o offset compensa; já o relógio de parede acertado (pela rede) depois da medida mudaria o começo na
+ * mesma quantidade, porque o `serverNow()` é o relógio de parede mais o offset medido antes: por isso o [awaitStart]
+ * mede de novo com o `inicio` já em mãos (3 idas e voltas, bem antes dos 3 s até o começo), e só sem internet fica
+ * com a medida do [loaded].
  *
  * Sem começo combinado (a sala acabou, a rodada voltou à sala ou passou, sem internet, ou nada em [MAX_WAIT_MS]), a
  * partida começa já: ela nunca fica presa esperando.
@@ -50,7 +53,7 @@ class RoomMatchStart(
 
     override suspend fun awaitStart(): Long {
         val serverStart = withTimeoutOrNull(MAX_WAIT_MS) { agreedStart() } ?: return clock()
-        val server = roomClock ?: measure() ?: return clock()
+        val server = measure() ?: roomClock ?: return clock()
         return clock() + (serverStart - server.serverNow())
     }
 
@@ -98,15 +101,11 @@ class RoomMatchStart(
         null
     }
 
-    /** Se sou o dono agora (lido de novo: o dono pode ter mudado); sem ler, pela última sala vista. */
-    private suspend fun iAmOwner(): Boolean {
-        val room = try {
-            repository.observe(code).first()
-        } catch (_: NoConnection) {
-            lastRoom
-        }
-        return room?.iAmOwner == true
-    }
+    /**
+     * Se sou o dono agora (lido de novo, só o `dono`: o dono pode ter mudado); sem ler, pela última sala vista (a de
+     * quem ainda esperava o começo).
+     */
+    private suspend fun iAmOwner(): Boolean = repository.isOwner(code) ?: (lastRoom?.iAmOwner == true)
 
     companion object {
         /** De quanto em quanto o dono confere se já dá para marcar o começo. */

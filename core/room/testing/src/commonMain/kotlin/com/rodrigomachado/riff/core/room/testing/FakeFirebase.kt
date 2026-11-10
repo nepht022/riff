@@ -98,6 +98,12 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
     /** Não null: o login anônimo (cadastro e renovação) responde isto em vez de entrar (Google fora do ar, etc.). */
     var loginReply: HttpReply? = null
 
+    @Volatile
+    private var streams = 0
+
+    /** Quantos streamings (SSE) já foram abertos, de qualquer jogador. */
+    val streamsOpened: Int get() = streams
+
     /** Todas as escritas recebidas, na ordem (as recusadas também). */
     val writes: List<FirebaseWrite> get() = synchronized(lock) { log.toList() }
 
@@ -214,6 +220,7 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         }
 
         override fun stream(url: String): Flow<String> = flow {
+            synchronized(lock) { streams++ }
             if (!online) throw NoConnection()
             val path = pathOf(url)
             combine(root, connected) { tree, up -> if (up) text(valueAt(tree, path)) else null }
