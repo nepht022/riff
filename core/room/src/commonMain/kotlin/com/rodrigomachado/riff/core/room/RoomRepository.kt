@@ -240,7 +240,7 @@ class RoomRepository(
         }
     }
 
-    /** Se sou o dono da sala [code] agora (uma leitura só do `dono`, sem streaming); null = sem internet ou recusado. */
+    /** Se sou o dono da sala [code] agora (uma leitura só do `dono`, sem streaming); null = sem internet, recusado. */
     suspend fun isOwner(code: String): Boolean? = try {
         db.get("${RoomFormat.path(code)}/$OWNER") == auth.uid()
     } catch (_: NoConnection) {

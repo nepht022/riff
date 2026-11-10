@@ -169,7 +169,8 @@ open class RoomLobbyViewModel(
 
     /**
      * O dono escolheu [chartId] na Biblioteca (modo de escolha), para tocar em [difficulty]. Não gravou (o mapa saiu
-     * da biblioteca, não tem dificuldades, recusado, sem internet): a tela avisa ([RoomLobbyUiState.Ready.chooseFailed]).
+     * da biblioteca, não tem dificuldades, recusado, sem internet): a tela avisa
+     * ([RoomLobbyUiState.Ready.chooseFailed]).
      */
     fun chooseSong(chartId: String, difficulty: Difficulty) {
         viewModelScope.launch {

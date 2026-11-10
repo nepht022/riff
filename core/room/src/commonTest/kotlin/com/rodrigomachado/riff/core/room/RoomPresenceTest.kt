@@ -11,7 +11,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,8 +29,10 @@ class RoomPresenceTest : JsonTest() {
 
     private fun players() = room()!!.getJSONObject("jogadores")
 
-    private fun beats(uid: String) =
-        fake.writes.count { it.uid == uid && it.method == "PATCH" && "jogadores/$uid/vistoEm" in it.body.orEmpty() }
+    /** Os batimentos de [uid] (o corpo lido como JSON: o org.json do Android escreve a `/` como `\\/`). */
+    private fun beats(uid: String) = fake.writes.count {
+        it.uid == uid && it.method == "PATCH" && JSONObject(it.body!!).has("jogadores/$uid/vistoEm")
+    }
 
     private fun ready(uid: String, seenAt: Long? = null, loadedRound: Int? = null) = FakePlayer(
         uid,
