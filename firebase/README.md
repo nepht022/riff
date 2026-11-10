@@ -35,7 +35,13 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
   estado: "sala" | "contagem" | "partida" | "fim"
   criadaEm, atividadeEm: tempo do servidor ({".sv": "timestamp"})
   vagas/{v1..v4}: uid
-  jogadores/{uid}: { nome (1 a 20), aparelho ("celular" | "pc"), vaga ("v1".."v4"), entrouEm, vistoEm }
+  jogadores/{uid}: { nome (1 a 20), aparelho ("celular" | "pc"), vaga ("v1".."v4"), entrouEm, vistoEm,
+                    dificuldade?, pronto?, musica?, carregou?, saiu? }          (os opcionais são da M2)
+  musica?: { chartId (40 hex minúsculos), titulo (até 200), artista (até 200),
+             dificuldades ("EASY,MEDIUM,HARD,EXPERT", só essas palavras), duracaoMs?,
+             encore?: { md5 (32 hex), video (bool), charter? (até 200) } }       (M2; ausente = nenhuma escolhida)
+  rodada?: n                            (M2; ausente = 0)
+  inicio?: hora do servidor             (M2; só na "partida")
 ```
 
 - **Vagas.** As regras do Realtime Database não contam filhos (não existe `numChildren()` nas regras; o emulador
@@ -56,6 +62,17 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
 - **`jogadores/{uid}`:** só o próprio uid escreve, numa sala que existe; o dono pode remover qualquer jogador.
   `entrouEm`/`vistoEm` com o tempo do servidor (ou o mesmo valor de antes, para entrar de novo mantendo o
   `entrouEm`). Campos fora da lista são recusados, na sala e no jogador.
+- **`musica` (M2):** só o dono e só com `estado: "sala"`; o dono também pode apagá-la. Campos fora da lista
+  recusados.
+- **`rodada` (M2):** só o dono, só sobe de 1 em 1 (a primeira é 1) e só na mesma escrita em que o `estado` é
+  `"contagem"`; nunca é apagada. E o contrário: entrar em `"contagem"` vindo de outro estado exige subir a rodada na
+  mesma escrita (o `.validate` do `estado` vê o `newData` da sala inteira, então o PATCH
+  `{estado: "contagem", rodada: n+1}` é conferido junto). Repetir `"contagem"` sem subir vale (o app tentando de novo).
+- **`inicio` (M2):** só o dono, hora do servidor entre `now` e `now + 20000`, e só com `estado: "partida"`;
+  `"partida"` só vem depois da `"contagem"` e sempre com o `inicio`; `"sala"` e `"contagem"` exigem o `inicio`
+  apagado na mesma escrita (`inicio: null`).
+- **Jogador (M2):** `dificuldade` (`EASY|MEDIUM|HARD|EXPERT`), `pronto` (bool), `musica` (`tem|baixando|sem`),
+  `carregou` e `saiu` iguais à `rodada` da sala depois da escrita. Só o próprio jogador grava (nem o dono).
 - **Leitura:** `salas/{CODIGO}` para qualquer autenticado; nada mais, nem a lista de salas (o código é o segredo).
 
 ### Limitações
@@ -67,6 +84,10 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
   se o código sorteado já existe (`412`), o app lê a sala e, se ela está morta, apaga e cria de novo com o mesmo código.
 - **Quantidade de salas.** As regras não limitam quantas salas um uid cria (não há contador por usuário sem servidor);
   o login anônimo e o plano Spark (1 GB, 100 conexões) seguram o abuso.
+- **Dono novo e começo na mesma escrita.** As escritas do dono (`estado`, `rodada`, `inicio`, `musica`) conferem o
+  dono de antes da escrita: quem assume o dono (`{dono: uid}`) grava a rodada ou o começo numa escrita seguinte.
+- **`carregou`/`saiu` não conferem o estado:** valem em qualquer estado, desde que sejam a rodada atual.
+- **`inicio` confere a hora do servidor na escrita,** não a do relógio de quem lê; o app converte pelo offset medido.
 - **Vaga abandonada.** Quem sai sem liberar a vaga (o app sempre libera) deixa a vaga abandonada; ela continua
   contando como ocupada na leitura até alguém ocupá-la, então o app trata uma vaga cujo uid não está em `jogadores`
   (ou aponta para outra vaga) como livre.
