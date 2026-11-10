@@ -19,7 +19,7 @@ fun interface RoomLibrary {
 
 /**
  * O que a sala usa da biblioteca deste aparelho: conferir se tem a música da sala ([has]), montar a música que o dono
- * escolheu ([songOf]) e baixar do Encore a que falta ([download]). Sem [downloader] (o PC antes da Task 5), não baixa.
+ * escolheu ([songOf]) e baixar do Encore a que falta ([download]). Sem [downloader], não baixa.
  */
 class RoomSongCheck(
     private val lookup: ChartLookup,
@@ -47,7 +47,7 @@ class RoomSongCheck(
     }
 
     companion object {
-        /** Sem biblioteca: não tem nenhuma música e não baixa (o PC até a Task 5 ligar a biblioteca). */
+        /** Sem biblioteca: não tem nenhuma música e não baixa (o padrão dos testes da sala). */
         val NONE = RoomSongCheck(lookup = { false }, library = { null }, downloader = null)
 
         /**

@@ -5,8 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
@@ -65,12 +67,19 @@ internal class GameKeyboard(private val session: GameSession, keys: Map<ControlA
  * tela na recomposição seguinte (1–2 quadros depois), e nesse intervalo um botão do controle viraria tecla nos menus
  * da pausa que já fechou, ou uma seta seria engolida por ela. [pause]/[resume] embrulham os da partida (a mudança vale
  * já); [composed] acompanha a pausa que vem de fora (o ciclo de vida, o foco do áudio). Só na thread da janela.
- * Sem [pausable] (a partida de sala), [pause] não faz nada: a tecla, o Start, a perda do foco e o controle
- * desconectado não pausam.
+ * Sem [pausable] (a partida de sala), [pause] não faz nada: a perda do foco e o controle desconectado não pausam, e a
+ * tecla da pausa (o Esc) e o Start abrem e fecham a pergunta de sair ([leaving]), com a música seguindo ([onPauseKey]).
  */
-internal class MatchPause(initial: Boolean, private val pausable: Boolean = true) {
+internal class MatchPause(initial: Boolean, val pausable: Boolean = true) {
     @Volatile var isPaused = initial
         private set
+
+    /** A pergunta "Sair da partida?" da partida de sala está aberta (estado do Compose: a tela recompõe). */
+    var leaving by mutableStateOf(false)
+
+    /** Um menu está por cima da pista (a pausa ou a pergunta de sair): as setas e os botões do controle vão a ele. */
+    val menuOpen: Boolean get() = isPaused || leaving
+
     private var lastComposed = initial
     private var onPause: () -> Unit = {}
     private var onResume: () -> Unit = {}
@@ -87,6 +96,18 @@ internal class MatchPause(initial: Boolean, private val pausable: Boolean = true
     val resume: () -> Unit = {
         isPaused = false
         onResume()
+    }
+
+    /**
+     * A tecla da pausa (ou o Start): pausa e continua ([resume], com o som do Continuar); na partida de sala, abre e
+     * fecha a pergunta de sair.
+     */
+    fun onPauseKey(resume: () -> Unit) {
+        when {
+            !pausable -> leaving = !leaving
+            isPaused -> resume()
+            else -> pause()
+        }
     }
 
     /** O estado composto: a pausa vale quando muda (o mesmo valor velho não desfaz uma mudança mais nova). */
@@ -155,8 +176,9 @@ internal fun Modifier.pauseMenu(menu: PauseMenu): Modifier = if (!menuKeysEnable
  * e o toque segue igual): o palco pede o foco ao aparecer e ao abrir ou fechar a pausa (o foco pode ter ido a um botão
  * dela). A tecla da pausa (Enter de fábrica) e o Esc pausam; na pausa, continuam, como o Continuar (com o mesmo som).
  * Na pausa do PC as setas andam pelos botões dela ([pauseMenu]); um botão com o foco recebe o Enter antes, e vale o
- * botão. A janela perdendo o foco pausa e solta as cores seguradas. A pausa é lida de [matchPause] (a de agora, não a
- * da última recomposição), que também pausa e continua a partida.
+ * botão. A janela perdendo o foco pausa e solta as cores seguradas. Na partida de sala, a tecla da pausa e o Esc abrem
+ * e fecham a pergunta de sair (que anda pelas setas como a pausa), e a perda do foco só solta as cores. A pausa é
+ * lida de [matchPause] (a de agora, não a da última recomposição), que também pausa e continua a partida.
  */
 @Composable
 internal fun rememberGameKeys(
@@ -170,17 +192,19 @@ internal fun rememberGameKeys(
     val resume by rememberUpdatedState(withMenuSound(MenuSound.CONFIRM, matchPause.resume))
     val keys = gameKeys(controls)
     val keyboard = remember(session, keys) {
-        GameKeyboard(session, keys) { if (matchPause.isPaused) resume() else pause() }
+        GameKeyboard(session, keys) { matchPause.onPauseKey(resume) }
     }
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    LaunchedEffect(isPaused) { focus.requestFocus() }
+    LaunchedEffect(isPaused, matchPause.leaving) { focus.requestFocus() }
     OnWindowFocusLost {
         pause() // antes de soltar: soltar uma cor tocando poderia acertar um pull-off
         keyboard.letGo()
     }
     return Modifier
-        .onKeyEvent { (matchPause.isPaused && pauseMenu.onKeyEvent(it, focusManager)) || keyboard.onKeyEvent(it) }
+        .onKeyEvent { event ->
+            (matchPause.menuOpen && pauseMenu.onKeyEvent(event, focusManager)) || keyboard.onKeyEvent(event)
+        }
         .focusRequester(focus)
         .focusTarget()
 }

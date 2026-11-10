@@ -10,8 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -67,13 +69,17 @@ internal fun RoomMatchOverlays(state: GameplayUiState.Ready, frame: () -> Long, 
 
 /**
  * Sair da partida de sala? A música não para (não há pausa na sala): Continuar tocando fecha a pergunta; Sair sai da
- * rodada e volta à sala.
+ * rodada e volta à sala. No PC as setas andam pelos dois botões como na pausa ([menu]: a primeira foca o Continuar
+ * tocando), Enter escolhe e o Esc de novo fecha.
  */
 @Composable
-internal fun LeaveOverlay(onKeepPlaying: () -> Unit, onExit: () -> Unit) {
+internal fun LeaveOverlay(menu: PauseMenu, onKeepPlaying: () -> Unit, onExit: () -> Unit) {
+    // A pergunta fechou com um botão focado: a próxima começa sem foco (como a pausa).
+    DisposableEffect(menu) { onDispose { menu.hasFocus = false } }
     Column(
         Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA))
-            .testTag(GameplayTestTags.LEAVE_PROMPT),
+            .testTag(GameplayTestTags.LEAVE_PROMPT)
+            .pauseMenu(menu),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -88,7 +94,7 @@ internal fun LeaveOverlay(onKeepPlaying: () -> Unit, onExit: () -> Unit) {
         PosterButton(
             stringResource(Res.string.gameplay_keep_playing),
             onClick = onKeepPlaying,
-            modifier = Modifier.testTag(GameplayTestTags.KEEP_PLAYING),
+            modifier = Modifier.testTag(GameplayTestTags.KEEP_PLAYING).focusRequester(menu.first),
             sound = MenuSound.CONFIRM,
         )
         TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape)) {

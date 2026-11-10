@@ -26,15 +26,17 @@ private const val NANOS_PER_MS = 1_000_000L
  * O controle desconectado no meio da música pausa (as cores chegam soltas logo depois). Tocando, nenhum botão vira
  * tecla nos menus ([TakePadFromMenus]: o ✕ que acerta a nota não confirma nada); na pausa, só o da pausa
  * ([pauseButton]) fica com a partida (Start continua, sem virar também um Enter), e os outros andam nos botões dela.
+ * Na partida de sala, Start abre e fecha a pergunta de sair, que fica com os botões como a pausa (✕ escolhe, ○ fecha).
  */
 @Composable
 internal fun HandleGamepad(session: GameSession, matchPause: MatchPause, pauseButton: String?) {
     val gamepad = LocalGamepad.current ?: return
     val window = LocalWindowInfo.current
     // A pausa de agora, não a da última recomposição: o ✕ logo depois de o Start continuar já é da partida.
-    TakePadFromMenus { !matchPause.isPaused || it == pauseButton }
+    TakePadFromMenus { !matchPause.menuOpen || it == pauseButton }
     val pause = matchPause.pause
     val resume by rememberUpdatedState(withMenuSound(MenuSound.CONFIRM, matchPause.resume))
+    val onStart = { matchPause.onPauseKey(resume) }
     // Na thread da janela, como o teclado: a sessão não é thread-safe.
     LaunchedEffect(gamepad, session) {
         val unplug = UnplugWatch(gamepad) { if (!matchPause.isPaused) pause() }
@@ -45,7 +47,7 @@ internal fun HandleGamepad(session: GameSession, matchPause: MatchPause, pauseBu
             unplug.check()
             // O foco de agora, não o da composição: o evento pode chegar antes de a perda do foco recompor.
             if (window.isWindowFocused) {
-                onEvent(session, event, if (matchPause.isPaused) resume else pause)
+                onEvent(session, event, onStart)
             }
         }
     }

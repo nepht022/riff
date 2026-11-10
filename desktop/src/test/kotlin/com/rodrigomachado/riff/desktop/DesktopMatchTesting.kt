@@ -1,7 +1,10 @@
 package com.rodrigomachado.riff.desktop
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
@@ -55,6 +58,14 @@ import kotlin.math.sin
 internal class DesktopMatch(private val composeRule: ComposeContentTestRule, private val temp: TemporaryFolder) {
     private val sinks = mutableListOf<RealTimeSink>()
     private var opened: DesktopGraph? = null
+    private var window: FocusedWindow? = null
+
+    /** A janela tem o foco (false: o Alt+Tab de mentira; a janela de verdade do teste não disputa o foco). */
+    var windowFocused: Boolean
+        get() = window?.isWindowFocused ?: true
+        set(value) {
+            composeRule.runOnUiThread { checkNotNull(window) { "o app não foi aberto" }.isWindowFocused = value }
+        }
 
     val graph: DesktopGraph get() = checkNotNull(opened) { "o app não foi aberto" }
 
@@ -71,6 +82,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
      * desligado, como sem `ranking.url`); sem [askForName], o pedido do nome da primeira abertura já foi respondido com
      * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes). A Sala fala com o Firebase falso
      * [room]; sem ele, fica sem configuração ("em breve"), e um Firebase falso sem internet garante que nada sai.
+     * A música do mapa tem [songMs] (as duas notas continuam em 1 s e 1,5 s).
      */
     fun openApp(
         pad: PadSource = NoPadSource,
@@ -80,11 +92,12 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         rankingUrl: String = TEST_RANKING_URL,
         askForName: Boolean = false,
         room: FakeFirebase? = null,
+        songMs: Int = SONG_MS,
     ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
             File(this, "notes.chart").writeText(CHART)
-            writeTone(File(this, "song.wav"), SONG_MS)
+            writeTone(File(this, "song.wav"), songMs)
         }
         LoadedFfmpeg.ensure()
         val audioOut = AudioSinkFactory { rate -> RealTimeSink(rate).also { synchronized(sinks) { sinks += it } } }
@@ -115,7 +128,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         composeRule.setContent {
             // A janela do teste não disputa o foco do sistema: sem isso a partida pausaria como num Alt+Tab.
             val real = LocalWindowInfo.current
-            val focused = remember(real) { FocusedWindow(real) }
+            val focused = remember(real) { FocusedWindow(real).also { window = it } }
             CompositionLocalProvider(LocalWindowInfo provides focused) { RiffDesktopApp(graph, sendMenuKey) }
         }
         return graph
@@ -193,6 +206,9 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         pressKeys { keyUp(fret) }
     }
 
+    /** Quanto da música já tocou (pela saída falsa da última música aberta; 0 antes de abrir ou de começar). */
+    fun songPositionMs(): Long = synchronized(sinks) { sinks.lastOrNull() }?.positionMs ?: 0L
+
     /** O recorde gravado da música (a única, na única dificuldade). */
     fun record(): ScoreRecord? = runBlocking {
         val chartId = graph.charts.observeCharts().first().single().id
@@ -210,7 +226,9 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         val STAGE = hasTestTag(GameplayTestTags.STAGE)
 
         private const val MATCH_TIMEOUT_MS = 30_000L
-        private const val SONG_MS = 2_000
+
+        /** A música do mapa, por padrão. */
+        const val SONG_MS = 2_000
         private const val FIRST_NOTE_MS = 1_000L
         private const val FRET_EARLY_MS = 300L
         private const val STRUM_EARLY_MS = 15L
@@ -255,9 +273,9 @@ private object LoadedFfmpeg {
     fun ensure() = Unit
 }
 
-/** A janela do teste sempre com foco (ela não disputa o foco do sistema). */
+/** A janela do teste com foco (ela não disputa o foco do sistema); o teste pode tirá-lo, como num Alt+Tab. */
 internal class FocusedWindow(real: WindowInfo) : WindowInfo by real {
-    override val isWindowFocused: Boolean get() = true
+    override var isWindowFocused by mutableStateOf(true)
 }
 
 internal object SilentSfx : SfxPlayer {

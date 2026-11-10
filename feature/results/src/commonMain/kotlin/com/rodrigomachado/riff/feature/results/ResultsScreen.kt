@@ -38,6 +38,7 @@ import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.results.resources.Res
 import com.rodrigomachado.riff.feature.results.resources.results_accuracy
 import com.rodrigomachado.riff.feature.results.resources.results_back
+import com.rodrigomachado.riff.feature.results.resources.results_back_to_room
 import com.rodrigomachado.riff.feature.results.resources.results_clean_time
 import com.rodrigomachado.riff.feature.results.resources.results_good
 import com.rodrigomachado.riff.feature.results.resources.results_max_combo
@@ -52,6 +53,7 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 
+/** O Resultado; numa partida de sala ([inRoom], da [ResultsRoute]), só "Voltar à sala" ([onDone]). */
 @Composable
 fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
@@ -60,9 +62,10 @@ fun ResultsScreen(
     modifier: Modifier = Modifier,
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
+    inRoom: Boolean = false,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName)
+    ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName, inRoom)
 }
 
 @Composable
@@ -73,27 +76,40 @@ fun ResultsContent(
     modifier: Modifier = Modifier,
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
+    inRoom: Boolean = false,
 ) {
+    val back = stringResource(if (inRoom) Res.string.results_back_to_room else Res.string.results_back)
     when (state) {
         ResultsUiState.Loading -> LoadingState(modifier)
 
         ResultsUiState.Missing -> EmptyState(
             title = stringResource(Res.string.results_missing),
             message = "",
-            actionLabel = stringResource(Res.string.results_back),
+            actionLabel = back,
             onAction = onDone,
             modifier = modifier,
         )
 
-        is ResultsUiState.Ready -> ReadyResults(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName)
+        is ResultsUiState.Ready -> ReadyResults(
+            state,
+            onPlayAgain.takeUnless { inRoom },
+            ResultsBack(back, onDone),
+            modifier,
+            onSeeRanking,
+            onChooseName,
+        )
     }
 }
 
+/** O botão de voltar do Resultado: o texto ("Voltar" ou "Voltar à sala") e a ação. */
+private class ResultsBack(val label: String, val onClick: () -> Unit)
+
+/** O Resultado pronto; sem [onPlayAgain] (a partida de sala), sem "Jogar de novo". */
 @Composable
 private fun ReadyResults(
     state: ResultsUiState.Ready,
-    onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
-    onDone: () -> Unit,
+    onPlayAgain: ((chartId: String, difficulty: Difficulty) -> Unit)?,
+    back: ResultsBack,
     modifier: Modifier,
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit,
     onChooseName: () -> Unit,
@@ -136,15 +152,17 @@ private fun ReadyResults(
         if (state.rankingOn) {
             RankingCard(state.ranking, { onSeeRanking(record.chartId, state.title, record.difficulty) }, onChooseName)
         }
-        PosterButton(
-            stringResource(Res.string.results_play_again),
-            onClick = { onPlayAgain(record.chartId, record.difficulty) },
-            sound = MenuSound.CONFIRM,
-        )
+        if (onPlayAgain != null) {
+            PosterButton(
+                stringResource(Res.string.results_play_again),
+                onClick = { onPlayAgain(record.chartId, record.difficulty) },
+                sound = MenuSound.CONFIRM,
+            )
+        }
         TextButton(
-            onClick = onDone,
+            onClick = back.onClick,
             modifier = Modifier.focusHighlight(CircleShape),
-        ) { Text(stringResource(Res.string.results_back), color = RiffColors.Paper) }
+        ) { Text(back.label, color = RiffColors.Paper) }
     }
 }
 

@@ -88,6 +88,8 @@ import com.rodrigomachado.riff.feature.results.ResultsViewModel
 import com.rodrigomachado.riff.feature.room.RoomEntryViewModel
 import com.rodrigomachado.riff.feature.room.RoomJoinViewModel
 import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
+import com.rodrigomachado.riff.feature.room.RoomMatchStart
+import com.rodrigomachado.riff.feature.room.RoomSongCheck
 import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -267,23 +269,29 @@ class DesktopGraph(
         scope.launch { ranking.flush() }
     }
 
-    fun gameplayViewModel(chartId: String, difficulty: Difficulty) = GameplayViewModel(
-        chartId = chartId,
-        difficulty = difficulty,
-        loader = trackLoader,
-        settingsRepository = settings,
-        scores = scores,
-        chartOffsets = chartOffsets,
-        songPlayers = songPlayers,
-        stemPlayers = stemPlayers,
-        sfxPlayers = sfx,
-        timeSource = clock,
-        interruptionsFactory = DesktopPlayers.interruptions,
-        artImages = chartArt,
-        ranking = ranking,
-        // No PC, a tabela do modo da partida ("Tocar com palheta" de quando ela começou).
-        rankingTable = { RankingTable.pc(it.controls.strum) },
-    )
+    /**
+     * A partida; com [roomCode], a partida de sala da rodada [round]: o começo combinado pelo [RoomMatchStart], no
+     * relógio da partida (o mesmo da `GameSession`), sem pausa.
+     */
+    fun gameplayViewModel(chartId: String, difficulty: Difficulty, roomCode: String? = null, round: Int = 0) =
+        GameplayViewModel(
+            chartId = chartId,
+            difficulty = difficulty,
+            loader = trackLoader,
+            settingsRepository = settings,
+            scores = scores,
+            chartOffsets = chartOffsets,
+            songPlayers = songPlayers,
+            stemPlayers = stemPlayers,
+            sfxPlayers = sfx,
+            timeSource = clock,
+            interruptionsFactory = DesktopPlayers.interruptions,
+            artImages = chartArt,
+            ranking = ranking,
+            // No PC, a tabela do modo da partida ("Tocar com palheta" de quando ela começou).
+            rankingTable = { RankingTable.pc(it.controls.strum) },
+            matchStart = roomCode?.let { RoomMatchStart(it, round, room, clock::nowMs) },
+        )
 
     fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
 
@@ -317,7 +325,9 @@ class DesktopGraph(
 
     fun roomJoinViewModel() = RoomJoinViewModel(room, roomPlayerName)
 
-    fun roomLobbyViewModel(code: String) = RoomLobbyViewModel(code, room)
+    /** A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa. */
+    fun roomLobbyViewModel(code: String) =
+        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
 
     /**
      * Fechar a janela com a sala aberta sai dela (passa o dono adiante, ou apaga a sala sendo o último), para não

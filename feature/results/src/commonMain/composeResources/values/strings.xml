@@ -13,6 +13,7 @@
     <string name="results_miss">Erros</string>
     <string name="results_play_again">Jogar de novo</string>
     <string name="results_back">Voltar</string>
+    <string name="results_back_to_room">Voltar à sala</string>
     <string name="results_missing">Este resultado não existe mais.</string>
     <plurals name="results_summary">
         <item quantity="one">Resultado: %1$s ponto, precisão de %2$s.</item>

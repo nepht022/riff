@@ -23,7 +23,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -174,7 +173,6 @@ internal fun GameStage(
     // A pausa já no instante em que muda (o teclado e o controle a leem antes de a tela recompor).
     val inRoom = state.inRoom
     val matchPause = rememberMatchPause(state.isPaused, onPause, onResume, pausable = !inRoom)
-    var leaving by remember { mutableStateOf(false) }
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
@@ -182,7 +180,7 @@ internal fun GameStage(
     val stageCache = remember(look) { StageCache().also { it.look = look } }
     // Primeiro quadro (e screenshots, com animate = false); depois o loop atualiza a cada quadro.
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
-    MatchBackHandler(inRoom, state.isPaused, matchPause.pause) { leaving = !leaving }
+    MatchBackHandler(inRoom, state.isPaused, matchPause.pause) { matchPause.leaving = !matchPause.leaving }
     val pauseButton = if (inRoom) null else matchPause.pause
     if (animate) FrameLoop(session, hud, state.withoutSeparateGuitar, onSessionFinished) { frame++ }
     val pauseMenu = remember { PauseMenu() }
@@ -221,7 +219,9 @@ internal fun GameStage(
         if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, matchPause.resume, onExit)
         if (inRoom) {
             RoomMatchOverlays(state, { frame }, Modifier.align(Alignment.Center))
-            if (leaving) LeaveOverlay(onKeepPlaying = { leaving = false }, onExit = onExit)
+            if (matchPause.leaving) {
+                LeaveOverlay(pauseMenu, onKeepPlaying = { matchPause.leaving = false }, onExit = onExit)
+            }
         }
     }
 }

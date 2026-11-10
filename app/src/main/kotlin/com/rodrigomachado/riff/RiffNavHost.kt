@@ -212,12 +212,13 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
     }
 }
 
-/** A partida e o resultado. */
+/** A partida e o resultado; o Resultado da partida de sala só volta à sala (sem "Jogar de novo"). */
 private fun NavGraphBuilder.matchDestinations(navController: NavHostController, onChooseName: () -> Unit) {
-    composable<GameplayRoute> {
+    composable<GameplayRoute> { entry ->
+        val route = entry.toRoute<GameplayRoute>()
         GameplayScreen(
             onFinished = { scoreId ->
-                navController.navigate(ResultsRoute(scoreId)) {
+                navController.navigate(resultsOf(route, scoreId)) {
                     popUpTo<GameplayRoute> { inclusive = true }
                 }
             },
@@ -225,7 +226,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
             viewModel = hiltViewModel<HiltGameplayViewModel>(),
         )
     }
-    composable<ResultsRoute> {
+    composable<ResultsRoute> { entry ->
         ResultsScreen(
             onPlayAgain = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name)) {
@@ -238,9 +239,13 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
                 navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
             },
             viewModel = hiltViewModel<HiltResultsViewModel>(),
+            inRoom = entry.toRoute<ResultsRoute>().inRoom,
         )
     }
 }
+
+/** O Resultado da partida [route]: o da partida de sala sabe disso (só volta à sala, sem "Jogar de novo"). */
+internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, inRoom = route.roomCode != null)
 
 /** A Biblioteca: jogar com o áudio da pasta. */
 private fun NavGraphBuilder.libraryDestinations(navController: NavHostController) {
