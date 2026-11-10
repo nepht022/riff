@@ -207,8 +207,11 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         val current = valueAt(root.value, write.path)
         if (refuse(write)) return HttpReply(HTTP_UNAUTHORIZED, """{"error":"Permission denied"}""", emptyMap())
         if (write.ifMatch != null && write.ifMatch != etagOf(current)) {
-            if (rulesBeforeEtag) return HttpReply(HTTP_UNAUTHORIZED, """{"error":"Permission denied"}""", emptyMap())
-            return HttpReply(HTTP_PRECONDITION_FAILED, text(current), mapOf("etag" to etagOf(current)))
+            return if (rulesBeforeEtag) {
+                HttpReply(HTTP_UNAUTHORIZED, """{"error":"Permission denied"}""", emptyMap())
+            } else {
+                HttpReply(HTTP_PRECONDITION_FAILED, text(current), mapOf("etag" to etagOf(current)))
+            }
         }
         val value = resolve(parse(write.body.orEmpty()))
         root.value = when (write.method) {

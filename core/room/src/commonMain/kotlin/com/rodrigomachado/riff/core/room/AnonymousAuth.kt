@@ -87,15 +87,19 @@ class AnonymousAuth(
      * Lê a resposta de sucesso com [read]. Um erro, uma página no lugar do JSON (portal de Wi-Fi, proxy) ou um JSON
      * sem os campos esperados viram [RoomHttpError] (nunca um JSONException solto, que fecharia o app).
      */
-    private fun <T> fields(reply: HttpReply, read: (JSONObject) -> T): T {
-        if (reply.code !in HTTP_OK) throw RoomHttpError(reply.code)
-        return try {
-            read(JSONObject(reply.body))
-        } catch (_: JSONException) {
-            throw RoomHttpError(reply.code)
-        } catch (_: NumberFormatException) {
-            throw RoomHttpError(reply.code) // expiresIn que não é número
+    private fun <T : Any> fields(reply: HttpReply, read: (JSONObject) -> T): T {
+        val value = if (reply.code in HTTP_OK) {
+            try {
+                read(JSONObject(reply.body))
+            } catch (_: JSONException) {
+                null
+            } catch (_: NumberFormatException) {
+                null // expiresIn que não é número
+            }
+        } else {
+            null
         }
+        return value ?: throw RoomHttpError(reply.code)
     }
 
     private fun expiresAt(expiresInSeconds: String) = clock() + expiresInSeconds.toLong() * MS_PER_SECOND

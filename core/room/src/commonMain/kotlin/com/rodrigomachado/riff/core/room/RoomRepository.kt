@@ -42,7 +42,10 @@ class RoomRepository(
      */
     suspend fun create(name: String): CreateResult = try {
         val room = RoomFormat.newRoom(auth.uid(), RoomFormat.cleanName(name), device)
-        firstFreeCode(room)?.let { joined = it; CreateResult.Created(it) } ?: CreateResult.NoConnection
+        firstFreeCode(room)?.let { code ->
+            joined = code
+            CreateResult.Created(code)
+        } ?: CreateResult.NoConnection
     } catch (_: NoConnection) {
         CreateResult.NoConnection
     } catch (_: RoomHttpError) {
@@ -128,32 +131,25 @@ class RoomRepository(
         return null
     }
 
-    /** Grava a sala nova em [code] se o código está livre ou se a sala que está nele morreu. */
+    /**
+     * Grava a sala nova em [code] se o código está livre ou se a sala que está nele morreu. O `PUT` condicional
+     * recusado (412, ou 401/403: ver [FirebaseDb.put]) é código ocupado: relê para decidir.
+     */
     private suspend fun claim(code: String, room: Map<String, Any?>): Boolean {
         val path = RoomFormat.path(code)
-        if (putIfFree(path, room)) return true
-        // código livre e mesmo assim recusado: é recusa das regras de verdade (lança e a tela pede para tentar de novo)
-        val existing = db.get(path) as? JSONObject ?: return db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
-        if (!RoomFormat.isStale(existing, clock())) return false
-        try {
-            db.delete(path)
-        } catch (e: RoomHttpError) {
-            if (e.code !in REFUSED) throw e
-            return false // para o servidor a sala ainda está viva
+        if (db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok) return true
+        val existing = db.get(path) as? JSONObject
+        if (existing != null) {
+            if (!RoomFormat.isStale(existing, clock())) return false
+            try {
+                db.delete(path)
+            } catch (e: RoomHttpError) {
+                if (e.code !in REFUSED) throw e
+                return false // para o servidor a sala ainda está viva
+            }
         }
-        return putIfFree(path, room) // outro pode ter criado entre o apagar e o PUT
-    }
-
-    /**
-     * O `PUT` só se o código está livre: false = ocupado. O emulador responde 412 (o `if-match` antes das regras);
-     * um servidor que confira as regras antes (a sala existente não é "criar") responderia 401/403: também ocupado,
-     * e o [claim] relê para decidir.
-     */
-    private suspend fun putIfFree(path: String, room: Map<String, Any?>): Boolean = try {
-        db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
-    } catch (e: RoomHttpError) {
-        if (e.code !in REFUSED) throw e
-        false
+        // outro pode ter criado entre o apagar e o PUT; código livre e recusado de novo: as regras (outro código)
+        return db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
     }
 
     private suspend fun joinAs(me: String, code: String, name: String): JoinResult {

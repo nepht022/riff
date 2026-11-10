@@ -18,7 +18,12 @@ object ServerTime {
 sealed interface PutResult {
     data object Ok : PutResult
 
-    /** 412: o `if-match` não bateu (com `null_etag`, o caminho já existe). */
+    /**
+     * O `if-match` não bateu (com `null_etag`, o caminho já existe): 412. O emulador dá 412 mesmo para uma escrita
+     * que as regras recusariam (`restCreateOnATakenCodeAnswers412` no `firebase/rules.test.mjs`); um servidor que
+     * confira as regras antes responderia 401/403, então no `put` condicional estes também são [Conflict] (quem
+     * chama relê para decidir).
+     */
     data object Conflict : PutResult
 }
 
@@ -38,6 +43,7 @@ class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, db
         val reply = http.request("PUT", url(path), toJsonText(value), headers)
         return when {
             reply.code == HTTP_PRECONDITION_FAILED -> PutResult.Conflict
+            ifMatch != null && reply.code in HTTP_REFUSED -> PutResult.Conflict
             reply.code in HTTP_OK -> PutResult.Ok
             else -> throw RoomHttpError(reply.code)
         }
@@ -146,6 +152,7 @@ class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, db
         const val ETAG_HEADER = "X-Firebase-ETag"
         const val HTTP_UNAUTHORIZED = 401
         const val HTTP_PRECONDITION_FAILED = 412
+        val HTTP_REFUSED = setOf(401, 403)
         const val FIRST_WAIT_MS = 1_000L
         const val MAX_WAIT_MS = 30_000L
         val HTTP_OK = 200..299

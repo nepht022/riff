@@ -54,6 +54,20 @@ class FirebaseDbTest : JsonTest() {
         assertEquals(PutResult.Ok, db.put("salas/ABCD", mapOf("dono" to "u1"), ifMatch = "null_etag"))
     }
 
+    /** Recusado no PUT condicional (um servidor que confere as regras antes do if-match): também conflito. */
+    @Test
+    fun conditionalPutRefusedIsConflictButAPlainPutThrows() = runTest {
+        database = { HttpReply(403, """{"error":"Permission denied"}""", emptyMap()) }
+
+        assertEquals(PutResult.Conflict, db.put("salas/ABCD", mapOf("dono" to "u1"), ifMatch = "null_etag"))
+        try {
+            db.put("salas/ABCD", mapOf("dono" to "u1"))
+            fail("PUT sem if-match recusado")
+        } catch (e: RoomHttpError) {
+            assertEquals(403, e.code)
+        }
+    }
+
     @Test
     fun urlsCarryAuthAndJsonSuffix() = runTest {
         database = { ok("""{"dono":"u1"}""") }
