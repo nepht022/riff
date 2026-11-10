@@ -74,6 +74,34 @@ class RoomLobbyViewModelTest {
         assertEquals(RoomLobbyUiState.Ended, vm.uiState.value)
     }
 
+    /** O dono me tirou (sumido há mais de 5 min): a sala acabou para mim. */
+    @Test
+    fun lobbyEndsWhenIAmRemoved() = runTest(dispatcher) {
+        fake.seedRoom("ABCD", owner = "u2", players = listOf(FakePlayer("u2", "Bia"), FakePlayer("u1", "Ana")))
+        val vm = opened()
+        assertEquals(listOf("Ana", "Bia"), vm.names()) // mesmo entrouEm: o uid desempata
+
+        fake.set("salas/ABCD/jogadores/u1", "null")
+        runCurrent()
+
+        assertEquals(RoomLobbyUiState.Ended, vm.uiState.value)
+    }
+
+    /** Sair não mostra "a sala acabou" no caminho (sair me tira da sala, ou apaga a sala). */
+    @Test
+    fun leavingDoesNotFlashEnded() = runTest(dispatcher) {
+        val vm = opened()
+        val states = mutableListOf<RoomLobbyUiState>()
+        backgroundScope.launch { vm.uiState.collect { states += it } }
+        runCurrent()
+
+        vm.leave()
+        runCurrent()
+
+        assertTrue(vm.left.value)
+        assertFalse(RoomLobbyUiState.Ended in states)
+    }
+
     @Test
     fun leaveNavigatesBack() = runTest(dispatcher) {
         val vm = opened()

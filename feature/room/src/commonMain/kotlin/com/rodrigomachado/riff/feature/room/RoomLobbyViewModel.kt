@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
@@ -19,7 +20,7 @@ sealed interface RoomLobbyUiState {
 
     data class Ready(val room: Room) : RoomLobbyUiState
 
-    /** A sala não existe mais (o último saiu, ou ela morreu). */
+    /** A sala não existe mais (o último saiu, ou ela morreu) ou eu não estou mais nela. */
     data object Ended : RoomLobbyUiState
 
     /** Sem internet para entrar no Firebase: tenta de novo sozinho. */
@@ -42,6 +43,8 @@ open class RoomLobbyViewModel(private val code: String, private val repository: 
         launch { heartbeats() }
         repository.observe(code)
             .map { room -> room?.let { RoomLobbyUiState.Ready(it) } ?: RoomLobbyUiState.Ended }
+            // Sair me tira da sala (ou a apaga): a tela volta sem mostrar "a sala acabou" no caminho.
+            .filterNot { it == RoomLobbyUiState.Ended && leaving.value }
             // Qualquer falha (sem internet, o login recusado, uma resposta estranha) é "sem conexão" e tenta de novo:
             // nenhuma exceção chega ao viewModelScope (fecharia o app). O cancelamento não passa por aqui.
             .retryWhen { _, _ ->

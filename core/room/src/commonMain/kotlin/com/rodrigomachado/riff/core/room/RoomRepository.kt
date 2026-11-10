@@ -87,7 +87,8 @@ class RoomRepository(
     }
 
     /**
-     * A sala ao vivo (null = não existe mais: a sala acabou). Emite a cada mudança no banco e recalcula o `gone`
+     * A sala ao vivo (null = a sala acabou: não existe mais, ou eu não estou mais nela, tirado pelo dono ou porque
+     * outra sala foi criada com o mesmo código). Emite a cada mudança no banco e recalcula o `gone`
      * dos jogadores a cada 5 s mesmo sem mudança. O streaming reabre sozinho quando cai (ver [FirebaseDb.observe]);
      * sem internet para o login ou com o login recusado (o Google fora do ar, uma resposta estranha), lança
      * [NoConnection].
@@ -108,6 +109,7 @@ class RoomRepository(
         emitAll(
             combine(trees, ticks) { tree, _ ->
                 (tree as? JSONObject)?.let { RoomFormat.room(code, it, me, clock()) }
+                    ?.takeIf { room -> room.players.any { it.uid == me } }
             },
         )
     }.distinctUntilChanged()

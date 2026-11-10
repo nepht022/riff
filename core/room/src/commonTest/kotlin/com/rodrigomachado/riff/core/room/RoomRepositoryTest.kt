@@ -554,7 +554,7 @@ class RoomRepositoryTest : JsonTest() {
 
     @Test
     fun observeEmitsNullWhenRoomIsDeleted() = runTest {
-        fake.seedRoom("ABCD", owner = "ana", players = listOf(FakePlayer("ana")))
+        fake.seedRoom("ABCD", owner = "ana", players = listOf(FakePlayer("ana"), FakePlayer("u1")))
         val rooms = mutableListOf<Room?>()
         backgroundScope.launch { fake.repository().observe("ABCD").toList(rooms) }
         runCurrent()
@@ -567,9 +567,39 @@ class RoomRepositoryTest : JsonTest() {
         assertNull(rooms.last())
     }
 
+    /** Tirado da sala (o dono me limpou depois de 5 min sumido): para mim a sala acabou. */
+    @Test
+    fun observeEmitsNullWhenIAmNoLongerInTheRoom() = runTest {
+        fake.seedRoom("ABCD", owner = "ana", players = listOf(FakePlayer("ana"), FakePlayer("u1")))
+        val rooms = mutableListOf<Room?>()
+        backgroundScope.launch { fake.repository().observe("ABCD").toList(rooms) }
+        runCurrent()
+
+        fake.set("salas/ABCD/jogadores/u1", "null")
+        runCurrent()
+
+        assertEquals(2, rooms.size)
+        assertNull(rooms.last())
+    }
+
+    /** A sala acabou e outra foi criada com o mesmo código: não é a minha sala. */
+    @Test
+    fun observeEmitsNullForARoomRecreatedWithTheSameCode() = runTest {
+        fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))
+        val rooms = mutableListOf<Room?>()
+        backgroundScope.launch { fake.repository().observe("ABCD").toList(rooms) }
+        runCurrent()
+
+        fake.seedRoom("ABCD", owner = "zeca", players = listOf(FakePlayer("zeca")))
+        runCurrent()
+
+        assertEquals("u1", rooms.first()!!.owner)
+        assertNull(rooms.last())
+    }
+
     @Test
     fun playerSilentFor60sIsGone() = runTest {
-        fake.seedRoom("ABCD", owner = "ana", players = listOf(FakePlayer("ana"), FakePlayer("bia")))
+        fake.seedRoom("ABCD", owner = "ana", players = listOf(FakePlayer("ana"), FakePlayer("bia"), FakePlayer("u1")))
         val rooms = mutableListOf<Room?>()
         backgroundScope.launch { fake.repository().observe("ABCD").toList(rooms) }
         runCurrent()
