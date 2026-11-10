@@ -62,6 +62,13 @@ internal object RoomFormat {
     /** Morta: sem atividade há mais de 2 h pelo relógio [now] (as regras conferem com o do servidor). */
     fun isStale(room: JSONObject, now: Long) = room.optLong(ACTIVITY, now) < now - STALE_MS
 
+    /** O tempo (do servidor) mais novo gravado na sala: a `atividadeEm` ou o `vistoEm` de algum jogador. */
+    fun latestTime(room: JSONObject): Long {
+        val players = room.optJSONObject(PLAYERS)
+        val seen = players?.keys()?.asSequence()?.map { players.optJSONObject(it)?.optLong(SEEN_AT) ?: 0L }
+        return maxOf(room.optLong(ACTIVITY), seen?.maxOrNull() ?: 0L)
+    }
+
     /**
      * A minha vaga, se ainda é minha; senão a primeira livre: vazia ou abandonada (o uid nela não aponta mais para
      * ela, como nas regras). Null = sala cheia.

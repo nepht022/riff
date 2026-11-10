@@ -73,8 +73,8 @@ class RoomRepository(
 
     /**
      * O batimento (a cada 20 s, enquanto a sala está aberta): grava o `vistoEm` e a `atividadeEm`. Se o dono
-     * sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Fora da sala,
-     * sem internet ou recusado, não faz nada.
+     * sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Sendo o dono,
+     * tiro da sala quem sumiu há mais de 5 min (libera a vaga). Fora da sala, sem internet ou recusado, não faz nada.
      */
     suspend fun heartbeat(code: String) {
         try {
@@ -183,6 +183,23 @@ class RoomRepository(
         // eu acabei de escrever: conto como vivo mesmo que a leitura seja de antes
         val heir = players.firstOrNull { it.uid != owner && (it.uid == me || !it.gone) }
         if (ownerGone && heir?.uid == me) db.patch(path, mapOf(OWNER to me))
+        if (owner == me) removeVanished(path, room, players, me)
+    }
+
+    /**
+     * Tira os jogadores sem escrever há mais de 5 min (e as vagas que ainda são deles), numa escrita só. O "agora" é
+     * a hora do servidor estimada pelo tempo mais novo gravado na sala (o último batimento de alguém, há no máximo
+     * ~20 s): fica para trás, nunca adiantado, então ninguém sai antes dos 5 min, mesmo com o relógio do aparelho
+     * errado (as regras deixam o dono remover qualquer jogador).
+     */
+    private suspend fun removeVanished(path: String, room: JSONObject, players: List<RoomPlayer>, me: String) {
+        val serverNow = RoomFormat.latestTime(room)
+        val write = mutableMapOf<String, Any?>()
+        players.filter { it.uid != me && serverNow - it.seenAt > VANISHED_MS }.forEach { player ->
+            write["$PLAYERS/${player.uid}"] = null
+            RoomFormat.mySlot(room, player.uid)?.let { write["$SLOTS/$it"] = null }
+        }
+        if (write.isNotEmpty()) db.patch(path, write)
     }
 
     private companion object {
@@ -190,6 +207,7 @@ class RoomRepository(
         const val CREATE_TRIES = 10
         const val JOIN_TRIES = 5
         const val RECHECK_MS = 5_000L
+        const val VANISHED_MS = 5 * 60_000L
         val REFUSED = setOf(401, 403)
     }
 }

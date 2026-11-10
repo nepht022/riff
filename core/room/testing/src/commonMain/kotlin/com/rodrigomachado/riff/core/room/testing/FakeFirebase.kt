@@ -77,15 +77,19 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
     /** O HTTP do jogador [uid] (o login anônimo dá esse uid). */
     fun client(uid: String): RoomHttp = if (uid == this.uid) self else Client(uid)
 
-    /** O repositório do jogador [uid] neste banco. */
+    /**
+     * O repositório do jogador [uid] neste banco. [deviceClock] é o relógio do aparelho (por padrão o mesmo do
+     * servidor, o [clock]; diferente, simula um relógio errado).
+     */
     fun repository(
         uid: String = this.uid,
         device: RoomDevice = RoomDevice.PHONE,
         random: Random = Random.Default,
+        deviceClock: () -> Long = clock,
     ): RoomRepository {
         val http = client(uid)
-        val auth = AnonymousAuth(http, MemoryIdentityStore(), API_KEY, clock)
-        return RoomRepository(FirebaseDb(http, auth, DB_URL), auth, device, clock, random)
+        val auth = AnonymousAuth(http, MemoryIdentityStore(), API_KEY, deviceClock)
+        return RoomRepository(FirebaseDb(http, auth, DB_URL), auth, device, deviceClock, random)
     }
 
     /** O valor em [path] (JSONObject, JSONArray, primitivo ou null). */

@@ -378,3 +378,21 @@ test('repositoryOwnerTakeoverAndLastLeaveAreAccepted', async () => {
   await assertSucceeds(db('bia').ref('salas/EFGH').remove());
   assert.equal(await lerSemRegras('salas/EFGH'), null);
 });
+
+test('repositoryOwnerRemovesVanishedPlayersIsAccepted', async () => {
+  const agora = Date.now();
+  // O dono, no batimento, tira de uma vez os que sumiram há mais de 5 min, com as vagas que ainda são deles.
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { vistoEm: agora - 10 * MINUTO }, caio: { vistoEm: agora - 6 * MINUTO }, davi: {} },
+  });
+  const limpeza = { 'jogadores/bia': null, 'vagas/v2': null, 'jogadores/caio': null, 'vagas/v3': null };
+  await assertFails(db('davi').ref('salas/ABCD').update(limpeza));
+  await assertSucceeds(db('ana').ref('salas/ABCD').update(limpeza));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.deepEqual(Object.keys(sala.jogadores).sort(), ['ana', 'davi']);
+  assert.deepEqual(sala.vagas, { v1: 'ana', v4: 'davi' });
+  // A vaga do sumido já ocupada por outro: só o jogador sai.
+  await semear('EFGH', { jogadores: { ana: {}, bia: { vistoEm: agora - 10 * MINUTO }, eva: { vaga: 'v2' } } });
+  await assertSucceeds(db('ana').ref('salas/EFGH').update({ 'jogadores/bia': null }));
+  assert.deepEqual((await lerSemRegras('salas/EFGH')).vagas, { v1: 'ana', v2: 'eva' });
+});

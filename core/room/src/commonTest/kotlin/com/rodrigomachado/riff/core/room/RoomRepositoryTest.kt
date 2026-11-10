@@ -436,6 +436,80 @@ class RoomRepositoryTest : JsonTest() {
         assertEquals("caio", room()!!.getString("dono"))
     }
 
+    // --- o dono limpa quem sumiu ---
+
+    /** O dono, no batimento, tira quem sumiu há mais de 5 min (jogador e vaga, numa escrita só). */
+    @Test
+    fun ownerRemovesPlayersGoneForFiveMinutes() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "u1",
+            players = listOf(
+                FakePlayer("u1", joinedAt = now - 4_000),
+                FakePlayer("bia", joinedAt = now - 3_000, seenAt = now - 5 * MINUTE - 1),
+                FakePlayer("caio", joinedAt = now - 2_000, seenAt = now - 5 * MINUTE),
+            ),
+        )
+
+        fake.repository().heartbeat("ABCD")
+
+        assertEquals(setOf("u1", "caio"), keys(players()))
+        assertEquals(setOf("v1", "v3"), keys(room()!!.getJSONObject("vagas")))
+        val write = fake.writes.last()
+        assertEquals("PATCH" to "salas/ABCD", write.method to write.path)
+        assertEquals(setOf("jogadores/bia", "vagas/v2"), patchKeys(write))
+    }
+
+    /** A vaga que já é de outro (o sumido saiu sem liberar e alguém entrou nela) não é mexida. */
+    @Test
+    fun ownerRemovesTheVanishedPlayerButNotASlotTakenByAnother() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "u1",
+            players = listOf(FakePlayer("u1"), FakePlayer("bia", seenAt = now - 10 * MINUTE), FakePlayer("eva")),
+        )
+        fake.set("salas/ABCD/vagas/v2", "\"eva\"")
+        fake.set("salas/ABCD/jogadores/eva/vaga", "\"v2\"")
+
+        fake.repository().heartbeat("ABCD")
+
+        assertEquals(setOf("u1", "eva"), keys(players()))
+        assertEquals(setOf("jogadores/bia"), patchKeys(fake.writes.last()))
+    }
+
+    /** O tempo é o do servidor (o mais novo gravado na sala), não o relógio do aparelho. */
+    @Test
+    fun vanishedIsMeasuredWithServerTimeNotTheDeviceClock() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "u1",
+            players = listOf(
+                FakePlayer("u1"),
+                FakePlayer("bia", seenAt = now - MINUTE),
+                FakePlayer("caio", seenAt = now - 6 * MINUTE),
+            ),
+        )
+        val deviceAhead = fake.repository(deviceClock = { now + HOUR })
+
+        deviceAhead.heartbeat("ABCD")
+
+        assertEquals(setOf("u1", "bia"), keys(players()))
+    }
+
+    @Test
+    fun guestDoesNotRemoveVanishedPlayers() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "ana",
+            players = listOf(FakePlayer("ana"), FakePlayer("u1"), FakePlayer("bia", seenAt = now - 10 * MINUTE)),
+        )
+
+        fake.repository().heartbeat("ABCD")
+
+        assertEquals(setOf("ana", "u1", "bia"), keys(players()))
+        assertEquals(1, fake.writes.size) // só o batimento
+    }
+
     // --- a sala ao vivo ---
 
     @Test
