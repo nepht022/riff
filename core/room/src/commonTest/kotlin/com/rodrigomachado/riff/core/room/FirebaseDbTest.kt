@@ -167,6 +167,22 @@ class FirebaseDbTest : JsonTest() {
         assertEquals(0L, testScheduler.currentTime) // reabre na hora, sem espera
     }
 
+    /** Revogado de novo logo depois de renovar (sem nenhum evento no meio): espera 1 s, 2 s… em vez de martelar. */
+    @Test
+    fun repeatedRevokesBackOff() = runTest {
+        http.streams += flowOf(*sse("auth_revoked", "\"credential is no longer valid\"").toTypedArray())
+        http.streams += flowOf(*sse("cancel", "\"permission denied\"").toTypedArray())
+        http.streams += flowOf(*sse("auth_revoked", "\"credential is no longer valid\"").toTypedArray())
+        http.streams += flowOf(*sse("put", """{"path":"/","data":"a"}""").toTypedArray())
+
+        val values = db.observe("salas/ABCD").take(1).toList()
+
+        assertEquals(listOf("a"), values)
+        assertEquals(4, http.streamUrls.size)
+        assertEquals(4, tokens) // renova o token a cada revogação
+        assertEquals(1_000L + 2_000L, testScheduler.currentTime) // a 1ª reabre na hora; a 2ª e a 3ª esperam
+    }
+
     @Test
     fun streamReopensAfterDrop() = runTest {
         // cai depois de um evento; a segunda tentativa cai sem nada; a terceira volta

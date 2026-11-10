@@ -66,17 +66,22 @@ class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, db
 
     /**
      * A árvore inteira do [path] a cada `put`/`patch` do streaming (null = não existe). `cancel`/`auth_revoked`:
-     * renova o token e reabre na hora. Queda, erro ou o servidor fechando: reabre depois de 1 s, 2 s, 4 s… até 30 s
-     * (volta a 1 s quando chega um evento).
+     * renova o token e reabre na hora; revogado de novo sem nenhum evento no meio, reabre com a espera abaixo (um
+     * token novo recusado de novo não martela o Google nem o banco). Queda, erro ou o servidor fechando: reabre
+     * depois de 1 s, 2 s, 4 s… até 30 s (volta a 1 s e zera as revogações quando chega um evento).
      */
     fun observe(path: String): Flow<Any?> = flow {
         var wait = FIRST_WAIT_MS
         var renewToken = false
+        var revokesInARow = 0
         while (true) {
             val outcome = try {
                 if (renewToken) auth.refreshNow()
                 renewToken = false
-                listen(path) { wait = FIRST_WAIT_MS }
+                listen(path) {
+                    wait = FIRST_WAIT_MS
+                    revokesInARow = 0
+                }
             } catch (_: NoConnection) {
                 Outcome.DROPPED
             } catch (e: RoomHttpError) {
@@ -88,7 +93,9 @@ class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, db
             }
             if (outcome == Outcome.REVOKED) {
                 renewToken = true
-            } else {
+                revokesInARow++
+            }
+            if (outcome == Outcome.DROPPED || revokesInARow > 1) {
                 delay(wait)
                 wait = (wait * 2).coerceAtMost(MAX_WAIT_MS)
             }
