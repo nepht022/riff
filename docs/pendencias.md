@@ -96,7 +96,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Multiplayer M2: música e começo juntos (2026-11-10)
 
-- **Ação do usuário:** republicar `firebase/database.rules.json` no console (regras da M2). Teste real (PC e celular: música do Encore que um não tem, dificuldades diferentes, Pronto, Começar, começo junto de ouvido, Esc sem pausar, Resultado e volta à sala, Começar desligado sozinho): pendente.
+- Regras da M2 republicadas pelo usuário e teste real aceito em 2026-11-10 (PC e celular): começo junto "menos de 1 s, bem parecido" — acima da meta de ~150 ms; melhorar na M3 (atraso de saída do áudio de cada aparelho além da calibração; medir). Baixar do Encore, Esc sem pausar e Voltar à sala funcionaram; cada um volta à sala ao tocar Voltar no próprio Resultado.
 - Precisão do começo junto estimada (meia ida e volta mais ~16 ms do `delay`), não medida em aparelhos reais; o teste do PC confere ≤ 250 ms do `inicio` com relógio falso.
 - O `encore_charts` não guarda se o pacote tem vídeo: o download pela sala pede sempre o pacote com vídeo, quando houver (maior; mesmas notas).
 - Sem começo combinado em 30 s (sem internet, sala acabou, rodada mudou), a partida começa sozinha para não travar.
