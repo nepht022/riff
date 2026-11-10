@@ -89,6 +89,14 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 - **Jogador apagado da planilha:** no próximo envio, o celular reserva o mesmo nome de novo e manda a partida; se outra pessoa já tiver pego o nome, o app pede um nome novo (a partida espera na fila).
 - **Limites do script** (o endereço vai dentro do APK): 60 pedidos de envio e 300 pontuações por hora por aparelho (um lote é um pedido), 5 reservas de nome por hora por aparelho (tentar um nome em uso conta; salvar o mesmo nome não), 100 nomes novos por hora no total, 5 códigos de vínculo e 5 tentativas de vínculo (certas ou erradas) por hora por aparelho, e, somando todos os aparelhos, 100 códigos de vínculo errados e 100 aparelhos sem nome vinculados por hora (a recusa por limite não gasta o código); chaves curtas ou vazias são recusadas. O app continua funcionando com uma versão antiga do script (manda uma pontuação por vez) até ela ser republicada.
 
+## Sala (multiplayer)
+
+Em construção (projeto 3; especificação em `docs/superpowers/specs/2026-11-05-riff-multiplayer-design.md`). Na M1: **Sala** na tela inicial (celular e PC) → **Criar sala** (código de 4 letras, sem I, L e O) ou **Entrar com código**; a sala mostra ao vivo até 4 jogadores (nome do ranking, aparelho, dono, "sumiu" depois de 60 s sem sinal); sair passa o dono ao jogador mais antigo, e o último a sair apaga a sala. Escolher a música e jogar juntos vêm na M2; placar ao vivo e Resultado da sala na M3.
+
+- Servidor: Firebase gratuito (login anônimo + Realtime Database), pela API REST e o streaming SSE, sem SDK (o mesmo código no celular e no PC). Criar o projeto e publicar as regras: `docs/firebase.md`. Sem `firebase.apiKey`/`firebase.dbUrl` no `local.properties`, a Sala fica "em breve".
+- Regras do banco em `firebase/database.rules.json`, testadas no emulador: `scripts/testar_regras_sala.sh` (ver `firebase/README.md`). O limite de 4 é garantido por vagas (`vagas/v1..v4`); a sala parada há mais de 2 h é apagada por quem sortear o mesmo código.
+- Módulos: `:core:room` (cliente do Firebase e `RoomRepository`), `:core:room:testing` (Firebase falso dos testes), `:feature:room` (telas).
+
 ## Licenças e privacidade
 
 **Configurações → Geral → Licenças e privacidade**: o que o app guarda e envia (ranking, Reportar, Encore), como pedir para sair do ranking e as licenças de tudo que vem de fora. A lista das bibliotecas é gerada no build pelo plugin AboutLibraries (`app/build.gradle.kts`); o que não vem do Gradle (modelo Demucs, demucs.onnx, fontes, sons do Freesound, mapas do Encore) está em `feature/licenses/.../AndroidLicenseSource.kt`, com os textos em `feature/licenses/src/main/assets/licencas/`. Ao adicionar algo de fora do Gradle, acrescente nessa lista.

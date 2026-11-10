@@ -94,6 +94,17 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Multiplayer M1: a sala (2026-11-09)
+
+- **Ação do usuário:** criar o projeto do Firebase, ligar o login anônimo, publicar `firebase/database.rules.json` e pôr `firebase.apiKey`/`firebase.dbUrl` no `local.properties` (`docs/firebase.md`). Teste real (PC cria, celular entra pelo código, sair passa o dono, o último apaga a sala): pendente.
+- A Sala usa o nome do ranking: com a Sala configurada e o ranking não, o diálogo do nome não salva e não dá para criar nem entrar.
+- Recusa do servidor (ex.: regras não publicadas) aparece como "Sem conexão. Tente de novo." e pode esconder um erro de configuração.
+- "Sumiu" e "sala morta" usam o relógio do aparelho contra o do servidor: um relógio muito errado mostra jogadores sumidos por engano (a medição da diferença vem na M2).
+- Sem limite de salas por usuário (as regras do RTDB não contam por usuário sem servidor próprio).
+- Sem "copiar código" na sala do celular (está na especificação).
+- O `:feature:room` só tem testes no Android (`androidHostTest`) e o fluxo do PC no `:desktop`; sem screenshot da sala no PC.
+- No PC, os testes digitam as letras do código como texto (a tecla injetada no teste não gera o caractere).
+
 ## Riff no Windows, etapa 4e: instalador (2026-11-05)
 
 - **Conformidade (validação humana antes de distribuir):** as DLLs do Visual C++/UCRT da Microsoft (no `runtime\bin` e no `javacpp-…-windows-x86_64.jar`) sem aviso próprio; a GPL 2 do OpenJDK aponta o código-fonte (sem oferta por escrito); FreeType pela FTL; linhas de copyright tiradas de README/cabeçalho (OpenSSL, SRT, LAME, cabeçalhos do Vulkan); winpthreads do `master` e ICU do fork do Chromium (74-2); patentes de codecs (MP3, AMR, H.264) ao distribuir.
