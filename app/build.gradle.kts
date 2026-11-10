@@ -94,6 +94,8 @@ dependencies {
     implementation(project(":feature:room"))
     // A Sala só liga com o Firebase configurado (RoomSwitch); o módulo do Hilt da Sala vem dele.
     implementation(project(":core:room"))
+    // O relógio da partida (TimeSource) para o começo da partida de sala (RoomMatchModule).
+    implementation(project(":core:game"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

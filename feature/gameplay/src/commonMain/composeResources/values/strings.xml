@@ -21,4 +21,8 @@
     <string name="gameplay_sync_later">+10 ms</string>
     <string name="gameplay_sync_much_later">+1 s</string>
     <string name="gameplay_unexpected">Algo deu errado ao abrir a partida. Tente de novo.</string>
+    <string name="gameplay_waiting">Esperando os outros…</string>
+    <string name="gameplay_leave_title">Sair da partida?</string>
+    <string name="gameplay_leave_message">A música continua para os outros; você fica de fora desta rodada.</string>
+    <string name="gameplay_keep_playing">Continuar tocando</string>
 </resources>

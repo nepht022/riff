@@ -65,8 +65,10 @@ internal class GameKeyboard(private val session: GameSession, keys: Map<ControlA
  * tela na recomposição seguinte (1–2 quadros depois), e nesse intervalo um botão do controle viraria tecla nos menus
  * da pausa que já fechou, ou uma seta seria engolida por ela. [pause]/[resume] embrulham os da partida (a mudança vale
  * já); [composed] acompanha a pausa que vem de fora (o ciclo de vida, o foco do áudio). Só na thread da janela.
+ * Sem [pausable] (a partida de sala), [pause] não faz nada: a tecla, o Start, a perda do foco e o controle
+ * desconectado não pausam.
  */
-internal class MatchPause(initial: Boolean) {
+internal class MatchPause(initial: Boolean, private val pausable: Boolean = true) {
     @Volatile var isPaused = initial
         private set
     private var lastComposed = initial
@@ -75,8 +77,10 @@ internal class MatchPause(initial: Boolean) {
 
     /** Pausa a partida (o `onPause` dela), valendo já. */
     val pause: () -> Unit = {
-        isPaused = true
-        onPause()
+        if (pausable) {
+            isPaused = true
+            onPause()
+        }
     }
 
     /** Continua a partida (o `onResume` dela), valendo já. */
@@ -95,10 +99,17 @@ internal class MatchPause(initial: Boolean) {
     }
 }
 
-/** A [MatchPause] da partida, com o `isPaused` do estado e os `onPause`/`onResume` dela. */
+/**
+ * A [MatchPause] da partida, com o `isPaused` do estado e os `onPause`/`onResume` dela; sem pausa se não [pausable].
+ */
 @Composable
-internal fun rememberMatchPause(isPaused: Boolean, onPause: () -> Unit, onResume: () -> Unit): MatchPause {
-    val matchPause = remember { MatchPause(isPaused) }
+internal fun rememberMatchPause(
+    isPaused: Boolean,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    pausable: Boolean = true,
+): MatchPause {
+    val matchPause = remember(pausable) { MatchPause(isPaused, pausable) }
     SideEffect { matchPause.composed(isPaused, onPause, onResume) }
     return matchPause
 }

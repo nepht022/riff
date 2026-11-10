@@ -23,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -86,6 +87,10 @@ object GameplayTestTags {
     const val RESUME = "gameplay_resume"
     const val PAUSE_MENU = "gameplay_pause_menu"
     const val PROGRESS = "gameplay_progress"
+    const val COUNTDOWN = "gameplay_countdown"
+    const val WAITING = "gameplay_waiting"
+    const val LEAVE_PROMPT = "gameplay_leave_prompt"
+    const val KEEP_PLAYING = "gameplay_keep_playing"
 }
 
 internal const val SCRIM_ALPHA = 0.8f
@@ -109,17 +114,24 @@ fun GameplayScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.pause() }
     KeepScreenOn()
+    // Na partida de sala, Sair também avisa a sala (saí da rodada); sozinho, só fecha a tela.
+    val exit = remember(viewModel, onExit) {
+        {
+            viewModel.leave()
+            onExit()
+        }
+    }
     when (val current = state) {
         GameplayUiState.Loading -> LoadingState(modifier)
 
-        is GameplayUiState.Unavailable -> UnavailableScreen(current.reason, onExit, modifier)
+        is GameplayUiState.Unavailable -> UnavailableScreen(current.reason, exit, modifier)
 
         is GameplayUiState.Ready -> GameStage(
             state = current,
             reducedMotion = systemAnimationsReduced(),
             onPause = viewModel::pause,
             onResume = viewModel::resume,
-            onExit = onExit, // o áudio é liberado em onCleared; a pausa já o silenciou
+            onExit = exit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
             onAdjustOffset = viewModel::adjustSongOffset,
             modifier = modifier,
@@ -142,7 +154,9 @@ internal fun UnavailableScreen(reason: UnavailableReason, onExit: () -> Unit, mo
 }
 
 /**
- * Palco da partida. [animate] liga o loop de frames (os screenshots desligam para congelar um instante).
+ * Palco da partida. [animate] liga o loop de frames (os screenshots desligam para congelar um instante). Na partida de
+ * sala ([GameplayUiState.Ready.inRoom]) não há pausa: nem o botão, nem a tecla, nem a perda do foco; o Voltar pergunta
+ * se é para sair, com a música seguindo, e a contagem 3-2-1 fica por cima da pista até o começo.
  */
 @Composable
 internal fun GameStage(
@@ -158,7 +172,9 @@ internal fun GameStage(
 ) {
     val session = state.session
     // A pausa já no instante em que muda (o teclado e o controle a leem antes de a tela recompor).
-    val matchPause = rememberMatchPause(state.isPaused, onPause, onResume)
+    val inRoom = state.inRoom
+    val matchPause = rememberMatchPause(state.isPaused, onPause, onResume, pausable = !inRoom)
+    var leaving by remember { mutableStateOf(false) }
     val leftHanded = state.settings.leftHanded
     val msPerUnit = BASE_MS_PER_DISTANCE / state.settings.noteSpeed
     var frame by remember { mutableLongStateOf(0L) }
@@ -166,24 +182,9 @@ internal fun GameStage(
     val stageCache = remember(look) { StageCache().also { it.look = look } }
     // Primeiro quadro (e screenshots, com animate = false); depois o loop atualiza a cada quadro.
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
-    val withoutSeparateGuitar by rememberUpdatedState(state.withoutSeparateGuitar)
-    // Voltar no meio da música pausa (um gesto da borda sem querer não joga a partida fora).
-    GameBackHandler(enabled = !state.isPaused, onBack = matchPause.pause)
-    if (animate) {
-        LaunchedEffect(session) {
-            while (isActive) {
-                withFrameMillis {
-                    session.tick()
-                    hud.update(session, withoutSeparateGuitar)
-                    frame++
-                }
-                if (session.isFinished) {
-                    onSessionFinished()
-                    break
-                }
-            }
-        }
-    }
+    MatchBackHandler(inRoom, state.isPaused, matchPause.pause) { leaving = !leaving }
+    val pauseButton = if (inRoom) null else matchPause.pause
+    if (animate) FrameLoop(session, hud, state.withoutSeparateGuitar, onSessionFinished) { frame++ }
     val pauseMenu = remember { PauseMenu() }
     val keys = rememberGameKeys(session, state.settings.controls, matchPause, state.isPaused, pauseMenu)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
@@ -211,13 +212,43 @@ internal fun GameStage(
                 JudgmentPop(session, hud, { frame }, reducedMotion, Modifier.align(Alignment.Center))
                 SongProgressBar(session, { frame }, Modifier.align(Alignment.BottomCenter).progressBar())
             }
-            SideHud(hud, matchPause.pause, highwayWidth, Modifier.fillMaxSize())
+            SideHud(hud, pauseButton, highwayWidth, Modifier.fillMaxSize())
         } else {
             highway(Modifier.fillMaxSize())
             SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
-            Hud(session, hud, { frame }, reducedMotion, matchPause.pause, Modifier.fillMaxSize())
+            Hud(session, hud, { frame }, reducedMotion, pauseButton, Modifier.fillMaxSize())
         }
         if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, matchPause.resume, onExit)
+        if (inRoom) {
+            RoomMatchOverlays(state, { frame }, Modifier.align(Alignment.Center))
+            if (leaving) LeaveOverlay(onKeepPlaying = { leaving = false }, onExit = onExit)
+        }
+    }
+}
+
+/** O loop de quadros: avança a partida e o placar a cada quadro ([onFrame]) e avisa quando ela acaba. */
+@Composable
+private fun FrameLoop(
+    session: GameSession,
+    hud: HudState,
+    withoutSeparateGuitar: Boolean,
+    onSessionFinished: () -> Unit,
+    onFrame: () -> Unit,
+) {
+    val noSeparateGuitar by rememberUpdatedState(withoutSeparateGuitar)
+    val finished by rememberUpdatedState(onSessionFinished)
+    LaunchedEffect(session) {
+        while (isActive) {
+            withFrameMillis {
+                session.tick()
+                hud.update(session, noSeparateGuitar)
+                onFrame()
+            }
+            if (session.isFinished) {
+                finished()
+                break
+            }
+        }
     }
 }
 

@@ -21,4 +21,8 @@
     <string name="gameplay_sync_later">+10 ms</string>
     <string name="gameplay_sync_much_later">+1 s</string>
     <string name="gameplay_unexpected">Something went wrong while opening the match. Try again.</string>
+    <string name="gameplay_waiting">Waiting for the others…</string>
+    <string name="gameplay_leave_title">Leave the match?</string>
+    <string name="gameplay_leave_message">The song goes on for the others; you sit out this round.</string>
+    <string name="gameplay_keep_playing">Keep playing</string>
 </resources>

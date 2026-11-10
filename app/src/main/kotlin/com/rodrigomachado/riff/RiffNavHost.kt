@@ -142,7 +142,8 @@ private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
  * A Sala: a escolha, entrar com o código e a sala. A sala abre por cima da escolha (entrar com o código sai da pilha):
  * sair da sala volta à escolha. Sem nome no ranking, criar e entrar abrem o diálogo do nome ([onChooseName]). O dono
  * escolhe a música pela Biblioteca no modo de escolha, que entrega o mapa e a dificuldade ao ViewModel da sala (o da
- * entrada da sala na pilha) e volta; a contagem abre a partida (por enquanto a de sempre: a Task 4 traz a de sala).
+ * entrada da sala na pilha) e volta; a contagem abre a partida de sala (com o código e a rodada) por cima da sala:
+ * Sair e o Voltar do Resultado voltam à sala.
  */
 private fun NavGraphBuilder.roomDestinations(navController: NavHostController, onChooseName: () -> Unit) {
     val openRoom = { code: String ->
@@ -172,7 +173,9 @@ private fun NavGraphBuilder.roomDestinations(navController: NavHostController, o
             viewModel = hiltViewModel<HiltRoomLobbyViewModel>(),
             code = code,
             onChooseSong = dropUnlessResumed { navController.navigate(LibraryPickRoute(code)) },
-            onMatch = { ticket -> navController.navigate(GameplayRoute(ticket.chartId, ticket.difficulty.name)) },
+            onMatch = { ticket ->
+                navController.navigate(GameplayRoute(ticket.chartId, ticket.difficulty.name, code, ticket.round))
+            },
         )
     }
     composable<LibraryPickRoute> { entry ->

@@ -74,6 +74,9 @@ class GameSession(
     /** Quanto da partida já passou, de 0 a 1: enche quando vem o resultado (nas duas origens de música). */
     val progress: Float get() = (songTimeMs.toFloat() / endMs).coerceIn(0f, 1f)
 
+    /** O agora do relógio da partida (o da contagem da partida de sala, ver [MatchStart]). */
+    fun nowMs(): Long = timeSource.nowMs()
+
     fun start() {
         player.play()
         syncClock()
