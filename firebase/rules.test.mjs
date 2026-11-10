@@ -396,3 +396,51 @@ test('repositoryOwnerRemovesVanishedPlayersIsAccepted', async () => {
   await assertSucceeds(db('ana').ref('salas/EFGH').update({ 'jogadores/bia': null }));
   assert.deepEqual((await lerSemRegras('salas/EFGH')).vagas, { v1: 'ana', v2: 'eva' });
 });
+
+// --- a API REST, como o app fala com o banco (FirebaseDb) ---
+
+const DB_HOST = process.env.FIREBASE_DATABASE_EMULATOR_HOST ?? '127.0.0.1:9000';
+const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099';
+
+// Login anônimo no emulador do Auth, como o AnonymousAuth faz (accounts:signUp).
+async function loginAnonimo() {
+  const resposta = await fetch(`http://${AUTH_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=falsa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ returnSecureToken: true }),
+  });
+  assert.equal(resposta.status, 200);
+  const { idToken, localId } = await resposta.json();
+  return { idToken, uid: localId };
+}
+
+// O PUT de criar do RoomRepository: só se o código está livre (if-match: null_etag).
+function putSeLivre(codigo, { idToken, uid }, sala = novaSala(uid)) {
+  return fetch(`http://${DB_HOST}/salas/${codigo}.json?ns=demo-riff&auth=${idToken}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Firebase-ETag': 'true', 'if-match': 'null_etag' },
+    body: JSON.stringify(sala),
+  });
+}
+
+// No emulador (2026-11-09), o código ocupado dá 412: o if-match é conferido antes das regras (até uma sala que as
+// regras recusariam de qualquer jeito dá 412). O servidor de verdade pode conferir as regras antes: por isso o
+// RoomRepository trata 401/403 nesse PUT também como "ocupado" (relê e decide).
+test('restCreateOnATakenCodeAnswers412', async () => {
+  const eu = await loginAnonimo();
+  await semear('ABCD', { dono: 'bia', jogadores: { bia: {} } });
+  const ocupado = await putSeLivre('ABCD', eu);
+  console.log(`PUT if-match null_etag num código ocupado por uma sala viva: HTTP ${ocupado.status}`);
+  assert.equal(ocupado.status, 412);
+  const recusavel = await putSeLivre('ABCD', eu, novaSala('zeca'));
+  console.log(`O mesmo PUT com uma sala que as regras recusam: HTTP ${recusavel.status}`);
+  assert.equal(recusavel.status, 412);
+  assert.equal((await lerSemRegras('salas/ABCD')).dono, 'bia');
+  // A mesma sala recusável num código livre: as regras recusam.
+  const livreRecusado = await putSeLivre('JKMN', eu, novaSala('zeca'));
+  console.log(`Sala recusável num código livre: HTTP ${livreRecusado.status}`);
+  assert.ok([401, 403].includes(livreRecusado.status), `HTTP ${livreRecusado.status}`);
+  // Código livre: cria.
+  assert.equal((await putSeLivre('EFGH', eu)).status, 200);
+  assert.equal((await lerSemRegras('salas/EFGH')).dono, eu.uid);
+});

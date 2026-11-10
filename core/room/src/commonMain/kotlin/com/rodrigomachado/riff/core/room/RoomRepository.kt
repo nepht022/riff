@@ -131,18 +131,29 @@ class RoomRepository(
     /** Grava a sala nova em [code] se o código está livre ou se a sala que está nele morreu. */
     private suspend fun claim(code: String, room: Map<String, Any?>): Boolean {
         val path = RoomFormat.path(code)
-        if (db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok) return true
-        val existing = db.get(path) as? JSONObject
-        if (existing != null) {
-            if (!RoomFormat.isStale(existing, clock())) return false
-            try {
-                db.delete(path)
-            } catch (e: RoomHttpError) {
-                if (e.code !in REFUSED) throw e
-                return false // para o servidor a sala ainda está viva
-            }
+        if (putIfFree(path, room)) return true
+        // código livre e mesmo assim recusado: é recusa das regras de verdade (lança e a tela pede para tentar de novo)
+        val existing = db.get(path) as? JSONObject ?: return db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
+        if (!RoomFormat.isStale(existing, clock())) return false
+        try {
+            db.delete(path)
+        } catch (e: RoomHttpError) {
+            if (e.code !in REFUSED) throw e
+            return false // para o servidor a sala ainda está viva
         }
-        return db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
+        return putIfFree(path, room) // outro pode ter criado entre o apagar e o PUT
+    }
+
+    /**
+     * O `PUT` só se o código está livre: false = ocupado. O emulador responde 412 (o `if-match` antes das regras);
+     * um servidor que confira as regras antes (a sala existente não é "criar") responderia 401/403: também ocupado,
+     * e o [claim] relê para decidir.
+     */
+    private suspend fun putIfFree(path: String, room: Map<String, Any?>): Boolean = try {
+        db.put(path, room, ifMatch = NULL_ETAG) == PutResult.Ok
+    } catch (e: RoomHttpError) {
+        if (e.code !in REFUSED) throw e
+        false
     }
 
     private suspend fun joinAs(me: String, code: String, name: String): JoinResult {

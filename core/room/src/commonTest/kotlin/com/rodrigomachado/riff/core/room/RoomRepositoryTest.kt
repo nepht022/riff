@@ -127,6 +127,31 @@ class RoomRepositoryTest : JsonTest() {
         assertEquals(CreateResult.Created("BBBB"), repository.create("Ana"))
     }
 
+    /** O servidor que recusa (401) em vez do 412 no código ocupado: relê e, com a sala viva, sorteia outro. */
+    @Test
+    fun createTreatsARefusedTakenCodeAsTaken() = runTest {
+        fake.rulesBeforeEtag = true
+        fake.seedRoom("AAAA", owner = "bia", players = listOf(FakePlayer("bia")))
+        val repository = fake.repository(random = CodesRandom("AAAA", "BBBB"))
+
+        assertEquals(CreateResult.Created("BBBB"), repository.create("Ana"))
+
+        assertEquals("bia", room("AAAA")!!.getString("dono"))
+        assertEquals(listOf("PUT", "PUT"), fake.writes.map { it.method })
+    }
+
+    @Test
+    fun createTakesOverAStaleCodeRefusedInsteadOf412() = runTest {
+        fake.rulesBeforeEtag = true
+        fake.seedRoom("AAAA", owner = "bia", players = listOf(FakePlayer("bia")), activityAt = now - 3 * HOUR)
+        val repository = fake.repository(random = CodesRandom("AAAA"))
+
+        assertEquals(CreateResult.Created("AAAA"), repository.create("Ana"))
+
+        assertEquals("u1", room("AAAA")!!.getString("dono"))
+        assertEquals(listOf("PUT", "DELETE", "PUT"), fake.writes.map { it.method })
+    }
+
     @Test
     fun noInternetOnCreateSaysNoConnection() = runTest {
         fake.online = false
