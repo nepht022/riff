@@ -31,7 +31,7 @@
     <string name="ranking_table_phone">Phone</string>
     <string name="ranking_table_pc_strum">PC with strum</string>
     <string name="ranking_table_pc_no_strum">PC without strum</string>
-    <string name="ranking_table_nobody">nobody in this table</string>
+    <string name="ranking_table_empty">Nobody in this table yet</string>
     <string name="ranking_link_share">Use this name on another device</string>
     <string name="ranking_link_enter">I already have a name on another device</string>
     <string name="ranking_link_code_title">Your name code</string>

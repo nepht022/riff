@@ -132,7 +132,8 @@ class DesktopRankingFlowTest {
         composeRule.onNodeWithText(STRUM).assertIsNotSelected()
         composeRule.onNodeWithText("2 jogadores com pontuação", substring = true).assertExists()
         composeRule.clickOnWindowThread(composeRule.onNodeWithText(PHONE))
-        composeRule.onNodeWithText("ninguém nesta tabela", substring = true).assertExists()
+        composeRule.onNodeWithText("Ninguém nesta tabela ainda").assertExists()
+        composeRule.onNodeWithText(SONG).assertDoesNotExist()
         composeRule.clickOnWindowThread(composeRule.onNodeWithText(STRUM))
         composeRule.onNodeWithText("1 jogador com pontuação", substring = true).assertExists()
 

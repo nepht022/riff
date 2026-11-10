@@ -22,23 +22,24 @@ data class RankingSongsUiState(
     val songs: List<RankedSong> = emptyList(),
     val offline: Boolean = false,
     val notConfigured: Boolean = false,
-    /** A tabela dos números de cada música; a lista mostra as músicas com alguém em qualquer tabela. */
+    /** A tabela escolhida: a lista mostra só as músicas com alguém nela. */
     val table: RankingTable = RankingTable.PHONE,
 ) {
-    /** A lista vem uma vez do script; a busca (música ou artista, sem acento) é feita aqui, na hora. */
+    /** As músicas com alguém na [table]: a lista vem uma vez do script e as tabelas e a busca são filtradas aqui. */
+    private val inTable: List<RankedSong>
+        get() = songs.filter { it.inTable(table) != null }
+
+    /** As da [table] que batem com a busca (música ou artista, sem acento). */
     val shown: List<RankedSong>
         get() {
             val wanted = query.folded()
-            return if (wanted.isEmpty()) {
-                songs
-            } else {
-                songs.filter {
-                    "${it.title} ${it.artist}".folded().contains(
-                        wanted,
-                    )
-                }
-            }
+            if (wanted.isEmpty()) return inTable
+            return inTable.filter { "${it.title} ${it.artist}".folded().contains(wanted) }
         }
+
+    /** Há músicas no ranking, mas ninguém na [table] ainda. */
+    val tableEmpty: Boolean
+        get() = songs.isNotEmpty() && inTable.isEmpty()
 }
 
 private val ACCENTS = Regex("\\p{Mn}+")

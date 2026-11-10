@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.ranking.RankedSong
+import com.rodrigomachado.riff.core.data.ranking.TableStanding
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
@@ -46,7 +47,7 @@ import com.rodrigomachado.riff.feature.ranking.resources.ranking_offline
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_players
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_retry
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_search_song
-import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_nobody
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_empty
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_pc_no_strum
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_pc_strum
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_table_phone
@@ -103,19 +104,19 @@ fun RankingSongsContent(
         if (state.offline) item { Offline(onRetry) }
         if (state.loading && state.songs.isEmpty()) item { Message(stringResource(Res.string.ranking_loading)) }
         if (!state.offline && !state.loading && state.shown.isEmpty()) {
-            item { Message(stringResource(Res.string.ranking_empty)) }
+            val empty = if (state.tableEmpty) Res.string.ranking_table_empty else Res.string.ranking_empty
+            item { Message(stringResource(empty)) }
         }
         items(state.shown, key = { it.chartId }) { song -> SongCard(song, state.table) { onSong(song) } }
     }
 }
 
-/** Os números da [table]; uma música só com gente nas outras tabelas diz que ninguém está nesta. */
+/** Os números da [table] (a lista só tem músicas com alguém nela). */
 @Composable
 private fun SongCard(song: RankedSong, table: RankingTable, onClick: () -> Unit) {
-    val standing = song.inTable(table)
-    val players = standing?.let { pluralStringResource(Res.plurals.ranking_players, it.players, it.players) }
-        ?: stringResource(Res.string.ranking_table_nobody)
-    val place = standing?.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
+    val standing = song.inTable(table) ?: TableStanding(0, null)
+    val players = pluralStringResource(Res.plurals.ranking_players, standing.players, standing.players)
+    val place = standing.yourPosition?.let { " · " + stringResource(Res.string.ranking_your_place, it) }.orEmpty()
     Column(
         Modifier.fillMaxWidth().focusHighlight(MaterialTheme.shapes.small)
             .background(RiffColors.Paper, MaterialTheme.shapes.small)
