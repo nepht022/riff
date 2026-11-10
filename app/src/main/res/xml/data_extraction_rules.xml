@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+: tudo o que o Riff guarda vai no backup e na troca de celular (recordes, ajustes, nome do ranking). -->
+<!-- Android 12+: tudo o que o Riff guarda vai no backup e na troca de celular (recordes, ajustes, nome do ranking),
+     menos a identidade da Sala, que fica na pasta no_backup (o Android nunca a leva; ver RoomModule no :core:room). -->
 <data-extraction-rules>
     <cloud-backup />
     <device-transfer />

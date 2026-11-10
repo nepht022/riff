@@ -14,7 +14,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.room.RoomSwitch
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.navigation.dropUnlessResumed
 import com.rodrigomachado.riff.feature.calibration.CalibrationRoute
@@ -45,6 +47,15 @@ import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.HiltResultsViewModel
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
+import com.rodrigomachado.riff.feature.room.HiltRoomEntryViewModel
+import com.rodrigomachado.riff.feature.room.HiltRoomJoinViewModel
+import com.rodrigomachado.riff.feature.room.HiltRoomLobbyViewModel
+import com.rodrigomachado.riff.feature.room.RoomEntryRoute
+import com.rodrigomachado.riff.feature.room.RoomEntryScreen
+import com.rodrigomachado.riff.feature.room.RoomJoinRoute
+import com.rodrigomachado.riff.feature.room.RoomJoinScreen
+import com.rodrigomachado.riff.feature.room.RoomLobbyRoute
+import com.rodrigomachado.riff.feature.room.RoomLobbyScreen
 import com.rodrigomachado.riff.feature.search.HiltSearchViewModel
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
@@ -76,6 +87,7 @@ fun RiffNavHost(modifier: Modifier = Modifier, openLibrary: Boolean = false, onL
         settingsDestinations(navController, back) { renamingPlayer = true }
         libraryDestinations(navController)
         rankingDestinations(navController)
+        roomDestinations(navController) { renamingPlayer = true }
         searchDestinations(navController)
         matchDestinations(navController) { renamingPlayer = true }
     }
@@ -108,7 +120,10 @@ private fun NavigationEffects(
     }
 }
 
-/** A tela inicial: Sozinho abre a Biblioteca; Ranking, Configurações e Reportar. */
+/**
+ * A tela inicial: Sozinho abre a Biblioteca; Sala (só com o Firebase configurado, senão "em breve"), Ranking,
+ * Configurações e Reportar.
+ */
 private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
     composable<HomeRoute> {
         HomeScreen(
@@ -116,6 +131,41 @@ private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
             onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
             onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+            onRoom = if (RoomSwitch.isOn) dropUnlessResumed { navController.navigate(RoomEntryRoute) } else null,
+        )
+    }
+}
+
+/**
+ * A Sala: a escolha, entrar com o código e a sala. A sala abre por cima da escolha (entrar com o código sai da pilha):
+ * sair da sala volta à escolha. Sem nome no ranking, criar e entrar abrem o diálogo do nome ([onChooseName]).
+ */
+private fun NavGraphBuilder.roomDestinations(navController: NavHostController, onChooseName: () -> Unit) {
+    val openRoom = { code: String ->
+        navController.navigate(RoomLobbyRoute(code)) { popUpTo<RoomEntryRoute>() }
+    }
+    composable<RoomEntryRoute> {
+        RoomEntryScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onJoin = dropUnlessResumed { navController.navigate(RoomJoinRoute) },
+            onOpenRoom = openRoom,
+            onChooseName = onChooseName,
+            viewModel = hiltViewModel<HiltRoomEntryViewModel>(),
+        )
+    }
+    composable<RoomJoinRoute> {
+        RoomJoinScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onOpenRoom = openRoom,
+            onChooseName = onChooseName,
+            viewModel = hiltViewModel<HiltRoomJoinViewModel>(),
+        )
+    }
+    composable<RoomLobbyRoute> { entry ->
+        RoomLobbyScreen(
+            onLeft = { navController.popBackStack() },
+            viewModel = hiltViewModel<HiltRoomLobbyViewModel>(),
+            code = entry.toRoute<RoomLobbyRoute>().code,
         )
     }
 }

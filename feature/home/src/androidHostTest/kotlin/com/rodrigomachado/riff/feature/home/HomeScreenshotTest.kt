@@ -38,12 +38,22 @@ class HomeScreenshotTest {
     @Test
     fun homeWithTheSeparationQueue() = snapshot("Home_queue", SeparatingWithQueue)
 
-    private fun snapshot(name: String, separation: SeparationControls? = null) {
+    /** Com o Firebase da Sala configurado, o quadro da Sala liga. */
+    @Test
+    fun homeWithTheRoomOn() = snapshot("Home_room_on", roomOn = true)
+
+    private fun snapshot(name: String, separation: SeparationControls? = null, roomOn: Boolean = false) {
         captureRoboImage("src/test/screenshots/$name.png") {
             CompositionLocalProvider(LocalSeparation provides separation) {
                 RiffTheme {
                     StageBackground(Modifier.fillMaxSize()) {
-                        HomeScreen(onSolo = {}, onRanking = {}, onSettings = {}, onReport = {})
+                        HomeScreen(
+                            onSolo = {},
+                            onRanking = {},
+                            onSettings = {},
+                            onReport = {},
+                            onRoom = if (roomOn) ({}) else null,
+                        )
                     }
                 }
             }

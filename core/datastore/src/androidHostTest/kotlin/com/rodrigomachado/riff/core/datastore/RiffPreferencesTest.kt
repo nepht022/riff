@@ -248,4 +248,19 @@ class RiffPreferencesTest {
         assertEquals(null, saved[nextSongDirect])
         assertEquals(true, saved[leftHanded])
     }
+
+    /** A identidade da Sala (login anônimo do Firebase): uid e refreshToken juntos, nas chaves room_uid e room_*. */
+    @Test
+    fun theRoomIdentityIsStored() = runTest {
+        val store = InMemoryPreferencesStore()
+        val preferences = RiffPreferences(store)
+        assertEquals(null to null, preferences.roomIdentity.first())
+
+        preferences.setRoomIdentity(uid = "u1", refreshToken = "r1")
+
+        assertEquals("u1" to "r1", preferences.roomIdentity.first())
+        val saved = store.data.first()
+        assertEquals("u1", saved[stringPreferencesKey("room_uid")])
+        assertEquals("r1", saved[stringPreferencesKey("room_refresh_token")])
+    }
 }

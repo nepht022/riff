@@ -298,7 +298,35 @@ class RankingScreensTest {
     }
 
     @Test
-    fun aSongWithNobodyInTheTableSaysSo() {
+    fun aTableShowsOnlyTheSongsSomeonePlayedInIt() {
+        val phoneOnly = RankedSong("m1", "Schism", "TOOL", 3, null, mapOf(RankingTable.PHONE to TableStanding(3, null)))
+        val both = RankedSong(
+            "m2",
+            "Lateralus",
+            "TOOL",
+            2,
+            null,
+            mapOf(RankingTable.PHONE to TableStanding(1, null), RankingTable.PC_NO_STRUM to TableStanding(1, null)),
+        )
+        composeRule.setContent {
+            RiffTheme {
+                RankingSongsContent(
+                    RankingSongsUiState(songs = listOf(phoneOnly, both), table = RankingTable.PC_NO_STRUM),
+                    onQuery = {},
+                    onSong = {},
+                    onRetry = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Lateralus").assertExists()
+        composeRule.onNodeWithText("Schism").assertDoesNotExist()
+        composeRule.onNodeWithText("ninguém nesta tabela", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun aTableWithNobodySaysItIsEmpty() {
         val song = RankedSong("m1", "Schism", "TOOL", 3, null, mapOf(RankingTable.PHONE to TableStanding(3, null)))
         composeRule.setContent {
             RiffTheme {
@@ -312,7 +340,8 @@ class RankingScreensTest {
             }
         }
 
-        composeRule.onNodeWithText("TOOL · ninguém nesta tabela").assertExists()
+        composeRule.onNodeWithText("Ninguém nesta tabela ainda").assertExists()
+        composeRule.onNodeWithText("Schism").assertDoesNotExist()
     }
 
     @Test

@@ -1,0 +1,21 @@
+<resources>
+    <string name="room_title">Room</string>
+    <string name="room_back">Back</string>
+    <string name="room_create">Create room</string>
+    <string name="room_join_with_code">Join with code</string>
+    <string name="room_code">Room code</string>
+    <string name="room_join">Join</string>
+    <string name="room_not_found">Room not found.</string>
+    <string name="room_full">Room full (4 players).</string>
+    <string name="room_no_connection">No connection. Try again.</string>
+    <string name="room_leave">Leave room</string>
+    <string name="room_owner">Host</string>
+    <string name="room_you">you</string>
+    <string name="room_phone">Phone</string>
+    <string name="room_pc">PC</string>
+    <string name="room_gone">gone</string>
+    <string name="room_gone_description">Did %1$s leave the room?</string>
+    <string name="room_waiting">Waiting for players…</string>
+    <string name="room_loading">Loading…</string>
+    <string name="room_ended">The room is over.</string>
+</resources>

@@ -94,6 +94,25 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Multiplayer M1: a sala (2026-11-09)
+
+- Firebase criado e regras publicadas pelo usuário (2026-11-10); teste real aceito: PC criou a sala, o celular entrou pelo código, sair passou o dono e o último apagou a sala.
+- A Sala usa o nome do ranking: com a Sala configurada e o ranking não, o diálogo do nome não salva e não dá para criar nem entrar.
+- Recusa do servidor (ex.: regras não publicadas) aparece como "Sem conexão. Tente de novo." e pode esconder um erro de configuração.
+- "Sumiu" (60 s, na tela e para passar o dono) e "sala morta" usam o relógio do aparelho contra o do servidor: um relógio muito errado mostra jogadores sumidos por engano (a medição da diferença vem na M2). A limpeza dos sumidos há mais de 5 min já usa a hora do servidor estimada pelo tempo mais novo gravado na sala (fica até ~20 s para trás: o sumido sai entre 5 min e ~5 min 20 s).
+- Sem limite de salas por usuário (as regras do RTDB não contam por usuário sem servidor próprio).
+- Sem "copiar código" na sala do celular (está na especificação).
+- O `:feature:room` só tem testes no Android (`androidHostTest`) e o fluxo do PC no `:desktop`; sem screenshot da sala no PC.
+- No PC, os testes digitam as letras do código como texto (a tecla injetada no teste não gera o caractere).
+- M7: criar a sala e sair da tela durante a criação (Voltar/Esc com o pedido em andamento) deixa a sala criada sem ninguém olhando (o dono some em 60 s; a sala morre em 2 h) ou abre a sala de surpresa quando a resposta chega.
+- M10: o `refreshNow` (streaming revogado) que recebe 400 do Google cria outra conta anônima (outro uid); o uid antigo fica na sala como fantasma até o dono tirá-lo (5 min) e o jogador vê a sala como acabada.
+- M11 (abuso): o código de 4 letras é adivinhável por força bruta (qualquer conta anônima lê uma sala pelo código) e uma conta anônima consegue criar ou ocupar salas em massa; o plano Spark tem limite de 100 conexões simultâneas. Para depois: App Check/Play Integrity, códigos maiores, alerta de uso no console. Recomendado já: restringir a chave da API como em `docs/firebase.md`.
+- O `FakeFirebase` (testes do app) não aplica as regras: as escritas do `RoomRepository` são espelhadas à mão nos testes do `firebase/rules.test.mjs` (uma escrita nova no repositório precisa do teste espelho lá).
+- PUT condicional de criar: o emulador responde 412 no código ocupado (o `if-match` antes das regras; `restCreateOnATakenCodeAnswers412`); o app também trata 401/403 como ocupado. O servidor de verdade não foi conferido (vale no teste real).
+- PC: sair da sala solta a janela na hora, mas a thread da leitura do streaming só termina com a próxima linha do servidor (o keep-alive do Firebase, ~30 s) ou o tempo esgotado (60 s); fechar a janela espera a saída da sala no máximo 2 s (sem ela, o jogador some em 60 s e o dono o tira em 5 min). No celular, fechar o app não sai da sala.
+- A identidade da Sala no celular saiu do `riff_settings` para a pasta `no_backup` (fora do backup); quem já tinha usado a Sala ganha outra conta anônima na primeira vez, e as chaves antigas (`room_uid`, `room_refresh_token`) ficam esquecidas no `riff_settings` (que vai no backup) até uma limpeza.
+- Instáveis sob carga vistos na suíte de 2026-11-09 (passam sozinhos): `DesktopGameplayFlowTest.theLibraryPlaysASongToTheResultsAndBackWithoutStackingScreens` (palheta sem acerto) e `GuitarSeparatorGoldenTest.guitarAndRestMatchTheOriginalDemucs` (ORT "bad allocation").
+
 ## Riff no Windows, etapa 4e: instalador (2026-11-05)
 
 - **Conformidade (validação humana antes de distribuir):** as DLLs do Visual C++/UCRT da Microsoft (no `runtime\bin` e no `javacpp-…-windows-x86_64.jar`) sem aviso próprio; a GPL 2 do OpenJDK aponta o código-fonte (sem oferta por escrito); FreeType pela FTL; linhas de copyright tiradas de README/cabeçalho (OpenSSL, SRT, LAME, cabeçalhos do Vulkan); winpthreads do `master` e ICU do fork do Chromium (74-2); patentes de codecs (MP3, AMR, H.264) ao distribuir.

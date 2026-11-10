@@ -30,6 +30,7 @@ import com.rodrigomachado.riff.core.encore.HttpResponse
 import com.rodrigomachado.riff.core.encore.HttpTransport
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import com.rodrigomachado.riff.core.room.testing.FakeFirebase
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialogTestTags
 import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.desktop.pad.PadSource
@@ -57,8 +58,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
 
     val graph: DesktopGraph get() = checkNotNull(opened) { "o app não foi aberto" }
 
+    /** Fecha o app (uma vez só: o teste pode fechar antes do fim, e o @After fecha de novo). */
     fun close() {
         opened?.close()
+        opened = null
     }
 
     /**
@@ -66,7 +69,8 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
      * manda aos menus por [sendMenuKey]. A pesquisa fala com o Encore por [encore] (nos testes, nunca a rede). O
      * ranking fica ligado e fala com o script falso [ranking] (o padrão: sem internet) em [rankingUrl] (vazio:
      * desligado, como sem `ranking.url`); sem [askForName], o pedido do nome da primeira abertura já foi respondido com
-     * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes).
+     * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes). A Sala fala com o Firebase falso
+     * [room]; sem ele, fica sem configuração ("em breve"), e um Firebase falso sem internet garante que nada sai.
      */
     fun openApp(
         pad: PadSource = NoPadSource,
@@ -75,6 +79,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         ranking: RankingTransport = OfflineRankingScript,
         rankingUrl: String = TEST_RANKING_URL,
         askForName: Boolean = false,
+        room: FakeFirebase? = null,
     ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
@@ -92,6 +97,9 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             encoreTransport = encore,
             rankingUrl = rankingUrl,
             rankingTransport = ranking,
+            roomApiKey = if (room != null) FakeFirebase.API_KEY else "",
+            roomDbUrl = if (room != null) FakeFirebase.DB_URL else "",
+            roomHttp = room ?: FakeFirebase(System::currentTimeMillis).apply { online = false },
         ).also { opened = it }
         if (!askForName) graph.ranking.askLater()
         graph.gamepad.start()

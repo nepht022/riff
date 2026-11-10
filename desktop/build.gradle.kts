@@ -45,6 +45,7 @@ dependencies {
     implementation(project(":feature:report"))
     implementation(project(":feature:licenses"))
     implementation(project(":feature:ranking"))
+    implementation(project(":feature:room"))
     implementation(project(":core:encore"))
     implementation(project(":core:game"))
     implementation(project(":core:data"))
@@ -53,6 +54,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":core:separation"))
+    implementation(project(":core:room"))
     implementation(libs.jetbrains.navigation.compose)
     implementation(libs.jetbrains.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.core)
@@ -76,6 +78,8 @@ dependencies {
     testImplementation(libs.roborazzi.compose.desktop)
     // Os pacotes .sng do Encore falso da pesquisa.
     testImplementation(testFixtures(project(":core:chart")))
+    // O Firebase falso da Sala: nenhum teste fala com o Firebase de verdade.
+    testImplementation(project(":core:room:testing"))
 }
 
 // A lista das bibliotecas que vão no app do PC (o que o Gradle põe no runtimeClasspath), gerada no build pelo

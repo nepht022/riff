@@ -31,7 +31,7 @@
     <string name="ranking_table_phone">Celular</string>
     <string name="ranking_table_pc_strum">PC com palheta</string>
     <string name="ranking_table_pc_no_strum">PC sem palheta</string>
-    <string name="ranking_table_nobody">ninguém nesta tabela</string>
+    <string name="ranking_table_empty">Ninguém nesta tabela ainda</string>
     <string name="ranking_link_share">Usar este nome em outro aparelho</string>
     <string name="ranking_link_enter">Já tenho um nome em outro aparelho</string>
     <string name="ranking_link_code_title">Código do seu nome</string>

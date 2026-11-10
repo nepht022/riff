@@ -44,6 +44,9 @@ class RiffDesktopAppTest {
             // Sem o ranking (desligado, como sem ranking.url): nunca o script real.
             rankingUrl = "",
             rankingTransport = OfflineRankingScript,
+            // Sem a Sala (desligada, "em breve", como sem o Firebase no local.properties): a imagem não muda com ele.
+            roomApiKey = "",
+            roomDbUrl = "",
         )
     }
 

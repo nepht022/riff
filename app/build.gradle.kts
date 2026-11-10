@@ -91,6 +91,9 @@ dependencies {
     implementation(project(":feature:ranking"))
     implementation(project(":feature:licenses"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:room"))
+    // A Sala só liga com o Firebase configurado (RoomSwitch); o módulo do Hilt da Sala vem dele.
+    implementation(project(":core:room"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))

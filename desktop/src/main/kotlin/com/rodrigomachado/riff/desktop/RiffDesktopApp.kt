@@ -59,6 +59,12 @@ import com.rodrigomachado.riff.feature.report.ReportScreen
 import com.rodrigomachado.riff.feature.results.ResultsRoute
 import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.results.ResultsUiState
+import com.rodrigomachado.riff.feature.room.RoomEntryRoute
+import com.rodrigomachado.riff.feature.room.RoomEntryScreen
+import com.rodrigomachado.riff.feature.room.RoomJoinRoute
+import com.rodrigomachado.riff.feature.room.RoomJoinScreen
+import com.rodrigomachado.riff.feature.room.RoomLobbyRoute
+import com.rodrigomachado.riff.feature.room.RoomLobbyScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
@@ -68,7 +74,7 @@ import java.util.Locale
 
 /**
  * O Riff no PC: tela inicial, Biblioteca (com a guitarra separada por IA), pesquisa no Encore, partida, resultado,
- * Ranking (com o nome e o vínculo por código), Configurações, Reportar e Licenças. Fora da partida (que tem as
+ * Ranking (com o nome e o vínculo por código), Sala, Configurações, Reportar e Licenças. Fora da partida (que tem as
  * próprias teclas), cada tela anda pelo teclado ([menuKeys]): setas movem o foco, Esc volta. O controle anda também,
  * virando essas teclas ([PadMenuKeys]) que [sendMenuKey] entrega à janela (nulo: o controle só vale na partida e na
  * escolha de botão).
@@ -147,6 +153,7 @@ private fun DesktopScreens(
                     onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
                     onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
                     onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+                    onRoom = if (graph.roomOn) dropUnlessResumed { navController.navigate(RoomEntryRoute) } else null,
                     // Na tela inicial o Esc não faz nada (fechar o jogo é pela janela).
                     modifier = Modifier.menuKeys(onBack = null),
                 )
@@ -165,6 +172,7 @@ private fun DesktopScreens(
             searchDestination(graph, navController)
             matchDestinations(graph, navController, chooseName)
             rankingDestinations(graph, navController, currentTable)
+            roomDestinations(graph, navController, chooseName)
             settingsDestinations(graph, navController, chooseName)
             reportDestination(graph, navController)
         }
@@ -200,6 +208,47 @@ private fun NavGraphBuilder.rankingDestinations(
                 val table = RankingTable.entries.firstOrNull { it.name == route.table } ?: currentTable()
                 graph.rankingBoardViewModel(route.chartId, route.title, route.difficulty, table)
             },
+        )
+    }
+}
+
+/**
+ * A Sala, como no celular: a escolha, entrar com o código e a sala, que abre por cima da escolha (sair volta a ela).
+ * As telas já andam pelo teclado sozinhas ([menuKeys] dentro delas): setas entre os botões, letras e Backspace na
+ * caixa do código, Enter entra e Esc volta (na sala, Esc sai dela). Sem nome no ranking, criar e entrar abrem o
+ * diálogo do nome ([onChooseName]).
+ */
+private fun NavGraphBuilder.roomDestinations(
+    graph: DesktopGraph,
+    navController: NavHostController,
+    onChooseName: () -> Unit,
+) {
+    val openRoom = { code: String ->
+        navController.navigate(RoomLobbyRoute(code)) { popUpTo<RoomEntryRoute>() }
+    }
+    composable<RoomEntryRoute> {
+        RoomEntryScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onJoin = dropUnlessResumed { navController.navigate(RoomJoinRoute) },
+            onOpenRoom = openRoom,
+            onChooseName = onChooseName,
+            viewModel = viewModel { graph.roomEntryViewModel() },
+        )
+    }
+    composable<RoomJoinRoute> {
+        RoomJoinScreen(
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            onOpenRoom = openRoom,
+            onChooseName = onChooseName,
+            viewModel = viewModel { graph.roomJoinViewModel() },
+        )
+    }
+    composable<RoomLobbyRoute> { entry ->
+        val code = entry.toRoute<RoomLobbyRoute>().code
+        RoomLobbyScreen(
+            onLeft = { navController.popBackStack() },
+            viewModel = viewModel { graph.roomLobbyViewModel(code) },
+            code = code,
         )
     }
 }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 
 /** Preferências do jogador e pasta da biblioteca. Valores inválidos no disco viram o padrão, nunca um crash. */
+@Suppress("TooManyFunctions") // um par ler/gravar por grupo de preferências (ajustes, ranking, Sala, pasta)
 class RiffPreferences(private val dataStore: DataStore<Preferences>) {
     /** Arquivo ilegível vira preferências vazias (valores padrão) em vez de derrubar quem observa. */
     private val safeData: Flow<Preferences> = dataStore.data.catch { error ->
@@ -101,6 +102,19 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /**
+     * A identidade da Sala (login anônimo do Firebase): o `uid` e o `refreshToken`, os dois juntos (um sem o outro
+     * não vale nada). O `idToken` não é guardado: vence em 1 h e é renovado na memória.
+     */
+    val roomIdentity: Flow<Pair<String?, String?>> = safeData.map { it[ROOM_UID] to it[ROOM_REFRESH_TOKEN] }
+
+    suspend fun setRoomIdentity(uid: String, refreshToken: String) {
+        editRetrying {
+            it[ROOM_UID] = uid
+            it[ROOM_REFRESH_TOKEN] = refreshToken
+        }
+    }
+
     suspend fun setLibraryRootUri(uri: String) {
         editRetrying { it[LIBRARY_ROOT_URI] = uri }
     }
@@ -175,6 +189,8 @@ class RiffPreferences(private val dataStore: DataStore<Preferences>) {
         val QUEUE_CLOSEST_DURATION = booleanPreferencesKey("queue_closest_duration")
         val PLAYER_NAME = stringPreferencesKey("player_name")
         val PLAYER_KEY = stringPreferencesKey("player_key")
+        val ROOM_UID = stringPreferencesKey("room_uid")
+        val ROOM_REFRESH_TOKEN = stringPreferencesKey("room_refresh_token")
         val SPOTIFY_NEXT_SONG_DIRECT = booleanPreferencesKey("spotify_next_song_direct")
         val SPOTIFY_KEYS = listOf(
             QUEUE_PREFETCH,
