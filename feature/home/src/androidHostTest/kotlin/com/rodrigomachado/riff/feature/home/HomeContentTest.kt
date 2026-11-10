@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.home
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -24,13 +25,15 @@ class HomeContentTest {
     val composeRule = createComposeRule()
     private val events = mutableListOf<String>()
 
-    private fun show() = composeRule.setContent {
+    /** [roomOn]: o Firebase da Sala configurado (o app passa o onRoom só então). */
+    private fun show(roomOn: Boolean = false) = composeRule.setContent {
         RiffTheme {
             HomeScreen(
                 onSolo = { events += "solo" },
                 onRanking = { events += "ranking" },
                 onSettings = { events += "settings" },
                 onReport = { events += "report" },
+                onRoom = if (roomOn) ({ events += "room" }) else null,
             )
         }
     }
@@ -56,8 +59,8 @@ class HomeContentTest {
     }
 
     @Test
-    fun theRoomIsComingSoonAndDoesNothing() {
-        show()
+    fun withoutConfigTheRoomTileStaysComingSoon() {
+        show(roomOn = false)
 
         val room = composeRule.onNodeWithTag(HomeTestTags.ROOM)
         room.assertIsNotEnabled()
@@ -65,6 +68,18 @@ class HomeContentTest {
         room.performClick()
 
         assertEquals(emptyList<String>(), events)
+    }
+
+    @Test
+    fun withConfigTheRoomTileOpensTheRoom() {
+        show(roomOn = true)
+
+        val room = composeRule.onNodeWithTag(HomeTestTags.ROOM)
+        room.assertIsEnabled()
+        composeRule.onNodeWithText("em breve").assertDoesNotExist()
+        room.performClick()
+
+        assertEquals(listOf("room"), events)
     }
 
     /** Num celular baixo os quadros encolhem: o Ranking continua na tela. */

@@ -44,6 +44,7 @@ dependencies {
     kover(project(":core:game"))
     kover(project(":core:data"))
     kover(project(":core:room"))
+    kover(project(":feature:room"))
 }
 
 kover {

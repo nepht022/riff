@@ -64,41 +64,46 @@ object HomeTestTags {
 
 /**
  * A tela inicial (maquete escolhida, opção 1): Reportar e Configurações nos cantos do topo, com a palheta da
- * separação no meio (só com separação ou fila); o letreiro; Sozinho e Sala lado a lado; o Ranking no pé.
+ * separação no meio (só com separação ou fila); o letreiro; Sozinho e Sala lado a lado; o Ranking no pé. Sem
+ * [onRoom] (o Firebase da Sala não configurado), a Sala fica desligada, "em breve".
  */
 @Composable
+@Suppress("LongParameterList") // um destino por botão da tela
 fun HomeScreen(
     onSolo: () -> Unit,
     onRanking: () -> Unit,
     onSettings: () -> Unit,
     onReport: () -> Unit,
     modifier: Modifier = Modifier,
+    onRoom: (() -> Unit)? = null,
 ) {
     BoxWithConstraints(modifier.fillMaxSize().padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
         // Os quadros ficam com o que sobra do topo, do letreiro e do Ranking: num celular baixo, encolhem.
         val tileHeight = (maxHeight - RESERVED_HEIGHT).coerceIn(MIN_TILE_HEIGHT, TILE_HEIGHT)
-        HomeLayout(tileHeight, maxHeight, onSolo, onRanking, onSettings, onReport)
+        HomeLayout(tileHeight, maxHeight, HomeActions(onSolo, onRoom, onRanking, onSettings, onReport))
     }
 }
 
+/** Os destinos dos botões da tela inicial; [onRoom] nulo = Sala "em breve". */
+private class HomeActions(
+    val onSolo: () -> Unit,
+    val onRoom: (() -> Unit)?,
+    val onRanking: () -> Unit,
+    val onSettings: () -> Unit,
+    val onReport: () -> Unit,
+)
+
 @Composable
-private fun HomeLayout(
-    tileHeight: Dp,
-    screenHeight: Dp,
-    onSolo: () -> Unit,
-    onRanking: () -> Unit,
-    onSettings: () -> Unit,
-    onReport: () -> Unit,
-) {
+private fun HomeLayout(tileHeight: Dp, screenHeight: Dp, actions: HomeActions) {
     // Rola quando nada cabe (deitado, fonte grande); quando cabe, ocupa a tela e o Ranking fica no pé.
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = screenHeight),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(Modifier.fillMaxWidth()) { HomeTop(tileHeight, onSolo, onSettings, onReport) }
+        Column(Modifier.fillMaxWidth()) { HomeTop(tileHeight, actions) }
         PosterButton(
             stringResource(Res.string.home_ranking),
-            onClick = onRanking,
+            onClick = actions.onRanking,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.md, bottom = Spacing.md)
                 .testTag(HomeTestTags.RANKING),
             minWidth = RANKING_WIDTH,
@@ -108,8 +113,8 @@ private fun HomeLayout(
 }
 
 @Composable
-private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: () -> Unit, onReport: () -> Unit) {
-    TopIcons(onReport, onSettings)
+private fun ColumnScope.HomeTop(tileHeight: Dp, actions: HomeActions) {
+    TopIcons(actions.onReport, actions.onSettings)
     PosterTitle(
         stringResource(Res.string.home_title),
         Modifier.align(Alignment.CenterHorizontally),
@@ -125,16 +130,33 @@ private fun ColumnScope.HomeTop(tileHeight: Dp, onSolo: () -> Unit, onSettings: 
             note = null,
             icon = { drawNote(it) },
             colors = RiffColors.TourRed to RiffColors.Paper,
-            onClick = onSolo,
+            onClick = actions.onSolo,
             modifier = tile.testTag(HomeTestTags.SOLO),
         )
+        RoomTile(actions.onRoom, tile.testTag(HomeTestTags.ROOM))
+    }
+}
+
+/** A Sala: papel com tinta quando ligada; apagada e "em breve" sem o Firebase configurado. */
+@Composable
+private fun RoomTile(onRoom: (() -> Unit)?, modifier: Modifier) {
+    if (onRoom != null) {
+        ModeTile(
+            stringResource(Res.string.home_room),
+            note = null,
+            icon = { drawFlag(it) },
+            colors = RiffColors.Paper to RiffColors.Ink,
+            onClick = onRoom,
+            modifier = modifier,
+        )
+    } else {
         ModeTile(
             stringResource(Res.string.home_room),
             note = stringResource(Res.string.home_coming_soon),
             icon = { drawFlag(it) },
             colors = RoomBackground to RiffColors.PaperDim,
             onClick = null,
-            modifier = tile.testTag(HomeTestTags.ROOM),
+            modifier = modifier,
             description = stringResource(Res.string.home_room_coming_soon),
         )
     }

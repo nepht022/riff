@@ -1,0 +1,21 @@
+<resources>
+    <string name="room_title">Sala</string>
+    <string name="room_back">Voltar</string>
+    <string name="room_create">Criar sala</string>
+    <string name="room_join_with_code">Entrar com código</string>
+    <string name="room_code">Código da sala</string>
+    <string name="room_join">Entrar</string>
+    <string name="room_not_found">Sala não encontrada.</string>
+    <string name="room_full">Sala cheia (4 jogadores).</string>
+    <string name="room_no_connection">Sem conexão. Tente de novo.</string>
+    <string name="room_leave">Sair da sala</string>
+    <string name="room_owner">Dono</string>
+    <string name="room_you">você</string>
+    <string name="room_phone">Celular</string>
+    <string name="room_pc">PC</string>
+    <string name="room_gone">sumiu</string>
+    <string name="room_gone_description">%1$s saiu da sala?</string>
+    <string name="room_waiting">Aguardando jogadores…</string>
+    <string name="room_loading">Carregando…</string>
+    <string name="room_ended">A sala acabou.</string>
+</resources>
