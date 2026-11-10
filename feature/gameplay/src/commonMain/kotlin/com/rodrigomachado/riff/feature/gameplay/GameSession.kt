@@ -77,7 +77,19 @@ class GameSession(
     /** O agora do relógio da partida (o da contagem da partida de sala, ver [MatchStart]). */
     fun nowMs(): Long = timeSource.nowMs()
 
-    fun start() {
+    /**
+     * Começa a música em [fromMs] (0 = do começo). A partida de sala que carregou depois do começo combinado começa
+     * onde os outros já estão: a música e as notas adiantadas; as notas que já passaram contam como perdidas, sem o
+     * som de erro (ninguém errou nada agora).
+     */
+    fun start(fromMs: Long = 0) {
+        if (fromMs > 0) {
+            player.seekTo(fromMs)
+            // Pela posição pedida, não pela do player: o MediaPlayer pode demorar a dizer a posição nova.
+            songTimeMs = fromMs + clock.offsetMs
+            engine.update(songTimeMs, MISS_GRACE_MS)
+            missesHeard = engine.count(Judgment.MISS)
+        }
         player.play()
         syncClock()
     }

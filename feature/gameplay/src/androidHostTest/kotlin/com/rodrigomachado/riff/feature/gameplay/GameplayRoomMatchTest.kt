@@ -87,6 +87,56 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         assertFalse(viewModel.ready().isPaused)
     }
 
+    /**
+     * Carregou 5 s depois do começo combinado (o celular mais lento): a música e as notas começam em 5 s, juntas com
+     * as dos outros, em vez de começar do zero fora de sincronia. As notas que já passaram contam como perdidas, sem
+     * o som de erro.
+     */
+    @Test
+    fun aLateLoadStartsAtTheSongPositionOfTheOthers() = runTest {
+        loader.result = { playable() }
+        advanceTimeBy(10_000)
+        val viewModel = roomViewModel(match, clock())
+
+        match.start.complete(5_000)
+        runCurrent()
+
+        assertTrue(player.isPlaying)
+        assertEquals(listOf(5_000L), player.seeks)
+        val session = viewModel.ready().session
+        val songTime = session.tick()
+        assertTrue("tempo da música $songTime", songTime in 4_900L..5_100L) // com o ajuste de áudio (-40 ms)
+        assertEquals(2, session.engine.count(com.rodrigomachado.riff.core.model.Judgment.MISS))
+        assertEquals(0, sfx.misses)
+    }
+
+    /** Mais de 10 s de atraso: começa assim mesmo, na posição certa. */
+    @Test
+    fun aVeryLateLoadStillStartsAtTheRightPosition() = runTest {
+        loader.result = { playable() }
+        advanceTimeBy(60_000)
+        val viewModel = roomViewModel(match, clock())
+
+        match.start.complete(15_000)
+        runCurrent()
+
+        assertTrue(player.isPlaying)
+        assertEquals(listOf(45_000L), player.seeks)
+        assertFalse(viewModel.ready().isPaused)
+    }
+
+    @Test
+    fun anOnTimeStartDoesNotSeek() = runTest {
+        loader.result = { playable() }
+        roomViewModel(match, clock())
+
+        match.start.complete(3_000)
+        advanceTimeBy(3_001)
+
+        assertTrue(player.isPlaying)
+        assertTrue(player.seeks.isEmpty())
+    }
+
     @Test
     fun roomMatchReportsLoadedOnce() = runTest {
         loader.result = { playable() }
@@ -180,6 +230,7 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         assertFalse(ready.waitingForStart)
         assertNull(ready.countdownEndsAt)
         assertTrue(player.isPlaying) // começa na hora
+        assertTrue(player.seeks.isEmpty()) // do começo
         assertTrue(matchStartsAsked.isEmpty())
 
         viewModel.pause()

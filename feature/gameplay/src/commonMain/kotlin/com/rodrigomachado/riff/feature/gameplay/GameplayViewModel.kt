@@ -186,7 +186,8 @@ open class GameplayViewModel(
     /**
      * A partida de sala: montada e parada até o começo combinado, com a contagem por cima; começa no instante
      * devolvido pelo [MatchStart] (no relógio da partida), esperando em passos pelo [timeSource] (o `delay` sozinho
-     * pode acordar antes). O foco de áudio é pedido como sempre, mas perdê-lo não pausa.
+     * pode acordar antes); com o começo já passado, começa na posição da música de agora (a dos outros). O foco de
+     * áudio é pedido como sempre, mas perdê-lo não pausa.
      */
     private suspend fun startInRoom(
         room: MatchStart,
@@ -197,6 +198,9 @@ open class GameplayViewModel(
         state.value = waiting
         room.loaded()
         val startAt = room.awaitStart()
+        // Carregou depois do começo (o começo já passou): começa onde os outros estão, por mais atrasado que seja. No
+        // horário, do começo (a espera abaixo pode acordar uns milissegundos depois: não vale um reposicionamento).
+        val late = timeSource.nowMs() > startAt
         val counting = waiting.copy(waitingForStart = false, countdownEndsAt = startAt)
         state.value = counting
         while (true) {
@@ -206,7 +210,7 @@ open class GameplayViewModel(
         }
         // Saiu enquanto contava (a tela já foi): nada de tocar num player liberado.
         if (player == null) return counting
-        session.start()
+        session.start(fromMs = if (late) timeSource.nowMs() - startAt else 0)
         interruptions = interruptionsFactory.create().also { it.start(onInterrupted = {}, onBusy = {}) }
         return counting
     }
