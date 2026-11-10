@@ -14,6 +14,13 @@ object RoomRound {
     const val LOAD_WAIT_MS = 15_000L
     const val START_DELAY_MS = 3_000L
 
+    /** A rodada órfã (ver `RoomRepository.heartbeat`): a folga depois do fim da música e depois do carregamento. */
+    const val MATCH_GRACE_MS = 30_000L
+    const val COUNTDOWN_GRACE_MS = 10_000L
+
+    /** A duração suposta da música sem a `duracaoMs` (só para desfazer a partida órfã). */
+    const val UNKNOWN_SONG_MS = 15 * 60_000L
+
     fun canStart(room: Room, nowServer: Long): Boolean {
         if (room.state != RoomState.LOBBY || room.song == null) return false
         val withSong = room.players.filter { !it.gone && it.song == SongStatus.HAS }

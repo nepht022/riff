@@ -31,6 +31,14 @@ object RoomModule {
         val db = FirebaseDb(UrlConnectionRoomHttp, auth, RoomConfig.DB_URL)
         return RoomRepository(db, auth, RoomDevice.PHONE, clock)
     }
+
+    /**
+     * Um só no app: o batimento da sala continua entre as telas (a partida, o Resultado, a Biblioteca de escolha);
+     * o app liga e desliga com o segundo plano ([RoomPresence.setForeground]).
+     */
+    @Provides
+    @Singleton
+    fun roomPresence(repository: RoomRepository): RoomPresence = RoomPresence(repository)
 }
 
 /**

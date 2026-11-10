@@ -703,6 +703,57 @@ test('repositoryNewOwnerFinishesTheCountdown', async () => {
   assert.equal((await lerSemRegras('salas/ABCD')).estado, 'partida');
 });
 
+// --- as escritas novas da revisão final da M2 (RoomPresence e a rodada órfã) ---
+
+test('repositoryClearReadyIsAccepted', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { extra: { dificuldade: 'HARD', pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'sala', rodada: 1, musica: MUSICA },
+  });
+  // clearReady (cada um, para si): só o pronto e a atividade.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/pronto': false, atividadeEm: AGORA }));
+  // O de outro jogador, não.
+  await assertFails(db('ana').ref('salas/ABCD').update({ 'jogadores/bia/pronto': false, atividadeEm: AGORA }));
+  const bia = await lerSemRegras('salas/ABCD/jogadores/bia');
+  assert.deepEqual({ p: bia.pronto, d: bia.dificuldade, m: bia.musica }, { p: false, d: 'HARD', m: 'tem' });
+});
+
+test('repositoryOrphanRoundRepairIsAccepted', async () => {
+  const agora = Date.now();
+  // A contagem órfã sem ninguém carregado: o dono (o novo, depois de assumir) volta à sala direto da contagem.
+  await semear('ABCD', {
+    jogadores: { ana: { vistoEm: agora - 90_000 }, bia: { extra: { pronto: true, musica: 'tem' } } },
+    sala: { estado: 'contagem', rodada: 1, musica: MUSICA },
+  });
+  const bia = db('bia').ref('salas/ABCD');
+  await assertSucceeds(bia.update({ dono: 'bia' }));
+  await assertSucceeds(bia.update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  // A partida órfã (o inicio bem no passado): de volta à sala.
+  await semear('EFGH', {
+    dono: 'bia',
+    jogadores: { bia: { extra: { pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'partida', rodada: 1, inicio: agora - HORA, musica: MUSICA },
+  });
+  await assertSucceeds(db('bia').ref('salas/EFGH').update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  assert.equal((await lerSemRegras('salas/ABCD')).estado, 'sala');
+  assert.equal((await lerSemRegras('salas/EFGH')).inicio, undefined);
+});
+
+// A escolha com os textos no limite (o RoundFormat corta título, artista e charter em 200).
+test('repositoryChooseSongAt200CharactersIsAccepted', async () => {
+  await semear('ABCD', { jogadores: { ana: {} } });
+  const longa = {
+    ...MUSICA,
+    titulo: 't'.repeat(200),
+    artista: 'a'.repeat(200),
+    encore: { md5: '0123456789abcdef0123456789abcdef', video: false, charter: 'c'.repeat(200) },
+  };
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ musica: longa, atividadeEm: AGORA }));
+  await assertFails(
+    db('ana').ref('salas/ABCD').update({ musica: { ...longa, encore: { ...longa.encore, charter: 'c'.repeat(201) } } }),
+  );
+});
+
 // --- a API REST, como o app fala com o banco (FirebaseDb) ---
 
 const DB_HOST = process.env.FIREBASE_DATABASE_EMULATOR_HOST ?? '127.0.0.1:9000';

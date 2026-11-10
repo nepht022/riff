@@ -55,6 +55,7 @@ import com.rodrigomachado.riff.core.room.FirebaseDb
 import com.rodrigomachado.riff.core.room.RoomConfig
 import com.rodrigomachado.riff.core.room.RoomDevice
 import com.rodrigomachado.riff.core.room.RoomHttp
+import com.rodrigomachado.riff.core.room.RoomPresence
 import com.rodrigomachado.riff.core.room.RoomRepository
 import com.rodrigomachado.riff.core.room.RoomSwitch
 import com.rodrigomachado.riff.core.room.UrlConnectionRoomHttp
@@ -319,6 +320,11 @@ class DesktopGraph(
         val auth = AnonymousAuth(roomHttp, DataStoreRoomIdentityStore(preferences), roomApiKey, clock)
         RoomRepository(FirebaseDb(roomHttp, auth, roomDbUrl), auth, RoomDevice.PC, clock)
     }
+
+    // A presença na sala (o batimento em qualquer tela: a partida, o Resultado, a Biblioteca de escolha) enquanto a
+    // janela existe; sair da sala (ou fechar a janela, que sai) para o batimento.
+    @Suppress("unused") // só existe para bater: segue o `joinedRoom` do repositório no escopo do PC
+    private val roomPresence = RoomPresence(room, scope)
     private val roomPlayerName = ranking.player.map { it.name }
 
     fun roomEntryViewModel() = RoomEntryViewModel(room, roomPlayerName)

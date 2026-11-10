@@ -48,6 +48,9 @@ internal object RoundFormat {
         ACTIVITY to ServerTime.NOW,
     )
 
+    /** O meu Pronto de volta a "não" (sobrou de uma rodada ou música anterior), e a atividade. */
+    fun clearReady(me: String): Map<String, Any?> = mapOf("$PLAYERS/$me/$READY" to false, ACTIVITY to ServerTime.NOW)
+
     /** O Começar (o dono): contagem da rodada [round] (a seguinte), sem começo marcado. */
     fun startRound(round: Int): Map<String, Any?> =
         mapOf(STATE to RoomState.COUNTDOWN.wire, ROUND to round, START to null, ACTIVITY to ServerTime.NOW)

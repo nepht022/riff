@@ -98,8 +98,9 @@ sealed interface RoomLobbyUiState {
 data class MatchTicket(val chartId: String, val difficulty: Difficulty, val round: Int)
 
 /**
- * A sala [code] ao vivo. Enquanto a tela está aberta (alguém olha o [uiState]), segue a sala pelo streaming e manda o
- * batimento a cada 20 s; com o app em segundo plano, os dois param (e o jogador some para os outros em 60 s). No
+ * A sala [code] ao vivo. Enquanto a tela está aberta (alguém olha o [uiState]), segue a sala pelo streaming; com o app
+ * em segundo plano, para. O batimento não é daqui: é da `RoomPresence`, que bate enquanto o jogador está na sala,
+ * qualquer que seja a tela (a sala aberta comigo nela também conta como estar nela: [RoomRepository.stayIn]). No
  * celular, o Hilt cria com o código da rota.
  *
  * Na M2, a música: a cada música nova o app confere na biblioteca ([songs]) se a tem e grava o próprio estado (a
@@ -137,7 +138,6 @@ open class RoomLobbyViewModel(
     val navigateToMatch: StateFlow<MatchTicket?> = ticket
 
     val uiState: StateFlow<RoomLobbyUiState> = channelFlow {
-        launch { heartbeats() }
         val rooms = repository.observe(code).onEach { room ->
             latest.value = room
             room?.let(::onRoom)
@@ -234,6 +234,7 @@ open class RoomLobbyViewModel(
 
     /** Cada sala lida: confere a música nova, mede o relógio (o dono, com música) e abre a partida da rodada nova. */
     private fun onRoom(room: Room) {
+        if (!leaving.value) repository.stayIn(code)
         val chart = room.song?.chartId
         if (chart != checkedChart) {
             val first = checkedChart == null
@@ -313,15 +314,7 @@ open class RoomLobbyViewModel(
         }
     }
 
-    private suspend fun heartbeats() {
-        while (true) {
-            if (!leaving.value) repository.heartbeat(code)
-            delay(HEARTBEAT_MS)
-        }
-    }
-
     private companion object {
-        const val HEARTBEAT_MS = 20_000L
         const val RETRY_MS = 5_000L
         const val TICK_MS = 1_000L
 

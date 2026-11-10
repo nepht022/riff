@@ -436,6 +436,114 @@ class RoomRepositoryRoundTest : JsonTest() {
         assertEquals(setOf("dono"), patchKeys(fake.writes[ownerWrite]))
     }
 
+    // ---- A rodada órfã: o dono a desfaz pelo batimento ----
+
+    /** A partida que passou do fim da música (mais 30 s) sem ninguém devolver a sala: o dono devolve. */
+    @Test
+    fun theOwnerEndsAMatchPastTheSongEnd() = runTest {
+        val start = now - 215_000 - 30_000
+        seedSongRoom(readyPlayer("u1"), readyPlayer("bia"), state = "partida", round = 1, startAt = start)
+        val owner = fake.repository()
+
+        owner.heartbeat("ABCD")
+        assertEquals("partida", room()!!.getString("estado")) // ainda no limite
+
+        now += 1
+        owner.heartbeat("ABCD")
+        assertEquals("sala", room()!!.getString("estado"))
+        assertFalse(room()!!.has("inicio"))
+    }
+
+    /** Sem a duração da música: 15 min (mais os 30 s). */
+    @Test
+    fun withoutTheDurationTheMatchEndsAfter15Minutes() = runTest {
+        val song = """{"chartId":"${SONG.chartId}","titulo":"M","artista":"B","dificuldades":"HARD"}"""
+        val players = listOf(readyPlayer("u1"), readyPlayer("bia"))
+        fake.seedRoom("ABCD", "u1", players, state = "partida", round = 1, songJson = song, startAt = now)
+        val owner = fake.repository()
+
+        now += 15 * MINUTE + 30_000
+        owner.heartbeat("ABCD")
+        assertEquals("partida", room()!!.getString("estado"))
+
+        now += 1
+        owner.heartbeat("ABCD")
+        assertEquals("sala", room()!!.getString("estado"))
+    }
+
+    @Test
+    fun aGuestDoesNotEndTheMatch() = runTest {
+        seedSongRoom(readyPlayer("bia"), readyPlayer("u1"), owner = "bia", state = "partida", round = 1, startAt = 0)
+
+        fake.repository().heartbeat("ABCD")
+
+        assertEquals("partida", room()!!.getString("estado"))
+    }
+
+    /** O dono novo (o antigo sumiu) também desfaz: assume num batimento e desfaz no seguinte. */
+    @Test
+    fun aNewOwnerEndsAnOrphanMatch() = runTest {
+        seedSongRoom(
+            readyPlayer("ana", seenAt = now - 90_000),
+            readyPlayer("u1"),
+            owner = "ana",
+            state = "partida",
+            round = 1,
+            startAt = now - HOUR,
+        )
+        val me = fake.repository()
+
+        me.heartbeat("ABCD")
+        me.heartbeat("ABCD")
+
+        assertEquals("u1", room()!!.getString("dono"))
+        assertEquals("sala", room()!!.getString("estado"))
+    }
+
+    /** A contagem sem começo 25 s (os 15 do carregamento + 10) depois de vista: começa com quem carregou. */
+    @Test
+    fun anOrphanCountdownStartsWithWhoLoaded() = runTest {
+        val players = arrayOf(readyPlayer("u1"), readyPlayer("bia", loadedRound = 1))
+        seedSongRoom(*players, state = "contagem", round = 1)
+        val owner = fake.repository()
+        owner.heartbeat("ABCD") // vi a contagem agora
+
+        now += 24_999
+        owner.heartbeat("ABCD")
+        assertEquals("contagem", room()!!.getString("estado"))
+
+        now += 1
+        owner.heartbeat("ABCD")
+        assertEquals("partida", room()!!.getString("estado"))
+        assertEquals(now + 3_000, room()!!.getLong("inicio"))
+    }
+
+    @Test
+    fun anOrphanCountdownWithNobodyLoadedGoesBackToTheLobby() = runTest {
+        seedSongRoom(readyPlayer("u1"), readyPlayer("bia"), state = "contagem", round = 1)
+        val owner = fake.repository()
+        owner.heartbeat("ABCD")
+
+        now += 25_000
+        owner.heartbeat("ABCD")
+
+        assertEquals("sala", room()!!.getString("estado"))
+    }
+
+    /** O meu Pronto volta a "não", só ele (e a atividade). */
+    @Test
+    fun clearReadyWritesOnlyMyReady() = runTest {
+        seedSongRoom(readyPlayer("u1"), readyPlayer("bia"))
+
+        assertTrue(fake.repository().clearReady("ABCD"))
+
+        assertEquals(setOf("jogadores/u1/pronto", "atividadeEm"), patchKeys(fake.writes.single()))
+        assertFalse(players().getJSONObject("u1").getBoolean("pronto"))
+        assertEquals("tem", players().getJSONObject("u1").getString("musica"))
+        fake.online = false
+        assertFalse(fake.repository().clearReady("ABCD"))
+    }
+
     @Test
     fun measureClockUsesTheFastestRoundTrip() = runTest {
         fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))
@@ -577,6 +685,7 @@ class RoomRepositoryRoundTest : JsonTest() {
     private companion object {
         const val T0 = 1_800_000_000_000L
         const val MINUTE = 60_000L
+        const val HOUR = 60 * MINUTE
         val SONG = RoomSong(
             chartId = "0123456789abcdef0123456789abcdef01234567",
             title = "Música",

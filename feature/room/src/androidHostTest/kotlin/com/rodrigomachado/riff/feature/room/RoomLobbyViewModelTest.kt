@@ -124,18 +124,33 @@ class RoomLobbyViewModelTest {
         assertNull(fake.get("salas/ABCD")) // o último a sair apaga a sala
     }
 
-    /** Batimento ao abrir e a cada 20 s enquanto a tela está aberta. */
+    /**
+     * O batimento não é da tela: é da presença na sala (`RoomPresence`), que bate também na partida, no Resultado e na
+     * Biblioteca de escolha.
+     */
     @Test
-    fun heartbeatEvery20Seconds() = runTest(dispatcher) {
+    fun theLobbyLeavesTheHeartbeatToThePresence() = runTest(dispatcher) {
         opened()
-        assertEquals(1, beats())
 
-        advanceTimeBy(19_000)
-        assertEquals(1, beats())
-        advanceTimeBy(1_001)
-        assertEquals(2, beats())
-        advanceTimeBy(20_000)
-        assertEquals(3, beats())
+        advanceTimeBy(60_000)
+
+        assertEquals(0, beats())
+    }
+
+    /** A tela da sala aberta comigo nela (o celular reaberto pelo Android): estou nessa sala, a presença bate. */
+    @Test
+    fun theOpenLobbyIsTheRoomIAmIn() = runTest(dispatcher) {
+        val repository = fake.repository()
+        assertNull(repository.joined)
+        val vm = RoomLobbyViewModel("ABCD", repository)
+        backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+
+        assertEquals("ABCD", repository.joined)
+
+        vm.leave()
+        runCurrent()
+        assertNull(repository.joined)
     }
 
     /** Sem internet ao abrir: avisa e tenta de novo sozinho. */

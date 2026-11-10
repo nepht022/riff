@@ -9,6 +9,9 @@ import com.rodrigomachado.riff.core.room.RoomFormat.SLOTS
 import com.rodrigomachado.riff.core.room.RoundFormat.ROUND
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -38,10 +41,16 @@ class RoomRepository(
     private val clock: () -> Long,
     private val random: Random = Random.Default,
 ) {
-    /** A sala em que este app entrou (criou ou entrou) e ainda não saiu: o PC sai dela ao fechar a janela. */
-    @Volatile
-    var joined: String? = null
-        private set
+    private val joinedCode = MutableStateFlow<String?>(null)
+
+    /**
+     * A sala em que este app entrou (criou ou entrou) e ainda não saiu, ao vivo: a [RoomPresence] bate enquanto há
+     * uma; o PC sai dela ao fechar a janela.
+     */
+    val joinedRoom: StateFlow<String?> = joinedCode.asStateFlow()
+
+    /** A sala em que este app está agora (ver [joinedRoom]). */
+    val joined: String? get() = joinedCode.value
 
     /** O último offset do relógio do servidor medido ([measureClock]); null = ainda não medido. */
     @Volatile
@@ -56,7 +65,7 @@ class RoomRepository(
     suspend fun create(name: String): CreateResult = try {
         val room = RoomFormat.newRoom(auth.uid(), RoomFormat.cleanName(name), device)
         firstFreeCode(room)?.let { code ->
-            joined = code
+            joinedCode.value = code
             CreateResult.Created(code)
         } ?: CreateResult.NoConnection
     } catch (_: NoConnection) {
@@ -71,7 +80,9 @@ class RoomRepository(
      * mantém o `entrouEm` e a vaga.
      */
     suspend fun join(code: String, name: String): JoinResult = try {
-        joinAs(auth.uid(), code, RoomFormat.cleanName(name)).also { if (it is JoinResult.Joined) joined = it.code }
+        joinAs(auth.uid(), code, RoomFormat.cleanName(name)).also {
+            if (it is JoinResult.Joined) joinedCode.value = it.code
+        }
     } catch (_: NoConnection) {
         JoinResult.NoConnection
     } catch (_: RoomHttpError) {
@@ -84,7 +95,7 @@ class RoomRepository(
      * o que este aparelho viu da sala (o primeiro Pronto, as contagens): outra sala pode nascer com o mesmo código.
      */
     suspend fun leave(code: String) {
-        if (joined == code) joined = null
+        joinedCode.compareAndSet(code, null)
         forget(code)
         try {
             leaveAs(auth.uid(), code)
@@ -96,9 +107,18 @@ class RoomRepository(
     }
 
     /**
-     * O batimento (a cada 20 s, enquanto a sala está aberta): grava o `vistoEm` e a `atividadeEm`. Se o dono
-     * sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Sendo o dono,
-     * tiro da sala quem sumiu há mais de 5 min (libera a vaga). Fora da sala, sem internet ou recusado, não faz nada.
+     * A tela da sala [code] aberta comigo nela: estou nessa sala (o celular reaberto pelo Android depois de fechar o
+     * app volta à tela da sala sem passar por [create]/[join]). Só se não estou em outra.
+     */
+    fun stayIn(code: String) {
+        joinedCode.compareAndSet(null, code)
+    }
+
+    /**
+     * O batimento (a cada 20 s, enquanto estou na sala: ver [RoomPresence]): grava o `vistoEm` e a `atividadeEm`. Se
+     * o dono sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Sendo o
+     * dono, tiro da sala quem sumiu há mais de 5 min (libera a vaga) e desfaço a rodada órfã ([repairRound]). Fora da
+     * sala, sem internet ou recusado, não faz nada.
      */
     suspend fun heartbeat(code: String) {
         try {
@@ -148,6 +168,19 @@ class RoomRepository(
         var written = false
         quietly {
             db.patch(RoomFormat.path(code), RoundFormat.chooseSong(auth.uid(), song, myDifficulty))
+            written = true
+        }
+        return written
+    }
+
+    /**
+     * O meu Pronto volta a "não" (só ele: a dificuldade e a música ficam), quando ele sobrou de uma rodada ou música
+     * anterior ([RoomPresence]). Devolve se gravou.
+     */
+    suspend fun clearReady(code: String): Boolean {
+        var written = false
+        quietly {
+            db.patch(RoomFormat.path(code), RoundFormat.clearReady(auth.uid()))
             written = true
         }
         return written
@@ -368,7 +401,39 @@ class RoomRepository(
         // eu acabei de escrever: conto como vivo mesmo que a leitura seja de antes
         val heir = players.firstOrNull { it.uid != owner && (it.uid == me || !it.gone) }
         if (ownerGone && heir?.uid == me) db.patch(path, mapOf(OWNER to me))
-        if (owner == me) removeVanished(path, room, players, me)
+        if (owner == me) {
+            removeVanished(path, room, players, me)
+            repairRound(code, path, room, me)
+        }
+    }
+
+    /**
+     * A rodada que ninguém mais vai terminar (o dono que a começou sumiu, a partida dele fechou sem avisar), desfeita
+     * pelo dono (também o dono novo):
+     * - na partida, passado o fim da música ([RoomSong.durationMs]; sem ela, 15 min) mais 30 s: de volta à sala;
+     * - na contagem, sem começo 25 s (os 15 s do carregamento mais 10) depois de este aparelho vê-la: começa com quem
+     *   carregou ou, sem ninguém carregado, volta à sala.
+     */
+    private suspend fun repairRound(code: String, path: String, json: JSONObject, me: String) {
+        val room = RoomFormat.room(code, json, me, clock())
+        when (room.state) {
+            RoomState.PLAYING -> {
+                val startAt = room.startAt ?: return
+                val end = startAt + (room.song?.durationMs ?: RoomRound.UNKNOWN_SONG_MS) + RoomRound.MATCH_GRACE_MS
+                if (serverNow(code) > end) db.patch(path, RoundFormat.backToLobby())
+            }
+
+            RoomState.COUNTDOWN -> {
+                val now = serverNow(code)
+                val since = countdownSince(code, room.round, now)
+                if (now - since < RoomRound.LOAD_WAIT_MS + RoomRound.COUNTDOWN_GRACE_MS) return
+                val anyLoaded = room.playersInRound().any { it.loadedRound == room.round }
+                val start = now + RoomRound.START_DELAY_MS
+                db.patch(path, if (anyLoaded) RoundFormat.start(start) else RoundFormat.backToLobby())
+            }
+
+            RoomState.LOBBY -> Unit
+        }
     }
 
     /**
