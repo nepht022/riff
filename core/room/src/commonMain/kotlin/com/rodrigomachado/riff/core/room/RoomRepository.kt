@@ -31,13 +31,18 @@ class RoomRepository(
     private val clock: () -> Long,
     private val random: Random = Random.Default,
 ) {
+    /** A sala em que este app entrou (criou ou entrou) e ainda não saiu: o PC sai dela ao fechar a janela. */
+    @Volatile
+    var joined: String? = null
+        private set
+
     /**
      * Cria uma sala com um código sorteado: `PUT` só se o código está livre (`if-match: null_etag`). Código ocupado
      * por uma sala viva: sorteia outro (até 10 vezes); por uma sala morta: apaga a morta e fica com o código.
      */
     suspend fun create(name: String): CreateResult = try {
         val room = RoomFormat.newRoom(auth.uid(), RoomFormat.cleanName(name), device)
-        firstFreeCode(room)?.let { CreateResult.Created(it) } ?: CreateResult.NoConnection
+        firstFreeCode(room)?.let { joined = it; CreateResult.Created(it) } ?: CreateResult.NoConnection
     } catch (_: NoConnection) {
         CreateResult.NoConnection
     } catch (_: RoomHttpError) {
@@ -50,7 +55,7 @@ class RoomRepository(
      * mantém o `entrouEm` e a vaga.
      */
     suspend fun join(code: String, name: String): JoinResult = try {
-        joinAs(auth.uid(), code, RoomFormat.cleanName(name))
+        joinAs(auth.uid(), code, RoomFormat.cleanName(name)).also { if (it is JoinResult.Joined) joined = it.code }
     } catch (_: NoConnection) {
         JoinResult.NoConnection
     } catch (_: RoomHttpError) {
@@ -62,6 +67,7 @@ class RoomRepository(
      * o último a sair apaga a sala. Sem internet não faz nada: quem saiu some em 60 s e o dono passa adiante.
      */
     suspend fun leave(code: String) {
+        if (joined == code) joined = null
         try {
             leaveAs(auth.uid(), code)
         } catch (_: NoConnection) {

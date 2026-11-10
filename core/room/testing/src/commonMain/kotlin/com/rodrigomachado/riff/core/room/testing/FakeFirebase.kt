@@ -10,6 +10,7 @@ import com.rodrigomachado.riff.core.room.RoomHttp
 import com.rodrigomachado.riff.core.room.RoomIdentity
 import com.rodrigomachado.riff.core.room.RoomIdentityStore
 import com.rodrigomachado.riff.core.room.RoomRepository
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -64,6 +65,10 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         set(value) {
             connected.value = value
         }
+
+    /** Travado: os pedidos ficam esperando para sempre (o servidor que não responde). */
+    @Volatile
+    var stalled: Boolean = false
 
     /** Uma escrita para a qual dá true é recusada com 401 (como as regras fariam), sem mudar nada. */
     var refuse: (FirebaseWrite) -> Boolean = { false }
@@ -140,6 +145,7 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
             body: String?,
             headers: Map<String, String>,
         ): HttpReply {
+            if (stalled) awaitCancellation()
             if (!online) throw NoConnection()
             val login = url.startsWith(SIGN_UP_URL) || url.startsWith(REFRESH_URL)
             loginReply?.takeIf { login }?.let { return it }

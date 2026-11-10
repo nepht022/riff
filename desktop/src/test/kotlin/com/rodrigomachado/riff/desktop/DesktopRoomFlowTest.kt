@@ -134,6 +134,32 @@ class DesktopRoomFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
     }
 
+    /** Fechar a janela com a sala aberta sai dela (aqui, o último: a sala é apagada), em vez de virar fantasma. */
+    @Test
+    fun closingTheAppLeavesTheRoom() {
+        openWithRoom()
+        val code = createByClick()
+
+        match.close()
+
+        assertNull(firebase.get("salas/$code"))
+    }
+
+    /** Com o Firebase sem responder, fechar não espera a saída da sala mais que ~2 s. */
+    @Test
+    fun closingTheAppDoesNotWaitLongForAStalledRoom() {
+        openWithRoom()
+        val code = createByClick()
+        firebase.stalled = true
+
+        val start = System.nanoTime()
+        match.close()
+        val closingMs = (System.nanoTime() - start) / NANOS_PER_MS
+
+        assertTrue("fechar levou $closingMs ms", closingMs < CLOSE_LIMIT_MS)
+        assertEquals(ME, firebase.get("salas/$code/dono")) // não saiu: some para os outros em 60 s
+    }
+
     /** Cada botão da escolha, da caixa do código e da sala, só com as setas, Enter e Esc. */
     @Test
     fun onlyKeyboardReachesEveryButton() {
@@ -244,5 +270,9 @@ class DesktopRoomFlowTest {
         const val PC = "PC"
         const val PHONE = "Celular"
         const val MAX_PRESSES = 8
+        const val NANOS_PER_MS = 1_000_000L
+
+        // os ~2 s da espera e uma folga para fechar o banco e o resto com a suíte ocupando o PC
+        const val CLOSE_LIMIT_MS = 4_000L
     }
 }

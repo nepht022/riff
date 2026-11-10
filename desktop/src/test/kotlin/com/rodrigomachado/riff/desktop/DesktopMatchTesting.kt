@@ -58,8 +58,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
 
     val graph: DesktopGraph get() = checkNotNull(opened) { "o app não foi aberto" }
 
+    /** Fecha o app (uma vez só: o teste pode fechar antes do fim, e o @After fecha de novo). */
     fun close() {
         opened?.close()
+        opened = null
     }
 
     /**

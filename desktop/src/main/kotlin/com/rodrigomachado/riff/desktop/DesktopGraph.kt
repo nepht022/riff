@@ -96,7 +96,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
+import kotlin.concurrent.thread
 import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDeviceInfo
 
 /**
@@ -317,6 +319,18 @@ class DesktopGraph(
 
     fun roomLobbyViewModel(code: String) = RoomLobbyViewModel(code, room)
 
+    /**
+     * Fechar a janela com a sala aberta sai dela (passa o dono adiante, ou apaga a sala sendo o último), para não
+     * deixar um jogador fantasma segurando a vaga. Numa thread de fundo, esperando no máximo ~2 s: o HTTP do Java
+     * não se cancela no meio, e o Firebase sem responder não pode segurar o fechamento (sem a saída, o jogador some
+     * para os outros em 60 s e o dono o tira em 5 min).
+     */
+    private fun leaveOpenRoom() {
+        val code = room.joined ?: return
+        thread(isDaemon = true, name = "riff-sair-da-sala") { runBlocking { room.leave(code) } }
+            .join(ROOM_LEAVE_WAIT_MS)
+    }
+
     // O Reportar: o mesmo script do celular; a espera entre relatos vale para o app inteiro (um só relógio).
     private val reportSender = AppsScriptReportSender(reportUrl, reportTransport)
     private val reportCooldown = ReportCooldown()
@@ -335,11 +349,12 @@ class DesktopGraph(
     val gamepad = GlfwGamepad(padSource)
 
     /**
-     * Fecha o Riff: a separação da vez é cancelada (volta à fila, nada pela metade) antes de o banco fechar; a trava
-     * sai por último (um Riff aberto nesse meio-tempo é recusado).
+     * Fecha o Riff: sai da sala aberta (ver [leaveOpenRoom]); a separação da vez é cancelada (volta à fila, nada pela
+     * metade) antes de o banco fechar; a trava sai por último (um Riff aberto nesse meio-tempo é recusado).
      */
     override fun close() {
         try {
+            leaveOpenRoom()
             separationScheduler.close()
             gamepad.close()
             database.close()
@@ -351,6 +366,7 @@ class DesktopGraph(
 }
 
 private const val NANOS_PER_MS = 1_000_000L
+private const val ROOM_LEAVE_WAIT_MS = 2_000L
 private const val LIBRARIES_JSON = "/aboutlibraries.json"
 
 /** Outro Riff já está aberto com a mesma pasta de dados. */

@@ -352,6 +352,24 @@ class RoomRepositoryTest : JsonTest() {
         repository.leave("ABCD") // quem saiu some em 60 s e as regras deixam o dono passar adiante
     }
 
+    /** A sala em que o app está (o PC sai dela ao fechar a janela): criar e entrar marcam, sair desmarca. */
+    @Test
+    fun joinedFollowsCreateJoinAndLeave() = runTest {
+        val repository = fake.repository(random = CodesRandom("ABCD"))
+        assertNull(repository.joined)
+
+        repository.create("Ana")
+        assertEquals("ABCD", repository.joined)
+        repository.leave("ABCD")
+        assertNull(repository.joined)
+
+        fake.seedRoom("EFGH", owner = "bia", players = listOf(FakePlayer("bia")))
+        assertEquals(JoinResult.NotFound, repository.join("ZZZZ", "Ana"))
+        assertNull(repository.joined)
+        repository.join("EFGH", "Ana")
+        assertEquals("EFGH", repository.joined)
+    }
+
     @Test
     fun leaveARoomThatIsGoneDoesNothing() = runTest {
         fake.repository().leave("ZZZZ")
