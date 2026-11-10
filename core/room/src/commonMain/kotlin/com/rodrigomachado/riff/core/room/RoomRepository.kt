@@ -1,10 +1,12 @@
 package com.rodrigomachado.riff.core.room
 
+import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.room.RoomFormat.ACTIVITY
 import com.rodrigomachado.riff.core.room.RoomFormat.OWNER
 import com.rodrigomachado.riff.core.room.RoomFormat.PLAYERS
 import com.rodrigomachado.riff.core.room.RoomFormat.SEEN_AT
 import com.rodrigomachado.riff.core.room.RoomFormat.SLOTS
+import com.rodrigomachado.riff.core.room.RoundFormat.ROUND
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,7 +25,12 @@ import kotlin.random.Random
  * O [clock] (do aparelho) só decide o que o app tenta: sala morta (2 h sem atividade) e jogador que sumiu (60 s sem
  * escrever). Quem confere de verdade são as regras, com a hora do servidor; se o relógio do aparelho errar, a escrita
  * é recusada e o app segue (outro código, o dono fica como está).
+ *
+ * Na M2, a música (`musica`), a rodada (`rodada`, `estado`, `inicio`) e o estado de cada jogador para a música
+ * (`dificuldade`, `pronto`, `musica`, `carregou`, `saiu`). As contas de tempo da rodada (os 30 s do Começar, os 15 s
+ * do carregamento, o começo 3 s depois) usam a hora do servidor estimada pelo [measureClock].
  */
+@Suppress("TooManyFunctions") // a sala inteira (M1 e M2) é uma API só, com uma função por ação mais as escritas
 class RoomRepository(
     private val db: FirebaseDb,
     private val auth: AnonymousAuth,
@@ -35,6 +42,12 @@ class RoomRepository(
     @Volatile
     var joined: String? = null
         private set
+
+    /** O último offset do relógio do servidor medido ([measureClock]); null = ainda não medido. */
+    @Volatile
+    private var offset: Long? = null
+    private val firstReady = mutableMapOf<String, FirstReady>()
+    private val countdowns = mutableMapOf<Pair<String, Int>, Long>()
 
     /**
      * Cria uma sala com um código sorteado: `PUT` só se o código está livre (`if-match: null_etag`). Código ocupado
@@ -117,11 +130,154 @@ class RoomRepository(
         val trees = db.observe(RoomFormat.path(code))
         emitAll(
             combine(trees, ticks) { tree, _ ->
-                (tree as? JSONObject)?.let { RoomFormat.room(code, it, me, clock()) }
-                    ?.takeIf { room -> room.players.any { it.uid == me } }
+                (tree as? JSONObject)?.let { read(code, it, me) }?.takeIf { room -> room.players.any { it.uid == me } }
             },
         )
     }.distinctUntilChanged()
+
+    /**
+     * Escolhe a música (só o dono, só na sala): ela, a minha dificuldade e eu com a música e não pronto. Os outros
+     * conferem a música nova e gravam o próprio estado ([setMe]). Sem internet ou recusado, não faz nada (a sala
+     * observada continua mostrando o que está no banco).
+     */
+    suspend fun chooseSong(code: String, song: RoomSong, myDifficulty: Difficulty) = quietly {
+        db.patch(RoomFormat.path(code), RoundFormat.chooseSong(auth.uid(), song, myDifficulty))
+    }
+
+    /** O meu estado para a música da sala (null = sem dificuldade escolhida). Sem internet ou recusado, nada. */
+    suspend fun setMe(code: String, difficulty: Difficulty?, ready: Boolean, song: SongStatus) = quietly {
+        db.patch(RoomFormat.path(code), RoundFormat.setMe(auth.uid(), difficulty, ready, song))
+    }
+
+    /**
+     * O Começar (só o dono, com o [Room.canStart] pela sala lida agora): a rodada seguinte, em contagem. Devolve se
+     * gravou; false também sem internet ou recusado.
+     */
+    suspend fun startRound(code: String): Boolean = try {
+        val path = RoomFormat.path(code)
+        val json = db.get(path) as? JSONObject
+        val room = json?.let { read(code, it, auth.uid()) }
+        if (room == null || !room.iAmOwner) {
+            false
+        } else {
+            val now = serverNow(code)
+            room.canStart(now).also { can ->
+                if (can) {
+                    db.patch(path, RoundFormat.startRound(room.round + 1))
+                    countdownSince(code, room.round + 1, now)
+                }
+            }
+        }
+    } catch (_: NoConnection) {
+        false
+    } catch (_: RoomHttpError) {
+        false
+    }
+
+    /** A música da rodada [round] carregou (a partida montada, parada). */
+    suspend fun markLoaded(code: String, round: Int) = markRound(code, round) { RoundFormat.loaded(it, round) }
+
+    /** Saí da rodada [round] no meio (não conto mais para ela). */
+    suspend fun markLeft(code: String, round: Int) = markRound(code, round) { RoundFormat.left(it, round) }
+
+    /**
+     * O dono marca o começo da rodada [round] (ainda em contagem) quando todos os que jogam carregaram, ou 15 s
+     * depois do Começar (contados de quando este aparelho viu a contagem: o dono novo conta de quando assumiu):
+     * `partida` com o `inicio` 3 s depois, na hora do servidor. Para ser chamado de tempos em tempos durante a
+     * contagem; fora dela, de outra rodada, ou sem ser o dono, não faz nada.
+     */
+    suspend fun scheduleStartIfDue(code: String, round: Int) = quietly {
+        val path = RoomFormat.path(code)
+        val json = db.get(path) as? JSONObject ?: return@quietly
+        val room = read(code, json, auth.uid())
+        if (!room.iAmOwner || room.round != round || room.state != RoomState.COUNTDOWN) return@quietly
+        val now = serverNow(code)
+        val since = countdownSince(code, round, now)
+        if (RoomRound.allLoaded(room, round) || now - since >= RoomRound.LOAD_WAIT_MS) {
+            db.patch(path, RoundFormat.start(now + RoomRound.START_DELAY_MS))
+        }
+    }
+
+    /** De volta à sala (o dono, ao sair da partida): sem começo marcado. Sem internet ou recusado, nada. */
+    suspend fun backToLobby(code: String) = quietly { db.patch(RoomFormat.path(code), RoundFormat.backToLobby()) }
+
+    /**
+     * Mede a diferença entre o relógio do servidor e o deste aparelho: 3 vezes grava o `vistoEm` (a hora do
+     * servidor) e lê de volta; `offset = vistoEm − (t0 + t1) / 2`, ficando com a ida e volta mais rápida (a de menor
+     * erro). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida (sem internet, recusado), lança
+     * [NoConnection].
+     */
+    suspend fun measureClock(code: String): RoomClock = RoomClock(measureOffset(code), clock)
+
+    private suspend fun measureOffset(code: String): Long {
+        val me = try {
+            auth.uid()
+        } catch (e: RoomHttpError) {
+            throw NoConnection(e)
+        }
+        val path = RoomFormat.path(code)
+        var best: Pair<Long, Long>? = null // ida e volta, offset
+        repeat(CLOCK_TRIES) {
+            val t0 = clock()
+            val seen = try {
+                db.patch(path, mapOf("$PLAYERS/$me/$SEEN_AT" to ServerTime.NOW, ACTIVITY to ServerTime.NOW))
+                db.get("$path/$PLAYERS/$me/$SEEN_AT") as? Number
+            } catch (_: NoConnection) {
+                null // fica com as outras medidas
+            } catch (_: RoomHttpError) {
+                null
+            }
+            val t1 = clock()
+            if (seen != null && (best == null || t1 - t0 < best.first)) {
+                best = t1 - t0 to seen.toLong() - (t0 + t1) / 2
+            }
+        }
+        return (best?.second ?: throw NoConnection()).also { offset = it }
+    }
+
+    /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
+    private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code))
+
+    /** Quando este aparelho viu a contagem da rodada [round] pela primeira vez (hora do servidor). */
+    private fun countdownSince(code: String, round: Int, now: Long): Long =
+        synchronized(countdowns) { countdowns.getOrPut(code to round) { now } }
+
+    /** A sala lida, com o primeiro Pronto que este aparelho viu nesta música. */
+    private fun read(code: String, json: JSONObject, me: String): Room {
+        val room = RoomFormat.room(code, json, me, clock())
+        val tracker = synchronized(firstReady) { firstReady.getOrPut(code) { FirstReady() } }
+        return room.copy(firstReadyAt = tracker.update(room, json.optLong(ACTIVITY)))
+    }
+
+    /**
+     * Grava o `carregou`/`saiu` da rodada [round]. Recusado: relê; se a rodada ainda é essa, tenta de novo; se a sala
+     * já está noutra rodada, a escrita não vale mais e fica por isso.
+     */
+    private suspend fun markRound(code: String, round: Int, write: (String) -> Map<String, Any?>) = quietly {
+        val path = RoomFormat.path(code)
+        val values = write(auth.uid())
+        repeat(MARK_TRIES) {
+            try {
+                db.patch(path, values)
+                return@quietly
+            } catch (e: RoomHttpError) {
+                if (e.code !in REFUSED) throw e
+                val current = (db.get(path) as? JSONObject)?.optInt(ROUND, 0)
+                if (current != round) return@quietly
+            }
+        }
+    }
+
+    /** Uma escrita que, sem internet ou recusada, não faz nada: a sala observada mostra o que está no banco. */
+    private suspend fun quietly(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (_: NoConnection) {
+            // sem internet: a tela continua com a sala como está
+        } catch (_: RoomHttpError) {
+            // recusado (não sou mais o dono, a sala mudou): idem
+        }
+    }
 
     private suspend fun firstFreeCode(room: Map<String, Any?>): String? {
         repeat(CREATE_TRIES) {
@@ -221,6 +377,8 @@ class RoomRepository(
         const val NULL_ETAG = "null_etag"
         const val CREATE_TRIES = 10
         const val JOIN_TRIES = 5
+        const val CLOCK_TRIES = 3
+        const val MARK_TRIES = 2
         const val RECHECK_MS = 5_000L
         const val VANISHED_MS = 5 * 60_000L
         val REFUSED = setOf(401, 403)

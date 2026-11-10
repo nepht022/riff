@@ -73,6 +73,8 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
   apagado na mesma escrita (`inicio: null`).
 - **Jogador (M2):** `dificuldade` (`EASY|MEDIUM|HARD|EXPERT`), `pronto` (bool), `musica` (`tem|baixando|sem`),
   `carregou` e `saiu` iguais à `rodada` da sala depois da escrita. Só o próprio jogador grava (nem o dono).
+  Entrar de novo regrava o jogador inteiro com a `dificuldade`, o `pronto` e a `musica` de antes (sem o
+  `carregou`/`saiu`, que podem ser de uma rodada que já passou).
 - **Leitura:** `salas/{CODIGO}` para qualquer autenticado; nada mais, nem a lista de salas (o código é o segredo).
 
 ### Limitações

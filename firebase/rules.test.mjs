@@ -642,6 +642,24 @@ test('repositoryChooseSongAndSetMeAreAccepted', async () => {
   );
 });
 
+// Entrar de novo (RoomFormat.join): o jogador inteiro regravado com a dificuldade, o Pronto e a música de antes;
+// o carregou/saiu ficam de fora (de uma rodada que pode já ter passado).
+test('repositoryJoinAgainKeepsTheM2Fields', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { entrouEm: 1000, extra: { dificuldade: 'HARD', pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'partida', rodada: 1, inicio: Date.now(), musica: MUSICA },
+  });
+  await assertSucceeds(
+    db('bia').ref('salas/ABCD').update({
+      'jogadores/bia': { ...jogador('Bia', { vaga: 'v2', entrouEm: 1000 }), dificuldade: 'HARD', pronto: true, musica: 'tem' },
+      'vagas/v2': 'bia',
+      atividadeEm: AGORA,
+    }),
+  );
+  const bia = (await lerSemRegras('salas/ABCD/jogadores/bia'));
+  assert.deepEqual({ d: bia.dificuldade, p: bia.pronto, m: bia.musica, c: bia.carregou }, { d: 'HARD', p: true, m: 'tem', c: undefined });
+});
+
 test('repositoryRoundWritesAreAccepted', async () => {
   await semear('ABCD', {
     jogadores: { ana: {}, bia: { extra: { dificuldade: 'HARD', pronto: true, musica: 'tem' } } },

@@ -44,6 +44,8 @@ kotlin {
             kotlin.srcDir(generateRoomConfig)
         }
         commonMain.dependencies {
+            // A Difficulty da música da sala está na API (RoomSong, RoomPlayer).
+            api(project(":core:model"))
             implementation(project(":core:datastore"))
             implementation(libs.kotlinx.coroutines.core)
             // O org.json vem com o Android; no PC entra a biblioteca original.
