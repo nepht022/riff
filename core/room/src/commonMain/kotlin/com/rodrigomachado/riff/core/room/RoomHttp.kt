@@ -1,9 +1,12 @@
 package com.rodrigomachado.riff.core.room
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -73,27 +76,36 @@ object UrlConnectionRoomHttp : RoomHttp {
             }
         }
 
-    // A leitura bloqueia a thread: cancelar a coleta fecha a conexão (awaitClose), o que solta a leitura.
+    // As leituras dos streamings, fora do escopo de quem coleta (ver [stream]).
+    private val readers = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * A leitura bloqueia a thread e o `disconnect()` do Java espera a leitura em andamento (o `close` do stream
+     * "chunked" é sincronizado com o `read`): com o servidor calado, até o tempo esgotado. Por isso a leitura roda
+     * solta, em [readers], e cancelar a coleta só pede o `disconnect()` numa thread de fundo, sem esperar: quem
+     * cancela (a thread da janela no PC) fica livre na hora, e a thread da leitura termina quando o servidor mandar
+     * a próxima linha (o keep-alive do Firebase, a cada ~30 s) ou o tempo esgotar.
+     */
     override fun stream(url: String): Flow<String> = channelFlow {
-        val connection = withContext(Dispatchers.IO) {
-            try {
-                open(url, STREAM_READ_TIMEOUT_MS).apply { setRequestProperty("Accept", "text/event-stream") }
-            } catch (e: IOException) {
-                throw NoConnection(e)
-            }
+        val connection = try {
+            open(url, STREAM_READ_TIMEOUT_MS).apply { setRequestProperty("Accept", "text/event-stream") }
+        } catch (e: IOException) {
+            throw NoConnection(e)
         }
-        launch(Dispatchers.IO) {
+        readers.launch {
             try {
                 val code = connection.responseCode
                 if (code != HTTP_OK) throw RoomHttpError(code)
                 connection.inputStream.bufferedReader().useLines { lines -> lines.forEach { send(it) } }
+                channel.close()
             } catch (e: IOException) {
-                throw NoConnection(e)
+                channel.close(NoConnection(e))
+            } catch (e: RoomHttpError) {
+                channel.close(e)
             }
-            channel.close()
         }
-        awaitClose { connection.disconnect() }
-    }
+        awaitClose { readers.launch { connection.disconnect() } }
+    }.flowOn(Dispatchers.IO)
 
     private fun open(url: String, readTimeoutMs: Int) = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
         connectTimeout = TIMEOUT_MS
