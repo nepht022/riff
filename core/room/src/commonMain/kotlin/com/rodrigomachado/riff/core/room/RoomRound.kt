@@ -2,7 +2,8 @@ package com.rodrigomachado.riff.core.room
 
 /**
  * As regras da rodada (ver os Global Constraints do plano da M2), sobre a [Room] lida:
- * - Começar: pelo menos 2 vivos prontos com a música, e todos os vivos com a música prontos, ou 30 s depois do
+ * - Começar: o dono pronto com a música (é ele quem marca o começo: sem ele na rodada, a sala ficaria presa na
+ *   contagem), pelo menos 2 vivos prontos com a música, e todos os vivos com a música prontos, ou 30 s depois do
  *   primeiro Pronto ("Começar com quem está pronto");
  * - começo: quando todos os da rodada carregaram, ou 15 s depois do Começar com quem carregou; a música começa 3 s
  *   depois, na hora do servidor.
@@ -17,7 +18,7 @@ object RoomRound {
         if (room.state != RoomState.LOBBY || room.song == null) return false
         val withSong = room.players.filter { !it.gone && it.song == SongStatus.HAS }
         val ready = withSong.filter(::isReady)
-        if (ready.size < MIN_PLAYERS) return false
+        if (ready.size < MIN_PLAYERS || ready.none { it.uid == room.owner }) return false
         val waited = room.firstReadyAt?.let { nowServer - it >= READY_WAIT_MS } ?: false
         return ready.size == withSong.size || waited
     }

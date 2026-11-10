@@ -250,6 +250,19 @@ class RoomRepositoryRoundTest : JsonTest() {
     }
 
     @Test
+    fun startRoundWithTheOwnerNotReadyDoesNothing() = runTest {
+        val owner = FakePlayer("u1", difficulty = Difficulty.HARD, song = SongStatus.HAS)
+        seedSongRoom(owner, readyPlayer("bia"), readyPlayer("caio"))
+        val repository = fake.repository()
+        assertFalse(repository.startRound("ABCD"))
+
+        now += 60_000
+
+        assertFalse(repository.startRound("ABCD")) // nem depois dos 30 s
+        assertEquals("sala", room()!!.getString("estado"))
+    }
+
+    @Test
     fun startRoundAfter30sStartsWithWhoIsReady() = runTest {
         val notReady = FakePlayer("caio", difficulty = Difficulty.HARD, song = SongStatus.HAS)
         seedSongRoom(readyPlayer("u1"), readyPlayer("bia"), notReady)

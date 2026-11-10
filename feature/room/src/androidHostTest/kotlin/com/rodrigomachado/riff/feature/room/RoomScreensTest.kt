@@ -165,6 +165,20 @@ class RoomScreensTest {
         assertEquals(listOf("choose"), events)
     }
 
+    /** O dono com a música e sem o Pronto: o Começar desligado e o aviso para ficar pronto. */
+    @Test
+    fun ownerNotReadyIsAskedToGetReady() {
+        val room = sampleRoom("Ana", "Bia", "Caio").withSong()
+            .withPlayer("Ana")
+            .withPlayer("Bia", ready = true)
+            .withPlayer("Caio", ready = true)
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        composeRule.onNodeWithText("Começar").assertIsNotEnabled()
+        composeRule.onNodeWithText("Fique pronto para começar").assertExists()
+        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos").assertDoesNotExist()
+    }
+
     @Test
     fun guestWithoutASongJustWaits() {
         showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia", me = "Bia")))

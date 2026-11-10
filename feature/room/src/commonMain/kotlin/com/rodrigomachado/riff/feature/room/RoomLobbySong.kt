@@ -36,6 +36,7 @@ import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.room.resources.Res
+import com.rodrigomachado.riff.feature.room.resources.room_be_ready
 import com.rodrigomachado.riff.feature.room.resources.room_change_song
 import com.rodrigomachado.riff.feature.room.resources.room_checking_song
 import com.rodrigomachado.riff.feature.room.resources.room_choose_song
@@ -198,7 +199,10 @@ private fun DifficultyPicker(
     }
 }
 
-/** O Começar do dono ("com quem está pronto" depois dos 30 s), o aviso dos 2 prontos, ou "Começando…". */
+/**
+ * O Começar do dono ("com quem está pronto" depois dos 30 s), o aviso (ficar pronto, ou os 2 prontos), ou
+ * "Começando…".
+ */
 @Composable
 internal fun StartSection(state: RoomLobbyUiState.Ready, onStart: () -> Unit) {
     Column(
@@ -217,7 +221,11 @@ internal fun StartSection(state: RoomLobbyUiState.Ready, onStart: () -> Unit) {
             enabled = state.canStart,
             sound = MenuSound.CONFIRM,
         )
-        if (state.readyCount < MIN_READY) Note(stringResource(Res.string.room_need_two), RiffColors.PaperDim)
+        when (state.startHint) {
+            StartHint.BE_READY -> Note(stringResource(Res.string.room_be_ready), RiffColors.PaperDim)
+            StartHint.NEED_TWO -> Note(stringResource(Res.string.room_need_two), RiffColors.PaperDim)
+            null -> Unit
+        }
     }
 }
 
@@ -232,6 +240,5 @@ private fun Note(text: String, color: Color = RiffColors.Paper) {
     )
 }
 
-private const val MIN_READY = 2
 private const val DISABLED_ALPHA = 0.45f
 private val CHIP_BORDER = 1.dp

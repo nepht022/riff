@@ -352,6 +352,33 @@ class RoomLobbyViewModelTest {
         assertTrue(vm.ready().withWhoIsReady)
     }
 
+    /** O dono que não está pronto não começa (nem depois dos 30 s): o aviso pede que ele fique pronto. */
+    @Test
+    fun startIsOffWhileTheOwnerIsNotReady() = runTest(dispatcher) {
+        seedWithSong("u1", ready("u1", ready = false), ready("u2"), ready("u3"))
+        val vm = opened(library = FakeRoomLibrary(CHART_A))
+        assertFalse(vm.ready().canStart)
+        assertEquals(StartHint.BE_READY, vm.ready().startHint)
+
+        now += 30_000
+        advanceTimeBy(1_001)
+        assertFalse(vm.ready().canStart)
+        assertEquals(StartHint.BE_READY, vm.ready().startHint)
+
+        vm.toggleReady()
+        runCurrent()
+        assertTrue(vm.ready().canStart)
+        assertNull(vm.ready().startHint)
+    }
+
+    @Test
+    fun startHintAsksForTwoReadyWhenTheOwnerIsTheOnlyOne() = runTest(dispatcher) {
+        seedWithSong("u1", ready("u1"), ready("u2", ready = false))
+        val vm = opened(library = FakeRoomLibrary(CHART_A))
+
+        assertEquals(StartHint.NEED_TWO, vm.ready().startHint)
+    }
+
     @Test
     fun countdownOpensTheMatchForReadyPlayersOnly() = runTest(dispatcher) {
         seedWithSong("u2", ready("u2"), ready("u1"), FakePlayer("u3"))

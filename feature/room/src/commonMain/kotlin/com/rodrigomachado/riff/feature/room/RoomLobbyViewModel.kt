@@ -41,6 +41,15 @@ sealed interface MySong {
     data class Missing(val canDownload: Boolean, val failed: Boolean = false) : MySong
 }
 
+/** Por que o Começar do dono está desligado (o aviso embaixo dele). */
+enum class StartHint {
+    /** O dono não está pronto: ele joga a rodada (é quem marca o começo). */
+    BE_READY,
+
+    /** Menos de 2 prontos. */
+    NEED_TWO,
+}
+
 sealed interface RoomLobbyUiState {
     data object Loading : RoomLobbyUiState
 
@@ -61,6 +70,15 @@ sealed interface RoomLobbyUiState {
 
         /** Vivos prontos para tocar (Pronto, com a música e a dificuldade). */
         val readyCount: Int get() = room.players.count { !it.gone && it.isReady() }
+
+        /** O aviso do Começar do dono (null = nenhum, ou não sou o dono). */
+        val startHint: StartHint?
+            get() = when {
+                !room.iAmOwner -> null
+                room.song != null && me?.isReady() != true -> StartHint.BE_READY
+                readyCount < MIN_READY -> StartHint.NEED_TWO
+                else -> null
+            }
 
         /** Começar habilitado sem todos os que têm a música prontos: passou dos 30 s ("com quem está pronto"). */
         val withWhoIsReady: Boolean
@@ -305,6 +323,8 @@ open class RoomLobbyViewModel(
         const val STOP_MS = 5_000L
     }
 }
+
+private const val MIN_READY = 2
 
 private fun Room.player(uid: String): RoomPlayer? = players.firstOrNull { it.uid == uid }
 

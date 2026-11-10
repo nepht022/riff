@@ -58,6 +58,18 @@ class RoomRoundTest {
         assertTrue(room(player("ana"), player("bia")).canStart(T0))
     }
 
+    /** O dono que não joga não começa: a rodada ficaria sem quem marca o começo (a sala presa na contagem). */
+    @Test
+    fun theOwnerMustBeReadyToStart() {
+        val ownerNotReady = room(player("ana", ready = false), player("bia"), player("caio"))
+        val ownerWithoutTheSong = room(player("ana", song = SongStatus.MISSING), player("bia"), player("caio"))
+        val ownerGone = room(player("ana", gone = true), player("bia"), player("caio"))
+
+        assertFalse(ownerNotReady.canStart(T0 + HOUR))
+        assertFalse(ownerWithoutTheSong.canStart(T0 + HOUR))
+        assertFalse(ownerGone.canStart(T0 + HOUR))
+    }
+
     @Test
     fun aPlayerWithTheSongNotReadyWaits30sFromTheFirstReady() {
         val room = room(player("ana"), player("bia"), player("caio", ready = false))
