@@ -43,13 +43,13 @@ internal fun Hud(
     hud: HudState,
     frame: () -> Long,
     reducedMotion: Boolean,
-    onPause: () -> Unit,
+    onPause: (() -> Unit)?,
     modifier: Modifier,
 ) {
     Box(modifier.padding(Spacing.md)) {
         // Cada um no seu canto: o placar crescendo não empurra o Pausar, que fica sempre no centro.
         ScoreText(hud.score, Modifier.align(Alignment.TopStart))
-        PauseButton(onPause, Modifier.align(Alignment.TopCenter))
+        onPause?.let { PauseButton(it, Modifier.align(Alignment.TopCenter)) }
         MultiplierStamp(hud.multiplier, Modifier.align(Alignment.TopEnd))
         ComboText(hud, Modifier.align(Alignment.TopCenter).padding(top = Spacing.xl * 2))
         JudgmentPop(session, hud, frame, reducedMotion, Modifier.align(Alignment.Center))
@@ -64,7 +64,7 @@ internal fun Hud(
  * esquerda (junto da pista), multiplicador e Pausar à direita. O julgamento fica na pista ([JudgmentPop]).
  */
 @Composable
-internal fun SideHud(hud: HudState, onPause: () -> Unit, highwayWidth: Dp, modifier: Modifier) {
+internal fun SideHud(hud: HudState, onPause: (() -> Unit)?, highwayWidth: Dp, modifier: Modifier) {
     Row(modifier) {
         Box(Modifier.weight(1f).fillMaxHeight().padding(Spacing.md)) {
             Column(
@@ -85,7 +85,7 @@ internal fun SideHud(hud: HudState, onPause: () -> Unit, highwayWidth: Dp, modif
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             MultiplierStamp(hud.multiplier)
-            PauseButton(onPause, Modifier)
+            onPause?.let { PauseButton(it, Modifier) }
         }
     }
 }

@@ -54,7 +54,8 @@ function novaSala(dono, nome = 'Ana') {
 }
 
 // Grava uma sala sem passar pelas regras (estado inicial dos testes), com tempos escolhidos pelo teste.
-async function semear(codigo, { dono = 'ana', jogadores = { ana: {} }, atividadeEm = Date.now() } = {}) {
+// `sala` acrescenta campos da sala (estado, rodada, musica...); `extra` num jogador acrescenta campos dele.
+async function semear(codigo, { dono = 'ana', jogadores = { ana: {} }, atividadeEm = Date.now(), sala = {} } = {}) {
   const agora = Date.now();
   const lista = {};
   const vagas = {};
@@ -67,6 +68,7 @@ async function semear(codigo, { dono = 'ana', jogadores = { ana: {} }, atividade
       vaga,
       entrouEm: opcoes.entrouEm ?? agora,
       vistoEm: opcoes.vistoEm ?? agora,
+      ...opcoes.extra,
     };
   });
   await env.withSecurityRulesDisabled(async (ctx) => {
@@ -77,6 +79,7 @@ async function semear(codigo, { dono = 'ana', jogadores = { ana: {} }, atividade
       atividadeEm,
       jogadores: lista,
       vagas,
+      ...sala,
     });
   });
 }
@@ -395,6 +398,360 @@ test('repositoryOwnerRemovesVanishedPlayersIsAccepted', async () => {
   await semear('EFGH', { jogadores: { ana: {}, bia: { vistoEm: agora - 10 * MINUTO }, eva: { vaga: 'v2' } } });
   await assertSucceeds(db('ana').ref('salas/EFGH').update({ 'jogadores/bia': null }));
   assert.deepEqual((await lerSemRegras('salas/EFGH')).vagas, { v1: 'ana', v2: 'eva' });
+});
+
+// --- M2: a música, a rodada e o começo ---
+
+// A música como o RoomRepository grava (chartId = SHA-1 das notas, em hexadecimal minúsculo).
+const MUSICA = {
+  chartId: '0123456789abcdef0123456789abcdef01234567',
+  titulo: 'Teen Spirit',
+  artista: 'Nirvana',
+  dificuldades: 'EASY,MEDIUM,HARD,EXPERT',
+  duracaoMs: 300_000,
+  encore: { md5: 'a07d209baccd2d58042d81b869a0077e', video: false, charter: 'highfine' },
+};
+
+test('ownerChoosesTheSong', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} } });
+  await assertSucceeds(db('ana').ref('salas/ABCD/musica').set(MUSICA));
+  assert.deepEqual((await lerSemRegras('salas/ABCD')).musica, MUSICA);
+  // Trocar de música; sem Encore e sem duração também vale.
+  const { encore, duracaoMs, ...local } = MUSICA;
+  await assertSucceeds(db('ana').ref('salas/ABCD/musica').set({ ...local, chartId: 'f'.repeat(40) }));
+  // Tirar a música (nenhuma escolhida).
+  await assertSucceeds(db('ana').ref('salas/ABCD/musica').remove());
+  // Só na sala: durante a contagem ou a partida a música não muda.
+  await semear('EFGH', { sala: { estado: 'contagem', rodada: 1, musica: MUSICA } });
+  await assertFails(db('ana').ref('salas/EFGH/musica').set({ ...MUSICA, titulo: 'Outra' }));
+});
+
+test('guestCannotChooseTheSong', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { musica: MUSICA } });
+  await assertFails(db('bia').ref('salas/ABCD/musica').set({ ...MUSICA, titulo: 'Outra' }));
+  await assertFails(db('bia').ref('salas/ABCD/musica/titulo').set('Outra'));
+  await assertFails(db('bia').ref('salas/ABCD/musica').remove());
+  await assertFails(db('zeca').ref('salas/ABCD/musica').set(MUSICA));
+  await assertFails(db(null).ref('salas/ABCD/musica').set(MUSICA));
+});
+
+test('songFieldsAreValidated', async () => {
+  await semear('ABCD');
+  const musica = db('ana').ref('salas/ABCD/musica');
+  await assertSucceeds(musica.set({ ...MUSICA, titulo: 'T'.repeat(200), artista: 'A'.repeat(200), dificuldades: 'HARD' }));
+  await assertSucceeds(musica.set({ ...MUSICA, encore: { md5: MUSICA.encore.md5, video: true } }));
+  const ruins = [
+    { ...MUSICA, chartId: 'a'.repeat(39) },
+    { ...MUSICA, chartId: 'a'.repeat(41) },
+    { ...MUSICA, chartId: 'A'.repeat(40) },
+    { ...MUSICA, chartId: 'g'.repeat(40) },
+    { ...MUSICA, chartId: 42 },
+    { ...MUSICA, titulo: 'T'.repeat(201) },
+    { ...MUSICA, titulo: 7 },
+    { ...MUSICA, artista: 'A'.repeat(201) },
+    { ...MUSICA, dificuldades: '' },
+    { ...MUSICA, dificuldades: 'EASY,' },
+    { ...MUSICA, dificuldades: 'easy' },
+    { ...MUSICA, dificuldades: 'EASY;HARD' },
+    { ...MUSICA, dificuldades: 'EASY,INSANE' },
+    { ...MUSICA, dificuldades: 'EASYHARD' },
+    { ...MUSICA, dificuldades: 'EASY, HARD' },
+    { ...MUSICA, duracaoMs: -1 },
+    { ...MUSICA, duracaoMs: '300000' },
+    { ...MUSICA, encore: { ...MUSICA.encore, md5: 'a'.repeat(31) } },
+    { ...MUSICA, encore: { ...MUSICA.encore, md5: 'a'.repeat(33) } },
+    { ...MUSICA, encore: { ...MUSICA.encore, md5: 'z'.repeat(32) } },
+    { ...MUSICA, encore: { ...MUSICA.encore, video: 'nao' } },
+    { ...MUSICA, encore: { ...MUSICA.encore, charter: 'C'.repeat(201) } },
+    { ...MUSICA, encore: { video: false } },
+    { ...MUSICA, encore: { ...MUSICA.encore, lixo: 1 } },
+    { ...MUSICA, lixo: 1 },
+    { titulo: 'Sem chartId', artista: 'X', dificuldades: 'EASY' },
+    { chartId: MUSICA.chartId, artista: 'X', dificuldades: 'EASY' },
+    { chartId: MUSICA.chartId, titulo: 'X', artista: 'X' },
+  ];
+  for (const ruim of ruins) {
+    await assertFails(musica.set(ruim));
+  }
+});
+
+test('ownerStartsARoundByOne', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { musica: MUSICA } });
+  const sala = db('ana').ref('salas/ABCD');
+  // A primeira rodada é 1 (sem rodada antes = 0).
+  await assertFails(sala.update({ estado: 'contagem', rodada: 2 }));
+  await assertFails(sala.update({ estado: 'contagem', rodada: 0 }));
+  await assertFails(sala.update({ estado: 'contagem', rodada: '1' }));
+  // Contagem sem subir a rodada, ou a rodada sem a contagem: recusado.
+  await assertFails(sala.update({ estado: 'contagem' }));
+  await assertFails(sala.update({ rodada: 1 }));
+  await assertSucceeds(sala.update({ estado: 'contagem', rodada: 1 }));
+  // Repetir a contagem da mesma rodada (o app tentando de novo) vale; a rodada não volta nem pula.
+  await assertSucceeds(sala.update({ estado: 'contagem' }));
+  await assertFails(sala.update({ estado: 'contagem', rodada: 1 }));
+  await assertFails(sala.update({ estado: 'contagem', rodada: 3 }));
+  await assertFails(db('ana').ref('salas/ABCD/rodada').remove());
+  // Volta à sala e começa a próxima.
+  await assertSucceeds(sala.update({ estado: 'sala' }));
+  await assertFails(sala.update({ estado: 'contagem', rodada: 3 }));
+  await assertSucceeds(sala.update({ estado: 'contagem', rodada: 2 }));
+  const depois = await lerSemRegras('salas/ABCD');
+  assert.equal(depois.rodada, 2);
+  assert.equal(depois.estado, 'contagem');
+  // O convidado não começa.
+  await assertSucceeds(sala.update({ estado: 'sala' }));
+  await assertFails(db('bia').ref('salas/ABCD').update({ estado: 'contagem', rodada: 3 }));
+  await assertFails(db('bia').ref('salas/ABCD/rodada').set(3));
+});
+
+test('inicioMustBeSoon', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { estado: 'contagem', rodada: 1, musica: MUSICA } });
+  const sala = db('ana').ref('salas/ABCD');
+  await assertFails(sala.update({ estado: 'partida', inicio: Date.now() - 5000 }));
+  await assertFails(sala.update({ estado: 'partida', inicio: Date.now() + 60_000 }));
+  await assertFails(sala.update({ estado: 'partida', inicio: 'logo' }));
+  // A partida sempre com o inicio.
+  await assertFails(sala.update({ estado: 'partida' }));
+  await assertSucceeds(sala.update({ estado: 'partida', inicio: Date.now() + 3000 }));
+  await assertSucceeds(sala.update({ estado: 'partida', inicio: AGORA }));
+  await assertSucceeds(sala.update({ inicio: Date.now() + 15_000 }));
+  // O inicio só existe na partida: na sala (ou começando da sala direto na partida) é recusado.
+  await semear('EFGH', { jogadores: { ana: {}, bia: {} }, sala: { rodada: 1, musica: MUSICA } });
+  await assertFails(db('ana').ref('salas/EFGH/inicio').set(Date.now() + 3000));
+  await assertFails(db('ana').ref('salas/EFGH').update({ estado: 'partida', inicio: Date.now() + 3000 }));
+});
+
+test('onlyOwnerSetsInicio', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { estado: 'contagem', rodada: 1, musica: MUSICA } });
+  await assertFails(db('bia').ref('salas/ABCD').update({ estado: 'partida', inicio: Date.now() + 3000 }));
+  await assertFails(db('bia').ref('salas/ABCD/inicio').set(Date.now() + 3000));
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ estado: 'partida', inicio: Date.now() + 3000 }));
+  await assertFails(db('bia').ref('salas/ABCD/inicio').remove());
+  // Tirar o inicio sem sair da partida, ou voltar à sala deixando o inicio: recusado.
+  await assertFails(db('ana').ref('salas/ABCD/inicio').remove());
+  await assertFails(db('ana').ref('salas/ABCD').update({ estado: 'sala' }));
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ estado: 'sala', inicio: null }));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.equal(sala.estado, 'sala');
+  assert.equal(sala.inicio, undefined);
+});
+
+test('playerSetsItsDifficultyReadyAndSong', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { musica: MUSICA } });
+  const bia = db('bia').ref('salas/ABCD');
+  for (const dificuldade of ['EASY', 'MEDIUM', 'HARD', 'EXPERT']) {
+    await assertSucceeds(bia.update({ 'jogadores/bia/dificuldade': dificuldade }));
+  }
+  for (const musica of ['tem', 'baixando', 'sem']) {
+    await assertSucceeds(bia.update({ 'jogadores/bia/musica': musica, 'jogadores/bia/pronto': musica === 'tem' }));
+  }
+  await assertSucceeds(bia.update({ 'jogadores/bia/dificuldade': null, 'jogadores/bia/pronto': false }));
+  await assertFails(bia.update({ 'jogadores/bia/dificuldade': 'hard' }));
+  await assertFails(bia.update({ 'jogadores/bia/dificuldade': 'INSANE' }));
+  await assertFails(bia.update({ 'jogadores/bia/pronto': 'sim' }));
+  await assertFails(bia.update({ 'jogadores/bia/musica': 'talvez' }));
+  await assertFails(bia.update({ 'jogadores/bia/musica': true }));
+  // Só o próprio jogador (nem o dono mexe no estado dos outros).
+  await assertFails(bia.update({ 'jogadores/ana/pronto': true }));
+  await assertFails(db('ana').ref('salas/ABCD').update({ 'jogadores/bia/pronto': true }));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.equal(sala.jogadores.bia.musica, 'sem');
+  assert.equal(sala.jogadores.bia.pronto, false);
+});
+
+test('loadedMustBeTheCurrentRound', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { estado: 'contagem', rodada: 2, musica: MUSICA } });
+  const carregou = db('bia').ref('salas/ABCD/jogadores/bia/carregou');
+  await assertFails(carregou.set(1));
+  await assertFails(carregou.set(3));
+  await assertFails(carregou.set('2'));
+  await assertSucceeds(carregou.set(2));
+  await assertFails(db('ana').ref('salas/ABCD/jogadores/bia/carregou').set(2));
+  // Sem rodada nenhuma, nada carregou.
+  await semear('EFGH', { jogadores: { ana: {}, bia: {} } });
+  await assertFails(db('bia').ref('salas/EFGH/jogadores/bia/carregou').set(0));
+  await assertFails(db('bia').ref('salas/EFGH/jogadores/bia/carregou').set(1));
+});
+
+test('leftMustBeTheCurrentRound', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: {} },
+    sala: { estado: 'partida', rodada: 2, inicio: Date.now(), musica: MUSICA },
+  });
+  const saiu = db('bia').ref('salas/ABCD/jogadores/bia/saiu');
+  await assertFails(saiu.set(1));
+  await assertFails(saiu.set(3));
+  await assertFails(saiu.set(true));
+  await assertSucceeds(saiu.set(2));
+  await assertFails(db('ana').ref('salas/ABCD/jogadores/bia/saiu').set(2));
+  await semear('EFGH', { jogadores: { ana: {}, bia: {} } });
+  await assertFails(db('bia').ref('salas/EFGH/jogadores/bia/saiu').set(0));
+});
+
+test('extraPlayerFieldsStillRefused', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { estado: 'contagem', rodada: 1, musica: MUSICA } });
+  await assertFails(db('bia').ref('salas/ABCD/jogadores/bia/pontos').set(999));
+  await assertFails(db('bia').ref('salas/ABCD/jogadores/bia/temMusica').set(true));
+  await assertFails(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/pronto': true, 'jogadores/bia/lixo': 1 }));
+  await assertFails(db('ana').ref('salas/ABCD/placar').set({ 1: {} }));
+  // Os campos novos não dispensam os da M1.
+  await assertFails(
+    db('caio').ref('salas/ABCD').update({ 'jogadores/caio': { dificuldade: 'EASY', pronto: true }, 'vagas/v3': 'caio' }),
+  );
+});
+
+// --- as escritas novas do RoomRepository (Task 2 da M2), exatamente como o app as fará ---
+
+test('repositoryChooseSongAndSetMeAreAccepted', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} } });
+  // chooseSong (dono): a música, a dificuldade dele, "tem" e não pronto, e a atividade.
+  await assertSucceeds(
+    db('ana').ref('salas/ABCD').update({
+      musica: MUSICA,
+      'jogadores/ana/dificuldade': 'EXPERT',
+      'jogadores/ana/musica': 'tem',
+      'jogadores/ana/pronto': false,
+      atividadeEm: AGORA,
+    }),
+  );
+  // setMe (qualquer jogador): dificuldade (ou null), pronto, musica e a atividade.
+  await assertSucceeds(
+    db('bia').ref('salas/ABCD').update({
+      'jogadores/bia/dificuldade': null,
+      'jogadores/bia/pronto': false,
+      'jogadores/bia/musica': 'baixando',
+      atividadeEm: AGORA,
+    }),
+  );
+  await assertSucceeds(
+    db('bia').ref('salas/ABCD').update({
+      'jogadores/bia/dificuldade': 'HARD',
+      'jogadores/bia/pronto': true,
+      'jogadores/bia/musica': 'tem',
+      atividadeEm: AGORA,
+    }),
+  );
+  // O batimento da M1 continua aceito com os campos novos.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/vistoEm': AGORA, atividadeEm: AGORA }));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.equal(sala.musica.chartId, MUSICA.chartId);
+  assert.equal(sala.jogadores.ana.dificuldade, 'EXPERT');
+  assert.deepEqual(
+    { d: sala.jogadores.bia.dificuldade, p: sala.jogadores.bia.pronto, m: sala.jogadores.bia.musica },
+    { d: 'HARD', p: true, m: 'tem' },
+  );
+});
+
+// Entrar de novo (RoomFormat.join): o jogador inteiro regravado com a dificuldade, o Pronto e a música de antes;
+// o carregou/saiu ficam de fora (de uma rodada que pode já ter passado).
+test('repositoryJoinAgainKeepsTheM2Fields', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { entrouEm: 1000, extra: { dificuldade: 'HARD', pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'partida', rodada: 1, inicio: Date.now(), musica: MUSICA },
+  });
+  await assertSucceeds(
+    db('bia').ref('salas/ABCD').update({
+      'jogadores/bia': { ...jogador('Bia', { vaga: 'v2', entrouEm: 1000 }), dificuldade: 'HARD', pronto: true, musica: 'tem' },
+      'vagas/v2': 'bia',
+      atividadeEm: AGORA,
+    }),
+  );
+  const bia = (await lerSemRegras('salas/ABCD/jogadores/bia'));
+  assert.deepEqual({ d: bia.dificuldade, p: bia.pronto, m: bia.musica, c: bia.carregou }, { d: 'HARD', p: true, m: 'tem', c: undefined });
+});
+
+test('repositoryRoundWritesAreAccepted', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { extra: { dificuldade: 'HARD', pronto: true, musica: 'tem' } } },
+    sala: { musica: MUSICA },
+  });
+  const ana = db('ana').ref('salas/ABCD');
+  const bia = db('bia').ref('salas/ABCD');
+  // startRound (dono): contagem, rodada + 1, sem inicio, e a atividade.
+  await assertFails(bia.update({ estado: 'contagem', rodada: 1, inicio: null, atividadeEm: AGORA }));
+  await assertSucceeds(ana.update({ estado: 'contagem', rodada: 1, inicio: null, atividadeEm: AGORA }));
+  // markLoaded (cada um): a rodada que carregou.
+  await assertSucceeds(bia.update({ 'jogadores/bia/carregou': 1 }));
+  await assertSucceeds(ana.update({ 'jogadores/ana/carregou': 1 }));
+  // scheduleStartIfDue (dono): partida e inicio = agora do servidor + 3 s (calculado pelo relógio medido).
+  await assertSucceeds(ana.update({ estado: 'partida', inicio: Date.now() + 3000, atividadeEm: AGORA }));
+  // markLeft (cada um): a rodada que abandonou.
+  await assertSucceeds(bia.update({ 'jogadores/bia/saiu': 1 }));
+  // backToLobby (dono): sala e sem inicio.
+  await assertSucceeds(ana.update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  // A próxima rodada com o incremento do servidor também vale.
+  await assertSucceeds(ana.update({ estado: 'contagem', rodada: { '.sv': { increment: 1 } }, inicio: null }));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.equal(sala.rodada, 2);
+  assert.equal(sala.jogadores.bia.carregou, 1);
+  assert.equal(sala.jogadores.bia.saiu, 1);
+});
+
+test('repositoryNewOwnerFinishesTheCountdown', async () => {
+  const agora = Date.now();
+  // O dono some na contagem: o herdeiro assume (PATCH só do dono, como na M1) e depois marca o começo.
+  await semear('ABCD', {
+    jogadores: { ana: { vistoEm: agora - 90_000 }, bia: { extra: { pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'contagem', rodada: 1, musica: MUSICA },
+  });
+  const bia = db('bia').ref('salas/ABCD');
+  await assertFails(bia.update({ estado: 'partida', inicio: Date.now() + 3000 }));
+  // Assumir e começar na mesma escrita não vale: o inicio confere o dono de antes da escrita.
+  await assertFails(bia.update({ dono: 'bia', estado: 'partida', inicio: Date.now() + 3000 }));
+  await assertSucceeds(bia.update({ dono: 'bia' }));
+  await assertSucceeds(bia.update({ estado: 'partida', inicio: Date.now() + 3000, atividadeEm: AGORA }));
+  assert.equal((await lerSemRegras('salas/ABCD')).estado, 'partida');
+});
+
+// --- as escritas novas da revisão final da M2 (RoomPresence e a rodada órfã) ---
+
+test('repositoryClearReadyIsAccepted', async () => {
+  await semear('ABCD', {
+    jogadores: { ana: {}, bia: { extra: { dificuldade: 'HARD', pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'sala', rodada: 1, musica: MUSICA },
+  });
+  // clearReady (cada um, para si): só o pronto e a atividade.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/pronto': false, atividadeEm: AGORA }));
+  // O de outro jogador, não.
+  await assertFails(db('ana').ref('salas/ABCD').update({ 'jogadores/bia/pronto': false, atividadeEm: AGORA }));
+  const bia = await lerSemRegras('salas/ABCD/jogadores/bia');
+  assert.deepEqual({ p: bia.pronto, d: bia.dificuldade, m: bia.musica }, { p: false, d: 'HARD', m: 'tem' });
+});
+
+test('repositoryOrphanRoundRepairIsAccepted', async () => {
+  const agora = Date.now();
+  // A contagem órfã sem ninguém carregado: o dono (o novo, depois de assumir) volta à sala direto da contagem.
+  await semear('ABCD', {
+    jogadores: { ana: { vistoEm: agora - 90_000 }, bia: { extra: { pronto: true, musica: 'tem' } } },
+    sala: { estado: 'contagem', rodada: 1, musica: MUSICA },
+  });
+  const bia = db('bia').ref('salas/ABCD');
+  await assertSucceeds(bia.update({ dono: 'bia' }));
+  await assertSucceeds(bia.update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  // A partida órfã (o inicio bem no passado): de volta à sala.
+  await semear('EFGH', {
+    dono: 'bia',
+    jogadores: { bia: { extra: { pronto: true, musica: 'tem', carregou: 1 } } },
+    sala: { estado: 'partida', rodada: 1, inicio: agora - HORA, musica: MUSICA },
+  });
+  await assertSucceeds(db('bia').ref('salas/EFGH').update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  assert.equal((await lerSemRegras('salas/ABCD')).estado, 'sala');
+  assert.equal((await lerSemRegras('salas/EFGH')).inicio, undefined);
+});
+
+// A escolha com os textos no limite (o RoundFormat corta título, artista e charter em 200).
+test('repositoryChooseSongAt200CharactersIsAccepted', async () => {
+  await semear('ABCD', { jogadores: { ana: {} } });
+  const longa = {
+    ...MUSICA,
+    titulo: 't'.repeat(200),
+    artista: 'a'.repeat(200),
+    encore: { md5: '0123456789abcdef0123456789abcdef', video: false, charter: 'c'.repeat(200) },
+  };
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ musica: longa, atividadeEm: AGORA }));
+  await assertFails(
+    db('ana').ref('salas/ABCD').update({ musica: { ...longa, encore: { ...longa.encore, charter: 'c'.repeat(201) } } }),
+  );
 });
 
 // --- a API REST, como o app fala com o banco (FirebaseDb) ---

@@ -26,12 +26,17 @@ import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.model.Settings
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class UnavailableReason {
     NO_AUDIO,
@@ -58,6 +63,12 @@ sealed interface GameplayUiState {
         val art: ImageBitmap? = null,
         /** Pausada porque o Android negou o áudio ao continuar (no meio de uma ligação). */
         val audioBusy: Boolean = false,
+        /** Partida de sala: sem pausa (nem o botão, nem o Voltar, nem as interrupções), e Sair pergunta antes. */
+        val inRoom: Boolean = false,
+        /** Partida de sala montada e parada, esperando o começo combinado com os outros. */
+        val waitingForStart: Boolean = false,
+        /** O instante do começo (relógio da partida, ver [MatchStart]): a contagem 3-2-1 até ele; null = sem. */
+        val countdownEndsAt: Long? = null,
     ) : GameplayUiState
 
     data class Unavailable(val reason: UnavailableReason) : GameplayUiState
@@ -69,7 +80,12 @@ sealed interface GameplayUiState {
  * A partida de [chartId] em [difficulty]. No celular, o Hilt cria pela `HiltGameplayViewModel`; no PC, o app.
  * [rankingTable]: a tabela do ranking em que a partida conta, pelas configurações lidas ao começar (no celular,
  * sempre a do celular; no PC, `RankingTable.pc(settings.controls.strum)`).
+ *
+ * Com [matchStart], a partida de sala: carregada, avisa ([MatchStart.loaded]), espera o começo combinado
+ * ([MatchStart.awaitStart]), mostra a contagem e começa no instante devolvido, pelo [timeSource]; não pausa nunca e,
+ * ao sair no meio ([leave]), avisa a sala ([MatchStart.left]).
  */
+@Suppress("TooManyFunctions") // a partida: carregar, pausar, ajustar, terminar e o modo de sala; um estado só
 open class GameplayViewModel(
     private val chartId: String,
     private val difficulty: Difficulty,
@@ -85,6 +101,7 @@ open class GameplayViewModel(
     private val artImages: ChartArtImages,
     private val ranking: RankingRepository,
     private val rankingTable: (Settings) -> RankingTable = { RankingTable.PHONE },
+    private val matchStart: MatchStart? = null,
 ) : ViewModel() {
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
@@ -99,6 +116,12 @@ open class GameplayViewModel(
 
     // O app pode ir para segundo plano enquanto a música carrega: a partida começa pausada.
     private var pauseRequested = false
+
+    // Partida de sala: a sala já sabe que acabou para mim (saí, não abriu ou terminou); avisa uma vez só.
+    private var roomDone = false
+
+    // Os avisos à sala continuam depois de a tela fechar (o viewModelScope já foi cancelado), até o tempo-limite.
+    private val roomReports by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
 
     init {
         viewModelScope.launch { state.value = load() }
@@ -131,26 +154,79 @@ open class GameplayViewModel(
             // No PC, com ou sem palheta (Configurações → Controles); no celular, sempre o toque.
             strum = settings.controls.strum,
         )
-        if (!pauseRequested) session.start()
-        interruptions = interruptionsFactory.create().also {
-            if (!pauseRequested) it.start(onInterrupted = ::pause, onBusy = ::pauseAudioBusy)
-        }
-        GameplayUiState.Ready(
+        val ready = GameplayUiState.Ready(
             playable.chart.title,
             playable.chart.artist,
             difficulty,
             session,
             settings,
-            pauseRequested,
+            pauseRequested && matchStart == null,
             withoutSeparateGuitar,
             songOffsetMs = songOffsetMs,
             art = art,
         )
+        if (matchStart == null) startSolo(session, ready) else startInRoom(matchStart, session, ready)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         release()
+        // Os outros da sala não esperam por quem não conseguiu abrir a partida.
+        reportToRoom { it.left() }
         GameplayUiState.Unavailable(reasonFor(e))
+    }
+
+    private fun startSolo(session: GameSession, ready: GameplayUiState.Ready): GameplayUiState.Ready {
+        if (!pauseRequested) session.start()
+        interruptions = interruptionsFactory.create().also {
+            if (!pauseRequested) it.start(onInterrupted = ::pause, onBusy = ::pauseAudioBusy)
+        }
+        return ready
+    }
+
+    /**
+     * A partida de sala: montada e parada até o começo combinado, com a contagem por cima; começa no instante
+     * devolvido pelo [MatchStart] (no relógio da partida), esperando em passos pelo [timeSource] (o `delay` sozinho
+     * pode acordar antes); com o começo já passado, começa na posição da música de agora (a dos outros). O foco de
+     * áudio é pedido como sempre, mas perdê-lo não pausa.
+     */
+    private suspend fun startInRoom(
+        room: MatchStart,
+        session: GameSession,
+        ready: GameplayUiState.Ready,
+    ): GameplayUiState.Ready {
+        val waiting = ready.copy(inRoom = true, waitingForStart = true)
+        state.value = waiting
+        room.loaded()
+        val startAt = room.awaitStart()
+        // Carregou depois do começo (o começo já passou): começa onde os outros estão, por mais atrasado que seja. No
+        // horário, do começo (a espera abaixo pode acordar uns milissegundos depois: não vale um reposicionamento).
+        val late = timeSource.nowMs() > startAt
+        val counting = waiting.copy(waitingForStart = false, countdownEndsAt = startAt)
+        state.value = counting
+        while (true) {
+            val left = startAt - timeSource.nowMs()
+            if (left <= 0) break
+            delay(left)
+        }
+        // Saiu enquanto contava (a tela já foi): nada de tocar num player liberado.
+        if (player == null) return counting
+        session.start(fromMs = if (late) timeSource.nowMs() - startAt else 0)
+        interruptions = interruptionsFactory.create().also { it.start(onInterrupted = {}, onBusy = {}) }
+        return counting
+    }
+
+    /**
+     * Saindo da partida (Sair, ou a tela fechando): na de sala, avisa que saí da rodada, se ela ainda não acabou para
+     * mim. O aviso continua mesmo com a tela já fechada (até [ROOM_REPORT_TIMEOUT_MS]); sozinho, não faz nada.
+     */
+    fun leave() = reportToRoom { it.left() }
+
+    /** Avisa a sala uma vez só (sair, não abrir ou terminar), sem ser cancelado pela tela que fecha. */
+    private fun reportToRoom(report: suspend (MatchStart) -> Unit) {
+        val room = matchStart ?: return
+        if (roomDone) return
+        roomDone = true
+        roomReports.launch { withTimeoutOrNull(ROOM_REPORT_TIMEOUT_MS) { report(room) } }
     }
 
     /** Faixas separadas ou um arquivo só; se as faixas falharem, cai no arquivo só (com aviso). */
@@ -186,7 +262,9 @@ open class GameplayViewModel(
         return created
     }
 
+    /** Pausa (o botão, o Voltar, a tecla, o segundo plano, as interrupções); na partida de sala, nunca. */
     fun pause() {
+        if (matchStart != null) return
         if (state.value is GameplayUiState.Loading) pauseRequested = true
         if (player == null) return // já liberado: saindo ou terminando
         val ready = state.value as? GameplayUiState.Ready ?: return
@@ -200,6 +278,7 @@ open class GameplayViewModel(
     }
 
     fun resume() {
+        if (matchStart != null) return
         if (state.value is GameplayUiState.Loading) pauseRequested = false
         if (player == null) return
         val ready = state.value as? GameplayUiState.Ready ?: return
@@ -225,6 +304,7 @@ open class GameplayViewModel(
         if (finishing) return
         finishing = true
         release()
+        reportToRoom { it.finished() }
         val engine = ready.session.engine
         engine.finish()
         val record = ScoreRecord(
@@ -260,8 +340,15 @@ open class GameplayViewModel(
         sfx = null
     }
 
-    override fun onCleared() = release()
+    override fun onCleared() {
+        release()
+        // A tela fechou sem o Sair (o Voltar durante o carregamento, o Android fechando): também saí da rodada.
+        leave()
+    }
 }
+
+/** Quanto o aviso à sala ([MatchStart.left]/[MatchStart.finished]) pode demorar depois de a tela fechar. */
+private const val ROOM_REPORT_TIMEOUT_MS = 10_000L
 
 /** Quanto a pista volta ao continuar depois de uma pausa. */
 private const val REWIND_ON_RESUME_MS = 500L

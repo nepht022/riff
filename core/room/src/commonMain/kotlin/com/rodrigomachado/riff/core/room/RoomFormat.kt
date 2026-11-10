@@ -1,5 +1,13 @@
 package com.rodrigomachado.riff.core.room
 
+import com.rodrigomachado.riff.core.room.RoundFormat.DIFFICULTY
+import com.rodrigomachado.riff.core.room.RoundFormat.LEFT
+import com.rodrigomachado.riff.core.room.RoundFormat.LOADED
+import com.rodrigomachado.riff.core.room.RoundFormat.READY
+import com.rodrigomachado.riff.core.room.RoundFormat.ROUND
+import com.rodrigomachado.riff.core.room.RoundFormat.SONG
+import com.rodrigomachado.riff.core.room.RoundFormat.START
+import com.rodrigomachado.riff.core.room.RoundFormat.STATE
 import org.json.JSONObject
 
 /**
@@ -12,7 +20,6 @@ internal object RoomFormat {
     const val PLAYERS = "jogadores"
     const val SLOTS = "vagas"
     const val SEEN_AT = "vistoEm"
-    private const val STATE = "estado"
     private const val CREATED = "criadaEm"
     private const val NAME = "nome"
     private const val DEVICE = "aparelho"
@@ -31,7 +38,7 @@ internal object RoomFormat {
     /** A sala nova: o dono como o único jogador, na v1, com os tempos do servidor. */
     fun newRoom(me: String, name: String, device: RoomDevice): Map<String, Any?> = mapOf(
         OWNER to me,
-        STATE to "sala",
+        STATE to RoomState.LOBBY.wire,
         CREATED to ServerTime.NOW,
         ACTIVITY to ServerTime.NOW,
         PLAYERS to mapOf(me to player(name, device, SLOT_NAMES.first(), ServerTime.NOW)),
@@ -40,12 +47,15 @@ internal object RoomFormat {
 
     /**
      * Entrar na [slot] numa escrita só: o jogador, a vaga e a atividade. Quem já estava na sala mantém o `entrouEm`
-     * (as regras aceitam regravar o mesmo valor).
+     * (as regras aceitam regravar o mesmo valor) e a dificuldade, o Pronto e a música (a escrita troca o jogador
+     * inteiro); o `carregou`/`saiu` não (as regras exigem a rodada atual, e são de uma partida que já passou).
      */
     fun join(room: JSONObject, me: String, name: String, device: RoomDevice, slot: String): Map<String, Any?> {
-        val joinedAt = room.optJSONObject(PLAYERS)?.optJSONObject(me)?.opt(JOINED_AT) as? Number
+        val before = room.optJSONObject(PLAYERS)?.optJSONObject(me)
+        val joinedAt = before?.opt(JOINED_AT) as? Number
+        val kept = listOf(DIFFICULTY, READY, SONG).mapNotNull { key -> before?.opt(key)?.let { key to it } }
         return mapOf(
-            "$PLAYERS/$me" to player(name, device, slot, joinedAt ?: ServerTime.NOW),
+            "$PLAYERS/$me" to player(name, device, slot, joinedAt ?: ServerTime.NOW) + kept,
             "$SLOTS/$slot" to me,
             ACTIVITY to ServerTime.NOW,
         )
@@ -89,8 +99,18 @@ internal object RoomFormat {
         return slot.takeIf { it.isNotEmpty() && room.optJSONObject(SLOTS)?.optString(it) == me }
     }
 
-    fun room(code: String, room: JSONObject, me: String, now: Long) =
-        Room(code, room.optString(OWNER), players(room, now), me)
+    /** A sala lida, com o [firstReadyAt] que o observador guardou (ver [FirstReady]). */
+    fun room(code: String, room: JSONObject, me: String, now: Long, firstReadyAt: Long? = null) = Room(
+        code = code,
+        owner = room.optString(OWNER),
+        players = players(room, now),
+        me = me,
+        song = room.optJSONObject(SONG)?.let(RoundFormat::song),
+        round = room.optInt(ROUND, 0),
+        state = RoomState.of(room.optString(STATE)),
+        startAt = (room.opt(START) as? Number)?.toLong(),
+        firstReadyAt = firstReadyAt,
+    )
 
     /** Os jogadores na ordem em que entraram (o `uid` desempata), com o `gone` pelo relógio [now]. */
     fun players(room: JSONObject, now: Long): List<RoomPlayer> {
@@ -105,6 +125,11 @@ internal object RoomFormat {
                     joinedAt = player.optLong(JOINED_AT),
                     seenAt = seenAt,
                     gone = now - seenAt > GONE_MS,
+                    difficulty = RoundFormat.difficulty(player.opt(DIFFICULTY) as? String),
+                    ready = player.optBoolean(READY),
+                    song = SongStatus.of(player.opt(SONG) as? String),
+                    loadedRound = (player.opt(LOADED) as? Number)?.toInt(),
+                    leftRound = (player.opt(LEFT) as? Number)?.toInt(),
                 )
             }
         }.sortedWith(compareBy({ it.joinedAt }, { it.uid })).toList()

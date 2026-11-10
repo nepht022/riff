@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -28,6 +29,7 @@ import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
+import com.rodrigomachado.riff.feature.library.LibraryPickRoute
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.licenses.HiltLicensesViewModel
@@ -138,7 +140,10 @@ private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
 
 /**
  * A Sala: a escolha, entrar com o código e a sala. A sala abre por cima da escolha (entrar com o código sai da pilha):
- * sair da sala volta à escolha. Sem nome no ranking, criar e entrar abrem o diálogo do nome ([onChooseName]).
+ * sair da sala volta à escolha. Sem nome no ranking, criar e entrar abrem o diálogo do nome ([onChooseName]). O dono
+ * escolhe a música pela Biblioteca no modo de escolha, que entrega o mapa e a dificuldade ao ViewModel da sala (o da
+ * entrada da sala na pilha) e volta; a contagem abre a partida de sala (com o código e a rodada) por cima da sala:
+ * Sair e o Voltar do Resultado voltam à sala.
  */
 private fun NavGraphBuilder.roomDestinations(navController: NavHostController, onChooseName: () -> Unit) {
     val openRoom = { code: String ->
@@ -162,10 +167,28 @@ private fun NavGraphBuilder.roomDestinations(navController: NavHostController, o
         )
     }
     composable<RoomLobbyRoute> { entry ->
+        val code = entry.toRoute<RoomLobbyRoute>().code
         RoomLobbyScreen(
             onLeft = { navController.popBackStack() },
             viewModel = hiltViewModel<HiltRoomLobbyViewModel>(),
-            code = entry.toRoute<RoomLobbyRoute>().code,
+            code = code,
+            onChooseSong = dropUnlessResumed { navController.navigate(LibraryPickRoute(code)) },
+            onMatch = { ticket ->
+                navController.navigate(GameplayRoute(ticket.chartId, ticket.difficulty.name, code, ticket.round))
+            },
+        )
+    }
+    composable<LibraryPickRoute> { entry ->
+        val lobbyEntry = remember(entry) { navController.getBackStackEntry<RoomLobbyRoute>() }
+        val lobby = hiltViewModel<HiltRoomLobbyViewModel>(lobbyEntry)
+        LibraryScreen(
+            onPlay = dropUnlessResumed { chartId, difficulty ->
+                lobby.chooseSong(chartId, difficulty)
+                navController.popBackStack()
+            },
+            onBack = dropUnlessResumed { navController.popBackStack() },
+            pickForRoom = true,
+            viewModel = hiltViewModel<HiltLibraryViewModel>(),
         )
     }
 }
@@ -189,12 +212,13 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
     }
 }
 
-/** A partida e o resultado. */
+/** A partida e o resultado; o Resultado da partida de sala só volta à sala (sem "Jogar de novo"). */
 private fun NavGraphBuilder.matchDestinations(navController: NavHostController, onChooseName: () -> Unit) {
-    composable<GameplayRoute> {
+    composable<GameplayRoute> { entry ->
+        val route = entry.toRoute<GameplayRoute>()
         GameplayScreen(
             onFinished = { scoreId ->
-                navController.navigate(ResultsRoute(scoreId)) {
+                navController.navigate(resultsOf(route, scoreId)) {
                     popUpTo<GameplayRoute> { inclusive = true }
                 }
             },
@@ -202,7 +226,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
             viewModel = hiltViewModel<HiltGameplayViewModel>(),
         )
     }
-    composable<ResultsRoute> {
+    composable<ResultsRoute> { entry ->
         ResultsScreen(
             onPlayAgain = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name)) {
@@ -215,9 +239,13 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
                 navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
             },
             viewModel = hiltViewModel<HiltResultsViewModel>(),
+            inRoom = entry.toRoute<ResultsRoute>().inRoom,
         )
     }
 }
+
+/** O Resultado da partida [route]: o da partida de sala sabe disso (só volta à sala, sem "Jogar de novo"). */
+internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, inRoom = route.roomCode != null)
 
 /** A Biblioteca: jogar com o áudio da pasta. */
 private fun NavGraphBuilder.libraryDestinations(navController: NavHostController) {

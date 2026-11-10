@@ -1,4 +1,5 @@
 <resources>
+    <string name="library_pick_title">Choose song</string>
     <string name="library_title">Library</string>
     <string name="library_no_folder_title">No folder chosen</string>
     <string name="library_no_folder_message">Choose the folder that holds your Clone Hero charts.</string>

@@ -39,6 +39,8 @@ class RoomEncoreDownloadsTest {
 
         assertEquals(setOf("a07d209baccd2d58042d81b869a0077e"), downloads.md5s.first())
         assertEquals("a", downloads.chartIdOf("a07d209baccd2d58042d81b869a0077e"))
+        assertEquals("a07d209baccd2d58042d81b869a0077e", downloads.md5Of("a"))
+        assertEquals(null, downloads.md5Of("b"))
     }
 
     @Test

@@ -105,6 +105,8 @@ class FakeEncoreDownloads : EncoreDownloads {
     }
 
     override suspend fun chartIdOf(md5: String) = owned[md5]
+
+    override suspend fun md5Of(chartId: String) = owned.entries.firstOrNull { it.value == chartId }?.key
 }
 
 class FakeFolderAccess : FolderAccess {

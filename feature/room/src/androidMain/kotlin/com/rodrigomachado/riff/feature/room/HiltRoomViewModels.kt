@@ -1,6 +1,9 @@
 package com.rodrigomachado.riff.feature.room
 
 import androidx.lifecycle.SavedStateHandle
+import com.rodrigomachado.riff.core.data.ChartRepository
+import com.rodrigomachado.riff.core.data.EncoreDownloads
+import com.rodrigomachado.riff.core.data.download.ChartDownloader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.room.RoomRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +20,19 @@ class HiltRoomEntryViewModel @Inject constructor(repository: RoomRepository, ran
 class HiltRoomJoinViewModel @Inject constructor(repository: RoomRepository, ranking: RankingRepository) :
     RoomJoinViewModel(repository, ranking.player.map { it.name })
 
-/** O [RoomLobbyViewModel] criado pelo Hilt no celular, com o código da rota. */
+/**
+ * O [RoomLobbyViewModel] criado pelo Hilt no celular, com o código da rota; a música é conferida na biblioteca (o
+ * repositório de mapas) e baixada do Encore pelo download da pesquisa.
+ */
 @HiltViewModel
-class HiltRoomLobbyViewModel @Inject constructor(savedStateHandle: SavedStateHandle, repository: RoomRepository) :
-    RoomLobbyViewModel(checkNotNull(savedStateHandle["code"]), repository)
+class HiltRoomLobbyViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    repository: RoomRepository,
+    charts: ChartRepository,
+    downloads: EncoreDownloads,
+    downloader: ChartDownloader,
+) : RoomLobbyViewModel(
+    checkNotNull(savedStateHandle["code"]),
+    repository,
+    RoomSongCheck.of(charts, downloads, downloader),
+)

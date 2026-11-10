@@ -55,6 +55,7 @@ import com.rodrigomachado.riff.core.room.FirebaseDb
 import com.rodrigomachado.riff.core.room.RoomConfig
 import com.rodrigomachado.riff.core.room.RoomDevice
 import com.rodrigomachado.riff.core.room.RoomHttp
+import com.rodrigomachado.riff.core.room.RoomPresence
 import com.rodrigomachado.riff.core.room.RoomRepository
 import com.rodrigomachado.riff.core.room.RoomSwitch
 import com.rodrigomachado.riff.core.room.UrlConnectionRoomHttp
@@ -88,6 +89,8 @@ import com.rodrigomachado.riff.feature.results.ResultsViewModel
 import com.rodrigomachado.riff.feature.room.RoomEntryViewModel
 import com.rodrigomachado.riff.feature.room.RoomJoinViewModel
 import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
+import com.rodrigomachado.riff.feature.room.RoomMatchStart
+import com.rodrigomachado.riff.feature.room.RoomSongCheck
 import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -267,23 +270,29 @@ class DesktopGraph(
         scope.launch { ranking.flush() }
     }
 
-    fun gameplayViewModel(chartId: String, difficulty: Difficulty) = GameplayViewModel(
-        chartId = chartId,
-        difficulty = difficulty,
-        loader = trackLoader,
-        settingsRepository = settings,
-        scores = scores,
-        chartOffsets = chartOffsets,
-        songPlayers = songPlayers,
-        stemPlayers = stemPlayers,
-        sfxPlayers = sfx,
-        timeSource = clock,
-        interruptionsFactory = DesktopPlayers.interruptions,
-        artImages = chartArt,
-        ranking = ranking,
-        // No PC, a tabela do modo da partida ("Tocar com palheta" de quando ela começou).
-        rankingTable = { RankingTable.pc(it.controls.strum) },
-    )
+    /**
+     * A partida; com [roomCode], a partida de sala da rodada [round]: o começo combinado pelo [RoomMatchStart], no
+     * relógio da partida (o mesmo da `GameSession`), sem pausa.
+     */
+    fun gameplayViewModel(chartId: String, difficulty: Difficulty, roomCode: String? = null, round: Int = 0) =
+        GameplayViewModel(
+            chartId = chartId,
+            difficulty = difficulty,
+            loader = trackLoader,
+            settingsRepository = settings,
+            scores = scores,
+            chartOffsets = chartOffsets,
+            songPlayers = songPlayers,
+            stemPlayers = stemPlayers,
+            sfxPlayers = sfx,
+            timeSource = clock,
+            interruptionsFactory = DesktopPlayers.interruptions,
+            artImages = chartArt,
+            ranking = ranking,
+            // No PC, a tabela do modo da partida ("Tocar com palheta" de quando ela começou).
+            rankingTable = { RankingTable.pc(it.controls.strum) },
+            matchStart = roomCode?.let { RoomMatchStart(it, round, room, clock::nowMs) },
+        )
 
     fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
 
@@ -311,13 +320,20 @@ class DesktopGraph(
         val auth = AnonymousAuth(roomHttp, DataStoreRoomIdentityStore(preferences), roomApiKey, clock)
         RoomRepository(FirebaseDb(roomHttp, auth, roomDbUrl), auth, RoomDevice.PC, clock)
     }
+
+    // A presença na sala (o batimento em qualquer tela: a partida, o Resultado, a Biblioteca de escolha) enquanto a
+    // janela existe; sair da sala (ou fechar a janela, que sai) para o batimento.
+    @Suppress("unused") // só existe para bater: segue o `joinedRoom` do repositório no escopo do PC
+    private val roomPresence = RoomPresence(room, scope)
     private val roomPlayerName = ranking.player.map { it.name }
 
     fun roomEntryViewModel() = RoomEntryViewModel(room, roomPlayerName)
 
     fun roomJoinViewModel() = RoomJoinViewModel(room, roomPlayerName)
 
-    fun roomLobbyViewModel(code: String) = RoomLobbyViewModel(code, room)
+    /** A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa. */
+    fun roomLobbyViewModel(code: String) =
+        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
 
     /**
      * Fechar a janela com a sala aberta sai dela (passa o dono adiante, ou apaga a sala sendo o último), para não

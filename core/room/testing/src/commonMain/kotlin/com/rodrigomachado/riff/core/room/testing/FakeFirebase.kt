@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.core.room.testing
 
+import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.room.AnonymousAuth
 import com.rodrigomachado.riff.core.room.FirebaseDb
 import com.rodrigomachado.riff.core.room.HttpReply
@@ -10,6 +11,7 @@ import com.rodrigomachado.riff.core.room.RoomHttp
 import com.rodrigomachado.riff.core.room.RoomIdentity
 import com.rodrigomachado.riff.core.room.RoomIdentityStore
 import com.rodrigomachado.riff.core.room.RoomRepository
+import com.rodrigomachado.riff.core.room.SongStatus
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,13 +36,21 @@ data class FirebaseWrite(
     val ifMatch: String? = null,
 )
 
-/** Um jogador semeado por [FakeFirebase.seedRoom] (tempos null = o [FakeFirebase.clock] de agora). */
+/**
+ * Um jogador semeado por [FakeFirebase.seedRoom] (tempos null = o [FakeFirebase.clock] de agora). Os campos da M2
+ * (dificuldade, pronto, música, carregou, saiu) só vão para o banco quando não são null.
+ */
 data class FakePlayer(
     val uid: String,
     val name: String = uid,
     val device: RoomDevice = RoomDevice.PHONE,
     val joinedAt: Long? = null,
     val seenAt: Long? = null,
+    val difficulty: Difficulty? = null,
+    val ready: Boolean? = null,
+    val song: SongStatus? = null,
+    val loadedRound: Int? = null,
+    val leftRound: Int? = null,
 )
 
 /**
@@ -79,8 +89,20 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
     /** Uma escrita para a qual dá true é recusada com 401 (como as regras fariam), sem mudar nada. */
     var refuse: (FirebaseWrite) -> Boolean = { false }
 
+    /**
+     * A viagem de cada pedido ao banco: chamado na ida (`arriving` true, antes de o servidor aplicar e carimbar o
+     * `{".sv":"timestamp"}`) e na volta (false). O teste avança o relógio aqui para simular a demora da rede.
+     */
+    var onTrip: (method: String, path: String, arriving: Boolean) -> Unit = { _, _, _ -> }
+
     /** Não null: o login anônimo (cadastro e renovação) responde isto em vez de entrar (Google fora do ar, etc.). */
     var loginReply: HttpReply? = null
+
+    @Volatile
+    private var streams = 0
+
+    /** Quantos streamings (SSE) já foram abertos, de qualquer jogador. */
+    val streamsOpened: Int get() = streams
 
     /** Todas as escritas recebidas, na ordem (as recusadas também). */
     val writes: List<FirebaseWrite> get() = synchronized(lock) { log.toList() }
@@ -111,8 +133,21 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         synchronized(lock) { root.value = JsonTree.put(root.value, path, resolve(parse(json))) }
     }
 
-    /** Uma sala no formato do app: os [players] nas vagas v1, v2… na ordem. */
-    fun seedRoom(code: String, owner: String, players: List<FakePlayer>, activityAt: Long = clock()) {
+    /**
+     * Uma sala no formato do app: os [players] nas vagas v1, v2… na ordem. [state], [round], [songJson] (o objeto
+     * `musica`, em JSON) e [startAt] são os campos da M2 (null = ausente).
+     */
+    @Suppress("LongParameterList") // o estado inicial de cada teste, com os padrões da sala recém-criada
+    fun seedRoom(
+        code: String,
+        owner: String,
+        players: List<FakePlayer>,
+        activityAt: Long = clock(),
+        state: String = "sala",
+        round: Int? = null,
+        songJson: String? = null,
+        startAt: Long? = null,
+    ) {
         val now = clock()
         val list = JSONObject()
         val slots = JSONObject()
@@ -126,16 +161,24 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
                     .put("aparelho", if (player.device == RoomDevice.PC) "pc" else "celular")
                     .put("vaga", slot)
                     .put("entrouEm", player.joinedAt ?: now)
-                    .put("vistoEm", player.seenAt ?: now),
+                    .put("vistoEm", player.seenAt ?: now)
+                    .putIfNotNull("dificuldade", player.difficulty?.name)
+                    .putIfNotNull("pronto", player.ready)
+                    .putIfNotNull("musica", player.song?.wire)
+                    .putIfNotNull("carregou", player.loadedRound)
+                    .putIfNotNull("saiu", player.leftRound),
             )
         }
         val room = JSONObject()
             .put("dono", owner)
-            .put("estado", "sala")
+            .put("estado", state)
             .put("criadaEm", activityAt)
             .put("atividadeEm", activityAt)
             .put("jogadores", list)
             .put("vagas", slots)
+            .putIfNotNull("rodada", round)
+            .putIfNotNull("musica", songJson?.let(::JSONObject))
+            .putIfNotNull("inicio", startAt)
         set("salas/$code", room.toString())
     }
 
@@ -166,13 +209,18 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
                         .put("expires_in", "3600").put("user_id", uid),
                 )
 
-                url.startsWith(DB_URL) -> database(uid, method, pathOf(url), body, headers)
+                url.startsWith(DB_URL) -> {
+                    val path = pathOf(url)
+                    onTrip(method, path, true)
+                    database(uid, method, path, body, headers).also { onTrip(method, path, false) }
+                }
 
                 else -> HttpReply(HTTP_NOT_FOUND, "", emptyMap())
             }
         }
 
         override fun stream(url: String): Flow<String> = flow {
+            synchronized(lock) { streams++ }
             if (!online) throw NoConnection()
             val path = pathOf(url)
             combine(root, connected) { tree, up -> if (up) text(valueAt(tree, path)) else null }
@@ -250,6 +298,8 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         private const val HTTP_NOT_FOUND = 404
         private const val HTTP_BAD_METHOD = 405
         private const val HTTP_PRECONDITION_FAILED = 412
+
+        private fun JSONObject.putIfNotNull(key: String, value: Any?) = if (value == null) this else put(key, value)
 
         private fun reply(json: JSONObject) = HttpReply(HTTP_OK, json.toString(), emptyMap())
 

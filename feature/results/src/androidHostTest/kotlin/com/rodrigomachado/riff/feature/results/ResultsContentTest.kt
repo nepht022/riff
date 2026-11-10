@@ -158,6 +158,28 @@ class ResultsContentTest {
         assertTrue(done)
     }
 
+    /** Na partida de sala, o Resultado só volta à sala: "Jogar de novo" abriria uma partida sozinho por cima dela. */
+    @Test
+    fun roomResultHasNoPlayAgain() {
+        var done = false
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", isNewBest = false),
+                    onPlayAgain = { _, _ -> error("jogou de novo na sala") },
+                    onDone = { done = true },
+                    inRoom = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Jogar de novo").assertDoesNotExist()
+        composeRule.onNodeWithText("Voltar").assertDoesNotExist()
+        composeRule.onNodeWithText("Voltar à sala").performScrollTo().performClick()
+
+        assertTrue(done)
+    }
+
     @Test
     fun talkBackAnnouncesTheResultWhenTheScreenAppears() {
         composeRule.setContent {

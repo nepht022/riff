@@ -88,6 +88,24 @@ class DesktopGameplayPadTest {
         composeRule.onNodeWithTag(GameplayTestTags.EXIT).assertDoesNotExist()
     }
 
+    /** Na partida de sala, Start não pausa: abre e fecha a pergunta de sair, com a música seguindo. */
+    @Test
+    fun startInTheRoomMatchAsksToLeaveWithoutPausing() {
+        val session = playingSession(note(60_000))
+        var pauses = 0
+        composeRule.showStage({ readyState(session).copy(inRoom = true) }, { pauses++ }, pad)
+
+        press(PadAction.PAUSE)
+        press(PadAction.PAUSE, down = false)
+        composeRule.onNodeWithTag(GameplayTestTags.LEAVE_PROMPT).assertExists()
+        assertEquals(0, pauses)
+        assertFalse(session.isPaused)
+
+        press(PadAction.PAUSE)
+        composeRule.onNodeWithTag(GameplayTestTags.LEAVE_PROMPT).assertDoesNotExist()
+        assertEquals(0, pauses)
+    }
+
     /**
      * Start continua e, no mesmo quadro (antes de a tela recompor sem a pausa), o ✕ desce: ele é uma cor, não um
      * Enter nos menus (que, chegando depois, pausaria de novo).

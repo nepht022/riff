@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.lifecycle.SavedStateHandle
 import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.PlayableChart
+import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -51,9 +52,34 @@ abstract class GameplayViewModelTestBase {
     protected var artFailure: Exception? = null
     protected var playingWhenArtAsked: Boolean? = null
 
+    /** As partidas de sala pedidas à fábrica: o código e a rodada da rota. */
+    protected val matchStartsAsked = mutableListOf<Pair<String, Int>>()
+
     // Pela subclasse do Hilt: confere também a leitura dos argumentos da rota (SavedStateHandle).
-    protected fun viewModel(): GameplayViewModel = HiltGameplayViewModel(
+    protected fun viewModel(): GameplayViewModel = hiltViewModel(
         SavedStateHandle(mapOf("chartId" to "a", "difficulty" to "EXPERT")),
+        matchStart = null,
+        timeSource = time,
+    )
+
+    /** A partida da sala [code], rodada [round], com o [matchStart] dado pela fábrica e o relógio [timeSource]. */
+    protected fun roomViewModel(
+        matchStart: MatchStart,
+        timeSource: TimeSource,
+        code: String = "ABCD",
+        round: Int = 3,
+    ): GameplayViewModel = hiltViewModel(
+        SavedStateHandle(mapOf("chartId" to "a", "difficulty" to "EXPERT", "roomCode" to code, "round" to round)),
+        matchStart,
+        timeSource,
+    )
+
+    private fun hiltViewModel(
+        route: SavedStateHandle,
+        matchStart: MatchStart?,
+        timeSource: TimeSource,
+    ): GameplayViewModel = HiltGameplayViewModel(
+        route,
         loader,
         settings,
         scores,
@@ -67,7 +93,7 @@ abstract class GameplayViewModelTestBase {
             stemPlayer
         },
         { sfx },
-        time,
+        timeSource,
         {
             interruptionsCreated++
             interruptions
@@ -79,6 +105,10 @@ abstract class GameplayViewModelTestBase {
             art
         },
         ranking,
+        { code, round ->
+            matchStartsAsked += code to round
+            checkNotNull(matchStart) { "partida sozinho não pede a partida de sala" }
+        },
     )
 
     /** Como o PC monta a partida: a tabela do ranking vem do modo daquela partida (com ou sem palheta). */

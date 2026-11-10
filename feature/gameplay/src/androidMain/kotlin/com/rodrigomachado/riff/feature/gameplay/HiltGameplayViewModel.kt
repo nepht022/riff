@@ -16,7 +16,10 @@ import com.rodrigomachado.riff.core.model.Difficulty
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
-/** O [GameplayViewModel] criado pelo Hilt no celular: o mapa e a dificuldade vêm dos argumentos da rota. */
+/**
+ * O [GameplayViewModel] criado pelo Hilt no celular: o mapa e a dificuldade vêm dos argumentos da rota; com o
+ * `roomCode` ([GameplayRoute]), a partida de sala, com o [MatchStart] montado pela [MatchStartFactory] do app.
+ */
 @HiltViewModel
 class HiltGameplayViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -31,6 +34,7 @@ class HiltGameplayViewModel @Inject constructor(
     interruptionsFactory: PlaybackInterruptionsFactory,
     artImages: ChartArtImages,
     ranking: RankingRepository,
+    matchStarts: MatchStartFactory,
 ) : GameplayViewModel(
     checkNotNull(savedStateHandle["chartId"]),
     Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"])),
@@ -45,4 +49,7 @@ class HiltGameplayViewModel @Inject constructor(
     interruptionsFactory,
     artImages,
     ranking,
+    matchStart = savedStateHandle.get<String>("roomCode")?.let { code ->
+        matchStarts.create(code, savedStateHandle.get<Int>("round") ?: 0)
+    },
 )

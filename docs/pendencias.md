@@ -94,6 +94,27 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Multiplayer M2: música e começo juntos (2026-11-10)
+
+- Regras da M2 republicadas pelo usuário e teste real aceito em 2026-11-10 (PC e celular): começo junto "menos de 1 s, bem parecido" — acima da meta de ~150 ms; melhorar na M3 (atraso de saída do áudio de cada aparelho além da calibração; medir). Baixar do Encore, Esc sem pausar e Voltar à sala funcionaram; cada um volta à sala ao tocar Voltar no próprio Resultado.
+- Precisão do começo junto estimada (meia ida e volta mais ~16 ms do `delay`), não medida em aparelhos reais; o teste do PC confere ≤ 250 ms do `inicio` com relógio falso.
+- O `encore_charts` não guarda se o pacote tem vídeo: o download pela sala pede sempre o pacote com vídeo, quando houver (maior; mesmas notas).
+- Sem começo combinado em 30 s (sem internet, sala acabou, rodada mudou), a partida começa sozinha para não travar.
+- O dono novo grava `{dono: me}` e só numa segunda escrita a rodada/o começo (as regras recusam as duas juntas).
+- `carregou`/`saiu` com a rodada desatualizada são recusados (o app relê e refaz se a rodada ainda é a mesma).
+- O `firstReadyAt` (30 s para começar com quem está pronto) é guardado no aparelho de quem observa: quem abre a sala depois conta de quando viu.
+- **Revisão final (2026-11-10), corrigido:**
+  - O Começar exige o dono pronto com a música (sem ele na rodada, ninguém marcava o começo e a sala ficava presa na contagem); o aviso "Fique pronto para começar" aparece embaixo do Começar.
+  - O batimento saiu da tela da sala para a `RoomPresence` (`:core:room`): bate enquanto o jogador está na sala (`RoomRepository.joinedRoom`), em qualquer tela (partida, Resultado, Biblioteca de escolha). No celular é singleton do Hilt e para em segundo plano (`ProcessLifecycleOwner`); no PC vive no `DesktopGraph` enquanto a janela existe. A tela da sala aberta comigo nela também conta como "na sala" (`stayIn`: o celular reaberto pelo Android).
+  - O dono (também o novo) desfaz a rodada órfã no batimento: partida passada do fim da música (`duracaoMs`; sem ela, 15 min) + 30 s volta à sala; contagem sem `inicio` 25 s depois de vista começa com quem carregou ou, sem ninguém, volta à sala. A precisão é a do batimento (até ~20 s a mais).
+  - Quem carrega depois do `inicio` começa na posição `agora − inicio` (música reposicionada, notas adiantadas; as que passaram contam como perdidas, sem o som de erro), por maior que seja o atraso. No `MediaPlayer` o reposicionamento antes do primeiro play não foi conferido em aparelho real.
+  - O Pronto não sobra: de volta à sala depois de uma rodada (a rodada subiu) ou com outra música, a presença grava `pronto: false` para mim (escrita nova `clearReady`, com o teste espelho em `rules.test.mjs`; as regras não mudaram).
+  - O `awaitStart` mede o relógio de novo com o `inicio` em mãos (o relógio de parede acertado depois da medida do carregou mudava o começo); o `iAmOwner` lê só o `dono` (`db.get`), sem streaming novo.
+  - A escolha da música corta título, artista e `charter` em 200 caracteres, não tenta mapa sem dificuldades e avisa na tela quando não grava ("Não deu para escolher a música. Tente de novo.").
+  - Sair da sala esquece o primeiro Pronto e as contagens vistas (outra sala pode nascer com o mesmo código).
+- **Antes do teste real:** atualizar o app nos dois aparelhos (celular e PC). O app da M1/M2 de antes pode herdar o dono e não sabe devolver a sala (nem desfazer a rodada órfã), e o batimento dele para fora da tela da sala.
+- A presença abre um streaming próprio da sala (além do da tela da sala e do da partida): até três ao mesmo tempo por aparelho.
+
 ## Multiplayer M1: a sala (2026-11-09)
 
 - Firebase criado e regras publicadas pelo usuário (2026-11-10); teste real aceito: PC criou a sala, o celular entrou pelo código, sair passou o dono e o último apagou a sala.

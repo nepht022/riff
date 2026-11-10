@@ -1,4 +1,5 @@
 <resources>
+    <string name="library_pick_title">Escolher música</string>
     <string name="library_title">Biblioteca</string>
     <string name="library_no_folder_title">Nenhuma pasta escolhida</string>
     <string name="library_no_folder_message">Escolha a pasta onde ficam seus mapas do Clone Hero.</string>

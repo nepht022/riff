@@ -24,7 +24,64 @@
         },
         "estado": {
           ".write": "auth != null && newData.exists() && data.parent().child('dono').val() == auth.uid",
-          ".validate": "newData.isString() && newData.val().matches(/^(sala|contagem|partida|fim)$/)"
+          // Transições da rodada (o newData da sala inteira vale, então um PATCH da sala é conferido junto):
+          // - entrar em "contagem" (vindo de outro estado) só subindo a rodada na mesma escrita (ver "rodada");
+          // - "partida" só depois da "contagem" (ou repetindo a "partida") e sempre com o inicio;
+          // - "sala" e "contagem" sem inicio (voltar à sala e começar uma rodada apagam o inicio).
+          ".validate": "newData.isString() && newData.val().matches(/^(sala|contagem|partida|fim)$/) && (newData.val() != 'contagem' || data.val() == 'contagem' || newData.parent().child('rodada').val() != data.parent().child('rodada').val()) && (newData.val() != 'partida' || ((data.val() == 'contagem' || data.val() == 'partida') && newData.parent().child('inicio').exists())) && ((newData.val() != 'sala' && newData.val() != 'contagem') || !newData.parent().child('inicio').exists())"
+        },
+        // Rodada: só o dono, só sobe de 1 em 1 (sem rodada antes = 0, então a primeira é 1) e só junto com a
+        // "contagem" (o Começar grava estado e rodada na mesma escrita). Nunca é apagada (só com a sala inteira).
+        "rodada": {
+          ".write": "auth != null && newData.exists() && data.parent().child('dono').val() == auth.uid",
+          ".validate": "newData.isNumber() && newData.parent().child('estado').val() == 'contagem' && ((!data.exists() && newData.val() == 1) || (data.exists() && newData.val() == data.val() + 1))"
+        },
+        // Início da música na rodada (hora do servidor): só o dono, só na "partida", entre agora e 20 s depois.
+        // Apagar só saindo da partida na mesma escrita (o .validate não roda em deleção, então a conferência é aqui).
+        "inicio": {
+          ".write": "auth != null && data.parent().child('dono').val() == auth.uid && (newData.exists() || newData.parent().child('estado').val() != 'partida')",
+          ".validate": "newData.isNumber() && now <= newData.val() && newData.val() <= now + 20000 && newData.parent().child('estado').val() == 'partida'"
+        },
+        // Música escolhida: só o dono, só com a sala no estado "sala"; sem musica = nenhuma escolhida.
+        "musica": {
+          ".write": "auth != null && data.parent().child('dono').val() == auth.uid",
+          ".validate": "newData.hasChildren(['chartId', 'titulo', 'artista', 'dificuldades']) && newData.parent().child('estado').val() == 'sala'",
+          // SHA-1 do arquivo de notas, em hexadecimal minúsculo (o id do mapa no app).
+          "chartId": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{40}$/)"
+          },
+          "titulo": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "artista": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          // As dificuldades do mapa, separadas por vírgula, sem espaços: "EASY,MEDIUM,HARD,EXPERT".
+          "dificuldades": {
+            ".validate": "newData.isString() && newData.val().matches(/^(EASY|MEDIUM|HARD|EXPERT)(,(EASY|MEDIUM|HARD|EXPERT))*$/)"
+          },
+          "duracaoMs": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          // Só nas músicas que vieram do Encore: o md5 do pacote, se tem vídeo de fundo e quem fez o mapa.
+          "encore": {
+            ".validate": "newData.hasChildren(['md5', 'video'])",
+            "md5": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9a-fA-F]{32}$/)"
+            },
+            "video": {
+              ".validate": "newData.isBoolean()"
+            },
+            "charter": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "$outro": {
+              ".validate": false
+            }
+          },
+          "$outro": {
+            ".validate": false
+          }
         },
         "criadaEm": {
           ".write": "auth != null && newData.exists() && data.parent().child('dono').val() == auth.uid",
@@ -67,6 +124,24 @@
             },
             "vistoEm": {
               ".validate": "newData.isNumber() && (newData.val() == now || newData.val() == data.val())"
+            },
+            // Estado do jogador para a música da sala (o próprio jogador grava; ver o .write do jogador).
+            "dificuldade": {
+              ".validate": "newData.isString() && newData.val().matches(/^(EASY|MEDIUM|HARD|EXPERT)$/)"
+            },
+            "pronto": {
+              ".validate": "newData.isBoolean()"
+            },
+            "musica": {
+              ".validate": "newData.isString() && newData.val().matches(/^(tem|baixando|sem)$/)"
+            },
+            // A rodada em que a música dele carregou / que ele abandonou: sempre a rodada atual da sala (depois da
+            // escrita); sem rodada na sala, nenhuma.
+            "carregou": {
+              ".validate": "newData.isNumber() && newData.val() == newData.parent().parent().parent().child('rodada').val()"
+            },
+            "saiu": {
+              ".validate": "newData.isNumber() && newData.val() == newData.parent().parent().parent().child('rodada').val()"
             },
             "$outro": {
               ".validate": false

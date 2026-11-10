@@ -44,6 +44,7 @@ import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
+import com.rodrigomachado.riff.feature.library.LibraryPickRoute
 import com.rodrigomachado.riff.feature.library.LibraryRoute
 import com.rodrigomachado.riff.feature.library.LibraryScreen
 import com.rodrigomachado.riff.feature.licenses.LicensesRoute
@@ -65,6 +66,7 @@ import com.rodrigomachado.riff.feature.room.RoomJoinRoute
 import com.rodrigomachado.riff.feature.room.RoomJoinScreen
 import com.rodrigomachado.riff.feature.room.RoomLobbyRoute
 import com.rodrigomachado.riff.feature.room.RoomLobbyScreen
+import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
@@ -216,7 +218,9 @@ private fun NavGraphBuilder.rankingDestinations(
  * A Sala, como no celular: a escolha, entrar com o código e a sala, que abre por cima da escolha (sair volta a ela).
  * As telas já andam pelo teclado sozinhas ([menuKeys] dentro delas): setas entre os botões, letras e Backspace na
  * caixa do código, Enter entra e Esc volta (na sala, Esc sai dela). Sem nome no ranking, criar e entrar abrem o
- * diálogo do nome ([onChooseName]).
+ * diálogo do nome ([onChooseName]). O dono escolhe a música pela Biblioteca no modo de escolha, que entrega o mapa e a
+ * dificuldade ao ViewModel da sala (o da entrada da sala na pilha) e volta; a contagem abre a partida de sala (com o
+ * código e a rodada) por cima da sala: Sair e o Voltar à sala do Resultado voltam a ela.
  */
 private fun NavGraphBuilder.roomDestinations(
     graph: DesktopGraph,
@@ -249,6 +253,25 @@ private fun NavGraphBuilder.roomDestinations(
             onLeft = { navController.popBackStack() },
             viewModel = viewModel { graph.roomLobbyViewModel(code) },
             code = code,
+            onChooseSong = dropUnlessResumed { navController.navigate(LibraryPickRoute(code)) },
+            onMatch = { ticket ->
+                navController.navigate(GameplayRoute(ticket.chartId, ticket.difficulty.name, code, ticket.round))
+            },
+        )
+    }
+    composable<LibraryPickRoute> { entry ->
+        val code = entry.toRoute<LibraryPickRoute>().roomCode
+        val lobbyEntry = remember(entry) { navController.getBackStackEntry<RoomLobbyRoute>() }
+        val lobby = viewModel<RoomLobbyViewModel>(lobbyEntry) { graph.roomLobbyViewModel(code) }
+        LibraryScreen(
+            onPlay = dropUnlessResumed { chartId, difficulty ->
+                lobby.chooseSong(chartId, difficulty)
+                navController.popBackStack()
+            },
+            onBack = { navController.popBackStack() },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            pickForRoom = true,
+            viewModel = viewModel { graph.libraryViewModel() },
         )
     }
 }
@@ -275,7 +298,8 @@ private fun NavGraphBuilder.searchDestination(graph: DesktopGraph, navController
  * A partida e o resultado, com a mesma pilha do celular: o Resultado toma o lugar da partida e "Jogar de novo", o do
  * Resultado (Biblioteca → Partida → Resultado → Biblioteca, sem tela repetida). O Resultado mostra o ranking como
  * no celular (a posição, "vai quando der" ou o convite para escolher um nome, [onChooseName]); "Ver ranking" abre o
- * placar na tabela da partida.
+ * placar na tabela da partida. A partida de sala (a rota com o código) não pausa: Esc e Start perguntam se é para
+ * sair; o Resultado dela só volta à sala.
  */
 private fun NavGraphBuilder.matchDestinations(
     graph: DesktopGraph,
@@ -286,12 +310,15 @@ private fun NavGraphBuilder.matchDestinations(
         val route = entry.toRoute<GameplayRoute>()
         GameplayScreen(
             onFinished = { scoreId ->
-                navController.navigate(ResultsRoute(scoreId)) {
+                navController.navigate(resultsOf(route, scoreId)) {
                     popUpTo<GameplayRoute> { inclusive = true }
                 }
             },
             onExit = dropUnlessResumed { navController.popBackStack() },
-            viewModel = viewModel { graph.gameplayViewModel(route.chartId, Difficulty.valueOf(route.difficulty)) },
+            viewModel = viewModel {
+                val difficulty = Difficulty.valueOf(route.difficulty)
+                graph.gameplayViewModel(route.chartId, difficulty, route.roomCode, route.round)
+            },
         )
     }
     composable<ResultsRoute> { entry ->
@@ -311,9 +338,13 @@ private fun NavGraphBuilder.matchDestinations(
             },
             viewModel = results,
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
+            inRoom = route.inRoom,
         )
     }
 }
+
+/** O Resultado da partida [route]: o da partida de sala sabe disso (só volta à sala, sem "Jogar de novo"). */
+internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, inRoom = route.roomCode != null)
 
 /**
  * As Configurações (com os Controles, a guitarra por IA e o nome no ranking, [onRankingName]), a calibração e as
