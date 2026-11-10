@@ -28,6 +28,9 @@ internal object RoundFormat {
     private const val VIDEO = "video"
     private const val CHARTER = "charter"
 
+    /** O limite das regras para `titulo`, `artista` e `charter`. */
+    private const val MAX_TEXT = 200
+
     /** Escolher a música (o dono): ela, a minha dificuldade, "tem" e não pronto, e a atividade. */
     fun chooseSong(me: String, song: RoomSong, difficulty: Difficulty): Map<String, Any?> = mapOf(
         SONG to songMap(song),
@@ -81,16 +84,19 @@ internal object RoundFormat {
 
     fun difficulty(name: String?): Difficulty? = Difficulty.entries.firstOrNull { it.name == name }
 
-    /** A música como vai no banco: as dificuldades na ordem do jogo, sem os opcionais ausentes. */
+    /**
+     * A música como vai no banco: as dificuldades na ordem do jogo, sem os opcionais ausentes, e os textos cortados
+     * no limite das regras ([MAX_TEXT]).
+     */
     private fun songMap(song: RoomSong): Map<String, Any?> = buildMap {
         put(CHART_ID, song.chartId)
-        put(TITLE, song.title)
-        put(ARTIST, song.artist)
+        put(TITLE, song.title.take(MAX_TEXT))
+        put(ARTIST, song.artist.take(MAX_TEXT))
         put(DIFFICULTIES, song.difficulties.sorted().joinToString(",") { it.name })
         song.durationMs?.let { put(DURATION, it) }
         song.encore?.let { encore ->
             val ref = mutableMapOf<String, Any?>(MD5 to encore.md5, VIDEO to encore.video)
-            encore.charter?.let { ref[CHARTER] = it }
+            encore.charter?.let { ref[CHARTER] = it.take(MAX_TEXT) }
             put(ENCORE, ref)
         }
     }

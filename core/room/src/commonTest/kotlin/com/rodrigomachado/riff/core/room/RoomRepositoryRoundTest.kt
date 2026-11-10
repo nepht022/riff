@@ -108,6 +108,69 @@ class RoomRepositoryRoundTest : JsonTest() {
         assertEquals(withoutCharter, observed().song)
     }
 
+    /** O limite das regras (200) para o título, o artista e quem fez o mapa: o que passa é cortado. */
+    @Test
+    fun chooseSongCutsLongTextsTo200() = runTest {
+        fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))
+        val long = SONG.copy(
+            title = "t".repeat(250),
+            artist = "a".repeat(201),
+            encore = SONG.encore!!.copy(charter = "c".repeat(300)),
+        )
+
+        assertTrue(fake.repository().chooseSong("ABCD", long, Difficulty.EASY))
+
+        val song = JSONObject(fake.writes.single().body!!).getJSONObject("musica")
+        assertEquals(200, song.getString("titulo").length)
+        assertEquals(200, song.getString("artista").length)
+        assertEquals(200, song.getJSONObject("encore").getString("charter").length)
+    }
+
+    /** Um mapa sem dificuldades as regras recusam: nem tenta. Recusado ou sem internet: false. */
+    @Test
+    fun chooseSongWithoutDifficultiesOrRefusedSaysFalse() = runTest {
+        fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))
+        val repository = fake.repository()
+
+        assertFalse(repository.chooseSong("ABCD", SONG.copy(difficulties = emptySet()), Difficulty.EASY))
+        assertTrue(fake.writes.isEmpty())
+
+        fake.refuse = { true }
+        assertFalse(repository.chooseSong("ABCD", SONG, Difficulty.EASY))
+        fake.refuse = { false }
+        fake.online = false
+        assertFalse(repository.chooseSong("ABCD", SONG, Difficulty.EASY))
+    }
+
+    /** Sair esquece a contagem vista: na sala nova com o mesmo código, os 15 s contam de novo. */
+    @Test
+    fun leavingForgetsTheCountdownSeen() = runTest {
+        seedSongRoom(readyPlayer("u1"), readyPlayer("bia"))
+        val repository = fake.repository()
+        assertTrue(repository.startRound("ABCD"))
+        repository.leave("ABCD")
+
+        now += 60_000
+        seedSongRoom(readyPlayer("u1"), readyPlayer("bia"), state = "contagem", round = 1)
+        repository.scheduleStartIfDue("ABCD", 1)
+
+        assertEquals("contagem", room()!!.getString("estado")) // conta de agora, não de 60 s atrás
+    }
+
+    /** Sair esquece o primeiro Pronto visto: na sala nova com o mesmo código, os 30 s contam de novo. */
+    @Test
+    fun leavingForgetsTheFirstReadySeen() = runTest {
+        seedSongRoom(readyPlayer("u1"), FakePlayer("bia"))
+        val repository = fake.repository()
+        assertEquals(now, repository.observe("ABCD").first()!!.firstReadyAt)
+        repository.leave("ABCD")
+
+        now += 60_000
+        seedSongRoom(readyPlayer("u1"), FakePlayer("bia"))
+
+        assertEquals(now, repository.observe("ABCD").first()!!.firstReadyAt)
+    }
+
     @Test
     fun setMeWritesMyState() = runTest {
         seedSongRoom(FakePlayer("u1"), FakePlayer("bia"))

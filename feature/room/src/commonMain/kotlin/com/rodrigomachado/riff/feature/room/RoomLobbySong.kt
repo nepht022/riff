@@ -39,6 +39,7 @@ import com.rodrigomachado.riff.feature.room.resources.Res
 import com.rodrigomachado.riff.feature.room.resources.room_be_ready
 import com.rodrigomachado.riff.feature.room.resources.room_change_song
 import com.rodrigomachado.riff.feature.room.resources.room_checking_song
+import com.rodrigomachado.riff.feature.room.resources.room_choose_failed
 import com.rodrigomachado.riff.feature.room.resources.room_choose_song
 import com.rodrigomachado.riff.feature.room.resources.room_difficulty
 import com.rodrigomachado.riff.feature.room.resources.room_download
@@ -64,9 +65,12 @@ data class RoomLobbyActions(
     val onStart: () -> Unit = {},
 )
 
-/** A música escolhida (ou "Nenhuma música escolhida") e, para o dono, Escolher/Trocar música. */
+/**
+ * A música escolhida (ou "Nenhuma música escolhida") e, para o dono, Escolher/Trocar música e o aviso quando a escolha
+ * não foi gravada ([chooseFailed]).
+ */
 @Composable
-internal fun SongSection(room: Room, onChooseSong: () -> Unit) {
+internal fun SongSection(room: Room, onChooseSong: () -> Unit, chooseFailed: Boolean = false) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         val song = room.song
         if (song == null) {
@@ -81,6 +85,7 @@ internal fun SongSection(room: Room, onChooseSong: () -> Unit) {
             TrackCard(title = song.title, artist = song.artist, tilted = true)
         }
         val lobby = room.state == RoomState.LOBBY
+        if (room.iAmOwner && chooseFailed) Note(stringResource(Res.string.room_choose_failed), RiffColors.PaperDim)
         when {
             !room.iAmOwner -> Unit
 

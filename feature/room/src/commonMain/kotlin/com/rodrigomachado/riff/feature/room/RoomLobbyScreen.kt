@@ -118,7 +118,7 @@ fun RoomLobbyContent(
             RoomLobbyUiState.NoConnection -> RoomErrorText(RoomError.NO_CONNECTION)
 
             is RoomLobbyUiState.Ready -> {
-                SongSection(state.room, actions.onChooseSong)
+                SongSection(state.room, actions.onChooseSong, state.chooseFailed)
                 MySongSection(state, actions)
                 // O Começar antes da lista: com a música e 4 jogadores, ele ainda aparece sem rolar a tela.
                 StartSection(state, actions.onStart)

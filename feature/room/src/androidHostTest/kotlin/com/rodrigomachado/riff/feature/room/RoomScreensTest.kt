@@ -180,6 +180,13 @@ class RoomScreensTest {
     }
 
     @Test
+    fun aRefusedChoiceTellsTheOwner() {
+        showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia"), chooseFailed = true))
+
+        composeRule.onNodeWithText("Não deu para escolher a música. Tente de novo.").assertExists()
+    }
+
+    @Test
     fun guestWithoutASongJustWaits() {
         showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia", me = "Bia")))
 

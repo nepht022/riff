@@ -80,10 +80,12 @@ class RoomRepository(
 
     /**
      * Sai da sala liberando a vaga. O dono passa o dono ao jogador mais antigo (vivo, se houver) na mesma escrita;
-     * o último a sair apaga a sala. Sem internet não faz nada: quem saiu some em 60 s e o dono passa adiante.
+     * o último a sair apaga a sala. Sem internet não faz nada: quem saiu some em 60 s e o dono passa adiante. Esquece
+     * o que este aparelho viu da sala (o primeiro Pronto, as contagens): outra sala pode nascer com o mesmo código.
      */
     suspend fun leave(code: String) {
         if (joined == code) joined = null
+        forget(code)
         try {
             leaveAs(auth.uid(), code)
         } catch (_: NoConnection) {
@@ -137,11 +139,18 @@ class RoomRepository(
 
     /**
      * Escolhe a música (só o dono, só na sala): ela, a minha dificuldade e eu com a música e não pronto. Os outros
-     * conferem a música nova e gravam o próprio estado ([setMe]). Sem internet ou recusado, não faz nada (a sala
-     * observada continua mostrando o que está no banco).
+     * conferem a música nova e gravam o próprio estado ([setMe]). O título, o artista e quem fez o mapa vão cortados
+     * no limite das regras; um mapa sem dificuldades (que as regras recusam) nem é tentado. Devolve se gravou: false
+     * sem dificuldades, sem internet ou recusado (a sala observada continua mostrando o que está no banco).
      */
-    suspend fun chooseSong(code: String, song: RoomSong, myDifficulty: Difficulty) = quietly {
-        db.patch(RoomFormat.path(code), RoundFormat.chooseSong(auth.uid(), song, myDifficulty))
+    suspend fun chooseSong(code: String, song: RoomSong, myDifficulty: Difficulty): Boolean {
+        if (song.difficulties.isEmpty()) return false
+        var written = false
+        quietly {
+            db.patch(RoomFormat.path(code), RoundFormat.chooseSong(auth.uid(), song, myDifficulty))
+            written = true
+        }
+        return written
     }
 
     /** O meu estado para a música da sala (null = sem dificuldade escolhida). Sem internet ou recusado, nada. */
@@ -237,6 +246,11 @@ class RoomRepository(
 
     /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
     private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code))
+
+    private fun forget(code: String) {
+        synchronized(firstReady) { firstReady.remove(code) }
+        synchronized(countdowns) { countdowns.keys.removeAll { it.first == code } }
+    }
 
     /** Quando este aparelho viu a contagem da rodada [round] pela primeira vez (hora do servidor). */
     private fun countdownSince(code: String, round: Int, now: Long): Long =

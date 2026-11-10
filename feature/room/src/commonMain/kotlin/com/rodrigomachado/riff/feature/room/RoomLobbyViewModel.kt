@@ -55,13 +55,15 @@ sealed interface RoomLobbyUiState {
 
     /**
      * A sala ao vivo; [mySong] null = nenhuma música escolhida. [canStart] = o Começar habilitado agora (as regras do
-     * [Room.canStart] no relógio do servidor); [startPressed] = o Começar foi apertado e o pedido está a caminho.
+     * [Room.canStart] no relógio do servidor); [startPressed] = o Começar foi apertado e o pedido está a caminho;
+     * [chooseFailed] = a última música escolhida pelo dono não foi gravada (recusada ou sem internet).
      */
     data class Ready(
         val room: Room,
         val mySong: MySong? = null,
         val canStart: Boolean = false,
         val startPressed: Boolean = false,
+        val chooseFailed: Boolean = false,
     ) : RoomLobbyUiState {
         /** "Começando…": o Começar foi apertado ou a sala já saiu da escolha (contagem ou partida). */
         val starting: Boolean get() = startPressed || room.state != RoomState.LOBBY
@@ -118,6 +120,7 @@ open class RoomLobbyViewModel(
     /** A conferência da música: o `chartId` conferido e como ela está aqui. */
     private val mine = MutableStateFlow<Pair<String, MySong>?>(null)
     private val pressedStart = MutableStateFlow(false)
+    private val chooseFailed = MutableStateFlow(false)
     private val ticket = MutableStateFlow<MatchTicket?>(null)
     private var checkedChart: String? = null
     private var songJob: Job? = null
@@ -139,8 +142,8 @@ open class RoomLobbyViewModel(
             latest.value = room
             room?.let(::onRoom)
         }
-        combine(rooms, mine, pressedStart, ticks()) { room, my, pressed, _ ->
-            room?.let { ready(it, my, pressed) } ?: RoomLobbyUiState.Ended
+        combine(rooms, mine, pressedStart, chooseFailed, ticks()) { room, my, pressed, failed, _ ->
+            room?.let { ready(it, my, pressed).copy(chooseFailed = failed) } ?: RoomLobbyUiState.Ended
         }
             // Sair me tira da sala (ou a apaga): a tela volta sem mostrar "a sala acabou" no caminho.
             .filterNot { it == RoomLobbyUiState.Ended && leaving.value }
@@ -164,11 +167,14 @@ open class RoomLobbyViewModel(
         }
     }
 
-    /** O dono escolheu [chartId] na Biblioteca (modo de escolha), para tocar em [difficulty]. */
+    /**
+     * O dono escolheu [chartId] na Biblioteca (modo de escolha), para tocar em [difficulty]. Não gravou (o mapa saiu
+     * da biblioteca, não tem dificuldades, recusado, sem internet): a tela avisa ([RoomLobbyUiState.Ready.chooseFailed]).
+     */
     fun chooseSong(chartId: String, difficulty: Difficulty) {
         viewModelScope.launch {
-            val song = songs.songOf(chartId) ?: return@launch
-            repository.chooseSong(code, song, difficulty)
+            val song = songs.songOf(chartId)
+            chooseFailed.value = song == null || !repository.chooseSong(code, song, difficulty)
         }
     }
 

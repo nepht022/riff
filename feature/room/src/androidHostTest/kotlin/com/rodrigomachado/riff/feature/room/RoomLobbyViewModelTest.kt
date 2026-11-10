@@ -201,6 +201,30 @@ class RoomLobbyViewModelTest {
         assertEquals(false, player("u1", "pronto"))
     }
 
+    /** A escolha recusada (o mapa sem dificuldades, as regras, sem internet) aparece na tela; a próxima apaga. */
+    @Test
+    fun aRefusedChoiceIsShown() = runTest(dispatcher) {
+        val library = FakeRoomLibrary(CHART_A).apply { songs[CHART_A] = SONG_A.copy(difficulties = emptySet()) }
+        val vm = opened(library = library)
+
+        vm.chooseSong(CHART_A, Difficulty.EXPERT)
+        runCurrent()
+        assertTrue(vm.ready().chooseFailed)
+        assertNull(vm.ready().room.song)
+
+        library.songs[CHART_A] = SONG_A
+        fake.refuse = { "musica" in it.body.orEmpty() }
+        vm.chooseSong(CHART_A, Difficulty.EXPERT)
+        runCurrent()
+        assertTrue(vm.ready().chooseFailed)
+
+        fake.refuse = { false }
+        vm.chooseSong(CHART_A, Difficulty.EXPERT)
+        runCurrent()
+        assertFalse(vm.ready().chooseFailed)
+        assertEquals(SONG_A.title, vm.ready().room.song?.title)
+    }
+
     @Test
     fun guestSeesTheSongAndChoosesADifficultyOfTheSong() = runTest(dispatcher) {
         seedWithSong("u2", FakePlayer("u2"), FakePlayer("u1"))

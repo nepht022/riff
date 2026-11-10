@@ -27,6 +27,7 @@
     <string name="room_start">Começar</string>
     <string name="room_start_with_ready">Começar com quem está pronto</string>
     <string name="room_need_two">Precisa de pelo menos 2 prontos</string>
+    <string name="room_choose_failed">Não deu para escolher a música. Tente de novo.</string>
     <string name="room_be_ready">Fique pronto para começar</string>
     <string name="room_download">Baixar do Encore</string>
     <string name="room_downloading">Baixando…</string>
