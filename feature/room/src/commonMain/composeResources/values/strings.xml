@@ -18,4 +18,22 @@
     <string name="room_waiting">Aguardando jogadores…</string>
     <string name="room_loading">Carregando…</string>
     <string name="room_ended">A sala acabou.</string>
+    <string name="room_choose_song">Escolher música</string>
+    <string name="room_change_song">Trocar música</string>
+    <string name="room_no_song">Nenhuma música escolhida</string>
+    <string name="room_difficulty">Dificuldade</string>
+    <string name="room_ready">Pronto</string>
+    <string name="room_not_ready">Não estou pronto</string>
+    <string name="room_start">Começar</string>
+    <string name="room_start_with_ready">Começar com quem está pronto</string>
+    <string name="room_need_two">Precisa de pelo menos 2 prontos</string>
+    <string name="room_download">Baixar do Encore</string>
+    <string name="room_downloading">Baixando…</string>
+    <string name="room_download_failed">Não foi possível baixar. Tente de novo.</string>
+    <string name="room_missing_song">Você não tem esta música.</string>
+    <string name="room_checking_song">Conferindo a música…</string>
+    <string name="room_stamp_missing">Sem a música</string>
+    <string name="room_stamp_ready">Pronto</string>
+    <string name="room_stamp_choosing">Escolhendo</string>
+    <string name="room_starting">Começando…</string>
 </resources>

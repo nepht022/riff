@@ -65,6 +65,7 @@ import com.rodrigomachado.riff.feature.library.resources.library_import_failed
 import com.rodrigomachado.riff.feature.library.resources.library_importing
 import com.rodrigomachado.riff.feature.library.resources.library_no_folder_message
 import com.rodrigomachado.riff.feature.library.resources.library_no_folder_title
+import com.rodrigomachado.riff.feature.library.resources.library_pick_title
 import com.rodrigomachado.riff.feature.library.resources.library_report_failed
 import com.rodrigomachado.riff.feature.library.resources.library_report_imported
 import com.rodrigomachado.riff.feature.library.resources.library_report_more
@@ -88,6 +89,8 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     /** Pesquisar no Encore. */
     onSearch: () -> Unit = {},
+    /** O modo de escolha da sala: [onPlay] devolve o mapa e a dificuldade em vez de jogar (ver [LibraryPickRoute]). */
+    pickForRoom: Boolean = false,
     viewModel: LibraryViewModel,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -113,6 +116,7 @@ fun LibraryScreen(
         modifier = modifier,
         onSearch = onSearch,
         onDifficultyChosen = viewModel::onDifficultyChosen,
+        pickForRoom = pickForRoom,
         onSeparate = separate,
         onPlayWithoutSeparating = viewModel::onPlayWithoutSeparating,
         onPromptDismissed = viewModel::onPromptDismissed,
@@ -146,6 +150,11 @@ fun LibraryContent(
     onPlayWithoutSeparating: () -> Unit = {},
     onPromptDismissed: () -> Unit = {},
     deletion: DeletionCallbacks = DeletionCallbacks(),
+    /**
+     * O modo de escolha da sala: a dificuldade escolhida vai direto para [onPlay] (sem a pergunta da separação, que é
+     * para jogar agora), o título é "Escolher música" e não há Pesquisar.
+     */
+    pickForRoom: Boolean = false,
 ) {
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -158,10 +167,10 @@ fun LibraryContent(
         filter = ""
     }
     Column(closeFilter.then(modifier).fillMaxSize().padding(horizontal = Spacing.md)) {
-        LibraryHeader(onBack, onSearch)
+        LibraryHeader(onBack, onSearch.takeUnless { pickForRoom })
         Row(verticalAlignment = Alignment.CenterVertically) {
             PosterTitle(
-                stringResource(Res.string.library_title),
+                stringResource(if (pickForRoom) Res.string.library_pick_title else Res.string.library_title),
                 Modifier.weight(1f),
                 style = MaterialTheme.typography.displaySmall,
             )
@@ -191,7 +200,8 @@ fun LibraryContent(
         }
     }
     choosing?.let { chart ->
-        DifficultyChoice(chart, onClose = { choosingId = null }, onChosen = onDifficultyChosen)
+        val chosen = if (pickForRoom) { picked: Chart, d: Difficulty -> onPlay(picked.id, d) } else onDifficultyChosen
+        DifficultyChoice(chart, onClose = { choosingId = null }, onChosen = chosen)
     }
     state.prompt?.let { SeparationPrompt(it, onSeparate, onPlayWithoutSeparating, onPromptDismissed) }
     DeletionDialogs(state.deletion, deletion, onAllow = onPickFolder)
@@ -242,19 +252,24 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
     ErrorState(message, onRetry, retrySound = MenuSound.NAVIGATE)
 }
 
-/** Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia; a palheta da separação no meio. */
+/**
+ * Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia; a palheta da separação no meio. Sem
+ * [onSearch] (o modo de escolha da sala), sem Pesquisar.
+ */
 @Composable
-private fun LibraryHeader(onBack: () -> Unit, onSearch: () -> Unit) {
+private fun LibraryHeader(onBack: () -> Unit, onSearch: (() -> Unit)?) {
     Box(Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).focusHighlight(CircleShape)) {
             Text(stringResource(Res.string.library_back), color = RiffColors.Paper)
         }
         SeparationIndicator(Modifier.align(Alignment.Center))
-        TextButton(
-            onClick = withMenuSound(MenuSound.NAVIGATE, onSearch),
-            modifier = Modifier.align(Alignment.CenterEnd).focusHighlight(CircleShape),
-        ) {
-            Text(stringResource(Res.string.library_search), color = RiffColors.Paper)
+        if (onSearch != null) {
+            TextButton(
+                onClick = withMenuSound(MenuSound.NAVIGATE, onSearch),
+                modifier = Modifier.align(Alignment.CenterEnd).focusHighlight(CircleShape),
+            ) {
+                Text(stringResource(Res.string.library_search), color = RiffColors.Paper)
+            }
         }
     }
 }

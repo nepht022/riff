@@ -8,6 +8,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:room"))
+            // O EncoreChart do download da música da sala (o ChartDownloader do :core:data).
+            implementation(project(":core:encore"))
         }
         androidMain.dependencies {
             // BackHandler (o Voltar do sistema na sala também sai dela).

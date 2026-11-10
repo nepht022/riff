@@ -15,4 +15,7 @@ interface EncoreChartDao {
 
     @Query("SELECT chartId FROM encore_charts WHERE md5 = :md5")
     suspend fun chartIdOf(md5: String): String?
+
+    @Query("SELECT md5 FROM encore_charts WHERE chartId = :chartId")
+    suspend fun md5Of(chartId: String): String?
 }

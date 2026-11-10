@@ -188,4 +188,6 @@ private class MemoryDownloads : EncoreDownloads {
     }
 
     override suspend fun chartIdOf(md5: String) = owned.value[md5]
+
+    override suspend fun md5Of(chartId: String) = owned.value.entries.firstOrNull { it.value == chartId }?.key
 }

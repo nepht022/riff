@@ -14,6 +14,9 @@ interface EncoreDownloads {
 
     /** O mapa da biblioteca baixado deste pacote (para o Jogar da pesquisa). */
     suspend fun chartIdOf(md5: String): String?
+
+    /** O pacote do Encore de onde veio o mapa [chartId] (null = não veio do Encore): a sala o leva aos outros. */
+    suspend fun md5Of(chartId: String): String?
 }
 
 class RoomEncoreDownloads @Inject constructor(private val dao: EncoreChartDao) : EncoreDownloads {
@@ -22,4 +25,6 @@ class RoomEncoreDownloads @Inject constructor(private val dao: EncoreChartDao) :
     override suspend fun remember(chartId: String, md5: String) = dao.upsert(EncoreChartEntity(chartId, md5))
 
     override suspend fun chartIdOf(md5: String): String? = dao.chartIdOf(md5)
+
+    override suspend fun md5Of(chartId: String): String? = dao.md5Of(chartId)
 }

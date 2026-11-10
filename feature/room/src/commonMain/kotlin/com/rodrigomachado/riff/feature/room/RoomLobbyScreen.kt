@@ -30,7 +30,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.room.Room
 import com.rodrigomachado.riff.core.room.RoomDevice
 import com.rodrigomachado.riff.core.room.RoomPlayer
+import com.rodrigomachado.riff.core.room.SongStatus
 import com.rodrigomachado.riff.core.ui.component.PosterButton
+import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -38,6 +40,7 @@ import com.rodrigomachado.riff.core.ui.theme.oswald
 import com.rodrigomachado.riff.feature.room.resources.Res
 import com.rodrigomachado.riff.feature.room.resources.room_back
 import com.rodrigomachado.riff.feature.room.resources.room_code
+import com.rodrigomachado.riff.feature.room.resources.room_downloading
 import com.rodrigomachado.riff.feature.room.resources.room_ended
 import com.rodrigomachado.riff.feature.room.resources.room_gone
 import com.rodrigomachado.riff.feature.room.resources.room_gone_description
@@ -45,23 +48,57 @@ import com.rodrigomachado.riff.feature.room.resources.room_leave
 import com.rodrigomachado.riff.feature.room.resources.room_owner
 import com.rodrigomachado.riff.feature.room.resources.room_pc
 import com.rodrigomachado.riff.feature.room.resources.room_phone
+import com.rodrigomachado.riff.feature.room.resources.room_stamp_choosing
+import com.rodrigomachado.riff.feature.room.resources.room_stamp_missing
+import com.rodrigomachado.riff.feature.room.resources.room_stamp_ready
 import com.rodrigomachado.riff.feature.room.resources.room_waiting
 import com.rodrigomachado.riff.feature.room.resources.room_you
 import org.jetbrains.compose.resources.stringResource
 
-/** A sala ao vivo; o Sair (ou o Voltar do sistema) sai da sala e então chama [onLeft]. */
+/**
+ * A sala ao vivo; o Sair (ou o Voltar do sistema) sai da sala e então chama [onLeft]. O dono escolhe a música pela
+ * Biblioteca ([onChooseSong], que devolve ao [RoomLobbyViewModel.chooseSong]); a contagem de uma rodada em que estou
+ * pronto abre a partida ([onMatch]).
+ */
 @Composable
-fun RoomLobbyScreen(onLeft: () -> Unit, viewModel: RoomLobbyViewModel, code: String, modifier: Modifier = Modifier) {
+fun RoomLobbyScreen(
+    onLeft: () -> Unit,
+    viewModel: RoomLobbyViewModel,
+    code: String,
+    modifier: Modifier = Modifier,
+    onChooseSong: () -> Unit = {},
+    onMatch: (MatchTicket) -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val left by viewModel.left.collectAsStateWithLifecycle()
+    val match by viewModel.navigateToMatch.collectAsStateWithLifecycle()
     LaunchedEffect(left) { if (left) onLeft() }
+    LaunchedEffect(match) {
+        match?.let {
+            onMatch(it)
+            viewModel.onMatchOpened()
+        }
+    }
     RoomBackHandler(viewModel::leave)
-    RoomLobbyContent(state, code, viewModel::leave, modifier)
+    val actions = RoomLobbyActions(
+        onChooseSong = onChooseSong,
+        onDifficulty = viewModel::chooseDifficulty,
+        onToggleReady = viewModel::toggleReady,
+        onDownload = viewModel::download,
+        onStart = viewModel::start,
+    )
+    RoomLobbyContent(state, code, viewModel::leave, modifier, actions)
 }
 
-/** O código grande, os jogadores (até 4) e o Sair. A música e o Começar chegam na próxima etapa. */
+/** O código grande, a música, a minha dificuldade e o Pronto, o Começar do dono, os jogadores (até 4) e o Sair. */
 @Composable
-fun RoomLobbyContent(state: RoomLobbyUiState, code: String, onLeave: () -> Unit, modifier: Modifier = Modifier) {
+fun RoomLobbyContent(
+    state: RoomLobbyUiState,
+    code: String,
+    onLeave: () -> Unit,
+    modifier: Modifier = Modifier,
+    actions: RoomLobbyActions = RoomLobbyActions(),
+) {
     Column(
         modifier.fillMaxSize().menuKeys(onLeave).verticalScroll(rememberScrollState()).padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -80,7 +117,13 @@ fun RoomLobbyContent(state: RoomLobbyUiState, code: String, onLeave: () -> Unit,
 
             RoomLobbyUiState.NoConnection -> RoomErrorText(RoomError.NO_CONNECTION)
 
-            is RoomLobbyUiState.Ready -> Players(state.room)
+            is RoomLobbyUiState.Ready -> {
+                SongSection(state.room, actions.onChooseSong)
+                MySongSection(state, actions)
+                // O Começar antes da lista: com a música e 4 jogadores, ele ainda aparece sem rolar a tela.
+                StartSection(state, actions.onStart)
+                Players(state.room)
+            }
 
             RoomLobbyUiState.Ended -> Unit
         }
@@ -116,6 +159,7 @@ private fun Players(room: Room) {
                 player,
                 owner = player.uid == room.owner,
                 me = player.uid == room.me,
+                withSong = room.song != null,
             )
         }
         if (room.players.size < MAX_PLAYERS) {
@@ -130,11 +174,12 @@ private fun Players(room: Room) {
 }
 
 /**
- * Cartão de papel: nome e aparelho; "Dono" e "sumiu" carimbados; o próprio jogador com a borda vermelha. Quem sumiu
- * fica no papel apagado, com o texto esmaecido (o carimbo continua legível).
+ * Cartão de papel: nome, aparelho e (com a música escolhida, [withSong]) a dificuldade; "Dono", "sumiu" e o estado
+ * para a música (Pronto, Escolhendo, Baixando…, Sem a música) carimbados; o próprio jogador com a borda vermelha.
+ * Quem sumiu fica no papel apagado, com o texto esmaecido (o carimbo continua legível).
  */
 @Composable
-private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean) {
+private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean, withSong: Boolean) {
     val shape = MaterialTheme.shapes.small
     Row(
         Modifier.fillMaxWidth()
@@ -155,12 +200,17 @@ private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean) {
                     )
                 }
             }
+            val device = stringResource(
+                if (player.device == RoomDevice.PC) Res.string.room_pc else Res.string.room_phone,
+            )
+            val difficulty = player.difficulty?.takeIf { withSong }?.let { difficultyName(it.ordinal) }
             Text(
-                stringResource(if (player.device == RoomDevice.PC) Res.string.room_pc else Res.string.room_phone),
+                listOfNotNull(device, difficulty).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = RiffColors.Ink.copy(alpha = SECONDARY_ALPHA),
             )
         }
+        if (withSong && !player.gone) SongStamp(player)
         if (player.gone) {
             val description = stringResource(Res.string.room_gone_description, player.name)
             Stamp(
@@ -170,6 +220,22 @@ private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean) {
             )
         }
         if (owner) Stamp(stringResource(Res.string.room_owner), RiffColors.TourRed)
+    }
+}
+
+/** O estado do jogador para a música da sala. */
+@Composable
+private fun SongStamp(player: RoomPlayer) {
+    when {
+        player.ready && player.song == SongStatus.HAS && player.difficulty != null ->
+            Stamp(stringResource(Res.string.room_stamp_ready), RiffColors.StampSuccess)
+
+        player.song == SongStatus.MISSING -> Stamp(stringResource(Res.string.room_stamp_missing), RiffColors.StampError)
+
+        player.song == SongStatus.DOWNLOADING ->
+            Stamp(stringResource(Res.string.room_downloading), RiffColors.StampWarning)
+
+        else -> Stamp(stringResource(Res.string.room_stamp_choosing), RiffColors.Ink)
     }
 }
 
