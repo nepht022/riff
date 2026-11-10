@@ -94,6 +94,16 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Multiplayer M2: música e começo juntos (2026-11-10)
+
+- **Ação do usuário:** republicar `firebase/database.rules.json` no console (regras da M2). Teste real (PC e celular: música do Encore que um não tem, dificuldades diferentes, Pronto, Começar, começo junto de ouvido, Esc sem pausar, Resultado e volta à sala, Começar desligado sozinho): pendente.
+- Precisão do começo junto estimada (meia ida e volta mais ~16 ms do `delay`), não medida em aparelhos reais; o teste do PC confere ≤ 250 ms do `inicio` com relógio falso.
+- O `encore_charts` não guarda se o pacote tem vídeo: o download pela sala pede sempre o pacote com vídeo, quando houver (maior; mesmas notas).
+- Sem começo combinado em 30 s (sem internet, sala acabou, rodada mudou), a partida começa sozinha para não travar.
+- O dono novo grava `{dono: me}` e só numa segunda escrita a rodada/o começo (as regras recusam as duas juntas).
+- `carregou`/`saiu` com a rodada desatualizada são recusados (o app relê e refaz se a rodada ainda é a mesma).
+- O `firstReadyAt` (30 s para começar com quem está pronto) é guardado no aparelho de quem observa: quem abre a sala depois conta de quando viu.
+
 ## Multiplayer M1: a sala (2026-11-09)
 
 - Firebase criado e regras publicadas pelo usuário (2026-11-10); teste real aceito: PC criou a sala, o celular entrou pelo código, sair passou o dono e o último apagou a sala.
