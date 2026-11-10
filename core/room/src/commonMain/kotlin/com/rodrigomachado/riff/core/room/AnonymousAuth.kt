@@ -64,26 +64,37 @@ class AnonymousAuth(
         val reply = http.request("POST", "$REFRESH_URL?key=$apiKey", form, FORM)
         // 400: a conta anônima não existe mais (apagada no console, token revogado): começa outra.
         if (reply.code == HTTP_BAD_REQUEST) return signUp()
-        val json = answer(reply)
-        val identity = RoomIdentity(json.getString("user_id"), json.getString("refresh_token"))
+        val session = fields(reply) { json ->
+            Session(json.getString("user_id"), json.getString("id_token"), expiresAt(json.getString("expires_in"))) to
+                json.getString("refresh_token")
+        }
+        val identity = RoomIdentity(session.first.uid, session.second)
         if (identity != saved) store.write(identity)
-        return Session(identity.uid, json.getString("id_token"), expiresAt(json.getString("expires_in")))
+        return session.first
     }
 
     private suspend fun signUp(): Session {
         val body = JSONObject().put("returnSecureToken", true).toString()
-        val json = answer(http.request("POST", "$SIGN_UP_URL?key=$apiKey", body, JSON))
-        val identity = RoomIdentity(json.getString("localId"), json.getString("refreshToken"))
-        store.write(identity)
-        return Session(identity.uid, json.getString("idToken"), expiresAt(json.getString("expiresIn")))
+        val (session, refreshToken) = fields(http.request("POST", "$SIGN_UP_URL?key=$apiKey", body, JSON)) { json ->
+            Session(json.getString("localId"), json.getString("idToken"), expiresAt(json.getString("expiresIn"))) to
+                json.getString("refreshToken")
+        }
+        store.write(RoomIdentity(session.uid, refreshToken))
+        return session
     }
 
-    private fun answer(reply: HttpReply): JSONObject {
+    /**
+     * Lê a resposta de sucesso com [read]. Um erro, uma página no lugar do JSON (portal de Wi-Fi, proxy) ou um JSON
+     * sem os campos esperados viram [RoomHttpError] (nunca um JSONException solto, que fecharia o app).
+     */
+    private fun <T> fields(reply: HttpReply, read: (JSONObject) -> T): T {
         if (reply.code !in HTTP_OK) throw RoomHttpError(reply.code)
         return try {
-            JSONObject(reply.body)
+            read(JSONObject(reply.body))
         } catch (_: JSONException) {
-            throw RoomHttpError(reply.code) // uma página no lugar do JSON (portal de Wi-Fi, proxy)
+            throw RoomHttpError(reply.code)
+        } catch (_: NumberFormatException) {
+            throw RoomHttpError(reply.code) // expiresIn que não é número
         }
     }
 

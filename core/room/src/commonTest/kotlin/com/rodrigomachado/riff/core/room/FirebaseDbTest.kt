@@ -110,6 +110,21 @@ class FirebaseDbTest : JsonTest() {
         }
     }
 
+    /** Uma resposta ilegível (cortada, um proxy): erro do servidor, nunca um JSONException solto. */
+    @Test
+    fun unreadableAnswerThrowsRoomHttpError() = runTest {
+        database = { ok("""{"dono":""") } // cortada no meio
+
+        for (read in listOf<suspend () -> Unit>({ db.get("salas/ABCD") }, { db.etag("salas/ABCD") })) {
+            try {
+                read()
+                fail("resposta ilegível")
+            } catch (e: RoomHttpError) {
+                assertEquals(200, e.code)
+            }
+        }
+    }
+
     @Test
     fun observeAppliesPutsAndPatches() = runTest {
         http.streams += flowOf(

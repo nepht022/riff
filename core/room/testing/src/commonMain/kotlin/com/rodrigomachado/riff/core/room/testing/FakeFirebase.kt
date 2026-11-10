@@ -68,6 +68,9 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
     /** Uma escrita para a qual dá true é recusada com 401 (como as regras fariam), sem mudar nada. */
     var refuse: (FirebaseWrite) -> Boolean = { false }
 
+    /** Não null: o login anônimo (cadastro e renovação) responde isto em vez de entrar (Google fora do ar, etc.). */
+    var loginReply: HttpReply? = null
+
     /** Todas as escritas recebidas, na ordem (as recusadas também). */
     val writes: List<FirebaseWrite> get() = synchronized(lock) { log.toList() }
 
@@ -134,6 +137,8 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
             headers: Map<String, String>,
         ): HttpReply {
             if (!online) throw NoConnection()
+            val login = url.startsWith(SIGN_UP_URL) || url.startsWith(REFRESH_URL)
+            loginReply?.takeIf { login }?.let { return it }
             return when {
                 url.startsWith(SIGN_UP_URL) -> reply(
                     JSONObject().put("idToken", "token-$uid").put("refreshToken", "refresh-$uid")

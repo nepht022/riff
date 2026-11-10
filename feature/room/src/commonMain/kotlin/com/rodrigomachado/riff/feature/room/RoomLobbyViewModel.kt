@@ -2,7 +2,6 @@ package com.rodrigomachado.riff.feature.room
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rodrigomachado.riff.core.room.NoConnection
 import com.rodrigomachado.riff.core.room.Room
 import com.rodrigomachado.riff.core.room.RoomRepository
 import kotlinx.coroutines.delay
@@ -43,13 +42,12 @@ open class RoomLobbyViewModel(private val code: String, private val repository: 
         launch { heartbeats() }
         repository.observe(code)
             .map { room -> room?.let { RoomLobbyUiState.Ready(it) } ?: RoomLobbyUiState.Ended }
-            .retryWhen { cause, _ ->
-                val offline = cause is NoConnection
-                if (offline) {
-                    emit(RoomLobbyUiState.NoConnection)
-                    delay(RETRY_MS)
-                }
-                offline
+            // Qualquer falha (sem internet, o login recusado, uma resposta estranha) é "sem conexão" e tenta de novo:
+            // nenhuma exceção chega ao viewModelScope (fecharia o app). O cancelamento não passa por aqui.
+            .retryWhen { _, _ ->
+                emit(RoomLobbyUiState.NoConnection)
+                delay(RETRY_MS)
+                true
             }
             .collect { send(it) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), RoomLobbyUiState.Loading)

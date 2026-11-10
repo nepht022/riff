@@ -25,12 +25,13 @@ sealed interface PutResult {
 /**
  * O Realtime Database pela API REST: `{dbUrl}/{caminho}.json?auth={idToken}`. Os valores lidos são JSONObject,
  * JSONArray, primitivos ou null; os escritos podem ser também Map e List (um null dentro de um Map do [patch] apaga
- * aquele filho). Sem rede, [NoConnection]; recusado pelas regras (401/403) ou outro erro, [RoomHttpError].
+ * aquele filho). Sem rede, [NoConnection]; recusado pelas regras (401/403), resposta ilegível ou outro erro,
+ * [RoomHttpError] (nenhuma outra exceção sai daqui, nem do login: ver [AnonymousAuth]).
  */
 class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, dbUrl: String) {
     private val base = dbUrl.trimEnd('/')
 
-    suspend fun get(path: String): Any? = parseJson(call("GET", path, null).body)
+    suspend fun get(path: String): Any? = call("GET", path, null).let { read(it) }
 
     suspend fun put(path: String, value: Any?, ifMatch: String? = null): PutResult {
         val headers = if (ifMatch == null) emptyMap() else mapOf(ETAG_HEADER to "true", "if-match" to ifMatch)
@@ -53,7 +54,14 @@ class FirebaseDb(private val http: RoomHttp, private val auth: AnonymousAuth, db
     /** O ETag do caminho (para um [put] com `ifMatch`) e o valor de agora. */
     suspend fun etag(path: String): Pair<String, Any?> {
         val reply = call("GET", path, null, mapOf(ETAG_HEADER to "true"))
-        return reply.headers["etag"].orEmpty() to parseJson(reply.body)
+        return reply.headers["etag"].orEmpty() to read(reply)
+    }
+
+    /** O valor da resposta; uma resposta ilegível (cortada, um proxy) é [RoomHttpError]. */
+    private fun read(reply: HttpReply): Any? = try {
+        parseJson(reply.body)
+    } catch (_: JSONException) {
+        throw RoomHttpError(reply.code)
     }
 
     /**

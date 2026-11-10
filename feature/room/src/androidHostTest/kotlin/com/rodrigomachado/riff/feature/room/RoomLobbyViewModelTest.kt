@@ -1,5 +1,6 @@
 package com.rodrigomachado.riff.feature.room
 
+import com.rodrigomachado.riff.core.room.HttpReply
 import com.rodrigomachado.riff.core.room.testing.FakeFirebase
 import com.rodrigomachado.riff.core.room.testing.FakePlayer
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +111,22 @@ class RoomLobbyViewModelTest {
         fake.online = true
         advanceTimeBy(5_001)
 
+        assertEquals(listOf("Ana"), vm.names())
+    }
+
+    /** O login recusado ao abrir (Google fora do ar, resposta sem os campos): sem conexão, sem fechar o app. */
+    @Test
+    fun refusedLoginShowsNoConnectionAndRetries() = runTest(dispatcher) {
+        fake.loginReply = HttpReply(503, "", emptyMap())
+        val vm = opened()
+        assertEquals(RoomLobbyUiState.NoConnection, vm.uiState.value)
+
+        fake.loginReply = HttpReply(200, "{}", emptyMap())
+        advanceTimeBy(5_001)
+        assertEquals(RoomLobbyUiState.NoConnection, vm.uiState.value)
+
+        fake.loginReply = null
+        advanceTimeBy(5_001)
         assertEquals(listOf("Ana"), vm.names())
     }
 }

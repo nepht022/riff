@@ -89,10 +89,15 @@ class RoomRepository(
     /**
      * A sala ao vivo (null = não existe mais: a sala acabou). Emite a cada mudança no banco e recalcula o `gone`
      * dos jogadores a cada 5 s mesmo sem mudança. O streaming reabre sozinho quando cai (ver [FirebaseDb.observe]);
-     * sem internet para o login, lança [NoConnection].
+     * sem internet para o login ou com o login recusado (o Google fora do ar, uma resposta estranha), lança
+     * [NoConnection].
      */
     fun observe(code: String): Flow<Room?> = flow {
-        val me = auth.uid()
+        val me = try {
+            auth.uid()
+        } catch (e: RoomHttpError) {
+            throw NoConnection(e)
+        }
         val ticks = flow {
             while (true) {
                 emit(Unit)

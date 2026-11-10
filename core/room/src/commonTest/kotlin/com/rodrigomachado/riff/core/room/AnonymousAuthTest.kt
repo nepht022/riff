@@ -108,6 +108,26 @@ class AnonymousAuthTest : JsonTest() {
         }
     }
 
+    /** Um 200 sem os campos esperados (proxy, mudança da API) é erro do Google, não um JSONException solto. */
+    @Test
+    fun answerWithoutFieldsThrowsRoomHttpError() = runTest {
+        http.answer = { ok("{}") }
+        try {
+            auth.uid()
+            fail("sem localId não há uid")
+        } catch (e: RoomHttpError) {
+            assertEquals(200, e.code)
+        }
+
+        store.identity = RoomIdentity("u1", "r0")
+        try {
+            auth.token()
+            fail("sem id_token não há token")
+        } catch (e: RoomHttpError) {
+            assertEquals(200, e.code)
+        }
+    }
+
     private companion object {
         const val SIGN_UP = "https://identitytoolkit.googleapis.com/v1/accounts:signUp"
         const val REFRESH = "https://securetoken.googleapis.com/v1/token"
