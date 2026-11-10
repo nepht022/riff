@@ -96,7 +96,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Multiplayer M1: a sala (2026-11-09)
 
-- **Ação do usuário:** criar o projeto do Firebase, ligar o login anônimo, publicar `firebase/database.rules.json` e pôr `firebase.apiKey`/`firebase.dbUrl` no `local.properties` (`docs/firebase.md`). Teste real (PC cria, celular entra pelo código, sair passa o dono, o último apaga a sala): pendente.
+- Firebase criado e regras publicadas pelo usuário (2026-11-10); teste real aceito: PC criou a sala, o celular entrou pelo código, sair passou o dono e o último apagou a sala.
 - A Sala usa o nome do ranking: com a Sala configurada e o ranking não, o diálogo do nome não salva e não dá para criar nem entrar.
 - Recusa do servidor (ex.: regras não publicadas) aparece como "Sem conexão. Tente de novo." e pode esconder um erro de configuração.
 - "Sumiu" (60 s, na tela e para passar o dono) e "sala morta" usam o relógio do aparelho contra o do servidor: um relógio muito errado mostra jogadores sumidos por engano (a medição da diferença vem na M2). A limpeza dos sumidos há mais de 5 min já usa a hora do servidor estimada pelo tempo mais novo gravado na sala (fica até ~20 s para trás: o sumido sai entre 5 min e ~5 min 20 s).
