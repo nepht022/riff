@@ -49,6 +49,15 @@ import com.rodrigomachado.riff.core.encore.UrlConnectionTransport
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.RankingTable
+import com.rodrigomachado.riff.core.room.AnonymousAuth
+import com.rodrigomachado.riff.core.room.DataStoreRoomIdentityStore
+import com.rodrigomachado.riff.core.room.FirebaseDb
+import com.rodrigomachado.riff.core.room.RoomConfig
+import com.rodrigomachado.riff.core.room.RoomDevice
+import com.rodrigomachado.riff.core.room.RoomHttp
+import com.rodrigomachado.riff.core.room.RoomRepository
+import com.rodrigomachado.riff.core.room.RoomSwitch
+import com.rodrigomachado.riff.core.room.UrlConnectionRoomHttp
 import com.rodrigomachado.riff.core.separation.DemucsModelFactory
 import com.rodrigomachado.riff.core.separation.DesktopSeparation
 import com.rodrigomachado.riff.core.separation.DesktopSeparationScheduler
@@ -76,12 +85,16 @@ import com.rodrigomachado.riff.feature.report.ReportCooldown
 import com.rodrigomachado.riff.feature.report.ReportViewModel
 import com.rodrigomachado.riff.feature.report.UrlConnectionJsonPost
 import com.rodrigomachado.riff.feature.results.ResultsViewModel
+import com.rodrigomachado.riff.feature.room.RoomEntryViewModel
+import com.rodrigomachado.riff.feature.room.RoomJoinViewModel
+import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
 import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 import com.rodrigomachado.riff.core.separation.DesktopDeviceInfo as SeparationDeviceInfo
@@ -121,6 +134,11 @@ class DesktopGraph(
      * da janela, que segue o redirecionamento do Apps Script como o do Reportar.
      */
     rankingTransport: RankingTransport = UrlConnectionRankingTransport,
+    /** O Firebase da Sala (o mesmo do celular, do local.properties; vazio: a Sala fica "em breve", como lá). */
+    roomApiKey: String = RoomConfig.API_KEY,
+    roomDbUrl: String = RoomConfig.DB_URL,
+    /** O HTTP da Sala (nos testes, o Firebase falso: nunca o de verdade). */
+    roomHttp: RoomHttp = UrlConnectionRoomHttp,
 ) : AutoCloseable {
     // Primeiro a trava: o segundo Riff não chega a abrir o banco nem a apagar os temporários da separação do primeiro.
     private val instanceLock = InstanceLock.tryAcquire(dataDir) ?: throw RiffAlreadyOpenException(dataDir)
@@ -280,6 +298,24 @@ class DesktopGraph(
         RankingBoardViewModel(chartId, title, difficulty, ranking, table)
 
     fun calibrationViewModel() = CalibrationViewModel(settings, clickTrack)
+
+    /** A Sala ligada: só com o Firebase configurado; sem ele, o quadro da tela inicial fica "em breve". */
+    val roomOn: Boolean = RoomSwitch.isOn(roomApiKey, roomDbUrl)
+
+    // A Sala, como no celular, com o aparelho PC: um só repositório (o login anônimo vale para todas as telas), a
+    // identidade nas preferências do PC e o nome do jogador, o do ranking.
+    private val room: RoomRepository = run {
+        val clock = System::currentTimeMillis
+        val auth = AnonymousAuth(roomHttp, DataStoreRoomIdentityStore(preferences), roomApiKey, clock)
+        RoomRepository(FirebaseDb(roomHttp, auth, roomDbUrl), auth, RoomDevice.PC, clock)
+    }
+    private val roomPlayerName = ranking.player.map { it.name }
+
+    fun roomEntryViewModel() = RoomEntryViewModel(room, roomPlayerName)
+
+    fun roomJoinViewModel() = RoomJoinViewModel(room, roomPlayerName)
+
+    fun roomLobbyViewModel(code: String) = RoomLobbyViewModel(code, room)
 
     // O Reportar: o mesmo script do celular; a espera entre relatos vale para o app inteiro (um só relógio).
     private val reportSender = AppsScriptReportSender(reportUrl, reportTransport)

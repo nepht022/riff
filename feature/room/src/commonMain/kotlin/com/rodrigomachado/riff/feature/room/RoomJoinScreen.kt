@@ -37,6 +37,7 @@ import com.rodrigomachado.riff.core.room.RoomCodes
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.input.menuKeys
+import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.core.ui.theme.oswald
@@ -134,7 +135,8 @@ private fun CodeBoxes(code: String, enabled: Boolean, onCode: (String) -> Unit, 
             imeAction = ImeAction.Go,
         ),
         keyboardActions = KeyboardActions(onGo = { onDone() }),
-        modifier = Modifier.testTag(RoomTestTags.CODE),
+        // No PC, ↑/↓ saem da caixa para os botões (←/→ andam nas letras).
+        modifier = Modifier.upDownLeave().testTag(RoomTestTags.CODE),
         decorationBox = { innerTextField ->
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 repeat(RoomCodes.LENGTH) { index ->
