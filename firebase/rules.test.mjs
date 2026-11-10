@@ -754,6 +754,249 @@ test('repositoryChooseSongAt200CharactersIsAccepted', async () => {
   );
 });
 
+// --- o placar da rodada (M3): salas/{C}/placar/{rodada}/{uid} ---
+
+// O placar de um jogador como o app grava (a cada 1 s e no fim, com terminou: true).
+function placar(campos = {}) {
+  return {
+    pontos: 12_345,
+    combo: 12,
+    maiorCombo: 40,
+    acertos: 90,
+    notas: 100,
+    precisao: 9000,
+    terminou: false,
+    atualizadoEm: AGORA,
+    ...campos,
+  };
+}
+
+// Uma sala na partida da rodada `rodada`, com ana (dona) e bia.
+function salaNaPartida(codigo, rodada = 2, outros = {}) {
+  return semear(codigo, {
+    jogadores: { ana: {}, bia: {}, ...outros },
+    sala: { estado: 'partida', rodada, inicio: Date.now(), musica: MUSICA },
+  });
+}
+
+test('playerWritesItsScoreForTheRound', async () => {
+  await salaNaPartida('ABCD');
+  await assertSucceeds(db('bia').ref('salas/ABCD/placar/2/bia').set(placar()));
+  await assertSucceeds(db('ana').ref('salas/ABCD/placar/2/ana').set(placar({ pontos: 0, combo: 0 })));
+  // Regravar (a cada 1 s) e o envio final.
+  await assertSucceeds(db('bia').ref('salas/ABCD/placar/2/bia').set(placar({ pontos: 20_000, terminou: true })));
+  const bia = await lerSemRegras('salas/ABCD/placar/2/bia');
+  assert.equal(bia.pontos, 20_000);
+  assert.equal(bia.terminou, true);
+  assert.equal(typeof bia.atualizadoEm, 'number');
+  // Todos leem o placar (vem junto com a sala).
+  assert.equal((await db('ana').ref('salas/ABCD').once('value')).val().placar['2'].bia.pontos, 20_000);
+});
+
+test('cannotWriteSomeoneElsesScore', async () => {
+  await salaNaPartida('ABCD');
+  // Nem o dono, nem outro jogador, nem quem não está na sala (nem com o próprio uid).
+  await assertFails(db('ana').ref('salas/ABCD/placar/2/bia').set(placar()));
+  await assertFails(db('bia').ref('salas/ABCD/placar/2/ana').set(placar()));
+  await assertFails(db('zeca').ref('salas/ABCD/placar/2/zeca').set(placar()));
+  await assertFails(db(null).ref('salas/ABCD/placar/2/bia').set(placar()));
+  await assertFails(db('bia').ref('salas/ABCD/placar/2').set({ bia: placar() }));
+  await assertFails(db('bia').ref('salas/ABCD/placar').set({ 2: { bia: placar() } }));
+  // Sala que não existe.
+  await assertFails(db('bia').ref('salas/ZZZZ/placar/1/bia').set(placar()));
+  // Escrito o meu, ninguém mexe nele.
+  await assertSucceeds(db('bia').ref('salas/ABCD/placar/2/bia').set(placar()));
+  await assertFails(db('ana').ref('salas/ABCD/placar/2/bia/pontos').set(0));
+  await assertFails(db('caio').ref('salas/ABCD/placar/2/bia').set(placar({ pontos: 0 })));
+  assert.equal((await lerSemRegras('salas/ABCD/placar/2/bia')).pontos, 12_345);
+});
+
+test('scoreMustBeTheCurrentOrPreviousRound', async () => {
+  await salaNaPartida('ABCD', 3);
+  const bia = (rodada) => db('bia').ref(`salas/ABCD/placar/${rodada}/bia`);
+  await assertSucceeds(bia(3).set(placar()));
+  // A anterior: o envio final que chegou depois de o dono começar a rodada seguinte.
+  await assertSucceeds(bia(2).set(placar({ terminou: true })));
+  for (const rodada of ['1', '4', '0', '-1', '03', '+3', ' 3', '3a', 'x']) {
+    await assertFails(bia(rodada).set(placar()));
+  }
+  // Sem rodada na sala, nenhum placar.
+  await semear('EFGH', { jogadores: { ana: {}, bia: {} } });
+  for (const rodada of ['0', '1', 'null', 'NaN']) {
+    await assertFails(db('bia').ref(`salas/EFGH/placar/${rodada}/bia`).set(placar()));
+  }
+  // Na primeira rodada, não há a anterior (0).
+  await salaNaPartida('JKMN', 1);
+  await assertSucceeds(db('bia').ref('salas/JKMN/placar/1/bia').set(placar()));
+  await assertFails(db('bia').ref('salas/JKMN/placar/0/bia').set(placar()));
+});
+
+test('scoreFieldsAreValidated', async () => {
+  await salaNaPartida('ABCD');
+  const meu = db('bia').ref('salas/ABCD/placar/2/bia');
+  // Os limites valem.
+  await assertSucceeds(meu.set(placar({ pontos: 1_000_000_000, precisao: 10_000 })));
+  await assertSucceeds(
+    meu.set(placar({ pontos: 0, combo: 0, maiorCombo: 0, acertos: 0, notas: 0, precisao: 0, terminou: true })),
+  );
+  const ruins = [
+    { pontos: -1 },
+    { pontos: 1_000_000_001 },
+    { pontos: 1.5 },
+    { pontos: '100' },
+    { combo: -1 },
+    { combo: 2.5 },
+    { maiorCombo: -1 },
+    { acertos: -1 },
+    { notas: -3 },
+    { notas: 0.5 },
+    { precisao: 10_001 },
+    { precisao: -1 },
+    { precisao: 99.5 },
+    { terminou: 'sim' },
+    { terminou: 1 },
+    { atualizadoEm: Date.now() },
+    { atualizadoEm: 'agora' },
+    { lixo: 1 },
+    { nome: 'Bia' },
+  ];
+  for (const ruim of ruins) {
+    await assertFails(meu.set(placar(ruim)), JSON.stringify(ruim));
+  }
+  // Faltando qualquer campo.
+  for (const campo of Object.keys(placar())) {
+    const { [campo]: _, ...semCampo } = placar();
+    await assertFails(meu.set(semCampo), campo);
+  }
+  // Nem campo a campo (o placar vai sempre inteiro).
+  await assertFails(db('bia').ref('salas/ABCD/placar/2/bia/lixo').set(1));
+  // O próprio jogador não apaga o seu.
+  await assertFails(meu.remove());
+  assert.equal((await lerSemRegras('salas/ABCD/placar/2/bia')).pontos, 0);
+});
+
+test('ownerDeletesOldRounds', async () => {
+  await salaNaPartida('ABCD', 3);
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.database().ref('salas/ABCD/placar').set({
+      1: { ana: placar(), bia: placar() },
+      2: { ana: placar(), bia: placar() },
+      3: { ana: placar(), bia: placar() },
+    });
+  });
+  // A antiga, inteira.
+  await assertSucceeds(db('ana').ref('salas/ABCD/placar/1').remove());
+  // A atual e a anterior ficam (o Resultado da sala de quem atrasou).
+  await assertFails(db('ana').ref('salas/ABCD/placar/2').remove());
+  await assertFails(db('ana').ref('salas/ABCD/placar/3').remove());
+  // Nem o placar de um jogador só, nem o placar inteiro de uma vez.
+  await assertFails(db('ana').ref('salas/ABCD/placar/3/bia').remove());
+  await assertFails(db('ana').ref('salas/ABCD/placar').remove());
+  // Apagar não é escrever: o dono não grava a rodada dos outros por ali.
+  await assertFails(db('ana').ref('salas/ABCD/placar/1').set({ bia: placar() }));
+  const depois = await lerSemRegras('salas/ABCD/placar');
+  assert.deepEqual(Object.keys(depois).sort(), ['2', '3']);
+  // Apagar a sala inteira continua levando o placar junto.
+  await assertSucceeds(db('ana').ref('salas/ABCD').remove());
+  assert.equal(await lerSemRegras('salas/ABCD'), null);
+});
+
+test('guestCannotDeleteScores', async () => {
+  await salaNaPartida('ABCD', 3, { caio: {} });
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.database().ref('salas/ABCD/placar').set({ 1: { ana: placar(), bia: placar() }, 3: { ana: placar() } });
+  });
+  for (const caminho of ['placar/1', 'placar/1/ana', 'placar/1/bia', 'placar/3/ana', 'placar']) {
+    await assertFails(db('bia').ref(`salas/ABCD/${caminho}`).remove(), caminho);
+    await assertFails(db('caio').ref(`salas/ABCD/${caminho}`).remove(), caminho);
+  }
+  await assertFails(db('bia').ref('salas/ABCD').update({ 'placar/1': null }));
+  await assertFails(db('zeca').ref('salas/ABCD/placar/1').remove());
+  assert.deepEqual(Object.keys(await lerSemRegras('salas/ABCD/placar')).sort(), ['1', '3']);
+});
+
+// --- as escritas do placar no RoomRepository (Task 2 da M3), exatamente como o app as fará ---
+
+test('repositoryPublishScoreIsAccepted', async () => {
+  await salaNaPartida('ABCD', 1);
+  // publishScore, a cada 1 s: PUT salas/{C}/placar/{rodada}/{uid} com o placar inteiro.
+  const bia = db('bia').ref('salas/ABCD/placar/1/bia');
+  await assertSucceeds(
+    bia.set({
+      pontos: 4200,
+      combo: 7,
+      maiorCombo: 31,
+      acertos: 52,
+      notas: 60,
+      precisao: 8667,
+      terminou: false,
+      atualizadoEm: AGORA,
+    }),
+  );
+  // O envio final: o mesmo PUT com terminou: true.
+  await assertSucceeds(
+    bia.set({
+      pontos: 98_765,
+      combo: 0,
+      maiorCombo: 120,
+      acertos: 410,
+      notas: 452,
+      precisao: 9071,
+      terminou: true,
+      atualizadoEm: AGORA,
+    }),
+  );
+  // O mesmo pelo PATCH da sala também vale (com ou sem a atividade).
+  await assertSucceeds(
+    db('ana').ref('salas/ABCD').update({ 'placar/1/ana': placar({ terminou: true }), atividadeEm: AGORA }),
+  );
+  // O app da M2 (sem placar) continua com as escritas de sempre na partida.
+  await assertSucceeds(db('bia').ref('salas/ABCD').update({ 'jogadores/bia/saiu': 1 }));
+  const placar1 = await lerSemRegras('salas/ABCD/placar/1');
+  assert.equal(placar1.bia.pontos, 98_765);
+  assert.equal(placar1.bia.terminou, true);
+  assert.equal(placar1.ana.terminou, true);
+});
+
+test('repositoryFinalScoreAfterTheNextRoundStartedIsAccepted', async () => {
+  await salaNaPartida('ABCD', 1);
+  await assertSucceeds(db('bia').ref('salas/ABCD/placar/1/bia').set(placar()));
+  // O dono volta à sala e começa a rodada 2 antes de o envio final da bia chegar.
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ estado: 'sala', inicio: null, atividadeEm: AGORA }));
+  await assertSucceeds(
+    db('ana').ref('salas/ABCD').update({ estado: 'contagem', rodada: 2, inicio: null, atividadeEm: AGORA }),
+  );
+  await assertSucceeds(db('bia').ref('salas/ABCD/placar/1/bia').set(placar({ pontos: 50_000, terminou: true })));
+  assert.equal((await lerSemRegras('salas/ABCD/placar/1/bia')).pontos, 50_000);
+});
+
+test('repositoryStartRoundDeletesTheRoundBeforeLast', async () => {
+  await semear('ABCD', { jogadores: { ana: {}, bia: {} }, sala: { estado: 'sala', rodada: 2, musica: MUSICA } });
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.database().ref('salas/ABCD/placar').set({ 1: { ana: placar(), bia: placar() }, 2: { bia: placar() } });
+  });
+  // startRound (dono) da rodada 3: o PATCH de sempre mais placar/{3 − 2}: null.
+  const comecar = { estado: 'contagem', rodada: 3, inicio: null, atividadeEm: AGORA, 'placar/1': null };
+  await assertFails(db('bia').ref('salas/ABCD').update(comecar));
+  // Apagar a anterior (2) junto: recusado.
+  await assertFails(db('ana').ref('salas/ABCD').update({ ...comecar, 'placar/2': null }));
+  await assertSucceeds(db('ana').ref('salas/ABCD').update(comecar));
+  const sala = await lerSemRegras('salas/ABCD');
+  assert.equal(sala.rodada, 3);
+  assert.deepEqual(Object.keys(sala.placar), ['2']);
+  // Nas rodadas 1 e 2 não há o que apagar (placar/-1, placar/0): o PATCH vai sem o placar, como na M2.
+  await semear('EFGH', { jogadores: { ana: {}, bia: {} }, sala: { musica: MUSICA } });
+  await assertSucceeds(
+    db('ana').ref('salas/EFGH').update({ estado: 'contagem', rodada: 1, inicio: null, atividadeEm: AGORA }),
+  );
+  // Apagar uma rodada que não existe (a 1 de novo) também não atrapalha.
+  await assertSucceeds(db('ana').ref('salas/ABCD').update({ estado: 'sala', inicio: null }));
+  await assertSucceeds(
+    db('ana').ref('salas/ABCD').update({ estado: 'contagem', rodada: 4, inicio: null, atividadeEm: AGORA, 'placar/2': null }),
+  );
+  assert.equal(await lerSemRegras('salas/ABCD/placar'), null);
+});
+
 // --- a API REST, como o app fala com o banco (FirebaseDb) ---
 
 const DB_HOST = process.env.FIREBASE_DATABASE_EMULATOR_HOST ?? '127.0.0.1:9000';

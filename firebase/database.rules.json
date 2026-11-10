@@ -148,6 +148,53 @@
             }
           }
         },
+        // Placar da rodada (M3): placar/{rodada}/{uid}, gravado pelo próprio jogador a cada 1 s e no fim (terminou).
+        // O $rodada do caminho é texto e a rodada da sala é número: a comparação converte a rodada em texto
+        // (rodada + ''), então "03", "+3" ou "x" nunca batem ("." nem cabe numa chave).
+        "placar": {
+          "$rodada": {
+            // Só o dono, só apagando a rodada inteira, e só uma rodada antiga: nem a atual nem a anterior (o
+            // Resultado da sala de quem atrasou), pela rodada da sala depois da escrita (o Começar da rodada n apaga
+            // placar/{n - 2} no mesmo PATCH). O .validate não roda em deleção, então a conferência é toda aqui.
+            ".write": "auth != null && !newData.exists() && data.parent().parent().child('dono').val() == auth.uid && newData.parent().parent().child('rodada').isNumber() && $rodada != newData.parent().parent().child('rodada').val() + '' && $rodada != (newData.parent().parent().child('rodada').val() - 1) + ''",
+            "$uid": {
+              // Só o próprio uid, jogador da sala (depois da escrita), na rodada atual ou na anterior (o envio final
+              // que chegou depois de o dono começar a seguinte); a rodada 0 não existe. Ninguém apaga um placar
+              // (nem o próprio): só o dono, a rodada antiga inteira (acima), ou a sala inteira.
+              ".write": "auth != null && auth.uid == $uid && newData.exists() && newData.parent().parent().parent().child('jogadores').child($uid).exists() && newData.parent().parent().parent().child('rodada').isNumber() && $rodada != '0' && ($rodada == newData.parent().parent().parent().child('rodada').val() + '' || $rodada == (newData.parent().parent().parent().child('rodada').val() - 1) + '')",
+              ".validate": "newData.hasChildren(['pontos', 'combo', 'maiorCombo', 'acertos', 'notas', 'precisao', 'terminou', 'atualizadoEm'])",
+              // Inteiros >= 0 com teto; precisao em centésimos de ponto percentual (0 a 10000 = 0% a 100%).
+              "pontos": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 1000000000"
+              },
+              "combo": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 1000000"
+              },
+              "maiorCombo": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 1000000"
+              },
+              "acertos": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 1000000"
+              },
+              "notas": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 1000000"
+              },
+              "precisao": {
+                ".validate": "newData.isNumber() && newData.val() % 1 == 0 && newData.val() >= 0 && newData.val() <= 10000"
+              },
+              "terminou": {
+                ".validate": "newData.isBoolean()"
+              },
+              // Hora do servidor da escrita: quem lê vê há quanto tempo o jogador não manda o placar ("sem conexão").
+              "atualizadoEm": {
+                ".validate": "newData.isNumber() && newData.val() == now"
+              },
+              "$outro": {
+                ".validate": false
+              }
+            }
+          }
+        },
         "$outro": {
           ".validate": false
         }
