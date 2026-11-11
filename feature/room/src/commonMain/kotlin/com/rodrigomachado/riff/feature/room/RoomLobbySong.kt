@@ -23,10 +23,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -294,30 +302,56 @@ private fun LobbyButtonPair(
     width: Dp,
 ) {
     val lobby = state.room.state == RoomState.LOBBY
-    if (shown.ready) {
-        val ready = state.me?.ready == true
-        val enabled = lobby && state.me?.difficulty != null
-        val text = stringResource(if (ready) Res.string.room_not_ready else Res.string.room_ready)
-        // Pronto é o chamado (vermelho); depois dele, desfazer fica em papel, sem disputar com o Começar.
-        if (ready) {
-            PaperButton(text, actions.onToggleReady, enabled, each.fillMaxHeight())
-        } else {
-            PosterButton(
-                text,
-                onClick = actions.onToggleReady,
-                modifier = each,
-                enabled = enabled,
-                sound = MenuSound.CONFIRM,
-                minWidth = width,
-            )
-        }
-    }
+    if (shown.ready) ReadyButton(state, actions.onToggleReady, lobby, each, width)
     if (shown.start) {
         PosterButton(
             stringResource(Res.string.room_start),
             onClick = actions.onStart,
             modifier = each,
             enabled = state.canStart,
+            sound = MenuSound.CONFIRM,
+            minWidth = width,
+        )
+    }
+}
+
+/**
+ * O meu Pronto: o chamado (cartaz vermelho) e, depois dele, "Não estou pronto" em papel, sem disputar com o Começar.
+ * São dois componentes: quem apertou pelo teclado ou controle continua com o foco no botão novo (Enter de novo
+ * desfaz).
+ */
+@Composable
+private fun ReadyButton(
+    state: RoomLobbyUiState.Ready,
+    onToggle: () -> Unit,
+    lobby: Boolean,
+    each: Modifier,
+    width: Dp,
+) {
+    val ready = state.me?.ready == true
+    val enabled = lobby && state.me?.difficulty != null
+    val text = stringResource(if (ready) Res.string.room_not_ready else Res.string.room_ready)
+    val focus = remember { FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
+    // Apertado com o foco nele: o botão que entra no lugar pega o foco.
+    var refocus by remember { mutableStateOf(false) }
+    LaunchedEffect(ready) {
+        if (refocus) focus.requestFocus()
+        refocus = false
+    }
+    val toggle = {
+        refocus = focused
+        onToggle()
+    }
+    val tracked = each.focusRequester(focus).onFocusChanged { focused = it.hasFocus }
+    if (ready) {
+        PaperButton(text, toggle, enabled, tracked.fillMaxHeight())
+    } else {
+        PosterButton(
+            text,
+            onClick = toggle,
+            modifier = tracked,
+            enabled = enabled,
             sound = MenuSound.CONFIRM,
             minWidth = width,
         )
