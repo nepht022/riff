@@ -73,7 +73,6 @@ import com.rodrigomachado.riff.desktop.pad.PadSource
 import com.rodrigomachado.riff.feature.calibration.AudioClickTrackPlayer
 import com.rodrigomachado.riff.feature.calibration.CalibrationViewModel
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
-import com.rodrigomachado.riff.feature.gameplay.ChartArtDecoder
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.home.HomeViewModel
@@ -268,7 +267,7 @@ class DesktopGraph(
     private val chartArt = DecodedChartArtImages(chartArtLoader)
 
     /** As capas das listas (Biblioteca, Resultado, sala, tela inicial): pequenas e numa memória só para o app. */
-    internal val chartThumbs = ChartThumbImages(DecodedChartArtImages(chartArtLoader, ChartArtDecoder.THUMB_MAX_SIDE))
+    internal val chartThumbs = ChartThumbImages(DecodedChartArtImages.thumbs(chartArtLoader))
         .also { importListeners.add(it::clear) }
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
 

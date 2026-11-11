@@ -2,9 +2,13 @@ package com.rodrigomachado.riff.core.ui.art
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.rodrigomachado.riff.core.model.ChartArtUnavailableException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -111,5 +115,31 @@ class ChartThumbImagesTest {
         thumbs.clear()
         assertNull(thumbs.cached("a"))
         assertSame(image, thumbs.load("a"))
+    }
+
+    /** Uma lista inteira pedindo capas ao abrir: no máximo [ChartThumbImages] lê 3 de uma vez (o disco e a memória). */
+    @Test
+    fun atMostThreeCoversAreReadAtOnce() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        var reading = 0
+        var most = 0
+        val thumbs = ChartThumbImages(
+            ChartArtImages {
+                reading++
+                most = maxOf(most, reading)
+                gate.await()
+                reading--
+                null
+            },
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+
+        val loads = (1..10).map { id -> launch { thumbs.load("mapa-$id") } }
+        advanceUntilIdle()
+        assertEquals(3, reading)
+        gate.complete(Unit)
+        loads.joinAll()
+
+        assertEquals(3, most)
     }
 }

@@ -3,7 +3,6 @@ package com.rodrigomachado.riff
 import com.rodrigomachado.riff.core.data.game.ChartArtLoader
 import com.rodrigomachado.riff.core.data.importer.ChartImportListeners
 import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
-import com.rodrigomachado.riff.feature.gameplay.ChartArtDecoder
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import dagger.Module
 import dagger.Provides
@@ -23,7 +22,7 @@ object ChartArtModule {
     @Provides
     @Singleton
     fun chartThumbs(loader: ChartArtLoader, imports: ChartImportListeners): ChartThumbImages =
-        ChartThumbImages(DecodedChartArtImages(loader, ChartArtDecoder.THUMB_MAX_SIDE)).also { thumbs ->
+        ChartThumbImages(DecodedChartArtImages.thumbs(loader)).also { thumbs ->
             imports.add(thumbs::clear)
         }
 }
