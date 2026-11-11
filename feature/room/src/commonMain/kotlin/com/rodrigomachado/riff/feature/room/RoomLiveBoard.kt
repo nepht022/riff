@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.room.RoomRepository
 import com.rodrigomachado.riff.core.room.RoundScore
 import com.rodrigomachado.riff.feature.gameplay.LiveBoard
 import com.rodrigomachado.riff.feature.gameplay.LiveScore
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,13 +25,16 @@ import kotlinx.coroutines.launch
  *   andamento (a rede lenta ou caída), os seguintes não empilham: fica guardado só o último, que vai quando o envio
  *   acaba; o final (`finished`) nunca se perde, porque é sempre o último.
  *
- * O [scope] vive mais que a partida: o envio final continua depois de a tela fechar.
+ * O [scope] vive mais que a partida: o envio final continua depois de a tela fechar. Um erro inesperado no envio só
+ * vai para o [log] (com o [CoroutineExceptionHandler]): no celular, uma exceção sem tratamento no escopo fecharia o
+ * app; o próximo [publish] envia de novo.
  */
 class RoomLiveBoard internal constructor(
     private val code: String,
     private val round: Int,
     rooms: Flow<Room?>,
     private val scope: CoroutineScope,
+    private val log: (String, Throwable) -> Unit = ::roomLog,
     private val send: suspend (RoundScore) -> Unit,
 ) : LiveBoard {
     constructor(
@@ -39,7 +43,9 @@ class RoomLiveBoard internal constructor(
         repository: RoomRepository,
         rooms: Flow<Room?>,
         scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    ) : this(code, round, rooms, scope, { repository.publishScore(code, round, it) })
+    ) : this(code, round, rooms, scope, send = { repository.publishScore(code, round, it) })
+
+    private val onError = CoroutineExceptionHandler { _, error -> log("placar ao vivo: o envio falhou", error) }
 
     private val lock = Any()
     private var pending: LiveScore? = null
@@ -58,7 +64,7 @@ class RoomLiveBoard internal constructor(
             if (busy) return
             busy = true
         }
-        scope.launch {
+        scope.launch(onError) {
             var drained = false
             try {
                 while (true) {

@@ -7,9 +7,14 @@ import com.rodrigomachado.riff.core.room.testing.FakeFirebase
 import com.rodrigomachado.riff.core.room.testing.FakePlayer
 import com.rodrigomachado.riff.feature.gameplay.LiveScore
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -129,6 +134,31 @@ class RoomLiveBoardTest {
         board.publish(mine(400))
         runCurrent()
         assertEquals(400L, sent.last().score)
+    }
+
+    /**
+     * Um erro inesperado no envio (não a falta de internet, que o repositório já engole) só vai para o log: não
+     * derruba o app (no celular, uma exceção sem tratamento no escopo fecha o app) e o próximo envio vai.
+     */
+    @Test
+    fun anErrorInTheSendIsOnlyLogged() = runTest {
+        val logged = mutableListOf<Throwable>()
+        val sent = mutableListOf<Long>()
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        val board = RoomLiveBoard("ABCD", 1, emptyFlow(), scope, log = { _, error -> logged += error }) { score ->
+            check(score.score != 100L) { "falha no envio" }
+            sent += score.score
+        }
+
+        board.publish(mine(100))
+        runCurrent()
+        board.publish(mine(200, finished = true))
+        runCurrent()
+
+        assertEquals(listOf("falha no envio"), logged.map { it.message })
+        assertEquals(listOf(200L), sent)
+        assertTrue(scope.isActive)
+        scope.cancel()
     }
 
     /** Com o repositório de verdade e o servidor travado: publicar continua voltando na hora. */
