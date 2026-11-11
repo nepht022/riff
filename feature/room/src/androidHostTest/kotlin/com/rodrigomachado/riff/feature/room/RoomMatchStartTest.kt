@@ -121,6 +121,40 @@ class RoomMatchStartTest {
         assertEquals(gameClock() + 3_000, start.awaitStart())
     }
 
+    /**
+     * Rede lenta: cada medida do relógio (o PATCH do `vistoEm` e o GET dele) leva 400 ms. Com o começo a 2 s, as
+     * medidas param quando falta menos de 1 s para ele, e a partida começa no instante certo com as que deu tempo.
+     */
+    @Test
+    fun slowClockMeasuresStopBeforeTheStart() = runTest {
+        seed(
+            player("u1", loadedRound = 1),
+            player("bia", loadedRound = 1),
+            owner = "bia",
+            state = "partida",
+            startAt = now + 2_000,
+        )
+        val start = matchStart()
+        start.loaded()
+        val expected = gameClock() + 2_000
+        // a ida do PATCH e a volta do GET levam 200 ms cada: o carimbo do servidor cai no meio da ida e volta
+        fake.onTrip = { method, _, arriving ->
+            if ((method == "PATCH" && arriving) || (method == "GET" && !arriving)) now += 200
+        }
+        val measuresBefore = clockMeasures()
+
+        val at = start.awaitStart()
+
+        assertEquals(expected, at)
+        assertEquals(3, clockMeasures() - measuresBefore) // 0, 400 e 800 ms; aos 1 200 ms falta menos de 1 s
+        assertTrue("sobrou ${at - gameClock()} ms", at - gameClock() >= 500)
+    }
+
+    /** As medidas do relógio gravadas (o PATCH do `vistoEm` com a `atividadeEm`). */
+    private fun clockMeasures() = fake.writes.count {
+        it.method == "PATCH" && it.body.orEmpty().contains("vistoEm") && it.body.orEmpty().contains("atividadeEm")
+    }
+
     @Test
     fun loadedMarksTheRound() = runTest {
         seed(player("u1"), player("bia"), owner = "bia")

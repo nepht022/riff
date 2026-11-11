@@ -304,16 +304,20 @@ class RoomRepository(
      * Fica com a mediana das 3 idas e voltas mais rápidas (a mais rápida sozinha pode ter a demora toda de um lado
      * só; a mediana descarta o pior das três). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida
      * (sem internet, recusado), lança [NoConnection]; com menos de 3, fica com a mais rápida.
+     *
+     * Com prazo [untilServer] (hora do servidor; o `inicio` menos uma folga): antes de cada medida depois da
+     * primeira, se a hora do servidor estimada (pela melhor medida desta vez) já passou do prazo, para e fica com as
+     * que já tem. Na rede lenta, as 5 idas e voltas não comem o tempo até o começo.
      */
-    suspend fun measureClock(code: String): RoomClock {
-        val chosen = measureOffset(code)
+    suspend fun measureClock(code: String, untilServer: Long? = null): RoomClock {
+        val chosen = measureOffset(code, untilServer)
         return RoomClock(chosen.offsetMs, clock, chosen.roundTripMs)
     }
 
     /** Uma medida do relógio do servidor: a ida e volta e o offset que ela deu. */
     private class ClockSample(val roundTripMs: Long, val offsetMs: Long)
 
-    private suspend fun measureOffset(code: String): ClockSample {
+    private suspend fun measureOffset(code: String, untilServer: Long? = null): ClockSample {
         val me = try {
             auth.uid()
         } catch (e: RoomHttpError) {
@@ -321,7 +325,9 @@ class RoomRepository(
         }
         val path = RoomFormat.path(code)
         val samples = mutableListOf<ClockSample>()
-        repeat(CLOCK_TRIES) {
+        var tries = 0
+        while (tries < CLOCK_TRIES && !pastDeadline(samples, untilServer)) {
+            tries++
             val t0 = clock()
             val seen = try {
                 db.patch(path, mapOf("$PLAYERS/$me/$SEEN_AT" to ServerTime.NOW, ACTIVITY to ServerTime.NOW))
@@ -339,6 +345,15 @@ class RoomRepository(
         val chosen = if (fastest.size < CLOCK_MEDIAN_OF) fastest.first() else fastest.sortedBy { it.offsetMs }[1]
         offset = chosen.offsetMs
         return chosen
+    }
+
+    /**
+     * A hora do servidor estimada pela medida mais rápida desta vez já passou do prazo. Sem nenhuma ainda, mede: o
+     * último offset pode ter ficado errado (o relógio de parede acertado depois dele), e é por isso que se mede de novo.
+     */
+    private fun pastDeadline(samples: List<ClockSample>, untilServer: Long?): Boolean {
+        val known = samples.minByOrNull { it.roundTripMs }?.offsetMs ?: return false
+        return untilServer != null && clock() + known >= untilServer
     }
 
     /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
