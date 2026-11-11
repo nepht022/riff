@@ -58,5 +58,9 @@ object DesktopPlayers {
         override val isStarting: Boolean get() = stems?.isStarting ?: false
 
         override val isCompleted: Boolean get() = stems?.isCompleted ?: false
+
+        override fun warmUp() = stems?.warmUp() ?: Unit
+
+        override val outputLatencyMs: Long? get() = stems?.outputLatencyMs
     }
 }

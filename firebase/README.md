@@ -42,6 +42,8 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
              encore?: { md5 (32 hex), video (bool), charter? (até 200) } }       (M2; ausente = nenhuma escolhida)
   rodada?: n                            (M2; ausente = 0)
   inicio?: hora do servidor             (M2; só na "partida")
+  placar?/{rodada}/{uid}: { pontos (0 a 10^9), combo, maiorCombo, acertos, notas (0 a 10^6), precisao (0 a 10000),
+                            terminou (bool), atualizadoEm (tempo do servidor) }   (M3; todos obrigatórios, inteiros)
 ```
 
 - **Vagas.** As regras do Realtime Database não contam filhos (não existe `numChildren()` nas regras; o emulador
@@ -75,6 +77,15 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
   `carregou` e `saiu` iguais à `rodada` da sala depois da escrita. Só o próprio jogador grava (nem o dono).
   Entrar de novo regrava o jogador inteiro com a `dificuldade`, o `pronto` e a `musica` de antes (sem o
   `carregou`/`saiu`, que podem ser de uma rodada que já passou).
+- **`placar` (M3):** cada jogador grava o próprio placar inteiro (`PUT salas/{CODIGO}/placar/{rodada}/{uid}`) a
+  cada 1 s e no fim (`terminou: true`). Só o próprio uid, só sendo jogador da sala (depois da escrita) e só na
+  `rodada` atual da sala ou na anterior (o envio final que chega depois de o dono começar a seguinte). O `{rodada}`
+  do caminho é texto: a regra compara com `rodada + ''` e `(rodada - 1) + ''`, então `03` ou `+3` não valem, nem
+  `0`. Campos inteiros (`% 1 == 0`) e todos obrigatórios; `precisao` em centésimos de % (`10000` = 100%);
+  `atualizadoEm` sempre `{".sv": "timestamp"}` (quem lê sabe há quanto tempo o jogador não manda: "sem conexão").
+  Ninguém apaga um placar, nem o próprio, exceto o dono, que apaga uma rodada antiga **inteira**
+  (`placar/{n}: null`, nem a atual nem a anterior, pela `rodada` depois da escrita): o Começar da rodada `n` leva
+  `"placar/{n-2}": null` no mesmo PATCH. Apagar a sala leva o placar junto.
 - **Leitura:** `salas/{CODIGO}` para qualquer autenticado; nada mais, nem a lista de salas (o código é o segredo).
 
 ### Limitações
@@ -90,6 +101,11 @@ salas/{CODIGO}                          4 letras de ABCDEFGHJKMNPQRSTUVWXYZ
   dono de antes da escrita: quem assume o dono (`{dono: uid}`) grava a rodada ou o começo numa escrita seguinte.
 - **`carregou`/`saiu` não conferem o estado:** valem em qualquer estado, desde que sejam a rodada atual.
 - **`inicio` confere a hora do servidor na escrita,** não a do relógio de quem lê; o app converte pelo offset medido.
+- **Placar não confere o jogo.** As regras conferem formato e limites, não se os pontos são possíveis (sem servidor,
+  um cliente alterado pode mandar qualquer placar dentro dos tetos); nem o estado da sala (vale em qualquer estado,
+  desde que seja a rodada atual ou a anterior) nem se `acertos <= notas` ou `combo <= maiorCombo`.
+- **Placar de quem saiu da sala** fica na rodada até o dono apagá-la (duas rodadas depois) ou a sala acabar; um
+  jogador removido não grava mais (não é jogador da sala).
 - **Vaga abandonada.** Quem sai sem liberar a vaga (o app sempre libera) deixa a vaga abandonada; ela continua
   contando como ocupada na leitura até alguém ocupá-la, então o app trata uma vaga cujo uid não está em `jogadores`
   (ou aponta para outra vaga) como livre.

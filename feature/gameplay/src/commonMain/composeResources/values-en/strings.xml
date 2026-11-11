@@ -25,4 +25,8 @@
     <string name="gameplay_leave_title">Leave the match?</string>
     <string name="gameplay_leave_message">The song goes on for the others; you sit out this round.</string>
     <string name="gameplay_keep_playing">Keep playing</string>
+    <string name="gameplay_live_you">You</string>
+    <string name="gameplay_live_left">left</string>
+    <string name="gameplay_live_stale">no connection</string>
+    <string name="gameplay_live_board">Room scoreboard</string>
 </resources>

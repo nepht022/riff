@@ -80,6 +80,14 @@ class RoomScreenshotTest {
         lobby(room, MySong.Missing(canDownload = true))
     }
 
+    /** O Resultado da sala com 4: o pódio dos 3 primeiros e a classificação, o próprio em segundo. */
+    @Test
+    fun roomResultsFour() = snapshot("Room_results_4") { RoomResultsContent(sampleResults(4), onBackToRoom = {}) }
+
+    /** Com 2: o pódio só com o 1.º e o 2.º. */
+    @Test
+    fun roomResultsTwo() = snapshot("Room_results_2") { RoomResultsContent(sampleResults(2), onBackToRoom = {}) }
+
     @Composable
     private fun lobby(room: Room, mySong: MySong? = null) =
         RoomLobbyContent(RoomLobbyUiState.Ready(room, mySong = mySong), room.code, onLeave = {})

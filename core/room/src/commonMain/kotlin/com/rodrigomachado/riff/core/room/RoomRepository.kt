@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import kotlin.random.Random
 
@@ -32,6 +34,9 @@ import kotlin.random.Random
  * Na M2, a música (`musica`), a rodada (`rodada`, `estado`, `inicio`) e o estado de cada jogador para a música
  * (`dificuldade`, `pronto`, `musica`, `carregou`, `saiu`). As contas de tempo da rodada (os 30 s do Começar, os 15 s
  * do carregamento, o começo 3 s depois) usam a hora do servidor estimada pelo [measureClock].
+ *
+ * Na M3, o placar de cada rodada (`placar/{rodada}/{uid}`): cada um grava o próprio ([publishScore]) e a sala lida
+ * traz o de todos ([Room.board], [Room.boardOf]); o Começar apaga o de duas rodadas atrás.
  */
 @Suppress("TooManyFunctions") // a sala inteira (M1 e M2) é uma API só, com uma função por ação mais as escritas
 class RoomRepository(
@@ -57,6 +62,13 @@ class RoomRepository(
     private var offset: Long? = null
     private val firstReady = mutableMapOf<String, FirstReady>()
     private val countdowns = mutableMapOf<Pair<String, Int>, Long>()
+
+    /** Os jogadores que este aparelho já viu em cada sala (o nome de quem saiu dela, no placar). */
+    private val known = mutableMapOf<String, MutableMap<String, RoomPlayer>>()
+
+    /** O último placar de cada (sala, rodada) que ainda não chegou ao banco ([publishScore]). */
+    private val unsent = mutableMapOf<Pair<String, Int>, RoundScore>()
+    private val sending = Mutex()
 
     /**
      * Cria uma sala com um código sorteado: `PUT` só se o código está livre (`if-match: null_etag`). Código ocupado
@@ -118,7 +130,8 @@ class RoomRepository(
      * O batimento (a cada 20 s, enquanto estou na sala: ver [RoomPresence]): grava o `vistoEm` e a `atividadeEm`. Se
      * o dono sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Sendo o
      * dono, tiro da sala quem sumiu há mais de 5 min (libera a vaga) e desfaço a rodada órfã ([repairRound]). Fora da
-     * sala, sem internet ou recusado, não faz nada.
+     * sala, sem internet ou recusado, não faz nada. Depois de bater, reenvia os placares guardados ([publishScore]):
+     * um envio lento (ou outro em andamento) não atrasa o `vistoEm`.
      */
     suspend fun heartbeat(code: String) {
         try {
@@ -128,6 +141,7 @@ class RoomRepository(
         } catch (_: RoomHttpError) {
             // outro jogador assumiu o dono antes, ou saí da sala
         }
+        sendScores(code)
     }
 
     /**
@@ -205,7 +219,7 @@ class RoomRepository(
             val now = serverNow(code)
             room.canStart(now).also { can ->
                 if (can) {
-                    db.patch(path, RoundFormat.startRound(room.round + 1))
+                    patchStartRound(path, RoundFormat.startRound(room.round + 1))
                     countdownSince(code, room.round + 1, now)
                 }
             }
@@ -214,6 +228,53 @@ class RoomRepository(
         false
     } catch (_: RoomHttpError) {
         false
+    }
+
+    /**
+     * O PATCH do Começar. Recusado com a deleção do placar antigo (as regras de antes da M3, sem o `placar`, ainda
+     * não republicadas: recusam o PATCH inteiro), tenta de novo sem ela: a rodada começa e o placar antigo fica.
+     */
+    private suspend fun patchStartRound(path: String, values: Map<String, Any?>) {
+        try {
+            db.patch(path, values)
+        } catch (e: RoomHttpError) {
+            val withoutBoard = values.filterKeys { !it.startsWith("${ScoreFormat.BOARD}/") }
+            if (e.code !in REFUSED || withoutBoard.size == values.size) throw e
+            db.patch(path, withoutBoard)
+        }
+    }
+
+    /**
+     * Grava o meu placar da rodada [round] (`PUT placar/{rodada}/{uid}`, inteiro, nos limites das regras e com a hora
+     * do servidor), a cada 1 s na partida e no fim ([RoundScore.finished]). Não lança: sem internet guarda o último
+     * de cada rodada e o reenvia no próximo [publishScore] ou batimento ([heartbeat]), então o envio final chega
+     * quando a conexão volta. Recusado (a rodada já não vale, saí da sala) esquece. Suspende enquanto envia: a
+     * partida chama fora da thread da tela. Rodada 0 (nenhuma) não grava.
+     */
+    suspend fun publishScore(code: String, round: Int, score: RoundScore) {
+        if (round < 1) return
+        synchronized(unsent) { unsent[code to round] = score }
+        sendScores(code)
+    }
+
+    /** Envia os placares guardados da sala [code], um de cada vez (um mais velho nunca chega depois do novo). */
+    private suspend fun sendScores(code: String) = sending.withLock {
+        val pending = synchronized(unsent) { unsent.filterKeys { it.first == code } }
+        for ((key, score) in pending) {
+            val sent = try {
+                db.put(
+                    "${RoomFormat.path(code)}/${ScoreFormat.scorePath(auth.uid(), key.second)}",
+                    ScoreFormat.score(score),
+                )
+                true
+            } catch (_: NoConnection) {
+                false // fica guardado; os outros também não vão agora
+            } catch (e: RoomHttpError) {
+                e.code in REFUSED // recusado: não adianta reenviar; outro erro, tenta de novo depois
+            }
+            if (!sent) break
+            synchronized(unsent) { if (unsent[key] == score) unsent.remove(key) }
+        }
     }
 
     /** A música da rodada [round] carregou (a partida montada, parada). */
@@ -253,22 +314,35 @@ class RoomRepository(
     suspend fun backToLobby(code: String) = quietly { db.patch(RoomFormat.path(code), RoundFormat.backToLobby()) }
 
     /**
-     * Mede a diferença entre o relógio do servidor e o deste aparelho: 3 vezes grava o `vistoEm` (a hora do
-     * servidor) e lê de volta; `offset = vistoEm − (t0 + t1) / 2`, ficando com a ida e volta mais rápida (a de menor
-     * erro). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida (sem internet, recusado), lança
-     * [NoConnection].
+     * Mede a diferença entre o relógio do servidor e o deste aparelho: 5 vezes grava o `vistoEm` (a hora do
+     * servidor) e lê de volta; cada medida dá `offset = vistoEm − (t0 + t1) / 2`, com erro de até meia ida e volta.
+     * Fica com a mediana das 3 idas e voltas mais rápidas (a mais rápida sozinha pode ter a demora toda de um lado
+     * só; a mediana descarta o pior das três). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida
+     * (sem internet, recusado), lança [NoConnection]; com menos de 3, fica com a mais rápida.
+     *
+     * Com prazo [untilServer] (hora do servidor; o `inicio` menos uma folga): antes de cada medida depois da
+     * primeira, se a hora do servidor estimada (pela melhor medida desta vez) já passou do prazo, para e fica com as
+     * que já tem. Na rede lenta, as 5 idas e voltas não comem o tempo até o começo.
      */
-    suspend fun measureClock(code: String): RoomClock = RoomClock(measureOffset(code), clock)
+    suspend fun measureClock(code: String, untilServer: Long? = null): RoomClock {
+        val chosen = measureOffset(code, untilServer)
+        return RoomClock(chosen.offsetMs, clock, chosen.roundTripMs)
+    }
 
-    private suspend fun measureOffset(code: String): Long {
+    /** Uma medida do relógio do servidor: a ida e volta e o offset que ela deu. */
+    private class ClockSample(val roundTripMs: Long, val offsetMs: Long)
+
+    private suspend fun measureOffset(code: String, untilServer: Long? = null): ClockSample {
         val me = try {
             auth.uid()
         } catch (e: RoomHttpError) {
             throw NoConnection(e)
         }
         val path = RoomFormat.path(code)
-        var best: Pair<Long, Long>? = null // ida e volta, offset
-        repeat(CLOCK_TRIES) {
+        val samples = mutableListOf<ClockSample>()
+        var tries = 0
+        while (tries < CLOCK_TRIES && !pastDeadline(samples, untilServer)) {
+            tries++
             val t0 = clock()
             val seen = try {
                 db.patch(path, mapOf("$PLAYERS/$me/$SEEN_AT" to ServerTime.NOW, ACTIVITY to ServerTime.NOW))
@@ -279,30 +353,63 @@ class RoomRepository(
                 null
             }
             val t1 = clock()
-            if (seen != null && (best == null || t1 - t0 < best.first)) {
-                best = t1 - t0 to seen.toLong() - (t0 + t1) / 2
-            }
+            if (seen != null) samples += ClockSample(t1 - t0, seen.toLong() - (t0 + t1) / 2)
         }
-        return (best?.second ?: throw NoConnection()).also { offset = it }
+        val fastest = samples.sortedBy { it.roundTripMs }.take(CLOCK_MEDIAN_OF)
+        if (fastest.isEmpty()) throw NoConnection()
+        val chosen = if (fastest.size < CLOCK_MEDIAN_OF) fastest.first() else fastest.sortedBy { it.offsetMs }[1]
+        offset = chosen.offsetMs
+        return chosen
     }
 
+    /**
+     * A hora do servidor estimada pela medida mais rápida desta vez já passou do prazo. Sem nenhuma ainda, mede: o
+     * último offset pode ter ficado errado (o relógio de parede acertado depois dele), e por isso se mede de novo.
+     */
+    private fun pastDeadline(samples: List<ClockSample>, untilServer: Long?): Boolean {
+        val known = samples.minByOrNull { it.roundTripMs }?.offsetMs ?: return false
+        return untilServer != null && clock() + known >= untilServer
+    }
+
+    /**
+     * A hora do servidor estimada agora pelo último offset medido ([measureClock]), sem ir ao banco; null = ainda não
+     * mediu (a partida de sala sempre mede antes do Resultado).
+     */
+    fun serverNowOrNull(): Long? = offset?.let { clock() + it }
+
     /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
-    private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code))
+    private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code).offsetMs)
 
     private fun forget(code: String) {
         synchronized(firstReady) { firstReady.remove(code) }
         synchronized(countdowns) { countdowns.keys.removeAll { it.first == code } }
+        synchronized(known) { known.remove(code) }
+        synchronized(unsent) { unsent.keys.removeAll { it.first == code } }
     }
 
     /** Quando este aparelho viu a contagem da rodada [round] pela primeira vez (hora do servidor). */
     private fun countdownSince(code: String, round: Int, now: Long): Long =
         synchronized(countdowns) { countdowns.getOrPut(code to round) { now } }
 
-    /** A sala lida, com o primeiro Pronto que este aparelho viu nesta música. */
+    /**
+     * A sala lida, com o primeiro Pronto que este aparelho viu nesta música e o placar de cada rodada. O "agora" do
+     * placar é a hora do servidor estimada: o relógio medido ([measureClock]), se já mediu, ou o tempo mais novo
+     * gravado na sala (o último placar ou batimento de alguém: fica para trás, nunca adiantado), o que for maior.
+     */
     private fun read(code: String, json: JSONObject, me: String): Room {
         val room = RoomFormat.room(code, json, me, clock())
         val tracker = synchronized(firstReady) { firstReady.getOrPut(code) { FirstReady() } }
-        return room.copy(firstReadyAt = tracker.update(room, json.optLong(ACTIVITY)))
+        val seen = synchronized(known) {
+            known.getOrPut(code) { mutableMapOf() }.apply { room.players.forEach { put(it.uid, it) } }.toMap()
+        }
+        val scores = ScoreFormat.scores(json)
+        val written = maxOf(RoomFormat.latestTime(json), ScoreFormat.latestScoreTime(scores))
+        val nowServer = maxOf(written, serverNowOrNull() ?: written)
+        val rounds = scores.keys + room.round
+        val boards = rounds.associateWith { round ->
+            RoundBoard.lines(room, round, scores[round].orEmpty(), nowServer, seen)
+        }.filterValues { it.isNotEmpty() }
+        return room.copy(firstReadyAt = tracker.update(room, json.optLong(ACTIVITY)), boards = boards)
     }
 
     /**
@@ -465,7 +572,8 @@ class RoomRepository(
         const val NULL_ETAG = "null_etag"
         const val CREATE_TRIES = 10
         const val JOIN_TRIES = 5
-        const val CLOCK_TRIES = 3
+        const val CLOCK_TRIES = 5
+        const val CLOCK_MEDIAN_OF = 3
         const val MARK_TRIES = 2
         const val RECHECK_MS = 5_000L
         const val VANISHED_MS = 5 * 60_000L

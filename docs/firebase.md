@@ -34,7 +34,9 @@ desligada ("em breve").
 
 Sempre que `firebase/database.rules.json` mudar (as próximas etapas do multiplayer acrescentam campos), repita este
 passo: colar o arquivo inteiro e **Publicar**. **A M2 (música e começo juntos) mudou as regras: republique antes de
-usar a versão nova do app** (as regras novas continuam aceitando tudo o que o app da M1 grava). As regras são testadas no emulador antes (`scripts/testar_regras_sala.sh`,
+usar a versão nova do app** (as regras novas continuam aceitando tudo o que o app da M1 grava). **A M3 (placar ao
+vivo e Resultado da sala) mudou as regras de novo (`placar`): republique antes de usar a versão da M3** (sem
+republicar, o placar ao vivo fica vazio; o app da M2 continua funcionando com as regras novas). As regras são testadas no emulador antes (`scripts/testar_regras_sala.sh`,
 ver `firebase/README.md`).
 
 ## 5. Copiar a chave e o endereço para o `local.properties`

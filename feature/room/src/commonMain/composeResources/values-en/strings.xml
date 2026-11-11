@@ -38,4 +38,14 @@
     <string name="room_stamp_ready">Ready</string>
     <string name="room_stamp_choosing">Choosing</string>
     <string name="room_starting">Starting…</string>
+    <string name="room_results_title">Room standings</string>
+    <string name="room_results_round">Round %1$d</string>
+    <string name="room_results_back">Back to the room</string>
+    <string name="room_results_left">left</string>
+    <string name="room_results_stale">no connection</string>
+    <string name="room_results_playing">playing</string>
+    <string name="room_results_waiting">Waiting for the others to finish…</string>
+    <string name="room_results_empty">The scores of this round are no longer in the room.</string>
+    <string name="room_results_accuracy">Accuracy %1$s</string>
+    <string name="room_results_max_combo">Max combo %1$d</string>
 </resources>

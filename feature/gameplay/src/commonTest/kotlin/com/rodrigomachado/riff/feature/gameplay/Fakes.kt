@@ -4,6 +4,7 @@ import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Note
+import kotlinx.coroutines.flow.MutableStateFlow
 
 fun note(timeMs: Long, lane: Int = 0, sustainMs: Long = 0) = Note(timeMs, lane, sustainMs, isHopo = false)
 
@@ -19,6 +20,17 @@ class FakeSongPlayer : SongPlayer {
     override var isCompleted: Boolean = false
     override var isStarting: Boolean = false
     val seeks = mutableListOf<Long>()
+
+    /** Quantas vezes a partida aqueceu o player ([warmUp]) e a latência que ele informa depois disso. */
+    var warmUps = 0
+    var latencyWhenWarm: Long? = null
+
+    override val outputLatencyMs: Long? get() = if (warmUps > 0 && !isPlaying) latencyWhenWarm else null
+
+    override fun warmUp() {
+        checkNotReleased()
+        warmUps++
+    }
 
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
     override var positionMs: Long = 0
@@ -221,3 +233,27 @@ class RecordingRanking(override val isConfigured: Boolean = true) :
 
     override suspend fun link(code: String) = com.rodrigomachado.riff.core.data.ranking.LinkResult.Offline
 }
+
+/** O placar ao vivo de mentira: o teste manda o dos outros ([others]) e lê o que a partida publicou ([published]). */
+class FakeLiveBoard : LiveBoard {
+    override val others = MutableStateFlow<List<LiveScore>>(emptyList())
+    val published = mutableListOf<LiveScore>()
+
+    /** Chamado a cada publicação (o teste anota o instante). */
+    var onPublish: (LiveScore) -> Unit = {}
+
+    override fun publish(mine: LiveScore) {
+        published += mine
+        onPublish(mine)
+    }
+}
+
+/**
+ * Os outros três de uma sala cheia, para os screenshots do placar ao vivo: a Ana na frente, o Bruno sem conexão (com
+ * os pontos de antes de cair) e a Carla, que saiu.
+ */
+fun liveOthersSample() = listOf(
+    LiveScore("ana", "Ana", 2_350, 18, 18, 0.62f, finished = false),
+    LiveScore("bruno", "Bruno_88", 1_200, 0, 7, 0.3f, finished = false, stale = true),
+    LiveScore("carla", "Carla", 3_100, 0, 21, 0.7f, finished = false, left = true),
+)

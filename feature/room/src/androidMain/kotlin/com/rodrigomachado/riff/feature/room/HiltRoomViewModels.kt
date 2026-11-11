@@ -5,6 +5,7 @@ import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.EncoreDownloads
 import com.rodrigomachado.riff.core.data.download.ChartDownloader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
+import com.rodrigomachado.riff.core.room.RoomPresence
 import com.rodrigomachado.riff.core.room.RoomRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
@@ -35,4 +36,20 @@ class HiltRoomLobbyViewModel @Inject constructor(
     checkNotNull(savedStateHandle["code"]),
     repository,
     RoomSongCheck.of(charts, downloads, downloader),
+)
+
+/**
+ * O [RoomResultsViewModel] criado pelo Hilt no celular, com o código e a rodada da rota, a sala da presença e a hora
+ * do servidor do repositório.
+ */
+@HiltViewModel
+class HiltRoomResultsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    presence: RoomPresence,
+    repository: RoomRepository,
+) : RoomResultsViewModel(
+    checkNotNull(savedStateHandle["code"]),
+    checkNotNull(savedStateHandle["round"]),
+    presence.room,
+    repository::serverNowOrNull,
 )

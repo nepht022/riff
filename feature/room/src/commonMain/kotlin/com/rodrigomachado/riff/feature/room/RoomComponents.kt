@@ -8,7 +8,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -49,6 +51,19 @@ private fun RoomError.message(): StringResource = when (this) {
     RoomError.FULL -> Res.string.room_full
     RoomError.NO_CONNECTION -> Res.string.room_no_connection
 }
+
+/** Carimbo chapado (como o StatusBadge), sem caixa alta: o texto é o que o teste e o leitor de tela leem. */
+@Composable
+internal fun Stamp(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = STAMP_SPACING),
+        color = RiffColors.Paper,
+        modifier = modifier.background(color).padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+    )
+}
+
+private val STAMP_SPACING = 1.5.sp
 
 /** A sombra dura dos quadros e cartazes do app. */
 internal val HardShadow = 4.dp

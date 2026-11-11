@@ -9,6 +9,10 @@ import java.io.IOException
  * Toca a guitarra e o resto da banda em faixas separadas, perfeitamente juntas: uma thread decodifica cada
  * faixa, mistura ([StemMixer]) e escreve numa saída só, cujos quadros tocados são o relógio. A guitarra é a
  * faixa 0 do mixer.
+ *
+ * Aquecida ([warmUp], partida de sala), a saída começa antes da música tocando silêncio: o arranque do som (no PC,
+ * centenas de ms na primeira vez) passa antes do instante combinado, e o [play] só troca o silêncio pela música, que
+ * entra logo atrás do silêncio já na fila. Esse silêncio não conta como música: a posição só anda depois dele.
  */
 @Suppress("TooManyFunctions") // ciclo de vida da thread de áudio, mistura e relógio ficam juntos de propósito
 class StemSongPlayer(
@@ -56,6 +60,12 @@ class StemSongPlayer(
     @Volatile private var released = false
 
     @Volatile private var allEnded = false
+
+    // Aquecendo: a saída tocando silêncio antes do primeiro play ([warmUp]).
+    @Volatile private var warming = false
+
+    // Quadros de silêncio do aquecimento entregues à saída atual (antes da música): não contam na posição.
+    @Volatile private var silenceFrames = 0L
 
     internal var audioThread: Thread? = null
         private set
@@ -134,7 +144,7 @@ class StemSongPlayer(
         }
     }
 
-    private fun hasWork(): Boolean = playing && (pendingFrames > 0 || !allEnded)
+    private fun hasWork(): Boolean = warming || (playing && (pendingFrames > 0 || !allEnded))
 
     /**
      * Grava o que sobrou do bloco anterior ou mistura um bloco novo e o grava. `false` quando não há mais nada:
@@ -143,6 +153,7 @@ class StemSongPlayer(
     internal fun renderOnce(): Boolean {
         val output = sink ?: return false
         if (released) return false
+        if (warming) return writeSilence(output)
         if (pendingFrames == 0 && !allEnded) mixNextBlock(output)
         if (pendingFrames > 0) flushPending(output)
         return pendingFrames > 0 || !allEnded
@@ -172,6 +183,17 @@ class StemSongPlayer(
         writtenFrames += written
     }
 
+    /**
+     * Um pedaço do silêncio do aquecimento, contado antes da escrita (a posição lida no meio dela não pode achar que
+     * a música já começou); a parte que a saída não aceitou (pausa, parada) é descontada depois.
+     */
+    private fun writeSilence(output: AudioSink): Boolean {
+        silenceFrames += WARM_FRAMES
+        val written = output.write(silence, 0, WARM_FRAMES)
+        silenceFrames -= WARM_FRAMES - written
+        return true
+    }
+
     /** Silêncio depois da música, que não conta como música: empurra o último pedaço para o alto-falante. */
     private fun pushOutTheEnd(output: AudioSink) {
         repeat(END_SILENCE_BLOCKS) { output.write(silence, 0, BLOCK_FRAMES) }
@@ -192,16 +214,44 @@ class StemSongPlayer(
     override fun play() {
         val output = sink ?: return
         if (released) return
-        output.start()
+        // Aquecida, a saída já está tocando (o silêncio): recomeçá-la apagaria o "já está saindo som".
+        if (!warming) output.start()
         synchronized(lock) {
+            warming = false
             playing = true
             lock.notifyAll()
         }
     }
 
+    /** Só antes do primeiro play da saída atual (nada da música escrito nela): ver a classe. */
+    override fun warmUp() {
+        val output = sink ?: return
+        if (released || playing || warming) return
+        if (startedMusic()) return
+        output.start()
+        synchronized(lock) {
+            warming = true
+            lock.notifyAll()
+        }
+    }
+
+    /** Já há música escrita na saída atual (o aquecimento só vale antes dela). */
+    private fun startedMusic(): Boolean = writtenFrames > 0 || pendingFrames > 0
+
+    override val outputLatencyMs: Long?
+        get() {
+            val output = sink ?: return null
+            if (!warming || released) return null
+            // A leitura da posição é que atualiza o "já está saindo som" (ver PresentedFrames): lê antes.
+            val played = output.playedFrames
+            if (!output.isPresenting) return null
+            return (silenceFrames - played).coerceAtLeast(0) * 1_000 / sampleRate
+        }
+
     override fun pause() {
         if (released) return
         playing = false
+        warming = false
         val output = sink ?: return
         // A posição apresentada só se atualiza quando lida (a partida lê a cada 500 ms): lê agora, antes de
         // congelar, para a pista e o ponto de retomada não ficarem para trás.
@@ -216,6 +266,7 @@ class StemSongPlayer(
     @Suppress("TooGenericExceptionCaught") // AudioTrack sem recursos chega como RuntimeException
     override fun seekTo(positionMs: Long) {
         if (released || playing) return
+        warming = false // a saída aquecida é a que sai: a nova começa fria
         synchronized(renderLock) {
             val old = sink ?: return
             val fresh = try {
@@ -236,6 +287,7 @@ class StemSongPlayer(
             sink = fresh
             baseFrames = frame
             writtenFrames = 0
+            silenceFrames = 0
             pendingFrames = 0
             pendingOffset = 0
             allEnded = false
@@ -258,6 +310,7 @@ class StemSongPlayer(
             positionAtRelease = positionMs
             released = true
             playing = false
+            warming = false
             lock.notifyAll()
         }
         sink?.stop()
@@ -278,17 +331,26 @@ class StemSongPlayer(
         get() {
             if (released) return positionAtRelease
             val output = sink ?: return 0
-            return (baseFrames + output.playedFrames) * 1_000 / sampleRate
+            return (baseFrames + musicFrames(output)) * 1_000 / sampleRate
         }
+
+    /** Os quadros da música que já saíram (sem o silêncio do aquecimento antes dela). */
+    private fun musicFrames(output: AudioSink): Long = (output.playedFrames - silenceFrames).coerceAtLeast(0)
 
     override val isPlaying: Boolean get() = playing && !released && !isCompleted
 
-    override val isStarting: Boolean get() = isPlaying && sink?.isPresenting == false
+    override val isStarting: Boolean
+        get() {
+            val output = sink ?: return false
+            // Sem aquecimento (a partida sozinha), nada de ler a posição da saída a cada quadro.
+            return isPlaying && (!output.isPresenting || (silenceFrames > 0 && output.playedFrames < silenceFrames))
+        }
 
     override val isCompleted: Boolean
         get() {
-            val played = sink?.playedFrames ?: return false
+            // Antes de ler a posição da saída: o isPlaying de cada quadro passa por aqui.
             if (!allEnded || pendingFrames > 0) return false
+            val played = sink?.let(::musicFrames) ?: return false
             if (played >= writtenFrames) return true
             val now = nowMs()
             if (played != stalledHead) {
@@ -300,6 +362,9 @@ class StemSongPlayer(
 
     companion object {
         const val BLOCK_FRAMES = 1_024
+
+        /** O silêncio do aquecimento em pedaços pequenos: o play espera no máximo um pedaço (~5 ms) para a música. */
+        const val WARM_FRAMES = 256
         const val STALL_MS = 500L
         private const val END_SILENCE_BLOCKS = 4
         private const val GUITAR = 0

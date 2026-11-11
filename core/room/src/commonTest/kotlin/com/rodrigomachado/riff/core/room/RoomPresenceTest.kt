@@ -86,6 +86,39 @@ class RoomPresenceTest : JsonTest() {
         assertTrue(beats("u1") >= 20)
     }
 
+    /**
+     * A sala que a presença observa fica à disposição (o placar ao vivo da partida lê dela, sem abrir outro
+     * streaming); saindo da sala, volta a null.
+     */
+    @Test
+    fun theRoomItObservesIsShared() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "u1",
+            players = listOf(ready("u1", loadedRound = 1), ready("bia", loadedRound = 1)),
+            state = "partida",
+            round = 1,
+            songJson = song(),
+            startAt = T0,
+        )
+        fake.seedScore("ABCD", 1, "bia", points = 1_200)
+        val (repository, presence) = present("u1")
+
+        val seen = presence.room.value
+        assertEquals("ABCD", seen?.code)
+        assertEquals(1_200L, seen!!.board.first { it.uid == "bia" }.score)
+        val streams = fake.streamsOpened
+
+        fake.seedScore("ABCD", 1, "bia", points = 2_500)
+        runCurrent()
+        assertEquals(2_500L, presence.room.value!!.board.first { it.uid == "bia" }.score)
+        assertEquals(streams, fake.streamsOpened)
+
+        repository.leave("ABCD")
+        runCurrent()
+        assertNull(presence.room.value)
+    }
+
     @Test
     fun beatsEvery20SecondsWhileInTheRoom() = runTest {
         fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))

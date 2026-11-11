@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.gameplay
 
 import android.os.SystemClock
 import android.provider.Settings.Global
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,6 +13,11 @@ import androidx.compose.ui.platform.LocalView
 actual val playsByTouch = true
 
 actual fun touchUptimeMs(): Long = SystemClock.uptimeMillis()
+
+actual fun matchSyncLog(message: String) {
+    // O log de depuração nunca derruba a partida (fora do Android, nos testes da JVM, o Log lança).
+    runCatching { Log.i("RiffSync", message) }
+}
 
 /** "Remover animações" do Android: escala de animação zerada. */
 @Composable

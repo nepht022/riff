@@ -56,4 +56,18 @@ class JsonTreeTest : JsonTest() {
         assertEquals("Bia", deep.getJSONObject("jogadores").getJSONObject("u2").getString("nome"))
         assertEquals(5, deep.getJSONObject("jogadores").getJSONObject("u2").getInt("vistoEm"))
     }
+
+    @Test
+    fun putUnderAListKeepsItsItems() {
+        // o Firebase manda {"1":…,"2":…} como lista; um evento depois num filho dela não pode apagar os outros
+        val tree = JSONObject("""{"placar":[null,{"ana":{"pontos":1}},{"bia":{"pontos":2}}]}""")
+
+        val after = JsonTree.put(tree, "/placar/2/caio", JSONObject("""{"pontos":3}""")) as JSONObject
+        val patched = JsonTree.patch(after, "/placar", JSONObject("""{"3":{"ana":{"pontos":4}}}""")) as JSONObject
+
+        val board = patched.getJSONObject("placar")
+        assertEquals(setOf("1", "2", "3"), board.keys().asSequence().toSet())
+        assertEquals(1, board.getJSONObject("1").getJSONObject("ana").getInt("pontos"))
+        assertEquals(setOf("bia", "caio"), board.getJSONObject("2").keys().asSequence().toSet())
+    }
 }

@@ -18,7 +18,8 @@ import javax.inject.Inject
 
 /**
  * O [GameplayViewModel] criado pelo Hilt no celular: o mapa e a dificuldade vêm dos argumentos da rota; com o
- * `roomCode` ([GameplayRoute]), a partida de sala, com o [MatchStart] montado pela [MatchStartFactory] do app.
+ * `roomCode` ([GameplayRoute]), a partida de sala, com o [MatchStart] e o [LiveBoard] montados pelas fábricas do app
+ * ([MatchStartFactory], [LiveBoardFactory]).
  */
 @HiltViewModel
 class HiltGameplayViewModel @Inject constructor(
@@ -35,6 +36,7 @@ class HiltGameplayViewModel @Inject constructor(
     artImages: ChartArtImages,
     ranking: RankingRepository,
     matchStarts: MatchStartFactory,
+    liveBoards: LiveBoardFactory,
 ) : GameplayViewModel(
     checkNotNull(savedStateHandle["chartId"]),
     Difficulty.valueOf(checkNotNull(savedStateHandle["difficulty"])),
@@ -51,5 +53,8 @@ class HiltGameplayViewModel @Inject constructor(
     ranking,
     matchStart = savedStateHandle.get<String>("roomCode")?.let { code ->
         matchStarts.create(code, savedStateHandle.get<Int>("round") ?: 0)
+    },
+    liveBoard = savedStateHandle.get<String>("roomCode")?.let { code ->
+        liveBoards.create(code, savedStateHandle.get<Int>("round") ?: 0)
     },
 )

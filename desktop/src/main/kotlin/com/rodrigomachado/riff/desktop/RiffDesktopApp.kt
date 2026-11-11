@@ -67,6 +67,8 @@ import com.rodrigomachado.riff.feature.room.RoomJoinScreen
 import com.rodrigomachado.riff.feature.room.RoomLobbyRoute
 import com.rodrigomachado.riff.feature.room.RoomLobbyScreen
 import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
+import com.rodrigomachado.riff.feature.room.RoomResultsRoute
+import com.rodrigomachado.riff.feature.room.RoomResultsScreen
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
 import com.rodrigomachado.riff.feature.settings.SettingsRoute
@@ -299,7 +301,8 @@ private fun NavGraphBuilder.searchDestination(graph: DesktopGraph, navController
  * Resultado (Biblioteca → Partida → Resultado → Biblioteca, sem tela repetida). O Resultado mostra o ranking como
  * no celular (a posição, "vai quando der" ou o convite para escolher um nome, [onChooseName]); "Ver ranking" abre o
  * placar na tabela da partida. A partida de sala (a rota com o código) não pausa: Esc e Start perguntam se é para
- * sair; o Resultado dela só volta à sala.
+ * sair; o Resultado dela não tem "Jogar de novo": "Ver a sala" abre o Resultado da sala por cima dele, e "Voltar à
+ * sala" (nos dois) volta à sala, tirando da pilha o que estava por cima dela; Esc volta uma tela.
  */
 private fun NavGraphBuilder.matchDestinations(
     graph: DesktopGraph,
@@ -339,12 +342,30 @@ private fun NavGraphBuilder.matchDestinations(
             viewModel = results,
             modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
             inRoom = route.inRoom,
+            onSeeRoom = roomResultsOf(route)?.let { roomResults ->
+                dropUnlessResumed { navController.navigate(roomResults) }
+            },
+        )
+    }
+    composable<RoomResultsRoute> { entry ->
+        val route = entry.toRoute<RoomResultsRoute>()
+        RoomResultsScreen(
+            viewModel = viewModel { graph.roomResultsViewModel(route.code, route.round) },
+            onBackToRoom = dropUnlessResumed {
+                // De volta à sala que está embaixo na pilha (sem ela, só esta tela sai).
+                if (!navController.popBackStack<RoomLobbyRoute>(inclusive = false)) navController.popBackStack()
+            },
+            modifier = Modifier.menuKeys(onBack = dropUnlessResumed { navController.popBackStack() }),
         )
     }
 }
 
-/** O Resultado da partida [route]: o da partida de sala sabe disso (só volta à sala, sem "Jogar de novo"). */
-internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, inRoom = route.roomCode != null)
+/** O Resultado da partida [route]: o da partida de sala sabe de que sala e rodada (só volta à sala, ou a vê). */
+internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, route.roomCode, route.round)
+
+/** O Resultado da sala do "Ver a sala" do Resultado [route]; null = a partida não foi de sala. */
+internal fun roomResultsOf(route: ResultsRoute): RoomResultsRoute? =
+    route.roomCode?.let { RoomResultsRoute(it, route.round) }
 
 /**
  * As Configurações (com os Controles, a guitarra por IA e o nome no ranking, [onRankingName]), a calibração e as

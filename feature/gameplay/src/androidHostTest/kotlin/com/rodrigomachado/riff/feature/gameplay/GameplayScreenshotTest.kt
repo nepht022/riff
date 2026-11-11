@@ -6,6 +6,7 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -156,6 +157,34 @@ class GameplayScreenshotTest {
                         onExit = {},
                         onSessionFinished = {},
                         animate = false,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * A partida de sala com o placar ao vivo cheio (4 jogadores): a minha linha destacada, "sem conexão" e "saiu"
+     * (por último), embaixo dos pontos e sem cobrir a pista.
+     */
+    @Test
+    fun roomMatchWithTheLiveBoard() {
+        val session = GameSession(listOf(Note(60_000, 2, 0, false)), FakeSongPlayer(), FakeSfxPlayer(), FakeTime(), 0)
+        val state =
+            GameplayUiState.Ready("Música", "Banda", Difficulty.EXPERT, session, Settings.DEFAULT, inRoom = true)
+        val others = mutableStateOf(liveOthersSample())
+        captureRoboImage("src/test/screenshots/Gameplay_room_live.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    GameStage(
+                        state,
+                        reducedMotion = true,
+                        onPause = {},
+                        onResume = {},
+                        onExit = {},
+                        onSessionFinished = {},
+                        animate = false,
+                        liveOthers = others,
                     )
                 }
             }

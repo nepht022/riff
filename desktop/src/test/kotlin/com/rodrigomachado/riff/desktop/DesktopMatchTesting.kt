@@ -321,7 +321,8 @@ internal fun writeTone(file: File, durationMs: Int) {
 
 /**
  * Saída falsa no ritmo do relógio: aceita no máximo [BUFFER_MS] à frente do que já "tocou", e o que tocou é o tempo
- * desde [start] (sem contar as pausas). A música anda em tempo real sem alto-falante.
+ * desde [start] (sem contar as pausas). A música anda em tempo real sem alto-falante. O silêncio antes do primeiro
+ * som (o aquecimento da partida de sala) não conta na [positionMs], como no player: o tom do teste não tem silêncio.
  */
 private class RealTimeSink(private val rate: Int) : AudioSink {
     private val lock = Object()
@@ -329,11 +330,14 @@ private class RealTimeSink(private val rate: Int) : AudioSink {
     private var startedAtNs = 0L
     private var written = 0L
 
+    // Os quadros de silêncio escritos antes do primeiro som (o aquecimento).
+    private var leadingSilence = 0L
+
     @Volatile private var running = false
 
     @Volatile private var stopped = false
 
-    val positionMs: Long get() = playedFrames * 1_000 / rate
+    val positionMs: Long get() = (playedFrames - synchronized(lock) { leadingSilence }).coerceAtLeast(0) * 1_000 / rate
 
     override fun start() = synchronized(lock) {
         if (!running) {
@@ -363,7 +367,13 @@ private class RealTimeSink(private val rate: Int) : AudioSink {
                 continue
             }
             val count = minOf(room, (frames - done).toLong()).toInt()
-            synchronized(lock) { written += count }
+            val silent = (offsetFrames + done until offsetFrames + done + count).all {
+                buffer[it * 2] == 0f && buffer[it * 2 + 1] == 0f
+            }
+            synchronized(lock) {
+                if (silent && leadingSilence == written) leadingSilence += count
+                written += count
+            }
             done += count
         }
         return done

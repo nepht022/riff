@@ -23,6 +23,10 @@ internal class HudState {
         private set
     var combo by mutableIntStateOf(0)
         private set
+
+    /** O maior combo visto (o desempate do placar ao vivo), sem montar o `state` do motor a cada quadro. */
+    var maxCombo by mutableIntStateOf(0)
+        private set
     var judgment by mutableStateOf<Judgment?>(null)
         private set
     var showingJudgment by mutableStateOf(false)
@@ -35,6 +39,7 @@ internal class HudState {
         score = engine.score
         multiplier = engine.multiplier
         combo = engine.combo
+        if (combo > maxCombo) maxCombo = combo
         judgment = session.lastJudgment
         showingJudgment = judgment != null && session.judgmentAgeMs() < JUDGMENT_VISIBLE_MS
         showingNotice = withoutSeparateGuitar && session.songTimeMs < NOTICE_MS

@@ -7,6 +7,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -23,7 +25,8 @@ import kotlinx.coroutines.launch
  * - O Pronto que sobrou: de volta à sala depois de uma rodada, ou com outra música, o meu Pronto volta a "não"
  *   ([RoomRepository.clearReady]), mesmo sem a tela da sala à vista.
  *
- * Sair da sala ([RoomRepository.leave]) para os dois na hora.
+ * Sair da sala ([RoomRepository.leave]) para os dois na hora. A sala que ela observa fica em [room] (o placar ao vivo
+ * da partida lê dela, sem abrir outro streaming).
  */
 @OptIn(ExperimentalCoroutinesApi::class) // collectLatest: trocar de sala (ou sair) cancela a presença da anterior
 class RoomPresence(
@@ -31,6 +34,10 @@ class RoomPresence(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     private val foreground = MutableStateFlow(true)
+    private val seen = MutableStateFlow<Room?>(null)
+
+    /** A sala em que estou, como a presença a vê agora (relida a cada 5 s); null = fora da sala ou em segundo plano. */
+    val room: StateFlow<Room?> = seen.asStateFlow()
 
     /** O que esta presença viu de cada sala (para o Pronto que sobrou): continua entre o segundo plano e a volta. */
     private var tracked: Pair<String, StaleReady>? = null
@@ -39,7 +46,10 @@ class RoomPresence(
         scope.launch {
             combine(repository.joinedRoom, foreground) { code, visible -> code.takeIf { visible } }
                 .distinctUntilChanged()
-                .collectLatest { code -> code?.let { present(it) } }
+                .collectLatest { code ->
+                    seen.value = null
+                    code?.let { present(it) }
+                }
         }
     }
 
@@ -63,6 +73,7 @@ class RoomPresence(
                 true
             }
             .collect { room ->
+                seen.value = room
                 if (room != null && stale.mustClear(room) && repository.clearReady(code)) stale.cleared()
             }
     }

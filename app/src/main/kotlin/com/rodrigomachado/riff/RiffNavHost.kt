@@ -52,12 +52,15 @@ import com.rodrigomachado.riff.feature.results.ResultsScreen
 import com.rodrigomachado.riff.feature.room.HiltRoomEntryViewModel
 import com.rodrigomachado.riff.feature.room.HiltRoomJoinViewModel
 import com.rodrigomachado.riff.feature.room.HiltRoomLobbyViewModel
+import com.rodrigomachado.riff.feature.room.HiltRoomResultsViewModel
 import com.rodrigomachado.riff.feature.room.RoomEntryRoute
 import com.rodrigomachado.riff.feature.room.RoomEntryScreen
 import com.rodrigomachado.riff.feature.room.RoomJoinRoute
 import com.rodrigomachado.riff.feature.room.RoomJoinScreen
 import com.rodrigomachado.riff.feature.room.RoomLobbyRoute
 import com.rodrigomachado.riff.feature.room.RoomLobbyScreen
+import com.rodrigomachado.riff.feature.room.RoomResultsRoute
+import com.rodrigomachado.riff.feature.room.RoomResultsScreen
 import com.rodrigomachado.riff.feature.search.HiltSearchViewModel
 import com.rodrigomachado.riff.feature.search.SearchRoute
 import com.rodrigomachado.riff.feature.search.SearchScreen
@@ -212,7 +215,10 @@ private fun NavGraphBuilder.rankingDestinations(navController: NavHostController
     }
 }
 
-/** A partida e o resultado; o Resultado da partida de sala só volta à sala (sem "Jogar de novo"). */
+/**
+ * A partida e o resultado; o Resultado da partida de sala não tem "Jogar de novo": "Ver a sala" abre o Resultado da
+ * sala por cima dele, e "Voltar à sala" (nos dois) volta à sala, tirando da pilha o que estava por cima dela.
+ */
 private fun NavGraphBuilder.matchDestinations(navController: NavHostController, onChooseName: () -> Unit) {
     composable<GameplayRoute> { entry ->
         val route = entry.toRoute<GameplayRoute>()
@@ -227,6 +233,7 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
         )
     }
     composable<ResultsRoute> { entry ->
+        val route = entry.toRoute<ResultsRoute>()
         ResultsScreen(
             onPlayAgain = dropUnlessResumed { chartId, difficulty ->
                 navController.navigate(GameplayRoute(chartId, difficulty.name)) {
@@ -239,13 +246,29 @@ private fun NavGraphBuilder.matchDestinations(navController: NavHostController, 
                 navController.navigate(RankingBoardRoute(chartId, title, difficulty.name))
             },
             viewModel = hiltViewModel<HiltResultsViewModel>(),
-            inRoom = entry.toRoute<ResultsRoute>().inRoom,
+            inRoom = route.inRoom,
+            onSeeRoom = roomResultsOf(route)?.let { roomResults ->
+                dropUnlessResumed { navController.navigate(roomResults) }
+            },
+        )
+    }
+    composable<RoomResultsRoute> {
+        RoomResultsScreen(
+            viewModel = hiltViewModel<HiltRoomResultsViewModel>(),
+            onBackToRoom = dropUnlessResumed {
+                // De volta à sala que está embaixo na pilha (sem ela, só esta tela sai).
+                if (!navController.popBackStack<RoomLobbyRoute>(inclusive = false)) navController.popBackStack()
+            },
         )
     }
 }
 
-/** O Resultado da partida [route]: o da partida de sala sabe disso (só volta à sala, sem "Jogar de novo"). */
-internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, inRoom = route.roomCode != null)
+/** O Resultado da partida [route]: o da partida de sala sabe de que sala e rodada (só volta à sala, ou a vê). */
+internal fun resultsOf(route: GameplayRoute, scoreId: Long) = ResultsRoute(scoreId, route.roomCode, route.round)
+
+/** O Resultado da sala do "Ver a sala" do Resultado [route]; null = a partida não foi de sala. */
+internal fun roomResultsOf(route: ResultsRoute): RoomResultsRoute? =
+    route.roomCode?.let { RoomResultsRoute(it, route.round) }
 
 /** A Biblioteca: jogar com o áudio da pasta. */
 private fun NavGraphBuilder.libraryDestinations(navController: NavHostController) {

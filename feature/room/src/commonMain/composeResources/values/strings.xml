@@ -38,4 +38,14 @@
     <string name="room_stamp_ready">Pronto</string>
     <string name="room_stamp_choosing">Escolhendo</string>
     <string name="room_starting">Começando…</string>
+    <string name="room_results_title">Resultado da sala</string>
+    <string name="room_results_round">Rodada %1$d</string>
+    <string name="room_results_back">Voltar à sala</string>
+    <string name="room_results_left">saiu</string>
+    <string name="room_results_stale">sem conexão</string>
+    <string name="room_results_playing">jogando</string>
+    <string name="room_results_waiting">Esperando os outros terminarem…</string>
+    <string name="room_results_empty">O placar desta rodada não está mais na sala.</string>
+    <string name="room_results_accuracy">Precisão %1$s</string>
+    <string name="room_results_max_combo">Maior combo %1$d</string>
 </resources>

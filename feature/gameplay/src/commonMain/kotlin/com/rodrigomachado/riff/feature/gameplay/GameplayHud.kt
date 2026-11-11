@@ -13,12 +13,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.stage.JudgmentText
@@ -36,7 +38,18 @@ import org.jetbrains.compose.resources.stringResource
 
 private const val COMBO_MIN_TO_SHOW = 10
 
-/** O placar em pé (celular): tudo por cima da pista, cada um no seu canto. */
+/** O placar ao vivo no celular: logo abaixo dos pontos, à esquerda, acima do fundo da pista (sem cobri-la). */
+private val PHONE_LIVE_TOP = 40.dp
+private val PHONE_LIVE_WIDTH = 128.dp
+
+/** O placar ao vivo no PC: na coluna do placar, abaixo dos pontos e do combo (sem pular quando o combo aparece). */
+private val SIDE_LIVE_TOP = 88.dp
+private val SIDE_LIVE_WIDTH = 180.dp
+
+/**
+ * O placar em pé (celular): tudo por cima da pista, cada um no seu canto; na partida de sala ([liveOthers]), o placar
+ * ao vivo embaixo dos pontos.
+ */
 @Composable
 internal fun Hud(
     session: GameSession,
@@ -45,10 +58,20 @@ internal fun Hud(
     reducedMotion: Boolean,
     onPause: (() -> Unit)?,
     modifier: Modifier,
+    liveOthers: State<List<LiveScore>>? = null,
 ) {
     Box(modifier.padding(Spacing.md)) {
         // Cada um no seu canto: o placar crescendo não empurra o Pausar, que fica sempre no centro.
         ScoreText(hud.score, Modifier.align(Alignment.TopStart))
+        liveOthers?.let {
+            LiveBoardBlock(
+                it,
+                hud,
+                reducedMotion,
+                PHONE_LIVE_WIDTH,
+                Modifier.align(Alignment.TopStart).padding(top = PHONE_LIVE_TOP),
+            )
+        }
         onPause?.let { PauseButton(it, Modifier.align(Alignment.TopCenter)) }
         MultiplierStamp(hud.multiplier, Modifier.align(Alignment.TopEnd))
         ComboText(hud, Modifier.align(Alignment.TopCenter).padding(top = Spacing.xl * 2))
@@ -61,10 +84,18 @@ internal fun Hud(
 
 /**
  * O placar deitado (PC), nas laterais da pista central de largura [highwayWidth], sem cobri-la: placar e combo à
- * esquerda (junto da pista), multiplicador e Pausar à direita. O julgamento fica na pista ([JudgmentPop]).
+ * esquerda (junto da pista), multiplicador e Pausar à direita; na partida de sala ([liveOthers]), o placar ao vivo
+ * na coluna da esquerda, embaixo do combo. O julgamento fica na pista ([JudgmentPop]).
  */
 @Composable
-internal fun SideHud(hud: HudState, onPause: (() -> Unit)?, highwayWidth: Dp, modifier: Modifier) {
+internal fun SideHud(
+    hud: HudState,
+    onPause: (() -> Unit)?,
+    highwayWidth: Dp,
+    modifier: Modifier,
+    reducedMotion: Boolean = false,
+    liveOthers: State<List<LiveScore>>? = null,
+) {
     Row(modifier) {
         Box(Modifier.weight(1f).fillMaxHeight().padding(Spacing.md)) {
             Column(
@@ -74,6 +105,15 @@ internal fun SideHud(hud: HudState, onPause: (() -> Unit)?, highwayWidth: Dp, mo
             ) {
                 ScoreText(hud.score)
                 ComboText(hud, Modifier)
+            }
+            liveOthers?.let {
+                LiveBoardBlock(
+                    it,
+                    hud,
+                    reducedMotion,
+                    SIDE_LIVE_WIDTH,
+                    Modifier.align(Alignment.TopEnd).padding(top = SIDE_LIVE_TOP),
+                )
             }
             if (hud.showingNotice) {
                 NoSeparateGuitarNotice(Modifier.align(Alignment.BottomEnd), TextAlign.End)

@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
+import com.rodrigomachado.riff.core.game.GameEngine
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
@@ -31,9 +32,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -83,7 +87,9 @@ sealed interface GameplayUiState {
  *
  * Com [matchStart], a partida de sala: carregada, avisa ([MatchStart.loaded]), espera o começo combinado
  * ([MatchStart.awaitStart]), mostra a contagem e começa no instante devolvido, pelo [timeSource]; não pausa nunca e,
- * ao sair no meio ([leave]), avisa a sala ([MatchStart.left]).
+ * ao sair no meio ([leave]), avisa a sala ([MatchStart.left]). Com o [liveBoard] (só na de sala), o placar ao vivo:
+ * publica o meu no começo, a cada [LIVE_PUBLISH_EVERY_MS] pelos quadros ([onFrame], no relógio da partida) e no fim
+ * ([LiveBoard.publish] não segura a tela: o envio vai fora dela) e entrega o dos outros ([liveOthers]).
  */
 @Suppress("TooManyFunctions") // a partida: carregar, pausar, ajustar, terminar e o modo de sala; um estado só
 open class GameplayViewModel(
@@ -102,9 +108,21 @@ open class GameplayViewModel(
     private val ranking: RankingRepository,
     private val rankingTable: (Settings) -> RankingTable = { RankingTable.PHONE },
     private val matchStart: MatchStart? = null,
+    private val liveBoard: LiveBoard? = null,
+    /** O log de depuração do começo junto (ver [matchSyncLog]); os testes trocam. */
+    private val syncLog: (String) -> Unit = ::matchSyncLog,
 ) : ViewModel() {
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
+
+    /** O placar dos outros na partida de sala, ao vivo; null = partida sozinho (sem o bloco). */
+    val liveOthers: StateFlow<List<LiveScore>>? = liveBoard?.others
+        ?.catch { emit(emptyList()) } // uma falha na leitura não derruba a partida
+        ?.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // O meu placar ao vivo (partida de sala): o motor da partida já começada, e quando publicar de novo.
+    private var liveEngine: GameEngine? = null
+    private var nextPublishAt = 0L
 
     private var player: SongPlayer? = null
     private var sfx: SfxPlayer? = null
@@ -116,6 +134,11 @@ open class GameplayViewModel(
 
     // O app pode ir para segundo plano enquanto a música carrega: a partida começa pausada.
     private var pauseRequested = false
+
+    // Partida de sala: quando a sessão começou (no relógio da partida) e o instante combinado, até o som sair (o log
+    // do atraso, ver [logSoundStart]).
+    private var soundAskedAt: Long? = null
+    private var agreedStartAt = 0L
 
     // Partida de sala: a sala já sabe que acabou para mim (saí, não abriu ou terminou); avisa uma vez só.
     private var roomDone = false
@@ -188,6 +211,13 @@ open class GameplayViewModel(
      * devolvido pelo [MatchStart] (no relógio da partida), esperando em passos pelo [timeSource] (o `delay` sozinho
      * pode acordar antes); com o começo já passado, começa na posição da música de agora (a dos outros). O foco de
      * áudio é pedido como sempre, mas perdê-lo não pausa.
+     *
+     * Logo depois do carregou (sem esperar o instante), o player é aquecido ([SongPlayer.warmUp]): o arranque do som
+     * (no PC, ~650 ms na primeira vez) passa enquanto espera os outros e mede o relógio, não depois do instante; o
+     * silêncio não se ouve. Atrasado, o reposicionamento abre outra saída, fria, e descarta o aquecimento (e a
+     * latência dele não vale). Perto do instante, a latência que o player aquecido informa
+     * ([SongPlayer.outputLatencyMs], até [MAX_OUTPUT_LATENCY_MS]) adianta o começo na mesma quantidade, para o som
+     * sair no instante; sem ela, começa no instante, só com a calibração de sempre no relógio da música (Decisão 5b).
      */
     private suspend fun startInRoom(
         room: MatchStart,
@@ -197,29 +227,88 @@ open class GameplayViewModel(
         val waiting = ready.copy(inRoom = true, waitingForStart = true)
         state.value = waiting
         room.loaded()
+        player?.warmUp()
         val startAt = room.awaitStart()
         // Carregou depois do começo (o começo já passou): começa onde os outros estão, por mais atrasado que seja. No
         // horário, do começo (a espera abaixo pode acordar uns milissegundos depois: não vale um reposicionamento).
         val late = timeSource.nowMs() > startAt
         val counting = waiting.copy(waitingForStart = false, countdownEndsAt = startAt)
         state.value = counting
-        while (true) {
-            val left = startAt - timeSource.nowMs()
-            if (left <= 0) break
-            delay(left)
-        }
+        waitUntil(startAt - MAX_OUTPUT_LATENCY_MS)
+        val latency = if (late) null else player?.outputLatencyMs
+        waitUntil(startAt - (latency?.coerceIn(0, MAX_OUTPUT_LATENCY_MS) ?: 0))
         // Saiu enquanto contava (a tela já foi): nada de tocar num player liberado.
         if (player == null) return counting
-        session.start(fromMs = if (late) timeSource.nowMs() - startAt else 0)
+        val now = timeSource.nowMs()
+        session.start(fromMs = if (late) now - startAt else 0)
+        syncLog("começo: latência informada=${latency ?: "?"} ms, start() ${now - startAt} ms do instante combinado")
+        soundAskedAt = now
+        agreedStartAt = startAt
         interruptions = interruptionsFactory.create().also { it.start(onInterrupted = {}, onBusy = {}) }
+        startPublishing(session.engine)
         return counting
+    }
+
+    /** Espera até o instante [at] do relógio da partida (em passos: o `delay` pode acordar antes). */
+    private suspend fun waitUntil(at: Long) {
+        while (true) {
+            val left = at - timeSource.nowMs()
+            if (left <= 0) return
+            delay(left)
+        }
+    }
+
+    /**
+     * Partida de sala, nos primeiros quadros: quando o som sai (o player deixa de estar arrancando), registra no log
+     * quanto ele levou desde o `start()` e onde caiu em relação ao instante combinado (com a precisão de um quadro).
+     */
+    private fun logSoundStart() {
+        val asked = soundAskedAt ?: return
+        val song = player
+        if (song == null) {
+            soundAskedAt = null
+            return
+        }
+        if (song.isStarting || !song.isPlaying) return
+        val now = timeSource.nowMs()
+        soundAskedAt = null
+        syncLog("som saiu ${now - asked} ms depois do start(), ${now - agreedStartAt} ms do instante combinado")
+    }
+
+    /** O meu placar ao vivo já no começo (os outros me veem desde o 0); depois, pelos quadros ([onFrame]). */
+    private fun startPublishing(engine: GameEngine) {
+        val board = liveBoard ?: return
+        liveEngine = engine
+        nextPublishAt = timeSource.nowMs() + LIVE_PUBLISH_EVERY_MS
+        board.publish(engine.liveScore(finished = false))
+    }
+
+    /**
+     * A cada quadro da partida (depois de ela avançar): na de sala, registra quando o som saiu ([logSoundStart]) e
+     * publica o meu placar se já passou
+     * [LIVE_PUBLISH_EVERY_MS] desde o último. Barato e na thread da tela: só monta o placar e entrega ao
+     * [LiveBoard.publish], que envia fora dela. Sem quadros (o app em segundo plano), não publica: os outros veem
+     * "sem conexão", como a presença.
+     */
+    fun onFrame() {
+        logSoundStart()
+        val board = liveBoard ?: return
+        val engine = liveEngine ?: return
+        if (finishing) return
+        val now = timeSource.nowMs()
+        if (now < nextPublishAt) return
+        nextPublishAt = now + LIVE_PUBLISH_EVERY_MS
+        board.publish(engine.liveScore(finished = false))
     }
 
     /**
      * Saindo da partida (Sair, ou a tela fechando): na de sala, avisa que saí da rodada, se ela ainda não acabou para
      * mim. O aviso continua mesmo com a tela já fechada (até [ROOM_REPORT_TIMEOUT_MS]); sozinho, não faz nada.
      */
-    fun leave() = reportToRoom { it.left() }
+    fun leave() {
+        liveEngine = null
+        reportToRoom { it.left() }
+    }
 
     /** Avisa a sala uma vez só (sair, não abrir ou terminar), sem ser cancelado pela tela que fecha. */
     private fun reportToRoom(report: suspend (MatchStart) -> Unit) {
@@ -307,6 +396,8 @@ open class GameplayViewModel(
         reportToRoom { it.finished() }
         val engine = ready.session.engine
         engine.finish()
+        // O placar final (com as notas que faltavam já julgadas): depois dele, mais nenhum (finishing).
+        if (liveEngine != null) liveBoard?.publish(engine.liveScore(finished = true))
         val record = ScoreRecord(
             id = 0,
             chartId = chartId,
@@ -345,10 +436,49 @@ open class GameplayViewModel(
         // A tela fechou sem o Sair (o Voltar durante o carregamento, o Android fechando): também saí da rodada.
         leave()
     }
+
+    companion object {
+        /**
+         * O máximo que a partida de sala adianta a música pela latência informada pelo player: acima disso é leitura
+         * errada da saída (o PC mediu ~75 ms; o celular, dezenas de ms).
+         */
+        const val MAX_OUTPUT_LATENCY_MS = 300L
+    }
 }
 
 /** Quanto o aviso à sala ([MatchStart.left]/[MatchStart.finished]) pode demorar depois de a tela fechar. */
 private const val ROOM_REPORT_TIMEOUT_MS = 10_000L
+
+/** De quanto em quanto a partida de sala publica o meu placar ao vivo. */
+internal const val LIVE_PUBLISH_EVERY_MS = 1_000L
+
+/**
+ * O meu placar ao vivo agora (o uid e o nome a sala sabe). A precisão, no meio da partida, é sobre as notas que já
+ * passaram (o BOM vale meia, como no [GameEngine.accuracy]); no fim, a do motor (sobre o mapa inteiro).
+ */
+private fun GameEngine.liveScore(finished: Boolean): LiveScore {
+    val hits = count(Judgment.PERFECT) + count(Judgment.GOOD)
+    val judged = hits + count(Judgment.MISS)
+    val accuracy = when {
+        finished -> accuracy()
+        judged == 0 -> 0f
+        else -> (count(Judgment.PERFECT) + GOOD_WEIGHT * count(Judgment.GOOD)) / judged
+    }
+    return LiveScore(
+        uid = "",
+        name = "",
+        score = score,
+        combo = combo,
+        maxCombo = state.maxCombo,
+        accuracy = accuracy,
+        finished = finished,
+        hits = hits,
+        notes = judged,
+    )
+}
+
+/** Quanto o BOM vale na precisão (como no [GameEngine.accuracy]). */
+private const val GOOD_WEIGHT = 0.5f
 
 /** Quanto a pista volta ao continuar depois de uma pausa. */
 private const val REWIND_ON_RESUME_MS = 500L

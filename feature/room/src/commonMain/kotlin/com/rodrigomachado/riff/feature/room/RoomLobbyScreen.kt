@@ -239,17 +239,6 @@ private fun SongStamp(player: RoomPlayer) {
     }
 }
 
-/** Carimbo chapado (como o StatusBadge), sem caixa alta: o texto é o que o teste e o leitor de tela leem. */
-@Composable
-private fun Stamp(text: String, color: Color, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = STAMP_SPACING),
-        color = RiffColors.Paper,
-        modifier = modifier.background(color).padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-    )
-}
-
 @Composable
 private fun Ended(onBack: () -> Unit) {
     Column(
@@ -272,4 +261,3 @@ private const val SECONDARY_ALPHA = 0.7f
 private val ME_BORDER = 3.dp
 private val CODE_SIZE = 72.sp
 private val CODE_SPACING = 12.sp
-private val STAMP_SPACING = 1.5.sp

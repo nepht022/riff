@@ -16,7 +16,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 /** O [RoomRepository] na M2: a música, o Pronto, a rodada, o relógio e o começo junto. */
 @OptIn(ExperimentalCoroutinesApi::class) // o relógio virtual do runTest
@@ -291,7 +290,8 @@ class RoomRepositoryRoundTest : JsonTest() {
 
         val write = fake.writes.last()
         assertEquals("PATCH" to "salas/ABCD", write.method to write.path)
-        assertEquals(setOf("estado", "rodada", "inicio", "atividadeEm"), patchKeys(write))
+        // a rodada 3 apaga o placar da 1 (ver RoomRepositoryBoardTest)
+        assertEquals(setOf("estado", "rodada", "inicio", "atividadeEm", "placar/1"), patchKeys(write))
         val body = JSONObject(write.body!!)
         assertEquals("contagem", body.getString("estado"))
         assertEquals(3, body.getInt("rodada"))
@@ -544,14 +544,23 @@ class RoomRepositoryRoundTest : JsonTest() {
         assertFalse(fake.repository().clearReady("ABCD"))
     }
 
+    /**
+     * 5 idas e voltas (PATCH + GET, as 4 metades de cada uma): a mais rápida sozinha erra 10 ms (a demora toda no
+     * meio, depois do carimbo); a mediana das 3 mais rápidas (20, 30 e 40 ms, com erros −10, +5 e +20) erra 5 ms. As
+     * duas lentas (400 e 300 ms) não contam.
+     */
     @Test
-    fun measureClockUsesTheFastestRoundTrip() = runTest {
+    fun clockUsesTheMedianOfTheThreeFastestOfFive() = runTest {
         fake.seedRoom("ABCD", owner = "u1", players = listOf(FakePlayer("u1")))
         val device = fake.repository(deviceClock = { now - 5 * MINUTE }) // o servidor 5 min adiantado
-        // 3 idas e voltas (PATCH + GET): 300 ms com a demora toda antes do carimbo, 80 ms igual nas 4 metades,
-        // 200 ms com a demora toda depois do carimbo
         val trips = ArrayDeque(
-            listOf(listOf(300L, 0L, 0L, 0L), listOf(20L, 20L, 20L, 20L), listOf(0L, 100L, 100L, 0L)),
+            listOf(
+                listOf(400L, 0L, 0L, 0L), // 400 ms, erro +200
+                listOf(0L, 10L, 10L, 0L), // 20 ms, erro −10
+                listOf(20L, 0L, 0L, 10L), // 30 ms, erro +5
+                listOf(0L, 0L, 0L, 300L), // 300 ms, erro −150
+                listOf(40L, 0L, 0L, 0L), // 40 ms, erro +20
+            ),
         )
         var leg = 0
         fake.onTrip = { _, path, _ ->
@@ -568,9 +577,10 @@ class RoomRepositoryRoundTest : JsonTest() {
         val clock = device.measureClock("ABCD")
 
         assertTrue(trips.isEmpty())
-        assertTrue("offset ${clock.offsetMs}", abs(clock.offsetMs - 5 * MINUTE) <= 40)
+        assertEquals(5 * MINUTE + 5, clock.offsetMs)
+        assertEquals(30L, clock.roundTripMs) // a ida e volta da medida escolhida
         val clockWrites = fake.writes.filter { it.method == "PATCH" }
-        assertEquals(3, clockWrites.size)
+        assertEquals(5, clockWrites.size)
         assertEquals(setOf("jogadores/u1/vistoEm", "atividadeEm"), patchKeys(clockWrites.first()))
     }
 
@@ -599,9 +609,11 @@ class RoomRepositoryRoundTest : JsonTest() {
         assertEquals(now + 3_000, startAt) // na hora do servidor, apesar do relógio do dono
         val room = bia.observe("ABCD").first()!!
         assertEquals(startAt, room.startAt)
+        assertNull(bia.serverNowOrNull()) // ainda sem medir
         val clock = bia.measureClock("ABCD")
         assertEquals(now - 5 * MINUTE + 3_000, clock.toLocal(room.startAt!!))
         assertEquals(now, clock.serverNow())
+        assertEquals(now, bia.serverNowOrNull()) // pela última medida, sem ir ao banco
     }
 
     @Test

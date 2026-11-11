@@ -180,6 +180,28 @@ class ResultsContentTest {
         assertTrue(done)
     }
 
+    /** Na partida de sala, "Ver a sala" abre o Resultado da sala; "Voltar à sala" continua lá. */
+    @Test
+    fun roomResultSeesTheRoom() {
+        var seen = 0
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", isNewBest = false),
+                    onPlayAgain = { _, _ -> error("jogou de novo na sala") },
+                    onDone = {},
+                    inRoom = true,
+                    onSeeRoom = { seen++ },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Voltar à sala").performScrollTo().assertExists()
+        composeRule.onNodeWithText("Ver a sala").performScrollTo().performClick()
+
+        assertEquals(1, seen)
+    }
+
     @Test
     fun talkBackAnnouncesTheResultWhenTheScreenAppears() {
         composeRule.setContent {

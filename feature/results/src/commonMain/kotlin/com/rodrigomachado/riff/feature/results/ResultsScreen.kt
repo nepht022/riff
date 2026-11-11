@@ -48,12 +48,16 @@ import com.rodrigomachado.riff.feature.results.resources.results_new_best
 import com.rodrigomachado.riff.feature.results.resources.results_new_best_spoken
 import com.rodrigomachado.riff.feature.results.resources.results_perfect
 import com.rodrigomachado.riff.feature.results.resources.results_play_again
+import com.rodrigomachado.riff.feature.results.resources.results_see_room
 import com.rodrigomachado.riff.feature.results.resources.results_summary
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import java.text.NumberFormat
 
-/** O Resultado; numa partida de sala ([inRoom], da [ResultsRoute]), só "Voltar à sala" ([onDone]). */
+/**
+ * O Resultado; numa partida de sala ([inRoom], da [ResultsRoute]), sem "Jogar de novo": "Ver a sala" ([onSeeRoom], o
+ * Resultado da sala, que o app abre) e "Voltar à sala" ([onDone]).
+ */
 @Composable
 fun ResultsScreen(
     onPlayAgain: (chartId: String, difficulty: Difficulty) -> Unit,
@@ -63,9 +67,10 @@ fun ResultsScreen(
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
     inRoom: Boolean = false,
+    onSeeRoom: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName, inRoom)
+    ResultsContent(state, onPlayAgain, onDone, modifier, onSeeRanking, onChooseName, inRoom, onSeeRoom)
 }
 
 @Composable
@@ -77,6 +82,7 @@ fun ResultsContent(
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit = { _, _, _ -> },
     onChooseName: () -> Unit = {},
     inRoom: Boolean = false,
+    onSeeRoom: (() -> Unit)? = null,
 ) {
     val back = stringResource(if (inRoom) Res.string.results_back_to_room else Res.string.results_back)
     when (state) {
@@ -93,6 +99,7 @@ fun ResultsContent(
         is ResultsUiState.Ready -> ReadyResults(
             state,
             onPlayAgain.takeUnless { inRoom },
+            onSeeRoom.takeIf { inRoom },
             ResultsBack(back, onDone),
             modifier,
             onSeeRanking,
@@ -104,11 +111,12 @@ fun ResultsContent(
 /** O botão de voltar do Resultado: o texto ("Voltar" ou "Voltar à sala") e a ação. */
 private class ResultsBack(val label: String, val onClick: () -> Unit)
 
-/** O Resultado pronto; sem [onPlayAgain] (a partida de sala), sem "Jogar de novo". */
+/** O Resultado pronto; sem [onPlayAgain] (a partida de sala), sem "Jogar de novo"; com [onSeeRoom], "Ver a sala". */
 @Composable
 private fun ReadyResults(
     state: ResultsUiState.Ready,
     onPlayAgain: ((chartId: String, difficulty: Difficulty) -> Unit)?,
+    onSeeRoom: (() -> Unit)?,
     back: ResultsBack,
     modifier: Modifier,
     onSeeRanking: (chartId: String, title: String, difficulty: Difficulty) -> Unit,
@@ -158,6 +166,9 @@ private fun ReadyResults(
                 onClick = { onPlayAgain(record.chartId, record.difficulty) },
                 sound = MenuSound.CONFIRM,
             )
+        }
+        if (onSeeRoom != null) {
+            PosterButton(stringResource(Res.string.results_see_room), onClick = onSeeRoom, sound = MenuSound.CONFIRM)
         }
         TextButton(
             onClick = back.onClick,
