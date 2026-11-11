@@ -342,13 +342,15 @@ class StemSongPlayer(
     override val isStarting: Boolean
         get() {
             val output = sink ?: return false
-            return isPlaying && (!output.isPresenting || output.playedFrames < silenceFrames)
+            // Sem aquecimento (a partida sozinha), nada de ler a posição da saída a cada quadro.
+            return isPlaying && (!output.isPresenting || (silenceFrames > 0 && output.playedFrames < silenceFrames))
         }
 
     override val isCompleted: Boolean
         get() {
-            val played = sink?.let(::musicFrames) ?: return false
+            // Antes de ler a posição da saída: o isPlaying de cada quadro passa por aqui.
             if (!allEnded || pendingFrames > 0) return false
+            val played = sink?.let(::musicFrames) ?: return false
             if (played >= writtenFrames) return true
             val now = nowMs()
             if (played != stalledHead) {

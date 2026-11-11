@@ -312,6 +312,20 @@ class StemSongPlayerTest {
         assertFalse(player.isStarting)
     }
 
+    /** Sem aquecimento (a partida sozinha), o isStarting de cada quadro não lê a posição da saída (é cara no PC). */
+    @Test
+    fun isStartingWithoutWarmUpDoesNotReadThePosition() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+        sink.calls.clear()
+
+        repeat(3) { assertFalse(player.isStarting) }
+
+        assertEquals(0, sink.calls.count { it == "posição" })
+    }
+
     @Test
     fun seekingWhilePausedRestartsEveryTrackAndTheOutputThere() {
         val guitar = FakeSource(frames = 200_000)
