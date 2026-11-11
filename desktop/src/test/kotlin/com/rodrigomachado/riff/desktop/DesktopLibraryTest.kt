@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.desktop
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import com.rodrigomachado.riff.core.data.folder.pcUri
@@ -55,6 +56,9 @@ class DesktopLibraryTest {
 
         composeRule.clickOnWindowThread(composeRule.onNodeWithTag(HomeTestTags.SOLO))
         composeRule.waitUntilAtLeastOneExists(hasText("Canção do PC"), TIMEOUT_MS)
+        // O Reimportar fica no menu ⋮ do topo.
+        composeRule.clickOnWindowThread(composeRule.onNodeWithContentDescription("Mais opções"))
+        composeRule.waitUntilAtLeastOneExists(hasText("Reimportar"), TIMEOUT_MS)
         composeRule.clickOnWindowThread(composeRule.onNodeWithText("Reimportar"))
 
         composeRule.waitUntilAtLeastOneExists(hasText("1 mapa importado"), TIMEOUT_MS)

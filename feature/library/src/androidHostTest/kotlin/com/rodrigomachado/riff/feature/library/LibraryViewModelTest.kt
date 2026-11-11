@@ -39,6 +39,7 @@ class LibraryViewModelTest {
     private val probe = FakeAudioProbe()
     private val settings = FakeSettingsRepository()
     private val deleter = FakeChartDeleter(repository)
+    private val scores = FakeScores()
     private val song = Chart("m", "Música", "Banda", null, null, null, "u", ChartFormat.CHART, setOf(Difficulty.EXPERT))
 
     @Before
@@ -58,9 +59,26 @@ class LibraryViewModelTest {
             probe,
             settings,
             deleter,
+            scores,
+            images = null,
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
+    }
+
+    /** O cartão mostra o maior recorde do mapa (o banco dá um por mapa) e acompanha uma partida nova. */
+    @Test
+    fun bestsComeFromTheScoresAndFollowNewMatches() = runTest {
+        val vm = viewModel()
+        scores.bests.value = listOf(score("a", Difficulty.HARD, 900))
+        assertEquals(mapOf("a" to ChartBest(900, Difficulty.HARD)), vm.uiState.value.bests)
+
+        scores.bests.value = listOf(score("a", Difficulty.EXPERT, 1_200), score("b", Difficulty.EASY, 10))
+
+        assertEquals(
+            mapOf("a" to ChartBest(1_200, Difficulty.EXPERT), "b" to ChartBest(10, Difficulty.EASY)),
+            vm.uiState.value.bests,
+        )
     }
 
     @Test

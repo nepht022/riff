@@ -2,21 +2,21 @@ package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.data.importer.ImportFailure
 import com.rodrigomachado.riff.core.data.importer.ImportFailureKind
@@ -32,21 +33,20 @@ import com.rodrigomachado.riff.core.data.importer.ImportReport
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.ErrorState
+import com.rodrigomachado.riff.core.ui.component.KeyHintBar
 import com.rodrigomachado.riff.core.ui.component.LoadingState
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
-import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
-import com.rodrigomachado.riff.core.ui.component.TrackCard
-import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.rememberMenuSound
-import com.rodrigomachado.riff.core.ui.component.withMenuSound
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
 import com.rodrigomachado.riff.feature.library.resources.library_access_lost
-import com.rodrigomachado.riff.feature.library.resources.library_back
+import com.rodrigomachado.riff.feature.library.resources.library_chip_none
 import com.rodrigomachado.riff.feature.library.resources.library_choose_another_folder
 import com.rodrigomachado.riff.feature.library.resources.library_choose_folder
 import com.rodrigomachado.riff.feature.library.resources.library_empty_message
@@ -60,7 +60,6 @@ import com.rodrigomachado.riff.feature.library.resources.library_failure_unexpec
 import com.rodrigomachado.riff.feature.library.resources.library_failure_unreadable
 import com.rodrigomachado.riff.feature.library.resources.library_failure_with_detail
 import com.rodrigomachado.riff.feature.library.resources.library_filter_none
-import com.rodrigomachado.riff.feature.library.resources.library_filter_open
 import com.rodrigomachado.riff.feature.library.resources.library_import_failed
 import com.rodrigomachado.riff.feature.library.resources.library_importing
 import com.rodrigomachado.riff.feature.library.resources.library_no_folder_message
@@ -70,9 +69,7 @@ import com.rodrigomachado.riff.feature.library.resources.library_report_failed
 import com.rodrigomachado.riff.feature.library.resources.library_report_imported
 import com.rodrigomachado.riff.feature.library.resources.library_report_more
 import com.rodrigomachado.riff.feature.library.resources.library_report_ok
-import com.rodrigomachado.riff.feature.library.resources.library_search
 import com.rodrigomachado.riff.feature.library.resources.library_title
-import com.rodrigomachado.riff.feature.library.resources.library_unknown_artist
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -80,6 +77,9 @@ import org.jetbrains.compose.resources.stringResource
 object LibraryTestTags {
     const val LIST = "library_list"
     const val FILTER = "library_filter"
+
+    /** A barra de teclas do PC. */
+    const val KEY_HINTS = "library_key_hints"
 }
 
 @Composable
@@ -120,6 +120,7 @@ fun LibraryScreen(
         onSeparate = separate,
         onPlayWithoutSeparating = viewModel::onPlayWithoutSeparating,
         onPromptDismissed = viewModel::onPromptDismissed,
+        images = viewModel.images,
         deletion = DeletionCallbacks(
             onDelete = { viewModel.onDeleteRequested(listOf(it)) },
             onStartSelecting = viewModel::onStartSelecting,
@@ -136,6 +137,7 @@ fun LibraryScreen(
 }
 
 @Composable
+@Suppress("LongParameterList") // o estado, as capas e o que cada botão da tela faz
 fun LibraryContent(
     state: LibraryUiState,
     onPickFolder: () -> Unit,
@@ -152,50 +154,47 @@ fun LibraryContent(
     deletion: DeletionCallbacks = DeletionCallbacks(),
     /**
      * O modo de escolha da sala: a dificuldade escolhida vai direto para [onPlay] (sem a pergunta da separação, que é
-     * para jogar agora), o título é "Escolher música" e não há Pesquisar.
+     * para jogar agora), o título é "Escolher música" e não há "+ Mapas".
      */
     pickForRoom: Boolean = false,
+    /** As capas dos cartões (sem elas, as iniciais). */
+    images: ChartArtImages? = null,
 ) {
     // Guarda o id (sobrevive à rotação da tela); o mapa vem da lista atual.
     var choosingId by rememberSaveable { mutableStateOf<String?>(null) }
     val choosing = choosingId?.let { id -> state.charts.firstOrNull { it.id == id } }
     val playMenuSound = rememberMenuSound()
-    var filtering by rememberSaveable { mutableStateOf(false) }
     var filter by rememberSaveable { mutableStateOf("") }
-    val closeFilter = Modifier.escapeClosesFilter(filtering) {
-        filtering = false
-        filter = ""
-    }
-    Column(closeFilter.then(modifier).fillMaxSize().padding(horizontal = Spacing.md)) {
-        LibraryHeader(onBack, onSearch.takeUnless { pickForRoom })
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PosterTitle(
-                stringResource(if (pickForRoom) Res.string.library_pick_title else Res.string.library_title),
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.displaySmall,
-            )
-            MagnifierButton(stringResource(Res.string.library_filter_open)) {
-                filtering = !filtering
-                if (!filtering) filter = ""
+    var chip by rememberSaveable { mutableStateOf(LibraryChip.ALL) }
+    val clearFilter = Modifier.escapeClosesFilter(filter.isNotEmpty()) { filter = "" }
+    val pad = LocalGamepad.current
+    val menu = LibraryMenuActions(
+        onRescan = onRescan.takeIf { state.hasFolder },
+        onPickFolder = onPickFolder,
+        onSelect = deletion.onStartSelecting.takeIf { state.charts.isNotEmpty() && !state.deletion.selecting },
+    )
+    BoxWithConstraints(clearFilter.then(modifier).fillMaxSize()) {
+        // No PC (janela larga) a coluna fica no meio, sem esticar os cartões de ponta a ponta.
+        // O widthIn vem antes do fillMaxWidth: estica até o máximo do PC, nunca além.
+        val width = if (maxWidth >= WIDE_MIN_WIDTH) Modifier.widthIn(max = WIDE_CONTENT) else Modifier
+        Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.weight(1f).align(Alignment.CenterHorizontally).then(width).fillMaxWidth()
+                    .padding(horizontal = Spacing.md),
+            ) {
+                LibraryTop(onBack, menu)
+                TitleRow(pickForRoom, onSearch)
+                LibraryBody(state, onPickFolder, onRescan) {
+                    val list = ListFilter(filter, chip, onFilter = { filter = it }, onChip = { chip = it })
+                    ChartList(state, list, images, onReportDismissed, deletion) { chart ->
+                        playMenuSound(MenuSound.NAVIGATE)
+                        choosingId = chart.id
+                    }
+                }
             }
-        }
-        if (filtering) FilterField(filter) { filter = it }
-        // Só a lista filtrada fica guardada; o resto do estado (seleção, importação, aviso) é sempre o atual.
-        val charts = remember(state.charts, filter) { state.charts.matching(filter) }
-        val shown = state.copy(charts = charts)
-        if (filter.isNotBlank() && shown.charts.isEmpty() && state.charts.isNotEmpty()) {
-            Text(
-                stringResource(Res.string.library_filter_none),
-                Modifier.padding(vertical = Spacing.md),
-                style = MaterialTheme.typography.bodyLarge,
-                color = RiffColors.PaperDim,
-            )
-            return@Column
-        }
-        LibraryBody(shown, onPickFolder, onRescan) {
-            ChartList(shown, onPickFolder, onRescan, onReportDismissed, deletion) { chart ->
-                playMenuSound(MenuSound.NAVIGATE)
-                choosingId = chart.id
+            if (pad != null) {
+                val connected by pad.connected.collectAsState()
+                KeyHintBar(libraryKeys(), connected, Modifier.testTag(LibraryTestTags.KEY_HINTS))
             }
         }
     }
@@ -206,6 +205,27 @@ fun LibraryContent(
     state.prompt?.let { SeparationPrompt(it, onSeparate, onPlayWithoutSeparating, onPromptDismissed) }
     DeletionDialogs(state.deletion, deletion, onAllow = onPickFolder)
 }
+
+/** O título ("Biblioteca" ou, na sala, "Escolher música") e, fora da sala, o "+ Mapas" (a pesquisa no Encore). */
+@Composable
+private fun TitleRow(pickForRoom: Boolean, onSearch: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PosterTitle(
+            stringResource(if (pickForRoom) Res.string.library_pick_title else Res.string.library_title),
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.displaySmall,
+        )
+        if (!pickForRoom) MoreChartsButton(onSearch)
+    }
+}
+
+/** O filtro de texto e o chip escolhido (os dois guardados pela tela), e como mudá-los. */
+private class ListFilter(
+    val text: String,
+    val chip: LibraryChip,
+    val onFilter: (String) -> Unit,
+    val onChip: (LibraryChip) -> Unit,
+)
 
 /** Carregando, erro, sem pasta, importando, vazia — ou a lista ([list]). */
 @Composable
@@ -253,52 +273,49 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
 }
 
 /**
- * Voltar e Pesquisar (no Encore): sempre à mão, até com a biblioteca vazia; a palheta da separação no meio. Sem
- * [onSearch] (o modo de escolha da sala), sem Pesquisar.
+ * O filtro, os chips e, rolando com eles (a fonte grande não espreme a lista), a seleção, o aviso da importação e os
+ * cartões. Só a lista filtrada é calculada aqui; o resto do estado (seleção, importação, aviso) é sempre o atual.
  */
 @Composable
-private fun LibraryHeader(onBack: () -> Unit, onSearch: (() -> Unit)?) {
-    Box(Modifier.fillMaxWidth()) {
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).focusHighlight(CircleShape)) {
-            Text(stringResource(Res.string.library_back), color = RiffColors.Paper)
-        }
-        SeparationIndicator(Modifier.align(Alignment.Center))
-        if (onSearch != null) {
-            TextButton(
-                onClick = withMenuSound(MenuSound.NAVIGATE, onSearch),
-                modifier = Modifier.align(Alignment.CenterEnd).focusHighlight(CircleShape),
-            ) {
-                Text(stringResource(Res.string.library_search), color = RiffColors.Paper)
-            }
-        }
-    }
-}
-
-@Composable
+@Suppress("LongParameterList") // o estado, o filtro, as capas e o que a lista faz
 private fun ChartList(
     state: LibraryUiState,
-    onPickFolder: () -> Unit,
-    onRescan: () -> Unit,
+    filter: ListFilter,
+    images: ChartArtImages?,
     onReportDismissed: () -> Unit,
     deletion: DeletionCallbacks,
     onChartClick: (Chart) -> Unit,
 ) {
+    val charts = remember(state.charts, state.aiSeparated, state.bests, filter.text, filter.chip) {
+        state.charts.matching(filter.text).filter { filter.chip.accepts(it, state) }
+    }
     LazyColumn(
         modifier = Modifier.testTag(LibraryTestTags.LIST),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
         contentPadding = PaddingValues(vertical = Spacing.md),
     ) {
-        item {
-            if (state.deletion.selecting) {
-                val deletable = state.charts.filter { it.id !in state.protectedIds }
+        item(key = "filter") { FilterField(filter.text, filter.onFilter) }
+        item(key = "chips") { LibraryChips(filter.chip, state.charts.size, filter.onChip) }
+        if (state.deletion.selecting) {
+            item(key = "selection") {
+                val deletable = charts.filter { it.id !in state.protectedIds }
                 val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
                 SelectionActions(state.deletion.selected.size, state.separableSelected, allSelected, deletion)
-            } else {
-                ListActions(onRescan, onPickFolder, deletion.onStartSelecting)
             }
         }
-        state.report?.let { item { ImportReportCard(it, onReportDismissed) } }
-        items(state.charts, key = { it.id }) { chart ->
+        state.report?.let { item(key = "report") { ImportReportCard(it, onReportDismissed) } }
+        if (charts.isEmpty() && state.charts.isNotEmpty()) {
+            item(key = "none") {
+                Text(
+                    stringResource(
+                        if (filter.text.isNotBlank()) Res.string.library_filter_none else Res.string.library_chip_none,
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = RiffColors.PaperDim,
+                )
+            }
+        }
+        items(charts, key = { it.id }) { chart ->
             DeletableChart(
                 title = chart.title,
                 chartId = chart.id,
@@ -307,12 +324,13 @@ private fun ChartList(
                 canDelete = chart.id !in state.protectedIds,
                 callbacks = deletion,
             ) { modifier, onClickOverride ->
-                TrackCard(
-                    title = chart.title,
-                    artist = chart.artist.ifBlank { stringResource(Res.string.library_unknown_artist) },
-                    modifier = modifier,
+                LibraryCard(
+                    chart = chart,
+                    best = state.bests[chart.id],
+                    aiSeparated = chart.id in state.aiSeparated,
+                    images = images,
                     onClick = onClickOverride ?: { onChartClick(chart) },
-                    badge = { ChartBadges(chart, aiSeparated = chart.id in state.aiSeparated) },
+                    modifier = modifier,
                 )
             }
         }
@@ -377,3 +395,9 @@ private fun failureText(failure: ImportFailure): String {
         stringResource(Res.string.library_failure, failure.folderName, label)
     }
 }
+
+/** A partir desta largura, o layout do PC (o celular deitado, ~780 dp, continua no do celular). */
+private val WIDE_MIN_WIDTH = 800.dp
+
+/** A largura máxima da coluna no PC. */
+private val WIDE_CONTENT = 760.dp

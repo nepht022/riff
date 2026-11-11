@@ -72,8 +72,9 @@ class LibraryContentTest {
         assertEquals(1, picks)
     }
 
+    /** O cartão não mostra mais a dificuldade mais alta (o recorde diz a dele); o Reimportar fica no menu ⋮. */
     @Test
-    fun listShowsChartsWithUnknownArtistFallbackAndHighestDifficulty() {
+    fun listShowsChartsWithUnknownArtistFallback() {
         show(
             LibraryUiState(
                 isLoading = false,
@@ -91,7 +92,7 @@ class LibraryContentTest {
 
         composeRule.onNodeWithText("Sem Artista").assertExists()
         composeRule.onNodeWithText("Artista desconhecido").assertExists()
-        composeRule.onNodeWithText("DIFÍCIL").assertExists()
+        openMenu()
         composeRule.onNodeWithText("Reimportar").performClick()
         assertEquals(1, rescans)
     }
@@ -292,12 +293,15 @@ class LibraryContentTest {
     fun libraryButtonsNavigateAndChoosingTheDifficultyConfirms() {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a", title = "Música"))))
 
+        openMenu()
         composeRule.onNodeWithText("Reimportar").performClick()
+        openMenu()
         composeRule.onNodeWithText("Trocar pasta").performClick()
         composeRule.onNodeWithText("Música").performClick()
         composeRule.onNodeWithText("Expert").performClick()
 
-        assertEquals(listOf(MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.NAVIGATE, MenuSound.CONFIRM), sounds)
+        // O ⋮ e cada item do menu navegam (⋮, Reimportar, ⋮, Trocar pasta, a música); a dificuldade confirma.
+        assertEquals(List(5) { MenuSound.NAVIGATE } + MenuSound.CONFIRM, sounds)
     }
 
     @Test
@@ -312,7 +316,7 @@ class LibraryContentTest {
     fun searchOpensTheEncoreSearchWithANavigateSound() {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(chart("a"))))
 
-        composeRule.onNodeWithText("Pesquisar Mapas").performClick()
+        composeRule.onNodeWithText("+ Mapas").performClick()
 
         assertEquals(1, searched)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
@@ -346,7 +350,7 @@ class LibraryContentTest {
             LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(song), aiSeparated = setOf("a")),
         )
 
-        composeRule.onNodeWithText("GUITARRA SEPARADA IA").assertExists()
+        composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertExists()
     }
 
     @Test
@@ -450,8 +454,9 @@ class LibraryContentTest {
         assertEquals(listOf("difficulty:a:EXPERT"), events)
     }
 
+    /** O selo "IA" é só da separação pela IA; a guitarra que veio com o mapa aparece no chip "Guitarra separada". */
     @Test
-    fun aChartThatCameWithItsOwnGuitarShowsTheMark() {
+    fun aChartThatCameWithItsOwnGuitarHasNoAiSeal() {
         showWithPrompt(
             LibraryUiState(
                 isLoading = false,
@@ -460,8 +465,9 @@ class LibraryContentTest {
             ),
         )
 
-        composeRule.onNodeWithText("GUITARRA SEPARADA").assertExists()
-        composeRule.onNodeWithText("GUITARRA SEPARADA IA").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertDoesNotExist()
+        composeRule.onNodeWithText("Guitarra separada").performClick()
+        composeRule.onNodeWithText("Música").assertExists()
     }
 
     private fun showDeletion(state: LibraryUiState) = composeRule.setContent {
@@ -470,7 +476,7 @@ class LibraryContentTest {
                 LibraryContent(
                     state = state,
                     onPickFolder = { events += "pick" },
-                    onRescan = {},
+                    onRescan = { events += "rescan" },
                     onReportDismissed = {},
                     onPlay = { _, _ -> events += "play" },
                     onBack = {},
@@ -493,9 +499,18 @@ class LibraryContentTest {
 
     private val two = listOf(chart("a", title = "Música A"), chart("b", title = "Solta na raiz"))
 
+    /** No modo Selecionar, cada mapa tem o X vermelho, menos o solto na raiz. */
     @Test
     fun eachChartHasARedXExceptTheOneLooseInTheRoot() {
-        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two, protectedIds = setOf("b")))
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                protectedIds = setOf("b"),
+                deletion = DeletionState(selecting = true),
+            ),
+        )
 
         composeRule.onAllNodesWithContentDescription("Excluir", substring = true).assertCountEquals(1)
         composeRule.onNodeWithContentDescription("Excluir Música A").performClick()
@@ -504,7 +519,9 @@ class LibraryContentTest {
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
     }
 
+    // Alta: o filtro e os chips ficam acima da seleção, e o segundo cartão precisa estar na tela.
     @Test
+    @Config(qualifiers = "pt-rBR-w411dp-h1200dp")
     fun selectingShowsCheckboxesAndDeletesTheChosenOnes() {
         showDeletion(
             LibraryUiState(
@@ -589,15 +606,6 @@ class LibraryContentTest {
     }
 
     @Test
-    fun theSelectButtonSitsWithReimport() {
-        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
-
-        composeRule.onNodeWithText("Selecionar").performClick()
-
-        assertEquals(listOf("select"), events)
-    }
-
-    @Test
     fun theConfirmationWarnsItCannotBeUndone() {
         showDeletion(
             LibraryUiState(
@@ -633,26 +641,19 @@ class LibraryContentTest {
         assertEquals(listOf("pick"), events)
     }
 
-    @Test
-    @Config(qualifiers = "pt-rBR-w411dp-h900dp")
-    fun selectLinesUpWithSearchOnTheRight() {
-        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
-
-        // Os botões, não os textos: o Robolectric mede texto com uma fonte falsa e centraliza no tamanho mínimo.
-        val search = composeRule.onNodeWithText("Pesquisar Mapas").getUnclippedBoundsInRoot()
-        val select = composeRule.onNodeWithText("Selecionar").getUnclippedBoundsInRoot()
-        assertEquals(search.right.value, select.right.value, 0.5f)
-    }
-
     private val songs = listOf(
         chart("a", title = "Smells Like Teen Spirit", artist = "Nirvana"),
         chart("b", title = "Bohemian Rhapsody", artist = "Queen"),
         chart("c", title = "Música Brasileira", artist = "Banda"),
     )
 
+    /** O campo do filtro fica sempre à mostra, abaixo do título. */
     private fun search(text: String) {
-        composeRule.onNodeWithContentDescription("Pesquisar na biblioteca").performClick()
         composeRule.onNodeWithTag(LibraryTestTags.FILTER).performTextReplacement(text)
+    }
+
+    private fun openMenu() {
+        composeRule.onNodeWithContentDescription("Mais opções").performClick()
     }
 
     /** O ranking fica no Tocando agora; aqui, a lupa procura nos mapas baixados. */
@@ -664,7 +665,7 @@ class LibraryContentTest {
     }
 
     @Test
-    fun theMagnifierFiltersBySongOrArtist() {
+    fun theFilterFiltersBySongOrArtist() {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs))
 
         search("nirv")
@@ -714,6 +715,8 @@ class LibraryContentTest {
             }
         }
 
+        search("nirv")
+        openMenu()
         composeRule.onNodeWithText("Selecionar").performClick()
 
         composeRule.onNodeWithText("Cancelar").assertExists()

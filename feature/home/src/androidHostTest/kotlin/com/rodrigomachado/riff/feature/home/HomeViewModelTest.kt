@@ -36,6 +36,8 @@ private class FakeScores(val records: MutableList<ScoreRecord>, val bests: List<
         recentLimit = limit
         return bests.take(limit)
     }
+
+    override fun observeChartBests() = kotlinx.coroutines.flow.flowOf(emptyList<ScoreRecord>())
 }
 
 /** A biblioteca falsa: só os mapas de [ids]. */

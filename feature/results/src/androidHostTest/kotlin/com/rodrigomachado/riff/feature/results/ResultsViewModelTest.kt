@@ -32,6 +32,8 @@ class FakeScores(private val records: List<ScoreRecord>) : ScoreRepository {
     override suspend fun last() = records.maxByOrNull { it.playedAtEpochMs }
 
     override suspend fun recentBests(limit: Int) = emptyList<ScoreRecord>()
+
+    override fun observeChartBests() = kotlinx.coroutines.flow.flowOf(emptyList<ScoreRecord>())
 }
 
 /** Ranking falso: guarda as partidas enviadas e devolve o status que o teste definir. */

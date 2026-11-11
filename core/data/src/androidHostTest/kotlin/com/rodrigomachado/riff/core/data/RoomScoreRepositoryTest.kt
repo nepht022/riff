@@ -7,6 +7,7 @@ import com.rodrigomachado.riff.core.database.RiffDatabase
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -91,6 +92,24 @@ class RoomScoreRepositoryTest {
 
         assertEquals(listOf(bestC, bestAEasy, bestB), scores.recentBests(3).map { it.id })
         assertEquals(listOf(bestC, bestAEasy, bestB, oldBestA), scores.recentBests(10).map { it.id })
+    }
+
+    /**
+     * A Biblioteca: o maior recorde de cada mapa, em qualquer dificuldade (empate: o mais antigo, como no [best]);
+     * mapa sem partidas fica de fora. Uma partida nova aparece sem reabrir a lista.
+     */
+    @Test
+    fun chartBestsAreTheHighestScoreOfEachChartInAnyDifficulty() = runTest {
+        charts("a", "b", "c")
+        scores.save(record(300))
+        val bestA = scores.save(record(900).copy(difficulty = Difficulty.EASY))
+        scores.save(record(900).copy(difficulty = Difficulty.HARD)) // empate: fica o mais antigo
+        val bestB = scores.save(record(50).copy(chartId = "b"))
+
+        val bests = scores.observeChartBests().first().associate { it.chartId to it.id }
+        assertEquals(mapOf("a" to bestA, "b" to bestB), bests)
+        val newBestB = scores.save(record(70).copy(chartId = "b", difficulty = Difficulty.MEDIUM))
+        assertEquals(newBestB, scores.observeChartBests().first().single { it.chartId == "b" }.id)
     }
 
     private suspend fun charts(vararg ids: String) = ids.forEach {

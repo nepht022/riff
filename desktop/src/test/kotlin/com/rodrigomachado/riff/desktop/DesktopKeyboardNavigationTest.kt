@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.rodrigomachado.riff.core.audio.MenuSoundPlayer
 import com.rodrigomachado.riff.core.audio.SfxPlayerFactory
@@ -172,18 +173,63 @@ class DesktopKeyboardNavigationTest {
         pressUntilFocused(Key.DirectionDown, hasText(chartTitle(1)), max = FILTER_TO_LIST_PRESSES)
     }
 
-    /** Esc com o filtro aberto fecha o filtro (e fica na Biblioteca); o seguinte volta à tela inicial. */
+    /**
+     * Esc com o filtro preenchido limpa o filtro (e fica na Biblioteca, com a lista toda de volta); o seguinte volta
+     * à tela inicial.
+     */
     @Test
     fun escapeClosesTheLibraryFilterFirst() {
         openFilter()
+        composeRule.runOnUiThread {
+            composeRule.onNodeWithTag(LibraryTestTags.FILTER).performTextInput(chartTitle(2))
+        }
+        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasText(chartTitle(1))) }
 
         press(Key.Escape)
 
-        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasTestTag(LibraryTestTags.FILTER)) }
+        composeRule.waitUntilAtLeastOneExists(hasText(chartTitle(1)), TIMEOUT_MS)
         composeRule.onNodeWithText(chartTitle(1)).assertExists()
         composeRule.onNodeWithTag(HomeTestTags.SOLO).assertDoesNotExist()
         press(Key.Escape)
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
+    }
+
+    /**
+     * A Biblioteca nova só pelo teclado (o controle manda as mesmas teclas): o ⋮ do topo e, nele, os itens do menu
+     * (Enter no Selecionar entra no modo de seleção; Esc fecha o menu sem sair da tela); o filtro, os chips e os
+     * cartões. A barra de teclas fica no rodapé.
+     */
+    @Test
+    fun pcKeyboardReachesMenuChipsAndCards() {
+        openLibrary(FILTER_CHARTS)
+        composeRule.onNodeWithTag(LibraryTestTags.KEY_HINTS).assertExists()
+
+        pressUntilFocused(Key.DirectionDown, hasText("Voltar"))
+        pressUntilFocused(Key.DirectionRight, hasContentDescription("Mais opções"))
+        press(Key.Enter)
+        composeRule.waitUntilAtLeastOneExists(hasText("Trocar pasta"), TIMEOUT_MS)
+        pressUntilFocused(Key.DirectionDown, hasText("Reimportar"), into = MENU)
+        pressUntilFocused(Key.DirectionDown, hasText("Trocar pasta"), into = MENU)
+        press(Key.Escape, into = MENU)
+        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasText("Trocar pasta")) }
+        composeRule.onNodeWithText(chartTitle(1)).assertExists()
+
+        pressUntilFocused(Key.DirectionDown, hasTestTag(LibraryTestTags.FILTER))
+        // ↓ do filtro (largo) cai no chip mais perto do meio; ← e → andam entre os chips.
+        pressUntilFocused(Key.DirectionDown, hasText("Com recorde"))
+        press(Key.Enter)
+        composeRule.waitUntilAtLeastOneExists(hasText("Nenhum mapa neste filtro"), TIMEOUT_MS)
+        pressUntilFocused(Key.DirectionLeft, hasText("Todas · $FILTER_CHARTS"))
+        press(Key.Enter)
+        pressUntilFocused(Key.DirectionDown, hasText(chartTitle(1)))
+
+        pressUntilFocused(Key.DirectionUp, hasContentDescription("Mais opções"), max = MAX_PRESSES * 2)
+        press(Key.Enter)
+        composeRule.waitUntilAtLeastOneExists(hasText("Selecionar"), TIMEOUT_MS)
+        pressUntilFocused(Key.DirectionDown, hasText("Selecionar"), into = MENU)
+        press(Key.Enter, into = MENU)
+        composeRule.waitUntilAtLeastOneExists(hasText("Cancelar"), TIMEOUT_MS)
+        composeRule.onNodeWithContentDescription("Excluir ${chartTitle(1)}").assertExists()
     }
 
     @Test
@@ -279,15 +325,19 @@ class DesktopKeyboardNavigationTest {
         return graph
     }
 
-    /** A Biblioteca com mapas, o filtro aberto pela lupa e o campo dele com o foco (digitando). */
+    /** A Biblioteca com mapas e o campo do filtro (sempre à mostra) com o foco (digitando). */
     private fun openFilter() {
-        openApp(charts = FILTER_CHARTS)
-        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(HomeTestTags.SOLO))
-        composeRule.waitUntilAtLeastOneExists(hasText(chartTitle(1)), TIMEOUT_MS)
-        composeRule.clickOnWindowThread(composeRule.onNodeWithContentDescription("Pesquisar na biblioteca"))
-        composeRule.waitUntilAtLeastOneExists(hasTestTag(LibraryTestTags.FILTER), TIMEOUT_MS)
+        openLibrary(FILTER_CHARTS)
         composeRule.clickOnWindowThread(composeRule.onNodeWithTag(LibraryTestTags.FILTER))
         composeRule.waitUntil(TIMEOUT_MS) { focused(hasTestTag(LibraryTestTags.FILTER)) }
+    }
+
+    /** O app com [charts] mapas e a Biblioteca aberta pelo Sozinho. */
+    private fun openLibrary(charts: Int) {
+        openApp(charts = charts)
+        composeRule.clickOnWindowThread(composeRule.onNodeWithTag(HomeTestTags.SOLO))
+        composeRule.waitUntilAtLeastOneExists(hasText(chartTitle(1)), TIMEOUT_MS)
+        composeRule.waitForIdle()
     }
 
     /** O app aberto e as Configurações pelo ícone do canto (o caminho até elas não é o que se testa). */
@@ -328,16 +378,19 @@ class DesktopKeyboardNavigationTest {
 
         /** A raiz do diálogo de idioma (o do "Fechar") e a do app (a que não tem o diálogo). */
         val LANGUAGE_DIALOG = isRoot() and hasAnyDescendant(hasText("Fechar"))
-        val APP = isRoot() and !hasAnyDescendant(hasText("Fechar"))
+        val APP = isRoot() and !hasAnyDescendant(hasText("Fechar")) and !hasAnyDescendant(hasText("Trocar pasta"))
+
+        /** A raiz do menu ⋮ da Biblioteca (um popup, com a própria raiz). */
+        val MENU = isRoot() and hasAnyDescendant(hasText("Trocar pasta"))
         const val MAX_PRESSES = 8
         const val CHART_COUNT = 30
         const val TARGET_CHART = 25
         const val FILTER_CHARTS = 3
 
-        /** Entre o filtro e o primeiro mapa, as ações da lista (Procurar de novo, Trocar pasta, Selecionar). */
+        /** Entre o filtro e o primeiro mapa, os chips. */
         const val FILTER_TO_LIST_PRESSES = 4
 
-        /** Os botões acima da lista (Voltar, Pesquisar, a lupa, as ações da lista). */
+        /** Os botões acima da lista (Voltar, ⋮, "+ Mapas", o filtro, os chips). */
         const val EXTRA_PRESSES = 10
 
         fun chartTitle(number: Int) = "Mapa %02d".format(number)

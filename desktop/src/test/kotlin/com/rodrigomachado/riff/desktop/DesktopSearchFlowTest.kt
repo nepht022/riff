@@ -186,7 +186,7 @@ class DesktopSearchFlowTest {
     private fun openSearch(encore: HttpTransport) {
         match.openApp(encore = encore)
         match.openLibrary()
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText("Pesquisar Mapas"))
+        composeRule.clickOnWindowThread(composeRule.onNodeWithText("+ Mapas"))
         composeRule.waitUntilAtLeastOneExists(hasText("Música ou artista"), DesktopMatch.TIMEOUT_MS)
     }
 

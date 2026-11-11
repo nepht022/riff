@@ -137,6 +137,9 @@ class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {
     override suspend fun last() = saved.lastOrNull()?.copy(id = saved.size.toLong())
 
     override suspend fun recentBests(limit: Int) = emptyList<com.rodrigomachado.riff.core.model.ScoreRecord>()
+
+    override fun observeChartBests() =
+        kotlinx.coroutines.flow.flowOf(emptyList<com.rodrigomachado.riff.core.model.ScoreRecord>())
 }
 
 class FakeStemPlayer(val song: FakeSongPlayer = FakeSongPlayer()) :

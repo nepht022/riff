@@ -5,6 +5,8 @@ import com.rodrigomachado.riff.core.database.ScoreDao
 import com.rodrigomachado.riff.core.database.ScoreEntity
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 interface ScoreRepository {
@@ -20,6 +22,9 @@ interface ScoreRepository {
 
     /** Os recordes de hoje (um por mapa e dificuldade), do jogado por último ao mais antigo, até [limit]. */
     suspend fun recentBests(limit: Int): List<ScoreRecord>
+
+    /** O maior recorde de cada mapa, em qualquer dificuldade (um por mapa jogado), acompanhando o banco. */
+    fun observeChartBests(): Flow<List<ScoreRecord>>
 }
 
 class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : ScoreRepository {
@@ -35,6 +40,9 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
     override suspend fun last(): ScoreRecord? = dao.last()?.toModel()
 
     override suspend fun recentBests(limit: Int): List<ScoreRecord> = dao.recentBests(limit).mapNotNull { it.toModel() }
+
+    override fun observeChartBests(): Flow<List<ScoreRecord>> =
+        dao.observeChartBests().map { rows -> rows.mapNotNull { it.toModel() } }
 }
 
 private fun ScoreRecord.toEntity() = ScoreEntity(

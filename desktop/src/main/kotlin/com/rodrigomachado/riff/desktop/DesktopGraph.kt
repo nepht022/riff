@@ -225,6 +225,8 @@ class DesktopGraph(
         probe = audioProbe,
         settings = settings,
         deleter = FolderChartDeleter(charts, FileFolderWriter(), libraryFolderStore, separations, io),
+        scores = scores,
+        images = chartThumbs,
     )
 
     // A pesquisa no Encore: baixa para "Baixados pelo Riff" na pasta da biblioteca e importa o pacote na hora.

@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.database
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ScoreDao {
@@ -40,4 +41,15 @@ interface ScoreDao {
             ") ORDER BY s.playedAtEpochMs DESC, s.id DESC LIMIT :limit",
     )
     suspend fun recentBests(limit: Int): List<ScoreEntity>
+
+    /**
+     * O maior recorde de cada mapa, em qualquer dificuldade (empate: o mais antigo, como no [best]); mapa sem partidas
+     * fica de fora. Acompanha o banco (a Biblioteca mostra a partida nova ao voltar a ela).
+     */
+    @Query(
+        "SELECT * FROM scores AS s WHERE s.id = (" +
+            "SELECT b.id FROM scores AS b WHERE b.chartId = s.chartId ORDER BY b.score DESC, b.id ASC LIMIT 1" +
+            ")",
+    )
+    fun observeChartBests(): Flow<List<ScoreEntity>>
 }
