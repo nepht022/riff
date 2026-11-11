@@ -116,6 +116,27 @@ class RoomRepositoryBoardTest : JsonTest() {
         assertEquals(10L, (fake.get("salas/ABCD/placar/2/u1") as JSONObject).getLong("pontos"))
     }
 
+    /** O placar guardado demora a subir (rede lenta): o batimento vai primeiro, com a hora de quando bateu. */
+    @Test
+    fun aSlowScoreDoesNotDelayTheHeartbeat() = runTest {
+        seedMatch()
+        val repository = fake.repository()
+        repository.heartbeat("ABCD")
+        fake.online = false
+        repository.publishScore("ABCD", 1, RoundScore(900, 0, 8, 9, 10, 0.9f, finished = true))
+        fake.online = true
+        fake.onTrip = { method, path, arriving ->
+            if (method == "PUT" && path.contains("placar") && arriving) now += 3_000
+        }
+        now += 10_000
+        val beatAt = now
+
+        repository.heartbeat("ABCD")
+
+        assertEquals(beatAt, fake.get("salas/ABCD/jogadores/u1/vistoEm"))
+        assertEquals(900L, (fake.get("salas/ABCD/placar/1/u1") as JSONObject).getLong("pontos")) // e o placar subiu
+    }
+
     @Test
     fun refusedScoreIsNotResent() = runTest {
         seedMatch()

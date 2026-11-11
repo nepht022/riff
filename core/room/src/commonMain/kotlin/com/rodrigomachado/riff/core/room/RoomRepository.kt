@@ -130,10 +130,10 @@ class RoomRepository(
      * O batimento (a cada 20 s, enquanto estou na sala: ver [RoomPresence]): grava o `vistoEm` e a `atividadeEm`. Se
      * o dono sumiu (60 s sem escrever, ou fora da sala) e eu sou o jogador vivo mais antigo, fico com o dono. Sendo o
      * dono, tiro da sala quem sumiu há mais de 5 min (libera a vaga) e desfaço a rodada órfã ([repairRound]). Fora da
-     * sala, sem internet ou recusado, não faz nada.
+     * sala, sem internet ou recusado, não faz nada. Depois de bater, reenvia os placares guardados ([publishScore]):
+     * um envio lento (ou outro em andamento) não atrasa o `vistoEm`.
      */
     suspend fun heartbeat(code: String) {
-        sendScores(code)
         try {
             beat(auth.uid(), code)
         } catch (_: NoConnection) {
@@ -141,6 +141,7 @@ class RoomRepository(
         } catch (_: RoomHttpError) {
             // outro jogador assumiu o dono antes, ou saí da sala
         }
+        sendScores(code)
     }
 
     /**
