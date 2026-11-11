@@ -8,7 +8,7 @@ internal data class WrittenScore(val score: RoundScore, val updatedAt: Long)
  * - quem está nele: quem tem placar na rodada, mais quem carregou a música dela (ainda sem placar);
  * - a ordem: pontos (desc), depois o maior combo (desc), depois quem entrou primeiro na sala (e o uid), para dois
  *   empatados não trocarem de lugar a cada leitura; quem saiu da rodada ou da sala, sempre por último (na mesma
- *   ordem entre eles);
+ *   ordem entre eles), menos quem terminou antes de sair, que fica na posição (e no pódio);
  * - "sem conexão" ([BoardLine.stale]): sem terminar e sem placar novo há [STALE_MS], ou sem nenhum [STALE_MS] depois
  *   do começo (numa rodada que já passou, quem nunca mandou);
  * - o fim da rodada: todos terminaram ou saíram, ou [END_GRACE_MS] depois do fim da música.
@@ -38,7 +38,8 @@ object RoundBoard {
             val written = scores[uid]
             val score = written?.score
             val finished = score?.finished ?: false
-            val left = player == null || player.leftRound == round
+            // quem terminou e depois saiu (da rodada ou da sala) fica na posição que ganhou, sem o "saiu"
+            val left = !finished && (player == null || player.leftRound == round)
             BoardLine(
                 uid = uid,
                 name = seen?.name.orEmpty(),

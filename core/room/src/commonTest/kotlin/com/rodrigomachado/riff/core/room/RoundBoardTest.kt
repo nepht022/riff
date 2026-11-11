@@ -108,6 +108,25 @@ class RoundBoardTest : JsonTest() {
     }
 
     @Test
+    fun finishedAndThenLeftTheRoomKeepsThePlace() {
+        // a bia terminou na frente e depois saiu da sala (não está mais em jogadores): continua na posição e no pódio
+        val scores = mapOf(
+            "ana" to score(1_000, finished = true),
+            "bia" to score(9_000, finished = true),
+            "caio" to score(2_000, finished = true),
+        )
+        val room = board(room(ana, caio), scores, now = START + 60_000)
+
+        assertEquals(listOf("bia", "caio", "ana"), room.board.map { it.uid })
+        assertEquals(listOf(false, false, false), room.board.map { it.left })
+        assertFalse(room.board.first().stale)
+        // o mesmo para quem terminou e depois saiu da rodada (ainda na sala)
+        val leftRound = board(room(ana, player("bia", joinedAt = 2, leftRound = ROUND), caio), scores)
+        assertEquals(listOf("bia", "caio", "ana"), leftRound.board.map { it.uid })
+        assertFalse(leftRound.board.first().left)
+    }
+
+    @Test
     fun staleScoreShowsNoConnection() {
         val now = START + 40_000
         val scores = mapOf(
