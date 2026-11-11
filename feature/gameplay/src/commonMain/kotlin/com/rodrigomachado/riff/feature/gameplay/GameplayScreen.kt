@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +91,13 @@ object GameplayTestTags {
     const val WAITING = "gameplay_waiting"
     const val LEAVE_PROMPT = "gameplay_leave_prompt"
     const val KEEP_PLAYING = "gameplay_keep_playing"
+    const val LIVE_BOARD = "gameplay_live_board"
+
+    /** A chave da minha linha no placar ao vivo ([liveLine]). */
+    const val LIVE_ME = "me"
+
+    /** A linha do jogador [uid] no placar ao vivo (a minha: [LIVE_ME]). */
+    fun liveLine(uid: String) = "gameplay_live_line_$uid"
 }
 
 internal const val SCRIM_ALPHA = 0.8f
@@ -111,6 +119,8 @@ fun GameplayScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // O placar dos outros (só na partida de sala): o estado vai inteiro até o bloco, que é o único a lê-lo.
+    val liveOthers = viewModel.liveOthers?.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.pause() }
     KeepScreenOn()
     // Na partida de sala, Sair também avisa a sala (saí da rodada); sozinho, só fecha a tela.
@@ -133,7 +143,9 @@ fun GameplayScreen(
             onExit = exit, // o áudio é liberado em onCleared; a pausa já o silenciou
             onSessionFinished = viewModel::onSessionFinished,
             onAdjustOffset = viewModel::adjustSongOffset,
+            onFrame = viewModel::onFrame,
             modifier = modifier,
+            liveOthers = liveOthers,
         )
 
         is GameplayUiState.Finished -> LaunchedEffect(current.scoreId) { onFinished(current.scoreId) }
@@ -155,7 +167,9 @@ internal fun UnavailableScreen(reason: UnavailableReason, onExit: () -> Unit, mo
 /**
  * Palco da partida. [animate] liga o loop de frames (os screenshots desligam para congelar um instante). Na partida de
  * sala ([GameplayUiState.Ready.inRoom]) não há pausa: nem o botão, nem a tecla, nem a perda do foco; o Voltar pergunta
- * se é para sair, com a música seguindo, e a contagem 3-2-1 fica por cima da pista até o começo.
+ * se é para sair, com a música seguindo, e a contagem 3-2-1 fica por cima da pista até o começo. [liveOthers] (só na
+ * partida de sala) liga o placar ao vivo minimizado, com o dos outros; [onFrame] roda depois de cada quadro avançar a
+ * partida (a publicação do placar ao vivo).
  */
 @Composable
 internal fun GameStage(
@@ -168,6 +182,8 @@ internal fun GameStage(
     modifier: Modifier = Modifier,
     onAdjustOffset: (Int) -> Unit = {},
     animate: Boolean = true,
+    liveOthers: State<List<LiveScore>>? = null,
+    onFrame: () -> Unit = {},
 ) {
     val session = state.session
     // A pausa já no instante em que muda (o teclado e o controle a leem antes de a tela recompor).
@@ -182,7 +198,13 @@ internal fun GameStage(
     val hud = remember(session) { HudState().also { it.update(session, state.withoutSeparateGuitar) } }
     MatchBackHandler(inRoom, state.isPaused, matchPause.pause) { matchPause.leaving = !matchPause.leaving }
     val pauseButton = if (inRoom) null else matchPause.pause
-    if (animate) FrameLoop(session, hud, state.withoutSeparateGuitar, onSessionFinished) { frame++ }
+    val afterFrame by rememberUpdatedState(onFrame)
+    if (animate) {
+        FrameLoop(session, hud, state.withoutSeparateGuitar, onSessionFinished) {
+            frame++
+            afterFrame()
+        }
+    }
     val pauseMenu = remember { PauseMenu() }
     val keys = rememberGameKeys(session, state.settings.controls, matchPause, state.isPaused, pauseMenu)
     // O controle passa pela mesma sessão: a perda do foco (no teclado acima) solta as cores dele também.
@@ -210,11 +232,11 @@ internal fun GameStage(
                 JudgmentPop(session, hud, { frame }, reducedMotion, Modifier.align(Alignment.Center))
                 SongProgressBar(session, { frame }, Modifier.align(Alignment.BottomCenter).progressBar())
             }
-            SideHud(hud, pauseButton, highwayWidth, Modifier.fillMaxSize())
+            SideHud(hud, pauseButton, highwayWidth, Modifier.fillMaxSize(), reducedMotion, liveOthers)
         } else {
             highway(Modifier.fillMaxSize())
             SongProgressBar(session, { frame }, Modifier.align(Alignment.TopCenter).progressBar())
-            Hud(session, hud, { frame }, reducedMotion, pauseButton, Modifier.fillMaxSize())
+            Hud(session, hud, { frame }, reducedMotion, pauseButton, Modifier.fillMaxSize(), liveOthers)
         }
         if (state.isPaused) PauseOverlay(state, pauseMenu, onAdjustOffset, matchPause.resume, onExit)
         if (inRoom) {

@@ -55,29 +55,39 @@ abstract class GameplayViewModelTestBase {
     /** As partidas de sala pedidas à fábrica: o código e a rodada da rota. */
     protected val matchStartsAsked = mutableListOf<Pair<String, Int>>()
 
+    /** Os placares ao vivo pedidos à fábrica: o código e a rodada da rota. */
+    protected val liveBoardsAsked = mutableListOf<Pair<String, Int>>()
+
     // Pela subclasse do Hilt: confere também a leitura dos argumentos da rota (SavedStateHandle).
     protected fun viewModel(): GameplayViewModel = hiltViewModel(
         SavedStateHandle(mapOf("chartId" to "a", "difficulty" to "EXPERT")),
         matchStart = null,
         timeSource = time,
+        liveBoard = null,
     )
 
-    /** A partida da sala [code], rodada [round], com o [matchStart] dado pela fábrica e o relógio [timeSource]. */
+    /**
+     * A partida da sala [code], rodada [round], com o [matchStart] e o [liveBoard] dados pelas fábricas e o relógio
+     * [timeSource].
+     */
     protected fun roomViewModel(
         matchStart: MatchStart,
         timeSource: TimeSource,
         code: String = "ABCD",
         round: Int = 3,
+        liveBoard: LiveBoard = FakeLiveBoard(),
     ): GameplayViewModel = hiltViewModel(
         SavedStateHandle(mapOf("chartId" to "a", "difficulty" to "EXPERT", "roomCode" to code, "round" to round)),
         matchStart,
         timeSource,
+        liveBoard,
     )
 
     private fun hiltViewModel(
         route: SavedStateHandle,
         matchStart: MatchStart?,
         timeSource: TimeSource,
+        liveBoard: LiveBoard?,
     ): GameplayViewModel = HiltGameplayViewModel(
         route,
         loader,
@@ -108,6 +118,10 @@ abstract class GameplayViewModelTestBase {
         { code, round ->
             matchStartsAsked += code to round
             checkNotNull(matchStart) { "partida sozinho não pede a partida de sala" }
+        },
+        { code, round ->
+            liveBoardsAsked += code to round
+            checkNotNull(liveBoard) { "partida sozinho não pede o placar ao vivo" }
         },
     )
 

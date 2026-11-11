@@ -25,4 +25,8 @@
     <string name="gameplay_leave_title">Sair da partida?</string>
     <string name="gameplay_leave_message">A música continua para os outros; você fica de fora desta rodada.</string>
     <string name="gameplay_keep_playing">Continuar tocando</string>
+    <string name="gameplay_live_you">Você</string>
+    <string name="gameplay_live_left">saiu</string>
+    <string name="gameplay_live_stale">sem conexão</string>
+    <string name="gameplay_live_board">Placar da sala</string>
 </resources>

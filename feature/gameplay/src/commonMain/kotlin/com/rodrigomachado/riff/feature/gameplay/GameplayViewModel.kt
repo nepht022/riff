@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.core.data.game.ChartAudio
 import com.rodrigomachado.riff.core.data.game.ChartNotFoundException
 import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
+import com.rodrigomachado.riff.core.game.GameEngine
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.Judgment
@@ -31,9 +32,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -83,7 +87,9 @@ sealed interface GameplayUiState {
  *
  * Com [matchStart], a partida de sala: carregada, avisa ([MatchStart.loaded]), espera o começo combinado
  * ([MatchStart.awaitStart]), mostra a contagem e começa no instante devolvido, pelo [timeSource]; não pausa nunca e,
- * ao sair no meio ([leave]), avisa a sala ([MatchStart.left]).
+ * ao sair no meio ([leave]), avisa a sala ([MatchStart.left]). Com o [liveBoard] (só na de sala), o placar ao vivo:
+ * publica o meu no começo, a cada [LIVE_PUBLISH_EVERY_MS] pelos quadros ([onFrame], no relógio da partida) e no fim
+ * ([LiveBoard.publish] não segura a tela: o envio vai fora dela) e entrega o dos outros ([liveOthers]).
  */
 @Suppress("TooManyFunctions") // a partida: carregar, pausar, ajustar, terminar e o modo de sala; um estado só
 open class GameplayViewModel(
@@ -102,9 +108,19 @@ open class GameplayViewModel(
     private val ranking: RankingRepository,
     private val rankingTable: (Settings) -> RankingTable = { RankingTable.PHONE },
     private val matchStart: MatchStart? = null,
+    private val liveBoard: LiveBoard? = null,
 ) : ViewModel() {
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
+
+    /** O placar dos outros na partida de sala, ao vivo; null = partida sozinho (sem o bloco). */
+    val liveOthers: StateFlow<List<LiveScore>>? = liveBoard?.others
+        ?.catch { emit(emptyList()) } // uma falha na leitura não derruba a partida
+        ?.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // O meu placar ao vivo (partida de sala): o motor da partida já começada, e quando publicar de novo.
+    private var liveEngine: GameEngine? = null
+    private var nextPublishAt = 0L
 
     private var player: SongPlayer? = null
     private var sfx: SfxPlayer? = null
@@ -212,14 +228,42 @@ open class GameplayViewModel(
         if (player == null) return counting
         session.start(fromMs = if (late) timeSource.nowMs() - startAt else 0)
         interruptions = interruptionsFactory.create().also { it.start(onInterrupted = {}, onBusy = {}) }
+        startPublishing(session.engine)
         return counting
+    }
+
+    /** O meu placar ao vivo já no começo (os outros me veem desde o 0); depois, pelos quadros ([onFrame]). */
+    private fun startPublishing(engine: GameEngine) {
+        val board = liveBoard ?: return
+        liveEngine = engine
+        nextPublishAt = timeSource.nowMs() + LIVE_PUBLISH_EVERY_MS
+        board.publish(engine.liveScore(finished = false))
+    }
+
+    /**
+     * A cada quadro da partida (depois de ela avançar): na de sala, publica o meu placar se já passou
+     * [LIVE_PUBLISH_EVERY_MS] desde o último. Barato e na thread da tela: só monta o placar e entrega ao
+     * [LiveBoard.publish], que envia fora dela. Sem quadros (o app em segundo plano), não publica: os outros veem
+     * "sem conexão", como a presença.
+     */
+    fun onFrame() {
+        val board = liveBoard ?: return
+        val engine = liveEngine ?: return
+        if (finishing) return
+        val now = timeSource.nowMs()
+        if (now < nextPublishAt) return
+        nextPublishAt = now + LIVE_PUBLISH_EVERY_MS
+        board.publish(engine.liveScore(finished = false))
     }
 
     /**
      * Saindo da partida (Sair, ou a tela fechando): na de sala, avisa que saí da rodada, se ela ainda não acabou para
      * mim. O aviso continua mesmo com a tela já fechada (até [ROOM_REPORT_TIMEOUT_MS]); sozinho, não faz nada.
      */
-    fun leave() = reportToRoom { it.left() }
+    fun leave() {
+        liveEngine = null
+        reportToRoom { it.left() }
+    }
 
     /** Avisa a sala uma vez só (sair, não abrir ou terminar), sem ser cancelado pela tela que fecha. */
     private fun reportToRoom(report: suspend (MatchStart) -> Unit) {
@@ -307,6 +351,8 @@ open class GameplayViewModel(
         reportToRoom { it.finished() }
         val engine = ready.session.engine
         engine.finish()
+        // O placar final (com as notas que faltavam já julgadas): depois dele, mais nenhum (finishing).
+        if (liveEngine != null) liveBoard?.publish(engine.liveScore(finished = true))
         val record = ScoreRecord(
             id = 0,
             chartId = chartId,
@@ -349,6 +395,25 @@ open class GameplayViewModel(
 
 /** Quanto o aviso à sala ([MatchStart.left]/[MatchStart.finished]) pode demorar depois de a tela fechar. */
 private const val ROOM_REPORT_TIMEOUT_MS = 10_000L
+
+/** De quanto em quanto a partida de sala publica o meu placar ao vivo. */
+internal const val LIVE_PUBLISH_EVERY_MS = 1_000L
+
+/** O meu placar ao vivo agora (o uid e o nome a sala sabe). */
+private fun GameEngine.liveScore(finished: Boolean): LiveScore {
+    val hits = count(Judgment.PERFECT) + count(Judgment.GOOD)
+    return LiveScore(
+        uid = "",
+        name = "",
+        score = score,
+        combo = combo,
+        maxCombo = state.maxCombo,
+        accuracy = accuracy(),
+        finished = finished,
+        hits = hits,
+        notes = hits + count(Judgment.MISS),
+    )
+}
 
 /** Quanto a pista volta ao continuar depois de uma pausa. */
 private const val REWIND_ON_RESUME_MS = 500L

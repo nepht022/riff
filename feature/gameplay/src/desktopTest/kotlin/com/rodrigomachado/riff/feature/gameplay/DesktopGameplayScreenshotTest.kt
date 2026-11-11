@@ -3,6 +3,8 @@ package com.rodrigomachado.riff.feature.gameplay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -42,7 +44,13 @@ class DesktopGameplayScreenshotTest {
     @After
     fun restore() = Locale.setDefault(system)
 
-    private fun capture(name: String, width: Dp, height: Dp, state: GameplayUiState.Ready) {
+    private fun capture(
+        name: String,
+        width: Dp,
+        height: Dp,
+        state: GameplayUiState.Ready,
+        liveOthers: State<List<LiveScore>>? = null,
+    ) {
         Locale.setDefault(Locale.forLanguageTag("pt-BR"))
         composeRule.setContent {
             Box(Modifier.size(width, height)) {
@@ -56,6 +64,7 @@ class DesktopGameplayScreenshotTest {
                             onExit = {},
                             onSessionFinished = {},
                             animate = false,
+                            liveOthers = liveOthers,
                         )
                     }
                 }
@@ -72,6 +81,16 @@ class DesktopGameplayScreenshotTest {
 
     @Test
     fun pausedInAWideWindow() = capture("Gameplay_wide_paused", 960.dp, 540.dp, midSong().copy(isPaused = true))
+
+    /** A partida de sala com o placar ao vivo cheio, na coluna do placar à esquerda, embaixo do combo. */
+    @Test
+    fun roomMatchWithTheLiveBoard() = capture(
+        "Gameplay_wide_room_live",
+        960.dp,
+        540.dp,
+        midSong().copy(inRoom = true),
+        mutableStateOf(liveOthersSample()),
+    )
 
     private companion object {
         val Tolerance = RoborazziOptions(compareOptions = RoborazziOptions.CompareOptions(changeThreshold = 0.01f))

@@ -4,6 +4,7 @@ import com.rodrigomachado.riff.core.audio.SfxPlayer
 import com.rodrigomachado.riff.core.audio.SongPlayer
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Note
+import kotlinx.coroutines.flow.MutableStateFlow
 
 fun note(timeMs: Long, lane: Int = 0, sustainMs: Long = 0) = Note(timeMs, lane, sustainMs, isHopo = false)
 
@@ -221,3 +222,27 @@ class RecordingRanking(override val isConfigured: Boolean = true) :
 
     override suspend fun link(code: String) = com.rodrigomachado.riff.core.data.ranking.LinkResult.Offline
 }
+
+/** O placar ao vivo de mentira: o teste manda o dos outros ([others]) e lê o que a partida publicou ([published]). */
+class FakeLiveBoard : LiveBoard {
+    override val others = MutableStateFlow<List<LiveScore>>(emptyList())
+    val published = mutableListOf<LiveScore>()
+
+    /** Chamado a cada publicação (o teste anota o instante). */
+    var onPublish: (LiveScore) -> Unit = {}
+
+    override fun publish(mine: LiveScore) {
+        published += mine
+        onPublish(mine)
+    }
+}
+
+/**
+ * Os outros três de uma sala cheia, para os screenshots do placar ao vivo: a Ana na frente, o Bruno sem conexão (com
+ * os pontos de antes de cair) e a Carla, que saiu.
+ */
+fun liveOthersSample() = listOf(
+    LiveScore("ana", "Ana", 2_350, 18, 18, 0.62f, finished = false),
+    LiveScore("bruno", "Bruno_88", 1_200, 0, 7, 0.3f, finished = false, stale = true),
+    LiveScore("carla", "Carla", 3_100, 0, 21, 0.7f, finished = false, left = true),
+)
