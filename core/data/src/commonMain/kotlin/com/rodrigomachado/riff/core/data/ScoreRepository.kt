@@ -14,6 +14,12 @@ interface ScoreRepository {
     suspend fun get(id: Long): ScoreRecord?
 
     suspend fun best(chartId: String, difficulty: Difficulty): ScoreRecord?
+
+    /** A última partida jogada (o "Continuar" da tela inicial); null sem partidas. */
+    suspend fun last(): ScoreRecord?
+
+    /** Os recordes de hoje (um por mapa e dificuldade), do jogado por último ao mais antigo, até [limit]. */
+    suspend fun recentBests(limit: Int): List<ScoreRecord>
 }
 
 class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : ScoreRepository {
@@ -25,6 +31,10 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
         chartId,
         difficulty.name,
     )?.toModel()
+
+    override suspend fun last(): ScoreRecord? = dao.last()?.toModel()
+
+    override suspend fun recentBests(limit: Int): List<ScoreRecord> = dao.recentBests(limit).mapNotNull { it.toModel() }
 }
 
 private fun ScoreRecord.toEntity() = ScoreEntity(

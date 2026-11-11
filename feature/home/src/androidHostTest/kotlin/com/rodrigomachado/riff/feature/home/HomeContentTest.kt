@@ -1,15 +1,24 @@
 package com.rodrigomachado.riff.feature.home
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.ui.input.Gamepad
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.PadEvent
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,18 +34,27 @@ class HomeContentTest {
     val composeRule = createComposeRule()
     private val events = mutableListOf<String>()
 
-    /** [roomOn]: o Firebase da Sala configurado (o app passa o onRoom só então). */
-    private fun show(roomOn: Boolean = false) = composeRule.setContent {
-        RiffTheme {
-            HomeScreen(
-                onSolo = { events += "solo" },
-                onRanking = { events += "ranking" },
-                onSettings = { events += "settings" },
-                onReport = { events += "report" },
-                onRoom = if (roomOn) ({ events += "room" }) else null,
-            )
+    /**
+     * [roomOn]: o Firebase da Sala configurado (o app passa o onRoom só então); [state]: as partidas do banco;
+     * [pad]: o controle do PC (nulo no celular, sem a barra de teclas).
+     */
+    private fun show(roomOn: Boolean = false, state: HomeUiState = HomeUiState(), pad: Gamepad? = null) =
+        composeRule.setContent {
+            CompositionLocalProvider(LocalGamepad provides pad) {
+                RiffTheme {
+                    HomeContent(
+                        state = state,
+                        images = null,
+                        onSolo = { events += "solo" },
+                        onRanking = { events += "ranking" },
+                        onSettings = { events += "settings" },
+                        onReport = { events += "report" },
+                        onContinue = { chartId, difficulty -> events += "continue $chartId $difficulty" },
+                        onRoom = if (roomOn) ({ events += "room" }) else null,
+                    )
+                }
+            }
         }
-    }
 
     @Test
     fun soloOpensTheLibraryAndRankingOpensTheRanking() {
@@ -116,5 +134,93 @@ class HomeContentTest {
         }
 
         composeRule.onNodeWithText("Solo").assertExists() // pt: "Sozinho"
+    }
+
+    /** "Continuar": a última partida (capa, título, artista, dificuldade, recorde); tocar abre essa música e nível. */
+    @Test
+    fun continueOpensTheLastMatch() {
+        show(state = HomeUiState(last = LAST))
+
+        composeRule.onNodeWithText("Continuar").assertExists()
+        composeRule.onNodeWithText("Música Um").assertExists()
+        composeRule.onNodeWithText("Banda", substring = true).assertExists()
+        composeRule.onNodeWithText("Recorde 12.345", substring = true).assertExists()
+        composeRule.onNodeWithTag(HomeTestTags.CONTINUE).performScrollTo().performClick()
+
+        assertEquals(listOf("continue a HARD"), events)
+    }
+
+    /** Primeira vez (sem partidas): sem "Continuar" nem "Últimos recordes", e o resto continua no lugar. */
+    @Test
+    fun homeWithoutMatchesHidesContinue() {
+        show()
+
+        composeRule.onNodeWithTag(HomeTestTags.CONTINUE).assertDoesNotExist()
+        composeRule.onNodeWithText("Continuar").assertDoesNotExist()
+        composeRule.onNodeWithText("Últimos recordes").assertDoesNotExist()
+        composeRule.onNodeWithTag(HomeTestTags.SOLO).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeTestTags.ROOM).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeTestTags.RANKING).assertIsDisplayed()
+    }
+
+    /** "Últimos recordes": até 3, com título e pontos. */
+    @Test
+    fun recentBestsShowUpToThree() {
+        val bests = (1..4).map { LAST.copy(chartId = "c$it", title = "Recorde de $it", best = it * 1_000L) }
+        show(state = HomeUiState(last = LAST, recentBests = bests))
+
+        composeRule.onNodeWithText("Últimos recordes").performScrollTo().assertIsDisplayed()
+        composeRule.onAllNodesWithTag(HomeTestTags.RECENT_BEST).assertCountEquals(3)
+        composeRule.onNodeWithText("Recorde de 3").assertExists()
+        composeRule.onNodeWithText("3.000").assertExists()
+        composeRule.onNodeWithText("Recorde de 4").assertDoesNotExist()
+    }
+
+    /**
+     * PC (janela larga, com o controle do PC): três quadros iguais lado a lado (Sozinho, Sala, Ranking) com a linha
+     * de apoio, Reportar e Configurações com texto e a barra de teclas (com os símbolos do controle ligado).
+     */
+    @Test
+    @Config(qualifiers = "pt-rBR-w1024dp-h768dp")
+    fun pcShowsThreeTilesAndKeyHints() {
+        show(roomOn = true, state = HomeUiState(last = LAST), pad = PadOn)
+
+        val solo = composeRule.onNodeWithTag(HomeTestTags.SOLO).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val room = composeRule.onNodeWithTag(HomeTestTags.ROOM).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val ranking =
+            composeRule.onNodeWithTag(HomeTestTags.RANKING).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertEquals(solo.top, room.top)
+        assertEquals(solo.top, ranking.top)
+        assertEquals(solo.width, ranking.width, 1f)
+        assertEquals(solo.height, ranking.height, 1f)
+        composeRule.onNodeWithText("Biblioteca e Encore").assertExists()
+        composeRule.onNodeWithText("Até 4, celular e PC").assertExists()
+        // Com texto na tela (conferido na screenshot); o leitor de tela lê a descrição, a mesma do ícone do celular.
+        composeRule.onNodeWithContentDescription("Reportar problema").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Configurações").assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeTestTags.KEY_HINTS).assertIsDisplayed()
+        composeRule.onNodeWithText("Mover").assertExists()
+        composeRule.onNodeWithText("✕").assertExists()
+        // O "Continuar" é do celular.
+        composeRule.onNodeWithTag(HomeTestTags.CONTINUE).assertDoesNotExist()
+    }
+
+    /** No celular não há barra de teclas, nem deitado. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w780dp-h360dp-land")
+    fun thePhoneHasNoKeyHints() {
+        show()
+
+        composeRule.onNodeWithTag(HomeTestTags.KEY_HINTS).assertDoesNotExist()
+    }
+
+    private object PadOn : Gamepad {
+        override val events = emptyFlow<PadEvent>()
+        override val connected = MutableStateFlow(true)
+        override val presses = emptyFlow<String>()
+    }
+
+    private companion object {
+        val LAST = HomeMatch("a", "Música Um", "Banda", Difficulty.HARD, best = 12_345)
     }
 }

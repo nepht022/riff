@@ -11,7 +11,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.sin
 
 /** Ícones da tela inicial, desenhados em código (o app não usa imagens prontas). */
 @Composable
@@ -79,4 +82,34 @@ internal fun DrawScope.drawGear(color: Color) {
     drawCircle(Color.Black, r * 0.28f, c)
 }
 
+/** Triângulo do "tocar": o Continuar. */
+internal fun DrawScope.drawPlay(color: Color) {
+    val w = size.width
+    val h = size.height
+    val play = Path().apply {
+        moveTo(w * 0.22f, h * 0.12f)
+        lineTo(w * 0.88f, h * 0.5f)
+        lineTo(w * 0.22f, h * 0.88f)
+        close()
+    }
+    drawPath(play, color)
+}
+
+/** Estrela de cinco pontas: o Ranking. */
+internal fun DrawScope.drawStar(color: Color) {
+    val s = min(size.width, size.height)
+    val c = Offset(size.width / 2, size.height / 2)
+    val star = Path()
+    repeat(STAR_POINTS * 2) { i ->
+        // Pontas e vales alternados, começando pela ponta de cima.
+        val radius = if (i % 2 == 0) s * 0.5f else s * 0.2f
+        val angle = PI * i / STAR_POINTS - PI / 2
+        val point = Offset(c.x + radius * cos(angle).toFloat(), c.y + radius * sin(angle).toFloat())
+        if (i == 0) star.moveTo(point.x, point.y) else star.lineTo(point.x, point.y)
+    }
+    star.close()
+    drawPath(star, color)
+}
+
 private const val TEETH = 8
+private const val STAR_POINTS = 5

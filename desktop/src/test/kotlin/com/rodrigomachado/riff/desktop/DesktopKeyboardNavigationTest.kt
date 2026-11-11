@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -72,6 +73,24 @@ class DesktopKeyboardNavigationTest {
 
         // A Biblioteca aberta e já lida do banco (fechá-lo no meio da leitura quebraria o fim do teste).
         composeRule.waitUntilAtLeastOneExists(hasText("Nenhuma pasta escolhida"), TIMEOUT_MS)
+    }
+
+    /**
+     * A tela inicial nova do PC só pelo teclado: Reportar e Configurações (texto no topo) e os três quadros (↓ das
+     * Configurações cai no Ranking, ← até o Sozinho, → de volta ao Ranking); Enter no Ranking o abre.
+     */
+    @Test
+    fun theKeyboardReachesTheTopButtonsAndTheThreeTiles() {
+        openApp()
+
+        pressUntilFocused(Key.DirectionDown, hasContentDescription("Reportar problema"))
+        pressUntilFocused(Key.DirectionRight, hasContentDescription("Configurações"))
+        pressUntilFocused(Key.DirectionDown, hasTestTag(HomeTestTags.RANKING))
+        pressUntilFocused(Key.DirectionLeft, hasTestTag(HomeTestTags.SOLO))
+        pressUntilFocused(Key.DirectionRight, hasTestTag(HomeTestTags.RANKING))
+        press(Key.Enter)
+
+        composeRule.waitUntilAtLeastOneExists(hasText("Ranking não configurado"), TIMEOUT_MS)
     }
 
     @Test

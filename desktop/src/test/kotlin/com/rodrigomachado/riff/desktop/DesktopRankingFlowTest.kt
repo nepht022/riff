@@ -154,7 +154,9 @@ class DesktopRankingFlowTest {
         match.openApp(ranking = script)
         composeRule.waitForIdle()
 
-        pressUntilFocused(Key.DirectionDown, hasText(HOME_RANKING))
+        // O Ranking é o terceiro quadro da tela inicial do PC: ↓ até os quadros, → até ele.
+        pressUntilFocused(Key.DirectionDown, hasTestTag(HomeTestTags.SOLO))
+        pressUntilFocused(Key.DirectionRight, hasTestTag(HomeTestTags.RANKING))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText(SONG), TIMEOUT_MS)
         // Com palheta, o padrão de fábrica do PC.
@@ -317,7 +319,6 @@ class DesktopRankingFlowTest {
         const val SAVE = "Salvar"
         const val LATER = "Agora não"
         const val BACK = "Voltar"
-        const val HOME_RANKING = "★ Ranking"
         const val LINK = "Vincular"
         const val HAVE_A_NAME = "Já tenho um nome em outro aparelho"
         const val NO_NAME = "Escolha um nome para entrar no ranking"

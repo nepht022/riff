@@ -28,6 +28,10 @@ class FakeScores(private val records: List<ScoreRecord>) : ScoreRepository {
     override suspend fun get(id: Long) = records.firstOrNull { it.id == id }
 
     override suspend fun best(chartId: String, difficulty: Difficulty) = records.maxByOrNull { it.score }
+
+    override suspend fun last() = records.maxByOrNull { it.playedAtEpochMs }
+
+    override suspend fun recentBests(limit: Int) = emptyList<ScoreRecord>()
 }
 
 /** Ranking falso: guarda as partidas enviadas e devolve o status que o teste definir. */

@@ -63,4 +63,37 @@ class RoomScoreRepositoryTest {
 
         assertEquals(RankingTable.PC_STRUM, scores.get(id)?.rankingTable)
     }
+
+    /** "Continuar" da tela inicial: a última partida jogada, de qualquer mapa; sem partidas, nada. */
+    @Test
+    fun lastIsTheMostRecentlyPlayedMatch() = runTest {
+        charts("a", "b", "c")
+        assertNull(scores.last())
+        scores.save(record(900).copy(playedAtEpochMs = 5_000))
+        val lastId = scores.save(record(100).copy(chartId = "b", playedAtEpochMs = 9_000))
+        scores.save(record(700).copy(playedAtEpochMs = 2_000))
+
+        assertEquals(lastId, scores.last()?.id)
+    }
+
+    /**
+     * "Últimos recordes": o recorde de hoje de cada mapa e dificuldade, do mais recente ao mais antigo; uma partida
+     * que não bateu o recorde não entra (nem tira o recorde dela da lista).
+     */
+    @Test
+    fun recentBestsAreTheCurrentBestsNewestFirst() = runTest {
+        charts("a", "b", "c")
+        val oldBestA = scores.save(record(900).copy(playedAtEpochMs = 1_000))
+        scores.save(record(300).copy(playedAtEpochMs = 8_000)) // não bateu
+        val bestB = scores.save(record(500).copy(chartId = "b", playedAtEpochMs = 4_000))
+        val bestAEasy = scores.save(record(200).copy(difficulty = Difficulty.EASY, playedAtEpochMs = 6_000))
+        val bestC = scores.save(record(50).copy(chartId = "c", playedAtEpochMs = 7_000))
+
+        assertEquals(listOf(bestC, bestAEasy, bestB), scores.recentBests(3).map { it.id })
+        assertEquals(listOf(bestC, bestAEasy, bestB, oldBestA), scores.recentBests(10).map { it.id })
+    }
+
+    private suspend fun charts(vararg ids: String) = ids.forEach {
+        db.chartDao().replace(ChartEntity(it, "t", "b", null, null, null, "u", "CHART", 1), emptyList())
+    }
 }

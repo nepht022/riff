@@ -24,4 +24,20 @@ interface ScoreDao {
             "ORDER BY score DESC, id ASC LIMIT 1",
     )
     suspend fun best(chartId: String, difficulty: String): ScoreEntity?
+
+    /** A última partida jogada (de qualquer mapa); empate no horário: a gravada por último. */
+    @Query("SELECT * FROM scores ORDER BY playedAtEpochMs DESC, id DESC LIMIT 1")
+    suspend fun last(): ScoreEntity?
+
+    /**
+     * O recorde de hoje de cada mapa e dificuldade (o mesmo critério do [best]), do jogado por último ao mais
+     * antigo, até [limit].
+     */
+    @Query(
+        "SELECT * FROM scores AS s WHERE s.id = (" +
+            "SELECT b.id FROM scores AS b WHERE b.chartId = s.chartId AND b.difficulty = s.difficulty " +
+            "ORDER BY b.score DESC, b.id ASC LIMIT 1" +
+            ") ORDER BY s.playedAtEpochMs DESC, s.id DESC LIMIT :limit",
+    )
+    suspend fun recentBests(limit: Int): List<ScoreEntity>
 }

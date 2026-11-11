@@ -74,6 +74,7 @@ import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.gameplay.ChartArtDecoder
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
+import com.rodrigomachado.riff.feature.home.HomeViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
 import com.rodrigomachado.riff.feature.licenses.DesktopLicenseSource
 import com.rodrigomachado.riff.feature.licenses.LicensesViewModel
@@ -303,6 +304,9 @@ class DesktopGraph(
             // O placar ao vivo lê a sala que a presença já observa (sem outro streaming) e envia fora da tela.
             liveBoard = roomCode?.let { RoomLiveBoard(it, round, room, roomPresence.room) },
         )
+
+    /** A tela inicial: as partidas do banco do PC e as capas das listas. */
+    fun homeViewModel() = HomeViewModel(scores, charts, chartThumbs)
 
     fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
 
