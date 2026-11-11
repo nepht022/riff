@@ -94,6 +94,14 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Design novo, celular e PC (2026-11-11)
+
+- Aplicado a partir dos protótipos aprovados pelo usuário: tela inicial (celular com "Continuar" e "Últimos recordes"; PC com três quadros), Biblioteca (menu ⋮, "+ Mapas", filtro sempre à mostra, chips, capas, recorde por mapa, X só no Selecionar), Resultado (nota S/A/B/C por precisão: 98/90/80%, "antes: N", barra de precisão, blocos), sala (código pequeno com compartilhar, linha do que falta), Configurações do PC (abas em coluna) e barra de teclas em todas as telas do PC (menos a partida). Teste real do usuário: pendente.
+- Capas sem imagem: iniciais sobre vermelho, marrom ou verde do tema (a tinta sumia no palco).
+- No PC, a partir do filtro da Biblioteca, ↓ cai em "Com recorde" (busca 2D do Compose); ←/→ andam nos chips.
+- A pausa da partida mostra a barra de teclas, mas sem teste automático.
+- "Continuar" e "Últimos recordes" só no celular (no PC os três quadros ocupam a tela, como no protótipo).
+
 ## Multiplayer M3: placar ao vivo e Resultado da sala (2026-11-11)
 
 - Regras do placar republicadas pelo usuário e teste real aceito em 2026-11-11 (PC e celular): o placar ao vivo mostrou os dois e trocou de posição. O começo ficou mais junto que na M2 e o Resultado da sala igual nos dois (relato do usuário, 2026-11-11).
