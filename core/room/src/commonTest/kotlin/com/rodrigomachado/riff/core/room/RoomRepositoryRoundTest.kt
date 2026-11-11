@@ -291,7 +291,8 @@ class RoomRepositoryRoundTest : JsonTest() {
 
         val write = fake.writes.last()
         assertEquals("PATCH" to "salas/ABCD", write.method to write.path)
-        assertEquals(setOf("estado", "rodada", "inicio", "atividadeEm"), patchKeys(write))
+        // a rodada 3 apaga o placar da 1 (ver RoomRepositoryBoardTest)
+        assertEquals(setOf("estado", "rodada", "inicio", "atividadeEm", "placar/1"), patchKeys(write))
         val body = JSONObject(write.body!!)
         assertEquals("contagem", body.getString("estado"))
         assertEquals(3, body.getInt("rodada"))

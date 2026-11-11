@@ -73,10 +73,43 @@ data class RoomPlayer(
 )
 
 /**
+ * O placar de um jogador numa rodada, como ele manda ([RoomRepository.publishScore]): os pontos, o combo de agora e o
+ * maior, as notas acertadas de quantas já passaram, a [accuracy] de 0 a 1 e se a música dele acabou ([finished]).
+ */
+data class RoundScore(
+    val score: Long,
+    val combo: Int,
+    val maxCombo: Int,
+    val hits: Int,
+    val notes: Int,
+    val accuracy: Float,
+    val finished: Boolean,
+)
+
+/**
+ * Uma linha do placar da rodada ([Room.board]), na ordem do placar. [left] = saiu da rodada (ou da sala); [stale] =
+ * "sem conexão": não terminou e não manda o placar há 15 s (ou nunca mandou, 15 s depois do começo), pela hora do
+ * servidor estimada na leitura. Quem saiu da sala antes de este aparelho vê-lo fica com o [name] vazio.
+ */
+data class BoardLine(
+    val uid: String,
+    val name: String,
+    val device: RoomDevice,
+    val score: Long,
+    val combo: Int,
+    val maxCombo: Int,
+    val accuracy: Float,
+    val finished: Boolean,
+    val left: Boolean,
+    val stale: Boolean,
+)
+
+/**
  * A sala vista pelo jogador [me]: os [players] na ordem em que entraram, a música, a rodada ([round] 0 = nenhuma
  * ainda) e o [startAt] da partida (hora do servidor; converta com o [RoomClock]). [firstReadyAt] não está no banco:
  * é a hora do servidor (a `atividadeEm` da leitura) em que este aparelho viu o primeiro Pronto nesta música (ver
- * [RoomRound]).
+ * [RoomRound]). [boards] é o placar de cada rodada guardada no banco (a atual e a anterior), já na ordem (ver
+ * [RoundBoard]).
  */
 data class Room(
     val code: String,
@@ -88,8 +121,18 @@ data class Room(
     val state: RoomState = RoomState.LOBBY,
     val startAt: Long? = null,
     val firstReadyAt: Long? = null,
+    val boards: Map<Int, List<BoardLine>> = emptyMap(),
 ) {
     val iAmOwner: Boolean get() = owner == me
+
+    /** O placar da rodada atual, na ordem (ver [RoundBoard]). */
+    val board: List<BoardLine> get() = boardOf(round)
+
+    /** O placar da rodada [round] (vazio se o banco não tem mais: o dono apaga a de duas rodadas atrás). */
+    fun boardOf(round: Int): List<BoardLine> = boards[round].orEmpty()
+
+    /** A rodada atual acabou na hora do servidor [nowServer] (ver [RoundBoard.roundOver]). */
+    fun roundOver(nowServer: Long): Boolean = RoundBoard.roundOver(this, nowServer)
 
     /** O Começar habilitado na hora do servidor [nowServer] (ver [RoomRound.canStart]). */
     fun canStart(nowServer: Long): Boolean = RoomRound.canStart(this, nowServer)

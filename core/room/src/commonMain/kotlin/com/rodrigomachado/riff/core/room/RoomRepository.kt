@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import kotlin.random.Random
 
@@ -32,6 +34,9 @@ import kotlin.random.Random
  * Na M2, a música (`musica`), a rodada (`rodada`, `estado`, `inicio`) e o estado de cada jogador para a música
  * (`dificuldade`, `pronto`, `musica`, `carregou`, `saiu`). As contas de tempo da rodada (os 30 s do Começar, os 15 s
  * do carregamento, o começo 3 s depois) usam a hora do servidor estimada pelo [measureClock].
+ *
+ * Na M3, o placar de cada rodada (`placar/{rodada}/{uid}`): cada um grava o próprio ([publishScore]) e a sala lida
+ * traz o de todos ([Room.board], [Room.boardOf]); o Começar apaga o de duas rodadas atrás.
  */
 @Suppress("TooManyFunctions") // a sala inteira (M1 e M2) é uma API só, com uma função por ação mais as escritas
 class RoomRepository(
@@ -57,6 +62,13 @@ class RoomRepository(
     private var offset: Long? = null
     private val firstReady = mutableMapOf<String, FirstReady>()
     private val countdowns = mutableMapOf<Pair<String, Int>, Long>()
+
+    /** Os jogadores que este aparelho já viu em cada sala (o nome de quem saiu dela, no placar). */
+    private val known = mutableMapOf<String, MutableMap<String, RoomPlayer>>()
+
+    /** O último placar de cada (sala, rodada) que ainda não chegou ao banco ([publishScore]). */
+    private val unsent = mutableMapOf<Pair<String, Int>, RoundScore>()
+    private val sending = Mutex()
 
     /**
      * Cria uma sala com um código sorteado: `PUT` só se o código está livre (`if-match: null_etag`). Código ocupado
@@ -121,6 +133,7 @@ class RoomRepository(
      * sala, sem internet ou recusado, não faz nada.
      */
     suspend fun heartbeat(code: String) {
+        sendScores(code)
         try {
             beat(auth.uid(), code)
         } catch (_: NoConnection) {
@@ -216,6 +229,39 @@ class RoomRepository(
         false
     }
 
+    /**
+     * Grava o meu placar da rodada [round] (`PUT placar/{rodada}/{uid}`, inteiro, nos limites das regras e com a hora
+     * do servidor), a cada 1 s na partida e no fim ([RoundScore.finished]). Não lança: sem internet guarda o último
+     * de cada rodada e o reenvia no próximo [publishScore] ou batimento ([heartbeat]), então o envio final chega
+     * quando a conexão volta. Recusado (a rodada já não vale, saí da sala) esquece. Suspende enquanto envia: a
+     * partida chama fora da thread da tela. Rodada 0 (nenhuma) não grava.
+     */
+    suspend fun publishScore(code: String, round: Int, score: RoundScore) {
+        if (round < 1) return
+        synchronized(unsent) { unsent[code to round] = score }
+        sendScores(code)
+    }
+
+    /** Envia os placares guardados da sala [code], um de cada vez (um mais velho nunca chega depois do novo). */
+    private suspend fun sendScores(code: String) = sending.withLock {
+        val pending = synchronized(unsent) { unsent.filterKeys { it.first == code } }
+        for ((key, score) in pending) {
+            val sent = try {
+                db.put(
+                    "${RoomFormat.path(code)}/${ScoreFormat.scorePath(auth.uid(), key.second)}",
+                    ScoreFormat.score(score),
+                )
+                true
+            } catch (_: NoConnection) {
+                false // fica guardado; os outros também não vão agora
+            } catch (e: RoomHttpError) {
+                e.code in REFUSED // recusado: não adianta reenviar; outro erro, tenta de novo depois
+            }
+            if (!sent) break
+            synchronized(unsent) { if (unsent[key] == score) unsent.remove(key) }
+        }
+    }
+
     /** A música da rodada [round] carregou (a partida montada, parada). */
     suspend fun markLoaded(code: String, round: Int) = markRound(code, round) { RoundFormat.loaded(it, round) }
 
@@ -292,17 +338,33 @@ class RoomRepository(
     private fun forget(code: String) {
         synchronized(firstReady) { firstReady.remove(code) }
         synchronized(countdowns) { countdowns.keys.removeAll { it.first == code } }
+        synchronized(known) { known.remove(code) }
+        synchronized(unsent) { unsent.keys.removeAll { it.first == code } }
     }
 
     /** Quando este aparelho viu a contagem da rodada [round] pela primeira vez (hora do servidor). */
     private fun countdownSince(code: String, round: Int, now: Long): Long =
         synchronized(countdowns) { countdowns.getOrPut(code to round) { now } }
 
-    /** A sala lida, com o primeiro Pronto que este aparelho viu nesta música. */
+    /**
+     * A sala lida, com o primeiro Pronto que este aparelho viu nesta música e o placar de cada rodada. O "agora" do
+     * placar é a hora do servidor estimada: o relógio medido ([measureClock]), se já mediu, ou o tempo mais novo
+     * gravado na sala (o último placar ou batimento de alguém: fica para trás, nunca adiantado), o que for maior.
+     */
     private fun read(code: String, json: JSONObject, me: String): Room {
         val room = RoomFormat.room(code, json, me, clock())
         val tracker = synchronized(firstReady) { firstReady.getOrPut(code) { FirstReady() } }
-        return room.copy(firstReadyAt = tracker.update(room, json.optLong(ACTIVITY)))
+        val seen = synchronized(known) {
+            known.getOrPut(code) { mutableMapOf() }.apply { room.players.forEach { put(it.uid, it) } }.toMap()
+        }
+        val scores = ScoreFormat.scores(json)
+        val written = maxOf(RoomFormat.latestTime(json), ScoreFormat.latestScoreTime(scores))
+        val nowServer = maxOf(written, offset?.let { clock() + it } ?: written)
+        val rounds = scores.keys + room.round
+        val boards = rounds.associateWith { round ->
+            RoundBoard.lines(room, round, scores[round].orEmpty(), nowServer, seen)
+        }.filterValues { it.isNotEmpty() }
+        return room.copy(firstReadyAt = tracker.update(room, json.optLong(ACTIVITY)), boards = boards)
     }
 
     /**

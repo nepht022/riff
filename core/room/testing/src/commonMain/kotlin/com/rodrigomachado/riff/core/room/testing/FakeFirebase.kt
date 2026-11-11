@@ -182,6 +182,34 @@ class FakeFirebase(val clock: () -> Long, val uid: String = "u1") : RoomHttp {
         set("salas/$code", room.toString())
     }
 
+    /**
+     * O placar de [uid] na rodada [round] da sala [code], no formato do app (`placar/{rodada}/{uid}`, M3);
+     * [updatedAt] null = o [clock] de agora.
+     */
+    @Suppress("LongParameterList") // o placar inteiro, com os padrões de um placar no começo
+    fun seedScore(
+        code: String,
+        round: Int,
+        uid: String,
+        points: Long = 0,
+        combo: Int = 0,
+        maxCombo: Int = 0,
+        accuracy: Int = 0,
+        finished: Boolean = false,
+        updatedAt: Long? = null,
+    ) {
+        val score = JSONObject()
+            .put("pontos", points)
+            .put("combo", combo)
+            .put("maiorCombo", maxCombo)
+            .put("acertos", 0)
+            .put("notas", 0)
+            .put("precisao", accuracy)
+            .put("terminou", finished)
+            .put("atualizadoEm", updatedAt ?: clock())
+        set("salas/$code/placar/$round/$uid", score.toString())
+    }
+
     override suspend fun request(method: String, url: String, body: String?, headers: Map<String, String>) =
         self.request(method, url, body, headers)
 
