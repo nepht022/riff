@@ -452,21 +452,33 @@ private const val ROOM_REPORT_TIMEOUT_MS = 10_000L
 /** De quanto em quanto a partida de sala publica o meu placar ao vivo. */
 internal const val LIVE_PUBLISH_EVERY_MS = 1_000L
 
-/** O meu placar ao vivo agora (o uid e o nome a sala sabe). */
+/**
+ * O meu placar ao vivo agora (o uid e o nome a sala sabe). A precisão, no meio da partida, é sobre as notas que já
+ * passaram (o BOM vale meia, como no [GameEngine.accuracy]); no fim, a do motor (sobre o mapa inteiro).
+ */
 private fun GameEngine.liveScore(finished: Boolean): LiveScore {
     val hits = count(Judgment.PERFECT) + count(Judgment.GOOD)
+    val judged = hits + count(Judgment.MISS)
+    val accuracy = when {
+        finished -> accuracy()
+        judged == 0 -> 0f
+        else -> (count(Judgment.PERFECT) + GOOD_WEIGHT * count(Judgment.GOOD)) / judged
+    }
     return LiveScore(
         uid = "",
         name = "",
         score = score,
         combo = combo,
         maxCombo = state.maxCombo,
-        accuracy = accuracy(),
+        accuracy = accuracy,
         finished = finished,
         hits = hits,
-        notes = hits + count(Judgment.MISS),
+        notes = judged,
     )
 }
+
+/** Quanto o BOM vale na precisão (como no [GameEngine.accuracy]). */
+private const val GOOD_WEIGHT = 0.5f
 
 /** Quanto a pista volta ao continuar depois de uma pausa. */
 private const val REWIND_ON_RESUME_MS = 500L

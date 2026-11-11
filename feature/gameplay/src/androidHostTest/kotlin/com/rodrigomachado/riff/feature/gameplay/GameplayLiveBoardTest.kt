@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.gameplay
 
 import com.rodrigomachado.riff.core.game.TimeSource
+import com.rodrigomachado.riff.core.model.Judgment
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -95,6 +96,31 @@ class GameplayLiveBoardTest : GameplayViewModelTestBase() {
         assertEquals(0, last.hits)
         assertEquals(engine.accuracy(), last.accuracy)
         assertFalse(last.finished)
+    }
+
+    /**
+     * No meio da partida, a precisão é sobre as notas que já passaram (o BOM vale meia, como no motor), não sobre as
+     * notas do mapa inteiro; no fim, a do motor.
+     */
+    @Test
+    fun partialAccuracyIsOverThePassedNotes() = runTest {
+        loader.result = { playable() }
+        val viewModel = roomViewModel(match, clock(), liveBoard = board)
+        match.start.complete(0)
+        runCurrent()
+        val engine = (viewModel.uiState.value as GameplayUiState.Ready).session.engine
+
+        assertEquals(Judgment.GOOD, engine.onPress(0, 1_080)) // a 1.ª nota, 80 ms atrasada: BOM
+        frames(viewModel, 1_000)
+        assertEquals(0.5f, board.published.last().accuracy, 0.0001f) // 1 BOM em 1 nota (não 0,25: em 2)
+
+        engine.update(2_500) // a 2.ª passou sem tocar
+        frames(viewModel, 1_000)
+        assertEquals(0.25f, board.published.last().accuracy, 0.0001f)
+
+        viewModel.onSessionFinished()
+        runCurrent()
+        assertEquals(engine.accuracy(), board.published.last().accuracy)
     }
 
     @Test
