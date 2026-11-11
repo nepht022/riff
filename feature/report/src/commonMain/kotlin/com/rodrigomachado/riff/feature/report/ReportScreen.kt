@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -19,7 +18,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,9 +30,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
+import com.rodrigomachado.riff.core.ui.component.KeyHint
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.tabLeaves
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
@@ -49,6 +53,7 @@ import com.rodrigomachado.riff.feature.report.resources.report_custom_category
 import com.rodrigomachado.riff.feature.report.resources.report_device_title
 import com.rodrigomachado.riff.feature.report.resources.report_done
 import com.rodrigomachado.riff.feature.report.resources.report_failed
+import com.rodrigomachado.riff.feature.report.resources.report_keys_next
 import com.rodrigomachado.riff.feature.report.resources.report_kind_other
 import com.rodrigomachado.riff.feature.report.resources.report_kind_problem
 import com.rodrigomachado.riff.feature.report.resources.report_kind_suggestion
@@ -105,39 +110,42 @@ fun ReportContent(
     onCategory: (ReportCategory) -> Unit = {},
     onCustomCategory: (String) -> Unit = {},
 ) {
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        // Sem som aqui: a navegação toca o de voltar ao sair da tela (com ele, soava duas vezes).
-        TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
-            Text(stringResource(Res.string.report_back), color = RiffColors.Paper)
-        }
-        PosterTitle(stringResource(Res.string.report_title), style = MaterialTheme.typography.displaySmall)
-        if (state.status == ReportStatus.SENT) {
-            Text(
-                stringResource(Res.string.report_sent),
-                Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                style = MaterialTheme.typography.titleLarge,
-                color = RiffColors.Paper,
-            )
-            PosterButton(
-                stringResource(Res.string.report_done),
-                onClick = onBack,
-                modifier = Modifier.testTag(ReportTestTags.DONE),
-            )
-        } else {
-            ReportForm(state, ReportInputs(onKind, onCategory, onCustomCategory, onText, onContact, onIncludeDevice))
-            StatusMessage(state.status)
-            PosterButton(
-                stringResource(
-                    if (state.status == ReportStatus.SENDING) Res.string.report_sending else Res.string.report_send,
-                ),
-                onClick = onSend,
-                enabled = state.canSend,
-                sound = MenuSound.CONFIRM,
-                modifier = Modifier.testTag(ReportTestTags.SEND).padding(bottom = Spacing.lg),
-            )
+    // No PC, Tab sai do campo do texto (onde ↑/↓ andam nas linhas).
+    val keys = listOf(moveHint(), KeyHint("Tab", pad = null, label = stringResource(Res.string.report_keys_next)))
+    WithPcKeyHints(keys + chooseHint() + backHint(), modifier) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            // Sem som aqui: a navegação toca o de voltar ao sair da tela (com ele, soava duas vezes).
+            BackRow(onBack = onBack, text = stringResource(Res.string.report_back))
+            PosterTitle(stringResource(Res.string.report_title), style = MaterialTheme.typography.displaySmall)
+            if (state.status == ReportStatus.SENT) {
+                Text(
+                    stringResource(Res.string.report_sent),
+                    Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.titleLarge,
+                    color = RiffColors.Paper,
+                )
+                PosterButton(
+                    stringResource(Res.string.report_done),
+                    onClick = onBack,
+                    modifier = Modifier.testTag(ReportTestTags.DONE),
+                )
+            } else {
+                val inputs = ReportInputs(onKind, onCategory, onCustomCategory, onText, onContact, onIncludeDevice)
+                ReportForm(state, inputs)
+                StatusMessage(state.status)
+                PosterButton(
+                    stringResource(
+                        if (state.status == ReportStatus.SENDING) Res.string.report_sending else Res.string.report_send,
+                    ),
+                    onClick = onSend,
+                    enabled = state.canSend,
+                    sound = MenuSound.CONFIRM,
+                    modifier = Modifier.testTag(ReportTestTags.SEND).padding(bottom = Spacing.lg),
+                )
+            }
         }
     }
 }

@@ -49,9 +49,13 @@ import com.rodrigomachado.riff.core.model.ControlAction
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.EmptyState
 import com.rodrigomachado.riff.core.ui.component.LoadingState
+import com.rodrigomachado.riff.core.ui.component.PcKeyHints
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.stage.HighwayGeometry
@@ -315,34 +319,44 @@ private fun PauseOverlay(
 ) {
     // A pausa fechou com um botão focado: a próxima começa sem foco (a primeira seta foca o Continuar).
     DisposableEffect(menu) { onDispose { menu.hasFocus = false } }
-    Column(
-        Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA))
-            .testTag(GameplayTestTags.PAUSE_MENU)
-            .pauseMenu(menu),
-        verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        PosterTitle(stringResource(Res.string.gameplay_paused))
-        if (state.audioBusy) {
-            Text(
-                stringResource(Res.string.gameplay_audio_busy),
-                style = MaterialTheme.typography.bodyLarge,
-                color = RiffColors.Paper,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                // O TalkBack anuncia o motivo da pausa (o foco some com o Continuar que volta a pausar).
-                modifier = Modifier.padding(horizontal = Spacing.lg).semantics { liveRegion = LiveRegionMode.Polite },
+    // No PC, a barra de teclas no pé da pausa (a pista, por trás, fica sem ela). Esc continua a música.
+    val keys = listOf(moveHint(), chooseHint(), backHint(stringResource(Res.string.gameplay_resume)))
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().background(RiffColors.StageBlack.copy(alpha = SCRIM_ALPHA))
+                .testTag(GameplayTestTags.PAUSE_MENU)
+                .pauseMenu(menu),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            PosterTitle(stringResource(Res.string.gameplay_paused))
+            if (state.audioBusy) {
+                Text(
+                    stringResource(Res.string.gameplay_audio_busy),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = RiffColors.Paper,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    // O TalkBack anuncia o motivo da pausa (o foco some com o Continuar que volta a pausar).
+                    modifier = Modifier
+                        .padding(horizontal = Spacing.lg)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
+            PosterButton(
+                stringResource(Res.string.gameplay_resume),
+                onClick = onResume,
+                modifier = Modifier.testTag(GameplayTestTags.RESUME).focusRequester(menu.first),
+                sound = MenuSound.CONFIRM,
             )
+            SyncAdjuster(state.songOffsetMs, onAdjustOffset)
+            TextButton(
+                onClick = onExit,
+                modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape),
+            ) {
+                Text(stringResource(Res.string.gameplay_exit), color = RiffColors.Paper)
+            }
         }
-        PosterButton(
-            stringResource(Res.string.gameplay_resume),
-            onClick = onResume,
-            modifier = Modifier.testTag(GameplayTestTags.RESUME).focusRequester(menu.first),
-            sound = MenuSound.CONFIRM,
-        )
-        SyncAdjuster(state.songOffsetMs, onAdjustOffset)
-        TextButton(onClick = onExit, modifier = Modifier.testTag(GameplayTestTags.EXIT).focusHighlight(CircleShape)) {
-            Text(stringResource(Res.string.gameplay_exit), color = RiffColors.Paper)
-        }
+        PcKeyHints(keys, Modifier.align(Alignment.BottomCenter))
     }
 }
 

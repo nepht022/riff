@@ -38,6 +38,7 @@ import com.rodrigomachado.riff.core.room.BoardLine
 import com.rodrigomachado.riff.core.room.RoomDevice
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.core.ui.theme.oswald
@@ -72,24 +73,26 @@ fun RoomResultsScreen(viewModel: RoomResultsViewModel, onBackToRoom: () -> Unit,
  */
 @Composable
 fun RoomResultsContent(state: RoomResultsUiState, onBackToRoom: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        PosterTitle(stringResource(Res.string.room_results_title), style = MaterialTheme.typography.headlineMedium)
-        when (state) {
-            RoomResultsUiState.Loading -> CircularProgressIndicator(
-                color = RiffColors.Paper,
+    WithPcKeyHints(roomMenuKeys(), modifier) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            PosterTitle(stringResource(Res.string.room_results_title), style = MaterialTheme.typography.headlineMedium)
+            when (state) {
+                RoomResultsUiState.Loading -> CircularProgressIndicator(
+                    color = RiffColors.Paper,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+
+                is RoomResultsUiState.Ready -> Standings(state)
+            }
+            PosterButton(
+                stringResource(Res.string.room_results_back),
+                onClick = onBackToRoom,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
-
-            is RoomResultsUiState.Ready -> Standings(state)
         }
-        PosterButton(
-            stringResource(Res.string.room_results_back),
-            onClick = onBackToRoom,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
     }
 }
 

@@ -86,4 +86,6 @@
     <string name="settings_action_strum_up">Palheta ↑</string>
     <string name="settings_action_strum_down">Palheta ↓</string>
     <string name="settings_action_pause">Pausa</string>
+    <string name="settings_keys_tabs">Abas e opções</string>
+    <string name="settings_keys_change">Mudar valor</string>
 </resources>

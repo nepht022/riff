@@ -9,10 +9,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rodrigomachado.riff.core.ui.component.KeyHint
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.room.resources.Res
 import com.rodrigomachado.riff.feature.room.resources.room_full
+import com.rodrigomachado.riff.feature.room.resources.room_join
+import com.rodrigomachado.riff.feature.room.resources.room_keys_code
+import com.rodrigomachado.riff.feature.room.resources.room_keys_erase
 import com.rodrigomachado.riff.feature.room.resources.room_no_connection
 import com.rodrigomachado.riff.feature.room.resources.room_not_found
 import org.jetbrains.compose.resources.StringResource
@@ -62,3 +69,17 @@ private val STAMP_SPACING = 1.5.sp
 
 /** A sombra dura dos quadros e cartazes do app. */
 internal val HardShadow = 4.dp
+
+/** As teclas da escolha da Sala e do Resultado da sala no PC. */
+@Composable
+internal fun roomMenuKeys(): List<KeyHint> = listOf(moveHint(), chooseHint(), backHint())
+
+/** As teclas de entrar com o código no PC: as letras na caixa, Backspace apaga, Enter entra, Esc volta. */
+@Composable
+internal fun joinKeys(): List<KeyHint> = listOf(
+    KeyHint("A–Z", pad = null, label = stringResource(Res.string.room_keys_code)),
+    KeyHint("Backspace", pad = null, label = stringResource(Res.string.room_keys_erase)),
+    moveHint("↑ ↓"),
+    chooseHint(stringResource(Res.string.room_join)),
+    backHint(),
+)

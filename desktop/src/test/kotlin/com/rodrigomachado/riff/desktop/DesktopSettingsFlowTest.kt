@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -113,7 +114,8 @@ class DesktopSettingsFlowTest {
         click("English")
 
         composeRule.waitUntilAtLeastOneExists(hasText("Settings"), TIMEOUT_MS)
-        click("Back")
+        // O "Back" do topo (a barra de teclas também diz "Esc Back").
+        composeRule.clickOnWindowThread(composeRule.onNode(hasText("Back") and hasClickAction()))
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
         composeRule.onNodeWithText("Settings").assertDoesNotExist()
         // A tela inicial também no idioma novo.

@@ -72,4 +72,6 @@
     <string name="room_keys_move">Mover</string>
     <string name="room_keys_choose">Escolher</string>
     <string name="room_keys_leave">Sair da sala</string>
+    <string name="room_keys_code">Código</string>
+    <string name="room_keys_erase">Apagar</string>
 </resources>

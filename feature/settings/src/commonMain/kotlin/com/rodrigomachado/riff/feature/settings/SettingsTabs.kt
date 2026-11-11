@@ -6,16 +6,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -25,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,13 +47,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
+import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.input.menuKeysEnabled
+import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
+import com.rodrigomachado.riff.feature.settings.resources.settings_back
 import com.rodrigomachado.riff.feature.settings.resources.settings_game
 import com.rodrigomachado.riff.feature.settings.resources.settings_language
 import com.rodrigomachado.riff.feature.settings.resources.settings_licenses
@@ -61,10 +71,40 @@ import com.rodrigomachado.riff.feature.settings.resources.settings_tab_ai
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_controls
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_general
 import com.rodrigomachado.riff.feature.settings.resources.settings_tab_track_look
+import com.rodrigomachado.riff.feature.settings.resources.settings_title
 import org.jetbrains.compose.resources.stringResource
 
 /** As abas das Configurações, na ordem da barra; a dos Controles é só do PC. */
 enum class SettingsTab { GENERAL, SOUNDS, GAME, CONTROLS, TRACK_LOOK, AI }
+
+/** O celular (e a janela estreita do PC): a coluna no meio, com as abas numa barra no topo. */
+@Composable
+internal fun PhoneSettings(
+    tabs: List<SettingsTab>,
+    tab: SettingsTab,
+    onTab: (SettingsTab) -> Unit,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                BackRow(onBack = onBack, text = stringResource(Res.string.settings_back))
+                Spacer(Modifier.weight(1f))
+                SeparationIndicator()
+            }
+            PosterTitle(stringResource(Res.string.settings_title), style = MaterialTheme.typography.displaySmall)
+            SettingsTabBar(tabs, tab, onSelect = onTab)
+            // Cada aba começa do topo.
+            key(tab) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) { content() }
+            }
+        }
+    }
+}
 
 /** Barra de abas que rola de lado se não couber; a escolhida fica clara e sublinhada de vermelho. */
 @Composable
@@ -107,7 +147,7 @@ internal fun SettingsTabBar(tabs: List<SettingsTab>, selected: SettingsTab, onSe
 }
 
 @Composable
-private fun tabTitle(tab: SettingsTab): String = stringResource(
+internal fun tabTitle(tab: SettingsTab): String = stringResource(
     when (tab) {
         SettingsTab.GENERAL -> Res.string.settings_tab_general
         SettingsTab.SOUNDS -> Res.string.settings_sounds

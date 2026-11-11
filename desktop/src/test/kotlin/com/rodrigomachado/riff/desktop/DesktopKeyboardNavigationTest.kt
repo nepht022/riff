@@ -114,11 +114,13 @@ class DesktopKeyboardNavigationTest {
         val graph = openSettings()
         val before = runBlocking { graph.settings.settings.first().menuSounds }
 
+        // As abas numa coluna à esquerda (PC largo): ↑/↓ andam nelas; → entra nas opções, onde ↑/↓ andam também.
         pressUntilFocused(Key.DirectionDown, hasText("Geral"))
-        press(Key.DirectionRight)
+        press(Key.DirectionDown)
         composeRule.onNodeWithText("Sons").assertIsFocused()
-        press(Key.DirectionLeft)
+        press(Key.DirectionUp)
         composeRule.onNodeWithText("Geral").assertIsFocused()
+        press(Key.DirectionRight)
         pressUntilFocused(Key.DirectionDown, hasTestTag(SettingsTestTags.MENU_SOUNDS))
         press(Key.Enter)
 
@@ -129,9 +131,10 @@ class DesktopKeyboardNavigationTest {
     fun leftAndRightChangeAFocusedSlider() {
         val graph = openSettings()
         pressUntilFocused(Key.DirectionDown, hasText("Geral"))
-        press(Key.DirectionRight)
+        press(Key.DirectionDown)
         press(Key.Enter) // abre a aba Sons
         composeRule.waitUntilAtLeastOneExists(hasTestTag(SettingsTestTags.MASTER_VOLUME), TIMEOUT_MS)
+        press(Key.DirectionRight) // da coluna das abas às opções
         pressUntilFocused(Key.DirectionDown, hasTestTag(SettingsTestTags.MASTER_VOLUME))
         fun volume() = runBlocking { graph.settings.settings.first().masterVolume }
         val full = volume() // começa no máximo: ← primeiro
@@ -235,6 +238,8 @@ class DesktopKeyboardNavigationTest {
     @Test
     fun escapeClosesADialogWithoutGoingBack() {
         openSettings()
+        pressUntilFocused(Key.DirectionDown, hasText("Geral"))
+        press(Key.DirectionRight) // da coluna das abas às opções
         pressUntilFocused(Key.DirectionDown, hasText("Idioma"))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText("English"), TIMEOUT_MS)
@@ -249,6 +254,8 @@ class DesktopKeyboardNavigationTest {
     @Test
     fun afterTheFocusedItemDisappearsTheNextArrowFindsAnother() {
         openSettings()
+        pressUntilFocused(Key.DirectionDown, hasText("Geral"))
+        press(Key.DirectionRight) // da coluna das abas às opções
         pressUntilFocused(Key.DirectionDown, hasText("Idioma"))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText("English"), TIMEOUT_MS)
@@ -267,10 +274,11 @@ class DesktopKeyboardNavigationTest {
     fun escapeWhileMeasuringStopsTheCalibrationOnly() {
         openSettings()
         pressUntilFocused(Key.DirectionDown, hasText("Geral"))
-        press(Key.DirectionRight)
-        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
         press(Key.Enter) // abre a aba Jogo
         composeRule.waitUntilAtLeastOneExists(hasText("Calibrar atraso do áudio"), TIMEOUT_MS)
+        press(Key.DirectionRight) // da coluna das abas às opções
         pressUntilFocused(Key.DirectionDown, hasText("Calibrar atraso do áudio"))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText("Começar"), TIMEOUT_MS)

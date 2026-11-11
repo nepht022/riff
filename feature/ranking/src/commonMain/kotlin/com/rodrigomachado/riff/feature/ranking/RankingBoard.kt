@@ -27,6 +27,7 @@ import com.rodrigomachado.riff.core.data.ranking.RankingMetric
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -81,54 +82,57 @@ fun RankingBoardScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewMo
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RankingBoardContent(state: RankingBoardUiState, actions: BoardActions, modifier: Modifier = Modifier) {
-    LazyColumn(
-        modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        item { BackButton(actions.onBack) }
-        item { PosterTitle(state.title, style = MaterialTheme.typography.headlineSmall) }
-        item { TableChips(state.table, actions.onTable) }
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
-                verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
-            ) {
-                for (difficulty in state.board?.difficulties.orEmpty()) {
-                    Chip(difficultyName(difficulty.ordinal), difficulty == state.board?.difficulty) {
-                        actions.onDifficulty(difficulty)
+    WithPcKeyHints(rankingKeys(), modifier) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            item { BackButton(actions.onBack) }
+            item { PosterTitle(state.title, style = MaterialTheme.typography.headlineSmall) }
+            item { TableChips(state.table, actions.onTable) }
+            item {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                ) {
+                    for (difficulty in state.board?.difficulties.orEmpty()) {
+                        Chip(difficultyName(difficulty.ordinal), difficulty == state.board?.difficulty) {
+                            actions.onDifficulty(difficulty)
+                        }
                     }
                 }
             }
-        }
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
-                verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
-            ) {
-                for (metric in RankingMetric.entries) {
-                    Chip(stringResource(metric.label()), metric == state.metric) { actions.onMetric(metric) }
-                }
-                val direction = if (state.descending) Res.string.ranking_descending else Res.string.ranking_ascending
-                Chip(
-                    stringResource(direction),
-                    selected = true,
-                    onClick = actions.onToggleDirection,
-                )
-            }
-        }
-        item { SearchField(state.query, stringResource(Res.string.ranking_search_name), actions.onQuery) }
-        if (state.offline) item { Offline(actions.onRetry) }
-        val lines = state.board?.lines.orEmpty()
-        if (state.loading && state.board == null) item { Message(stringResource(Res.string.ranking_loading)) }
-        if (!state.offline && !state.loading && lines.isEmpty()) {
             item {
-                Message(
-                    stringResource(Res.string.ranking_empty),
-                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                ) {
+                    for (metric in RankingMetric.entries) {
+                        Chip(stringResource(metric.label()), metric == state.metric) { actions.onMetric(metric) }
+                    }
+                    val direction =
+                        if (state.descending) Res.string.ranking_descending else Res.string.ranking_ascending
+                    Chip(
+                        stringResource(direction),
+                        selected = true,
+                        onClick = actions.onToggleDirection,
+                    )
+                }
             }
+            item { SearchField(state.query, stringResource(Res.string.ranking_search_name), actions.onQuery) }
+            if (state.offline) item { Offline(actions.onRetry) }
+            val lines = state.board?.lines.orEmpty()
+            if (state.loading && state.board == null) item { Message(stringResource(Res.string.ranking_loading)) }
+            if (!state.offline && !state.loading && lines.isEmpty()) {
+                item {
+                    Message(
+                        stringResource(Res.string.ranking_empty),
+                    )
+                }
+            }
+            items(lines, key = { it.position to it.name }) { line -> Line(line, state.metric) }
         }
-        items(lines, key = { it.position to it.name }) { line -> Line(line, state.metric) }
     }
 }
 

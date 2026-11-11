@@ -25,6 +25,7 @@ import com.rodrigomachado.riff.core.data.ranking.Player
 import com.rodrigomachado.riff.core.data.ranking.PlayerNames
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.PcKeyHints
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
@@ -33,6 +34,7 @@ import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.ranking.resources.Res
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_back
+import com.rodrigomachado.riff.feature.ranking.resources.ranking_keys_close
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_code_hint
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_code_title
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_link_confirm
@@ -327,6 +329,9 @@ private fun NameDialog(
                 // Só quem já tem nome pode levá-lo; qualquer um pode trazer o de outro aparelho.
                 if (state.hasName) LinkButton(stringResource(Res.string.ranking_link_share), link.onShowCode)
                 LinkButton(stringResource(Res.string.ranking_link_enter), link.onEnterCode)
+                // No PC, as teclas do diálogo (o Esc cancela a troca ou, na primeira abertura, é o "Agora não").
+                val escape = if (onDismiss != null) Res.string.ranking_keys_close else Res.string.ranking_name_later
+                PcKeyHints(rankingDialogKeys(stringResource(escape)))
             }
         },
         confirmButton = {
@@ -383,6 +388,7 @@ private fun ShowCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, l
                     )
                 }
                 state.linkError?.let { ErrorText(stringResource(it.message())) }
+                PcKeyHints(rankingDialogKeys(stringResource(Res.string.ranking_back)))
             }
         },
         confirmButton = {
@@ -441,6 +447,7 @@ private fun EnterCodeDialog(state: PlayerNameUiState, onDismiss: (() -> Unit)?, 
                     )
                 }
                 state.linkError?.let { ErrorText(stringResource(it.message())) }
+                PcKeyHints(rankingDialogKeys(stringResource(Res.string.ranking_back)))
             }
         },
         confirmButton = {

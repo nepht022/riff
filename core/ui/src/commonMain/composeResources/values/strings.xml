@@ -19,4 +19,7 @@
     <string name="ui_separation_close">Fechar</string>
     <string name="ui_separation_ok">OK</string>
     <string name="ui_back">Voltar</string>
+    <string name="ui_keys_move">Mover</string>
+    <string name="ui_keys_choose">Escolher</string>
+    <string name="ui_keys_back">Voltar</string>
 </resources>

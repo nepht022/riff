@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
@@ -80,33 +81,35 @@ fun RoomEntryContent(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
 ) {
-    Column(
-        modifier.fillMaxSize().menuKeys(onBack).verticalScroll(rememberScrollState()).padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
-        PosterTitle(stringResource(Res.string.room_title), style = MaterialTheme.typography.displayMedium)
-        val enabled = !state.creating
-        BigTile(
-            stringResource(Res.string.room_create),
-            RiffColors.TourRed to RiffColors.Paper,
-            onClick = onCreate.takeIf { enabled },
-            sound = MenuSound.CONFIRM,
-        )
-        BigTile(
-            stringResource(Res.string.room_join_with_code),
-            RiffColors.Paper to RiffColors.Ink,
-            onClick = onJoin.takeIf { enabled },
-            sound = MenuSound.NAVIGATE,
-        )
-        if (state.creating) {
-            Text(
-                stringResource(Res.string.room_loading),
-                style = MaterialTheme.typography.bodyLarge,
-                color = RiffColors.PaperDim,
+    WithPcKeyHints(roomMenuKeys(), modifier.menuKeys(onBack)) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
+            PosterTitle(stringResource(Res.string.room_title), style = MaterialTheme.typography.displayMedium)
+            val enabled = !state.creating
+            BigTile(
+                stringResource(Res.string.room_create),
+                RiffColors.TourRed to RiffColors.Paper,
+                onClick = onCreate.takeIf { enabled },
+                sound = MenuSound.CONFIRM,
             )
+            BigTile(
+                stringResource(Res.string.room_join_with_code),
+                RiffColors.Paper to RiffColors.Ink,
+                onClick = onJoin.takeIf { enabled },
+                sound = MenuSound.NAVIGATE,
+            )
+            if (state.creating) {
+                Text(
+                    stringResource(Res.string.room_loading),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = RiffColors.PaperDim,
+                )
+            }
+            state.error?.let { RoomErrorText(it) }
         }
-        state.error?.let { RoomErrorText(it) }
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -61,7 +62,7 @@ class DesktopSearchFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasText("Jogar"), DesktopMatch.TIMEOUT_MS)
         assertEquals(listOf("Banda do Encore - Teste do Encore.sng"), downloaded().map { it.name })
         assertFalse("a busca rodou na thread da janela", encore.onWindowThread)
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText(DesktopMatch.BACK))
+        composeRule.clickOnWindowThread(composeRule.onNode(hasText(DesktopMatch.BACK) and hasClickAction()))
         composeRule.waitUntilAtLeastOneExists(hasText("Teste do Encore"), DesktopMatch.TIMEOUT_MS)
         composeRule.onNodeWithText(DesktopMatch.TITLE).assertExists()
     }
@@ -90,7 +91,7 @@ class DesktopSearchFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasText("Não deu para falar com o Encore."), DesktopMatch.TIMEOUT_MS)
         assertFalse("a busca rodou na thread da janela", encore.onWindowThread)
         // A janela segue respondendo: Voltar leva à Biblioteca.
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText(DesktopMatch.BACK))
+        composeRule.clickOnWindowThread(composeRule.onNode(hasText(DesktopMatch.BACK) and hasClickAction()))
         composeRule.waitUntilAtLeastOneExists(hasText(DesktopMatch.TITLE), DesktopMatch.TIMEOUT_MS)
     }
 

@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -92,7 +93,7 @@ class DesktopReportFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasText(FAILED, substring = true), TIMEOUT_MS)
         assertTrue(exists(hasTestTag(ReportTestTags.TEXT) and hasText("Travou.")))
         // A janela segue respondendo: Voltar leva à tela inicial.
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText("Voltar"))
+        composeRule.clickOnWindowThread(composeRule.onNode(hasText("Voltar") and hasClickAction()))
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
     }
 

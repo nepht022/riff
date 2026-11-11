@@ -72,4 +72,6 @@
     <string name="room_keys_move">Move</string>
     <string name="room_keys_choose">Choose</string>
     <string name="room_keys_leave">Leave room</string>
+    <string name="room_keys_code">Code</string>
+    <string name="room_keys_erase">Erase</string>
 </resources>

@@ -37,6 +37,7 @@ import com.rodrigomachado.riff.core.room.RoomCodes
 import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -84,35 +85,37 @@ fun RoomJoinContent(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
 ) {
-    Column(
-        modifier.fillMaxSize().menuKeys(onBack).verticalScroll(rememberScrollState()).padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
-        PosterTitle(stringResource(Res.string.room_join_with_code), style = MaterialTheme.typography.displaySmall)
-        Text(
-            stringResource(Res.string.room_code),
-            style = MaterialTheme.typography.titleMedium,
-            color = RiffColors.PaperDim,
-            modifier = Modifier.padding(top = Spacing.md),
-        )
-        CodeBoxes(state.code, enabled = !state.joining, onCode = onCode, onDone = { if (state.canJoin) onJoin() })
-        state.error?.let { RoomErrorText(it) }
-        if (state.joining) {
+    WithPcKeyHints(joinKeys(), modifier.menuKeys(onBack)) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
+            PosterTitle(stringResource(Res.string.room_join_with_code), style = MaterialTheme.typography.displaySmall)
             Text(
-                stringResource(Res.string.room_loading),
-                style = MaterialTheme.typography.bodyLarge,
+                stringResource(Res.string.room_code),
+                style = MaterialTheme.typography.titleMedium,
                 color = RiffColors.PaperDim,
+                modifier = Modifier.padding(top = Spacing.md),
+            )
+            CodeBoxes(state.code, enabled = !state.joining, onCode = onCode, onDone = { if (state.canJoin) onJoin() })
+            state.error?.let { RoomErrorText(it) }
+            if (state.joining) {
+                Text(
+                    stringResource(Res.string.room_loading),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = RiffColors.PaperDim,
+                )
+            }
+            PosterButton(
+                stringResource(Res.string.room_join),
+                onClick = onJoin,
+                enabled = state.canJoin,
+                sound = MenuSound.CONFIRM,
+                minWidth = JOIN_WIDTH,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.md),
             )
         }
-        PosterButton(
-            stringResource(Res.string.room_join),
-            onClick = onJoin,
-            enabled = state.canJoin,
-            sound = MenuSound.CONFIRM,
-            minWidth = JOIN_WIDTH,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.md),
-        )
     }
 }
 

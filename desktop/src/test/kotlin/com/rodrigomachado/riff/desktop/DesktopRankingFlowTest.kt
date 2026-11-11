@@ -190,6 +190,9 @@ class DesktopRankingFlowTest {
         match.openApp(ranking = script)
         openSettings()
 
+        // As abas numa coluna à esquerda: da aba Geral, → passa às opções dela.
+        pressUntilFocused(Key.DirectionDown, hasText("Geral"))
+        press(Key.DirectionRight)
         pressUntilFocused(Key.DirectionDown, hasText(SETTINGS_NAME))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText(NAME_TITLE), TIMEOUT_MS)
@@ -221,6 +224,9 @@ class DesktopRankingFlowTest {
     fun escapeStepsBackOutOfTheNameDialog() {
         match.openApp(ranking = script)
         openSettings()
+        // As abas numa coluna à esquerda: da aba Geral, → passa às opções dela.
+        pressUntilFocused(Key.DirectionDown, hasText("Geral"))
+        press(Key.DirectionRight)
         pressUntilFocused(Key.DirectionDown, hasText(SETTINGS_NAME))
         press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText(NAME_TITLE), TIMEOUT_MS)

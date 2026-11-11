@@ -53,4 +53,5 @@
         <item quantity="one">%1$d player with a score</item>
         <item quantity="other">%1$d players with a score</item>
     </plurals>
+    <string name="ranking_keys_close">Close</string>
 </resources>

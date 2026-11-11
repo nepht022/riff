@@ -86,4 +86,6 @@
     <string name="settings_action_strum_up">Strum ↑</string>
     <string name="settings_action_strum_down">Strum ↓</string>
     <string name="settings_action_pause">Pause</string>
+    <string name="settings_keys_tabs">Tabs and options</string>
+    <string name="settings_keys_change">Change value</string>
 </resources>

@@ -182,16 +182,16 @@ internal fun ChoiceRow(
         modifier.fillMaxWidth().alpha(if (enabled) 1f else DISABLED_ALPHA).focusHighlight().clickable(
             enabled = enabled,
             onClick = withMenuSound(MenuSound.NAVIGATE, onClick),
-        ).padding(vertical = Spacing.md),
+        ).settingBlock(LocalWideSettings.current).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             title,
-            style = MaterialTheme.typography.titleMedium,
+            style = rowTitleStyle(),
             color = RiffColors.Paper,
             modifier = Modifier.weight(1f),
         )
-        Text(value, style = MaterialTheme.typography.titleMedium, color = RiffColors.PaperDim)
+        Text(value, style = rowTitleStyle(), color = RiffColors.PaperDim)
     }
 }
 

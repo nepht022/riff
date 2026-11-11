@@ -37,6 +37,7 @@ import com.rodrigomachado.riff.core.data.download.ChartDownloadException.Reason
 import com.rodrigomachado.riff.core.encore.EncoreChart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.DifficultyDialog
 import com.rodrigomachado.riff.core.ui.component.LoadingState
@@ -45,8 +46,12 @@ import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.TrackCard
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeysEnabled
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
@@ -120,29 +125,29 @@ fun SearchContent(
     onSearchMoreWithGuitar: () -> Unit = {},
 ) {
     var choosing by remember { mutableStateOf<Pair<EncoreChart, ItemState.Ready>?>(null) }
-    Column(modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
-                Text(stringResource(Res.string.search_back), color = RiffColors.Paper)
+    WithPcKeyHints(listOf(moveHint(), chooseHint(), backHint()), modifier) {
+        Column(Modifier.fillMaxSize().padding(horizontal = Spacing.md)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                BackRow(onBack = onBack, text = stringResource(Res.string.search_back))
+                Spacer(Modifier.weight(1f))
+                SeparationIndicator()
             }
-            Spacer(Modifier.weight(1f))
-            SeparationIndicator()
-        }
-        PosterTitle(stringResource(Res.string.search_title), style = MaterialTheme.typography.displaySmall)
-        QueryRow(state.query, onQueryChange, onSearch)
-        Text(
-            stringResource(Res.string.search_credit),
-            style = MaterialTheme.typography.bodySmall,
-            color = RiffColors.PaperDim,
-            modifier = Modifier.padding(vertical = Spacing.xs),
-        )
-        FilterRow(state, onShowVersions, onOnlySeparateGuitar)
-        if (!state.canWrite) WriteNeeded(onAllowWrite)
-        state.guitarSearch?.let { GuitarSearchStatus(it, state.results.isEmpty(), onSearchMoreWithGuitar) }
-        when {
-            state.isSearching && state.results.isEmpty() -> LoadingState()
-            state.error != null && state.results.isEmpty() -> SearchFailure(state.error, state.query, onSearch)
-            else -> Results(state, onDownload, onLoadMore) { chart, ready -> choosing = chart to ready }
+            PosterTitle(stringResource(Res.string.search_title), style = MaterialTheme.typography.displaySmall)
+            QueryRow(state.query, onQueryChange, onSearch)
+            Text(
+                stringResource(Res.string.search_credit),
+                style = MaterialTheme.typography.bodySmall,
+                color = RiffColors.PaperDim,
+                modifier = Modifier.padding(vertical = Spacing.xs),
+            )
+            FilterRow(state, onShowVersions, onOnlySeparateGuitar)
+            if (!state.canWrite) WriteNeeded(onAllowWrite)
+            state.guitarSearch?.let { GuitarSearchStatus(it, state.results.isEmpty(), onSearchMoreWithGuitar) }
+            when {
+                state.isSearching && state.results.isEmpty() -> LoadingState()
+                state.error != null && state.results.isEmpty() -> SearchFailure(state.error, state.query, onSearch)
+                else -> Results(state, onDownload, onLoadMore) { chart, ready -> choosing = chart to ready }
+            }
         }
     }
     choosing?.let { (chart, ready) ->

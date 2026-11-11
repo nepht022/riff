@@ -53,4 +53,5 @@
         <item quantity="one">%1$d jogador com pontuação</item>
         <item quantity="other">%1$d jogadores com pontuação</item>
     </plurals>
+    <string name="ranking_keys_close">Fechar</string>
 </resources>

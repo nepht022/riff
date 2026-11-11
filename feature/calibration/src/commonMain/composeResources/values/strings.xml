@@ -20,4 +20,8 @@
     <string name="calibration_unstable">Medição instável. Tente de novo, tocando junto com a batida.</string>
     <string name="calibration_audio_failed">Não deu para tocar o metrônomo.</string>
     <string name="calibration_retry">Tentar de novo</string>
+    <string name="calibration_keys_any_key">Qualquer tecla</string>
+    <string name="calibration_keys_any_button">Qualquer botão</string>
+    <string name="calibration_keys_tap">Junto com a batida</string>
+    <string name="calibration_keys_stop">Parar</string>
 </resources>

@@ -33,13 +33,13 @@ import com.rodrigomachado.riff.core.data.ranking.TableStanding
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.ranking.resources.Res
-import com.rodrigomachado.riff.feature.ranking.resources.ranking_back
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_empty
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_loading
 import com.rodrigomachado.riff.feature.ranking.resources.ranking_not_configured
@@ -88,26 +88,30 @@ fun RankingSongsContent(
     modifier: Modifier = Modifier,
     onTable: (RankingTable) -> Unit = {},
 ) {
-    LazyColumn(
-        modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        item { BackButton(onBack) }
-        item { PosterTitle(stringResource(Res.string.ranking_title), style = MaterialTheme.typography.displaySmall) }
-        if (state.notConfigured) {
-            item { Message(stringResource(Res.string.ranking_not_configured)) }
-            return@LazyColumn
+    WithPcKeyHints(rankingKeys(), modifier) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            item { BackButton(onBack) }
+            item {
+                PosterTitle(stringResource(Res.string.ranking_title), style = MaterialTheme.typography.displaySmall)
+            }
+            if (state.notConfigured) {
+                item { Message(stringResource(Res.string.ranking_not_configured)) }
+                return@LazyColumn
+            }
+            item { TableChips(state.table, onTable) }
+            item { SearchField(state.query, stringResource(Res.string.ranking_search_song), onQuery) }
+            if (state.offline) item { Offline(onRetry) }
+            if (state.loading && state.songs.isEmpty()) item { Message(stringResource(Res.string.ranking_loading)) }
+            if (!state.offline && !state.loading && state.shown.isEmpty()) {
+                val empty = if (state.tableEmpty) Res.string.ranking_table_empty else Res.string.ranking_empty
+                item { Message(stringResource(empty)) }
+            }
+            items(state.shown, key = { it.chartId }) { song -> SongCard(song, state.table) { onSong(song) } }
         }
-        item { TableChips(state.table, onTable) }
-        item { SearchField(state.query, stringResource(Res.string.ranking_search_song), onQuery) }
-        if (state.offline) item { Offline(onRetry) }
-        if (state.loading && state.songs.isEmpty()) item { Message(stringResource(Res.string.ranking_loading)) }
-        if (!state.offline && !state.loading && state.shown.isEmpty()) {
-            val empty = if (state.tableEmpty) Res.string.ranking_table_empty else Res.string.ranking_empty
-            item { Message(stringResource(empty)) }
-        }
-        items(state.shown, key = { it.chartId }) { song -> SongCard(song, state.table) { onSong(song) } }
     }
 }
 
@@ -199,14 +203,6 @@ internal fun Offline(onRetry: () -> Unit) {
 @Composable
 internal fun Message(text: String) {
     Text(text, style = MaterialTheme.typography.bodyLarge, color = RiffColors.PaperDim)
-}
-
-@Composable
-internal fun BackButton(onBack: () -> Unit) {
-    // Sem som aqui: a navegação toca o de voltar ao sair da tela.
-    TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
-        Text(stringResource(Res.string.ranking_back), color = RiffColors.Paper)
-    }
 }
 
 private const val SECONDARY_ALPHA = 0.7f

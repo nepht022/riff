@@ -20,4 +20,8 @@
     <string name="calibration_unstable">Unsteady measurement. Try again, tapping with the beat.</string>
     <string name="calibration_audio_failed">Couldn't play the metronome.</string>
     <string name="calibration_retry">Try again</string>
+    <string name="calibration_keys_any_key">Any key</string>
+    <string name="calibration_keys_any_button">Any button</string>
+    <string name="calibration_keys_tap">On each beat</string>
+    <string name="calibration_keys_stop">Stop</string>
 </resources>
