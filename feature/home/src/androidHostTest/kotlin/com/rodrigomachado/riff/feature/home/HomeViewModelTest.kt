@@ -30,6 +30,8 @@ private class FakeScores(val records: MutableList<ScoreRecord>, val bests: List<
     override suspend fun best(chartId: String, difficulty: Difficulty) =
         records.filter { it.chartId == chartId && it.difficulty == difficulty }.maxByOrNull { it.score }
 
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long) = null
+
     override suspend fun last() = records.maxByOrNull { it.playedAtEpochMs }
 
     override suspend fun recentBests(limit: Int): List<ScoreRecord> {

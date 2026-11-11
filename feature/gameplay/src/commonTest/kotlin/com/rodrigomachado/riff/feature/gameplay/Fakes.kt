@@ -134,6 +134,12 @@ class FakeScoreRepository : com.rodrigomachado.riff.core.data.ScoreRepository {
 
     override suspend fun best(chartId: String, difficulty: com.rodrigomachado.riff.core.model.Difficulty) = null
 
+    override suspend fun bestBefore(
+        chartId: String,
+        difficulty: com.rodrigomachado.riff.core.model.Difficulty,
+        scoreId: Long,
+    ) = null
+
     override suspend fun last() = saved.lastOrNull()?.copy(id = saved.size.toLong())
 
     override suspend fun recentBests(limit: Int) = emptyList<com.rodrigomachado.riff.core.model.ScoreRecord>()

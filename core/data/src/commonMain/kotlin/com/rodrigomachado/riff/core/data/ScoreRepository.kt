@@ -17,6 +17,12 @@ interface ScoreRepository {
 
     suspend fun best(chartId: String, difficulty: Difficulty): ScoreRecord?
 
+    /**
+     * O recorde da [difficulty] do mapa [chartId] de antes da partida [scoreId] (gravado antes dela; o "antes: N" do
+     * Resultado); null quando ela foi a primeira.
+     */
+    suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long): ScoreRecord?
+
     /** A última partida jogada (o "Continuar" da tela inicial); null sem partidas. */
     suspend fun last(): ScoreRecord?
 
@@ -36,6 +42,9 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
         chartId,
         difficulty.name,
     )?.toModel()
+
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long): ScoreRecord? =
+        dao.bestBefore(chartId, difficulty.name, scoreId)?.toModel()
 
     override suspend fun last(): ScoreRecord? = dao.last()?.toModel()
 

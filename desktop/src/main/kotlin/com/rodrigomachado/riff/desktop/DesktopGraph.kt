@@ -310,7 +310,7 @@ class DesktopGraph(
     /** A tela inicial: as partidas do banco do PC e as capas das listas. */
     fun homeViewModel() = HomeViewModel(scores, charts, chartThumbs)
 
-    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
+    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking, chartThumbs)
 
     fun settingsViewModel() = SettingsViewModel(settings, separations, languages, ranking, sfx)
 

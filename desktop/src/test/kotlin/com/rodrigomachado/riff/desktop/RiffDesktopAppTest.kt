@@ -1,7 +1,9 @@
 package com.rodrigomachado.riff.desktop
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -17,10 +19,16 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.rodrigomachado.riff.core.data.folder.pcUri
+import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import com.rodrigomachado.riff.core.ui.component.StageBackground
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.home.HomeTestTags
+import com.rodrigomachado.riff.feature.results.ResultsContent
+import com.rodrigomachado.riff.feature.results.ResultsUiState
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -124,6 +132,42 @@ class RiffDesktopAppTest {
 
         composeRule.onRoot()
             .captureRoboImage("src/test/screenshots/Home_desktop.png", roborazziOptions = TextRasterTolerance)
+    }
+
+    /**
+     * O Resultado do PC na janela padrão (1024×768): em duas colunas (capa, título, pontos e o carimbo da nota; a
+     * precisão, os blocos, o ranking e os botões lado a lado) e a barra de teclas no rodapé (sem controle: só o
+     * teclado). O conteúdo direto, como o app o mostra (o fundo, o tema, o controle do PC): chegar lá jogando daria
+     * números diferentes a cada vez.
+     */
+    @Test
+    fun resultsScreenshot() {
+        DesktopLocale.applyDefault()
+        composeRule.setContent {
+            RiffTheme {
+                CompositionLocalProvider(LocalGamepad provides graph.gamepad) {
+                    StageBackground(Modifier.fillMaxSize()) {
+                        ResultsContent(
+                            ResultsUiState.Ready(
+                                ScoreRecord(7, "fogo", Difficulty.EXPERT, 412_380, 0.93f, 300, 900, 40, 6, 1_000),
+                                "Through the Fire and Flames",
+                                "DragonForce",
+                                isNewBest = true,
+                                ranking = SubmitStatus.Placed(3, 27),
+                                rankingOn = true,
+                                previousBest = 398_120,
+                            ),
+                            onPlayAgain = { _, _ -> },
+                            onDone = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("antes: 398.120").assertExists()
+        composeRule.onRoot()
+            .captureRoboImage("src/test/screenshots/Results_desktop.png", roborazziOptions = TextRasterTolerance)
     }
 
     private companion object {

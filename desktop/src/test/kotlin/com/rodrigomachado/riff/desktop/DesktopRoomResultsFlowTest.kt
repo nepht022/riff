@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.desktop
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.rodrigomachado.riff.core.room.RoundScore
@@ -41,8 +42,11 @@ class DesktopRoomResultsFlowTest {
         val code = room.openRoomWithAGuest()
         room.playingRoomMatch(code)
 
-        // O Resultado de sempre (a música acabou): "Ver a sala" pelas setas e Enter.
+        // O Resultado de sempre (a música acabou): "Ver a sala" pelas setas e Enter. "Voltar à sala" e "Ver a sala"
+        // ficam lado a lado: ↓ chega à linha deles, → vai ao "Ver a sala".
         match.playUntil(hasText(SEE_ROOM))
+        room.pressUntilFocused(hasText(SEE_ROOM) or hasText(BACK_TO_ROOM))
+        if (!match.exists(hasText(SEE_ROOM) and isFocused())) room.press(Key.DirectionRight)
         room.pressUntilFocused(hasText(SEE_ROOM))
         room.press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText(ROOM_RESULTS), TIMEOUT_MS)

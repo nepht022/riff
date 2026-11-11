@@ -26,6 +26,16 @@ interface ScoreDao {
     )
     suspend fun best(chartId: String, difficulty: String): ScoreEntity?
 
+    /**
+     * O recorde da mesma dificuldade gravado antes da partida [beforeId] (o "antes: N" do Resultado; empate: o mais
+     * antigo, como no [best]); nulo quando ela foi a primeira.
+     */
+    @Query(
+        "SELECT * FROM scores WHERE chartId = :chartId AND difficulty = :difficulty AND id < :beforeId " +
+            "ORDER BY score DESC, id ASC LIMIT 1",
+    )
+    suspend fun bestBefore(chartId: String, difficulty: String, beforeId: Long): ScoreEntity?
+
     /** A última partida jogada (de qualquer mapa); empate no horário: a gravada por último. */
     @Query("SELECT * FROM scores ORDER BY playedAtEpochMs DESC, id DESC LIMIT 1")
     suspend fun last(): ScoreEntity?

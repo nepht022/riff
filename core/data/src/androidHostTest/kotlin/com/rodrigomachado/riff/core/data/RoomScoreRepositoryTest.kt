@@ -65,6 +65,23 @@ class RoomScoreRepositoryTest {
         assertEquals(RankingTable.PC_STRUM, scores.get(id)?.rankingTable)
     }
 
+    /**
+     * O "antes: N" do Resultado: o maior recorde da mesma dificuldade gravado antes da partida (nem ela, nem as que
+     * vieram depois, nem a outra dificuldade); a primeira partida não tem.
+     */
+    @Test
+    fun bestBeforeIsTheHighestScoreSavedBeforeThatMatch() = runTest {
+        charts("a")
+        val first = scores.save(record(500))
+        scores.save(record(700))
+        scores.save(record(9_000).copy(difficulty = Difficulty.EASY))
+        val current = scores.save(record(800))
+        scores.save(record(1_000))
+
+        assertNull(scores.bestBefore("a", Difficulty.EXPERT, first))
+        assertEquals(700L, scores.bestBefore("a", Difficulty.EXPERT, current)?.score)
+    }
+
     /** "Continuar" da tela inicial: a última partida jogada, de qualquer mapa; sem partidas, nada. */
     @Test
     fun lastIsTheMostRecentlyPlayedMatch() = runTest {

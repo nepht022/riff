@@ -180,6 +180,7 @@ class FakeScores : ScoreRepository {
     override suspend fun save(record: ScoreRecord) = error("não usado na biblioteca")
     override suspend fun get(id: Long) = null
     override suspend fun best(chartId: String, difficulty: Difficulty) = null
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long) = null
     override suspend fun last() = null
     override suspend fun recentBests(limit: Int) = emptyList<ScoreRecord>()
     override fun observeChartBests(): Flow<List<ScoreRecord>> = bests
