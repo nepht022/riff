@@ -91,6 +91,7 @@ import com.rodrigomachado.riff.feature.room.RoomJoinViewModel
 import com.rodrigomachado.riff.feature.room.RoomLiveBoard
 import com.rodrigomachado.riff.feature.room.RoomLobbyViewModel
 import com.rodrigomachado.riff.feature.room.RoomMatchStart
+import com.rodrigomachado.riff.feature.room.RoomResultsViewModel
 import com.rodrigomachado.riff.feature.room.RoomSongCheck
 import com.rodrigomachado.riff.feature.search.SearchViewModel
 import com.rodrigomachado.riff.feature.settings.SettingsViewModel
@@ -336,6 +337,9 @@ class DesktopGraph(
     /** A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa. */
     fun roomLobbyViewModel(code: String) =
         RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
+
+    /** O Resultado da sala [code], rodada [round], lido da sala que a presença já observa. */
+    fun roomResultsViewModel(code: String, round: Int) = RoomResultsViewModel(code, round, roomPresence.room)
 
     /**
      * Fechar a janela com a sala aberta sai dela (passa o dono adiante, ou apaga a sala sendo o último), para não

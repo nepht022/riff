@@ -13,3 +13,10 @@ data object RoomJoinRoute
 /** A sala [code] ao vivo (o código, os jogadores e o Sair). */
 @Serializable
 data class RoomLobbyRoute(val code: String)
+
+/**
+ * O Resultado da sala [code], rodada [round]: a classificação de todos, aberta pelo "Ver a sala" do Resultado da
+ * partida de sala.
+ */
+@Serializable
+data class RoomResultsRoute(val code: String, val round: Int)
