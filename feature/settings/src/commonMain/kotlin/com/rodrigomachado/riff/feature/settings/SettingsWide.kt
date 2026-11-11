@@ -203,7 +203,7 @@ private fun LicensesLink(onLicenses: () -> Unit) {
     }
 }
 
-/** As teclas das Configurações no PC largo. */
+/** As teclas das Configurações no PC largo (← → também passam entre a coluna das abas e as opções). */
 @Composable
 internal fun wideSettingsKeys(): List<KeyHint> = listOf(
     moveHint("↑ ↓", stringResource(Res.string.settings_keys_tabs)),

@@ -100,7 +100,7 @@ class DesktopWideSettingsTest {
         composeRule.onNode(hasText("Controles") and inColumn).performClick()
         composeRule.onNode(hasText("Teclado") and inOptions).assertExists()
         // A barra de teclas da tela.
-        for (label in listOf("Abas e opções", "Mudar valor", "Escolher", "Voltar")) {
+        for (label in listOf("Abas e opções", "Abas, opções e valores", "Escolher", "Voltar")) {
             composeRule.onNode(hasText(label) and inBar).assertExists()
         }
     }

@@ -63,7 +63,7 @@ class DesktopKeyHintsTest {
         showsKeys("tela inicial", "Mover", "Escolher")
 
         click(composeRule.onNodeWithContentDescription("Configurações"), "Geral")
-        showsKeys("Configurações", "Abas e opções", "Mudar valor", "Escolher", "Voltar")
+        showsKeys("Configurações", "Abas e opções", "Abas, opções e valores", "Escolher", "Voltar")
         click(composeRule.onNodeWithText("Jogo"), "Calibrar atraso do áudio")
         click(composeRule.onNodeWithText("Calibrar atraso do áudio"), "Começar")
         showsKeys("Calibração", "Mover", "Escolher", "Voltar")
