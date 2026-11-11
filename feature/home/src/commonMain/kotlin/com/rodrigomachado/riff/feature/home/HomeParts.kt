@@ -177,13 +177,7 @@ internal fun ContinueCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                "${match.artist} · ${difficultyName(match.difficulty.ordinal)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = RiffColors.PaperDim,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            ArtistAndDifficulty(match)
             Text(
                 stringResource(Res.string.home_record, formatScore(match.best)),
                 style = MaterialTheme.typography.labelLarge,
@@ -196,6 +190,30 @@ internal fun ContinueCard(
         ) {
             HomeIcon(Modifier.size(PLAY_ICON), RiffColors.Paper) { drawPlay(it) }
         }
+    }
+}
+
+/** "Artista · Dificuldade": dois textos (o artista pode ser cortado; a dificuldade, nunca), como no Resultado. */
+@Composable
+private fun ArtistAndDifficulty(match: HomeMatch) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (match.artist.isNotBlank()) {
+            Text(
+                match.artist,
+                Modifier.weight(1f, fill = false),
+                style = MaterialTheme.typography.bodySmall,
+                color = RiffColors.PaperDim,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(" · ", style = MaterialTheme.typography.bodySmall, color = RiffColors.PaperDim)
+        }
+        Text(
+            difficultyName(match.difficulty.ordinal),
+            style = MaterialTheme.typography.bodySmall,
+            color = RiffColors.PaperDim,
+            maxLines = 1,
+        )
     }
 }
 

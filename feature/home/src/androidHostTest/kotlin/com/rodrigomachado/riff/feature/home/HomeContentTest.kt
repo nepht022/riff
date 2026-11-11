@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.feature.home
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
@@ -20,11 +22,13 @@ import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
@@ -218,6 +222,27 @@ class HomeContentTest {
         override val events = emptyFlow<PadEvent>()
         override val connected = MutableStateFlow(true)
         override val presses = emptyFlow<String>()
+    }
+
+    /** Com fonte grande, o artista longo é cortado, a dificuldade do "Continuar" nunca. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h780dp", fontScale = 2f)
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // a medida do texto de verdade
+    fun theContinueDifficultyIsNeverCutWithALargeFont() {
+        val last = HomeMatch("a", "Música Um", "Uma Banda Com Um Nome Bem Comprido", Difficulty.EXPERT, best = 1)
+        show(state = HomeUiState(last = last))
+
+        composeRule.onNodeWithText("Expert", substring = true).performScrollTo()
+        // A dificuldade é um texto próprio (no cartão, os textos se juntam para o leitor de tela).
+        val difficulty = composeRule.onNodeWithText("Expert", useUnmergedTree = true).fetchSemanticsNode()
+        val layouts = mutableListOf<TextLayoutResult>()
+        difficulty.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        // A largura que o texto ganhou cabe a palavra inteira.
+        val layout = layouts.single()
+        assertTrue(
+            "a dificuldade foi cortada",
+            layout.multiParagraph.intrinsics.maxIntrinsicWidth <= layout.size.width,
+        )
     }
 
     private companion object {
