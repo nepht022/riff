@@ -370,6 +370,12 @@ class RoomRepository(
         return untilServer != null && clock() + known >= untilServer
     }
 
+    /**
+     * A hora do servidor estimada agora pelo último offset medido ([measureClock]), sem ir ao banco; null = ainda não
+     * mediu (a partida de sala sempre mede antes do Resultado).
+     */
+    fun serverNowOrNull(): Long? = offset?.let { clock() + it }
+
     /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
     private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code).offsetMs)
 
@@ -397,7 +403,7 @@ class RoomRepository(
         }
         val scores = ScoreFormat.scores(json)
         val written = maxOf(RoomFormat.latestTime(json), ScoreFormat.latestScoreTime(scores))
-        val nowServer = maxOf(written, offset?.let { clock() + it } ?: written)
+        val nowServer = maxOf(written, serverNowOrNull() ?: written)
         val rounds = scores.keys + room.round
         val boards = rounds.associateWith { round ->
             RoundBoard.lines(room, round, scores[round].orEmpty(), nowServer, seen)

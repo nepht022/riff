@@ -38,7 +38,18 @@ class HiltRoomLobbyViewModel @Inject constructor(
     RoomSongCheck.of(charts, downloads, downloader),
 )
 
-/** O [RoomResultsViewModel] criado pelo Hilt no celular, com o código e a rodada da rota e a sala da presença. */
+/**
+ * O [RoomResultsViewModel] criado pelo Hilt no celular, com o código e a rodada da rota, a sala da presença e a hora
+ * do servidor do repositório.
+ */
 @HiltViewModel
-class HiltRoomResultsViewModel @Inject constructor(savedStateHandle: SavedStateHandle, presence: RoomPresence) :
-    RoomResultsViewModel(checkNotNull(savedStateHandle["code"]), checkNotNull(savedStateHandle["round"]), presence.room)
+class HiltRoomResultsViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    presence: RoomPresence,
+    repository: RoomRepository,
+) : RoomResultsViewModel(
+    checkNotNull(savedStateHandle["code"]),
+    checkNotNull(savedStateHandle["round"]),
+    presence.room,
+    repository::serverNowOrNull,
+)

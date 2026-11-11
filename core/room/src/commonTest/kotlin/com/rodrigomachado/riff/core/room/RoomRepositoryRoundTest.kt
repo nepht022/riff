@@ -609,9 +609,11 @@ class RoomRepositoryRoundTest : JsonTest() {
         assertEquals(now + 3_000, startAt) // na hora do servidor, apesar do relógio do dono
         val room = bia.observe("ABCD").first()!!
         assertEquals(startAt, room.startAt)
+        assertNull(bia.serverNowOrNull()) // ainda sem medir
         val clock = bia.measureClock("ABCD")
         assertEquals(now - 5 * MINUTE + 3_000, clock.toLocal(room.startAt!!))
         assertEquals(now, clock.serverNow())
+        assertEquals(now, bia.serverNowOrNull()) // pela última medida, sem ir ao banco
     }
 
     @Test

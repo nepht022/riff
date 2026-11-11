@@ -339,7 +339,8 @@ class DesktopGraph(
         RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
 
     /** O Resultado da sala [code], rodada [round], lido da sala que a presença já observa. */
-    fun roomResultsViewModel(code: String, round: Int) = RoomResultsViewModel(code, round, roomPresence.room)
+    fun roomResultsViewModel(code: String, round: Int) =
+        RoomResultsViewModel(code, round, roomPresence.room, room::serverNowOrNull)
 
     /**
      * Fechar a janela com a sala aberta sai dela (passa o dono adiante, ou apaga a sala sendo o último), para não

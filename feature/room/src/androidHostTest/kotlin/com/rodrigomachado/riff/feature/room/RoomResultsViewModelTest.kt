@@ -2,6 +2,8 @@ package com.rodrigomachado.riff.feature.room
 
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.room.Room
+import com.rodrigomachado.riff.core.room.RoomRound
+import com.rodrigomachado.riff.core.room.RoundBoard
 import com.rodrigomachado.riff.core.room.SongStatus
 import com.rodrigomachado.riff.core.room.testing.FakeFirebase
 import com.rodrigomachado.riff.core.room.testing.FakePlayer
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -64,9 +67,12 @@ class RoomResultsViewModelTest {
     )
 
     /** A tela aberta (alguém olhando o estado), lendo a sala como a presença lê: o streaming do repositório. */
+    /** A hora do servidor estimada que o Resultado usa para o fim da rodada (null = ainda sem medir). */
+    private var serverNow: Long? = null
+
     private fun TestScope.opened(round: Int = 1): RoomResultsViewModel {
         val repository = fake.repository("u1")
-        val vm = RoomResultsViewModel("ABCD", round, flow { emitAll(repository.observe("ABCD")) })
+        val vm = RoomResultsViewModel("ABCD", round, flow { emitAll(repository.observe("ABCD")) }) { serverNow }
         backgroundScope.launch { vm.uiState.collect {} }
         runCurrent()
         return vm
@@ -148,6 +154,27 @@ class RoomResultsViewModelTest {
         assertFalse(vm.ready().waiting)
     }
 
+    /**
+     * A rodada acabou pelo tempo ([Room.roundOver]: 10 s depois do fim da música) com a Ana ainda mandando o placar
+     * (a conexão dela, boa, mas o final não veio): o Resultado para de esperar.
+     */
+    @Test
+    fun stopsWaitingWhenTheRoundIsOver() = runTest(dispatcher) {
+        fake.seedScore("ABCD", 1, "u1", points = 5_000, finished = true)
+        fake.seedScore("ABCD", 1, "ana", points = 1_000)
+        fake.seedScore("ABCD", 1, "bia", points = 2_000, finished = true)
+        val startAt = T0 - SONG_AND_GRACE_MS
+        serverNow = startAt + RoomRound.UNKNOWN_SONG_MS + RoundBoard.END_GRACE_MS - 1
+        val vm = opened()
+        assertTrue(vm.ready().waiting)
+
+        serverNow = startAt + RoomRound.UNKNOWN_SONG_MS + RoundBoard.END_GRACE_MS
+        advanceTimeBy(RECHECK_MS) // a sala não muda: o Resultado confere sozinho
+
+        assertFalse(vm.ready().waiting)
+        assertFalse(vm.ready().lines.single { it.uid == "ana" }.stale)
+    }
+
     /** O dono já começou a rodada seguinte: o Resultado continua sendo o da rodada da partida. */
     @Test
     fun keepsTheRoundOfTheMatch() = runTest(dispatcher) {
@@ -183,5 +210,6 @@ class RoomResultsViewModelTest {
         const val T0 = 1_800_000_000_000L
         const val SONG_AND_GRACE_MS = 200_000L
         const val STALE_AGO_MS = 20_000L
+        const val RECHECK_MS = 1_001L
     }
 }
