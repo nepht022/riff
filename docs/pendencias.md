@@ -94,6 +94,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Multiplayer M3: placar ao vivo e Resultado da sala (2026-11-11)
+
+- **Ação do usuário:** republicar `firebase/database.rules.json` (regras do placar). Teste real (placar ao vivo trocando de posição, "sem conexão" ao tirar a internet de um, Resultado da sala igual nos dois, começo junto comparado com a M2): pendente.
+- Regras do placar conferem só formato e tetos: um app alterado pode mandar pontos inventados dentro dos tetos (sem servidor próprio).
+- O placar é publicado pelos quadros da partida: sem quadros (app em segundo plano, janela minimizada) os outros veem "sem conexão" depois de 15 s.
+- No celular, nome longo cortado na linha com "sem conexão" (bloco de 128 dp).
+- O Resultado da sala mostra "Rodada N" e não o título (o dono pode trocar de música sem mudar a rodada).
+- Sincronia: arquivo único no celular (`MediaPlayer`) não aquece nem informa latência (~155 ms de arranque); a latência do mixer do Windows fica de fora; com internet lenta e menos de ~650 ms até o começo, o aquecimento do PC pode não terminar (log `latência informada=?`).
+
 ## Multiplayer M2: música e começo juntos (2026-11-10)
 
 - Regras da M2 republicadas pelo usuário e teste real aceito em 2026-11-10 (PC e celular): começo junto "menos de 1 s, bem parecido" — acima da meta de ~150 ms; melhorar na M3 (atraso de saída do áudio de cada aparelho além da calibração; medir). Baixar do Encore, Esc sem pausar e Voltar à sala funcionaram; cada um volta à sala ao tocar Voltar no próprio Resultado.
