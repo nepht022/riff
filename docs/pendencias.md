@@ -96,7 +96,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Multiplayer M3: placar ao vivo e Resultado da sala (2026-11-11)
 
-- **Ação do usuário:** republicar `firebase/database.rules.json` (regras do placar). Teste real (placar ao vivo trocando de posição, "sem conexão" ao tirar a internet de um, Resultado da sala igual nos dois, começo junto comparado com a M2): pendente.
+- Regras do placar republicadas pelo usuário e teste real aceito em 2026-11-11 (PC e celular): o placar ao vivo mostrou os dois e trocou de posição. O começo junto não foi comparado à parte com a M2 (log `RiffSync` do PC não lido nesta rodada).
 - Regras do placar conferem só formato e tetos: um app alterado pode mandar pontos inventados dentro dos tetos (sem servidor próprio).
 - O placar é publicado pelos quadros da partida: sem quadros (app em segundo plano, janela minimizada) os outros veem "sem conexão" depois de 15 s.
 - No celular, nome longo cortado na linha com "sem conexão" (bloco de 128 dp).
