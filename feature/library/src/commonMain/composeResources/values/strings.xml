@@ -80,6 +80,9 @@
     <string name="library_record">Recorde %1$s · %2$s</string>
     <string name="library_no_record">Ainda sem recorde</string>
     <string name="library_ai_seal">IA</string>
+    <string name="library_difficulties">Dificuldades: %1$s</string>
+    <string name="library_list_last">%1$s e %2$s</string>
+    <string name="library_own_guitar">Guitarra do mapa</string>
     <string name="library_keys_move">Mover</string>
     <string name="library_keys_choose">Escolher</string>
     <string name="library_keys_back">Voltar</string>

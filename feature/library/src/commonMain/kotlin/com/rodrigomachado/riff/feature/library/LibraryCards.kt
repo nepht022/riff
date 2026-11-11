@@ -16,24 +16,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.ui.art.ChartArtImages
-import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.ChartThumb
 import com.rodrigomachado.riff.core.ui.component.KeyHint
-import com.rodrigomachado.riff.core.ui.component.StatusBadge
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
-import com.rodrigomachado.riff.feature.library.resources.library_ai_seal
-import com.rodrigomachado.riff.feature.library.resources.library_ai_separated
 import com.rodrigomachado.riff.feature.library.resources.library_keys_back
 import com.rodrigomachado.riff.feature.library.resources.library_keys_choose
 import com.rodrigomachado.riff.feature.library.resources.library_keys_move
@@ -45,7 +39,7 @@ import java.text.NumberFormat
 
 /**
  * O cartão de um mapa: a capa, o título, artista · duração e o recorde ([best], o maior em qualquer dificuldade) ou
- * "Ainda sem recorde"; o selo "IA" quando a guitarra foi separada pela IA ([aiSeparated]).
+ * "Ainda sem recorde"; à direita, as dificuldades e a guitarra do mapa ou o selo "IA" ([aiSeparated], ver [CardSide]).
  */
 @Composable
 @Suppress("LongParameterList") // o mapa, o que se mostra dele e o toque
@@ -87,7 +81,7 @@ internal fun LibraryCard(
                 )
                 RecordLine(best)
             }
-            if (aiSeparated) AiSeal()
+            CardSide(chart, aiSeparated)
         }
     }
 }
@@ -107,17 +101,6 @@ private fun RecordLine(best: ChartBest?) {
         stringResource(Res.string.library_record, formatScore(best.score), difficultyName(best.difficulty.ordinal)),
         style = MaterialTheme.typography.labelLarge,
         color = RiffColors.Ink,
-    )
-}
-
-/** "IA" no cartão; o leitor de tela lê "Guitarra separada pela IA". */
-@Composable
-private fun AiSeal() {
-    val description = stringResource(Res.string.library_ai_separated)
-    StatusBadge(
-        stringResource(Res.string.library_ai_seal),
-        BadgeTone.SUCCESS,
-        Modifier.clearAndSetSemantics { contentDescription = description },
     )
 }
 
