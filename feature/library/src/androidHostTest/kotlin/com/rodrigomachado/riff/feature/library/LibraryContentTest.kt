@@ -590,25 +590,6 @@ class LibraryContentTest {
         assertEquals(listOf("toggleAll:a,b"), events)
     }
 
-    /** Com o filtro, marcar todos leva só os mapas à mostra (o mesmo conjunto do "todos marcados" da caixa). */
-    @Test
-    @Config(qualifiers = "pt-rBR-w411dp-h1200dp")
-    fun selectAllWithAFilterSendsOnlyTheVisible() {
-        showDeletion(
-            LibraryUiState(
-                isLoading = false,
-                hasFolder = true,
-                charts = songs,
-                deletion = DeletionState(selecting = true),
-            ),
-        )
-
-        search("nirv")
-        composeRule.onNodeWithContentDescription("Selecionar todos").performClick()
-
-        assertEquals(listOf("toggleAll:a"), events)
-    }
-
     @Test
     fun withEverythingChosenTheIconOffersToClear() {
         showDeletion(

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,9 +50,10 @@ enum class LibraryChip {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LibraryChips(selected: LibraryChip, total: Int, onSelect: (LibraryChip) -> Unit) {
-    // Em tela estreita (ou fonte grande), o que não cabe desce para a linha de baixo.
+    // Em tela estreita (ou fonte grande), o que não cabe desce para a linha de baixo. Um grupo de escolha única: o
+    // leitor de tela anuncia cada chip como um entre eles.
     FlowRow(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
