@@ -243,10 +243,18 @@ open class LibraryViewModel(
         it.copy(selected = if (chartId in it.selected) it.selected - chartId else it.selected + chartId)
     }
 
-    /** Marca todos os mapas que dá para excluir; com todos já marcados, desmarca. */
-    fun onToggleAll() = deletionState.update { deletion ->
-        val deletable = uiState.value.let { state -> state.charts.map { it.id }.filter { it !in state.protectedIds } }
-        deletion.copy(selected = if (deletion.selected.containsAll(deletable)) emptySet() else deletable.toSet())
+    /**
+     * Marca os mapas à mostra ([visible]: os do filtro e do chip) que dá para excluir; com todos eles já marcados,
+     * desmarca esses. Os marcados fora do filtro ficam como estão.
+     */
+    fun onToggleAll(visible: List<String>) = deletionState.update { deletion ->
+        val deletable = visible.filter { it !in uiState.value.protectedIds }.toSet()
+        val selected = if (deletion.selected.containsAll(deletable)) {
+            deletion.selected - deletable
+        } else {
+            deletion.selected + deletable
+        }
+        deletion.copy(selected = selected)
     }
 
     fun onCancelSelecting() {

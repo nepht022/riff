@@ -298,9 +298,11 @@ private fun ChartList(
         item(key = "chips") { LibraryChips(filter.chip, state.charts.size, filter.onChip) }
         if (state.deletion.selecting) {
             item(key = "selection") {
+                // O "todos" é o que está à mostra (filtro e chip), na caixa e ao tocar nela.
                 val deletable = charts.filter { it.id !in state.protectedIds }
                 val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
-                SelectionActions(state.deletion.selected.size, state.separableSelected, allSelected, deletion)
+                val visible = charts.map { it.id }
+                SelectionActions(state.deletion.selected.size, state.separableSelected, visible, allSelected, deletion)
             }
         }
         state.report?.let { item(key = "report") { ImportReportCard(it, onReportDismissed) } }

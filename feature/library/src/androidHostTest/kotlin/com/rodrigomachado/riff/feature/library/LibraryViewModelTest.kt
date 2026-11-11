@@ -462,12 +462,39 @@ class LibraryViewModelTest {
         vm.onStartSelecting()
         vm.onToggleSelected("a")
 
-        vm.onToggleAll()
+        vm.onToggleAll(listOf("solto", "a", "b"))
         assertEquals(setOf("a", "b"), vm.uiState.value.deletion.selected)
 
-        vm.onToggleAll()
+        vm.onToggleAll(listOf("solto", "a", "b"))
         assertEquals(emptySet<String>(), vm.uiState.value.deletion.selected)
         assertEquals(true, vm.uiState.value.deletion.selecting)
+    }
+
+    /** Com o filtro (ou um chip), marcar todos só marca os mapas à mostra; o que já estava marcado fica. */
+    @Test
+    fun selectAllWithAFilterOnlyMarksTheVisible() = runTest {
+        libraryWith(at("a", "raiz/A"), at("b", "raiz/B"), at("c", "raiz/C"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("c")
+
+        vm.onToggleAll(listOf("a", "b"))
+
+        assertEquals(setOf("a", "b", "c"), vm.uiState.value.deletion.selected)
+    }
+
+    /** Tocar de novo desmarca só os à mostra (os de fora do filtro continuam marcados). */
+    @Test
+    fun selectAllAgainClearsOnlyTheVisible() = runTest {
+        libraryWith(at("a", "raiz/A"), at("b", "raiz/B"), at("c", "raiz/C"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("c")
+        vm.onToggleAll(listOf("a", "b"))
+
+        vm.onToggleAll(listOf("a", "b"))
+
+        assertEquals(setOf("c"), vm.uiState.value.deletion.selected)
     }
 
     @Test
