@@ -5,6 +5,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.rodrigomachado.riff.core.room.SongStatus
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
@@ -73,7 +76,10 @@ internal fun RoomLobbyUiState.Ready.whatIsMissing(): List<LobbyNeed> {
     }
 }
 
-/** A linha do que falta, numa frase só ("2 prontos · esperando Bruno_88 terminar de baixar"); vazia, nada. */
+/**
+ * A linha do que falta, numa frase só ("2 prontos · esperando Bruno_88 terminar de baixar"); vazia, nada. Muda
+ * sozinha (alguém fica pronto, termina de baixar): o leitor de tela anuncia, sem interromper.
+ */
 @Composable
 internal fun MissingLine(state: RoomLobbyUiState.Ready, modifier: Modifier = Modifier) {
     val parts = state.whatIsMissing().map { it.text() }
@@ -83,7 +89,7 @@ internal fun MissingLine(state: RoomLobbyUiState.Ready, modifier: Modifier = Mod
         style = MaterialTheme.typography.bodyLarge,
         color = RiffColors.Paper,
         textAlign = TextAlign.Center,
-        modifier = modifier.testTag(RoomTestTags.MISSING),
+        modifier = modifier.testTag(RoomTestTags.MISSING).semantics { liveRegion = LiveRegionMode.Polite },
     )
 }
 

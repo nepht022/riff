@@ -8,6 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -398,6 +402,16 @@ class RoomScreensTest {
         composeRule.waitUntil(WAIT_MS) {
             composeRule.onAllNodesWithTag(ChartThumbTestTags.ART).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    /** A linha do que falta muda sozinha (alguém fica pronto): o leitor de tela anuncia sem interromper. */
+    @Test
+    fun theMissingLineIsAnnounced() {
+        val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana", ready = true)
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        composeRule.onNodeWithTag(RoomTestTags.MISSING)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
     private companion object {

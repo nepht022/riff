@@ -1,11 +1,13 @@
 package com.rodrigomachado.riff.feature.home
 
+import androidx.compose.ui.test.junit4.createComposeRule
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -17,11 +19,16 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** Partidas falsas: a última é a de [playedAtEpochMs] maior; os recordes recentes vêm prontos. */
 private class FakeScores(val records: MutableList<ScoreRecord>, val bests: List<ScoreRecord>) : ScoreRepository {
     var recentLimit = 0
+    var lastCalls = 0
 
     override suspend fun save(record: ScoreRecord) = error("não usado")
 
@@ -32,7 +39,10 @@ private class FakeScores(val records: MutableList<ScoreRecord>, val bests: List<
 
     override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long) = null
 
-    override suspend fun last() = records.maxByOrNull { it.playedAtEpochMs }
+    override suspend fun last(): ScoreRecord? {
+        lastCalls++
+        return records.maxByOrNull { it.playedAtEpochMs }
+    }
 
     override suspend fun recentBests(limit: Int): List<ScoreRecord> {
         recentLimit = limit
@@ -69,6 +79,10 @@ class HomeViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    /** O ViewModel com o banco já lido (na tela, quem lê é o [HomeViewModel.refresh] chamado ao abrir). */
+    private fun opened(scores: ScoreRepository, charts: ChartRepository) =
+        HomeViewModel(scores, charts, images = null).also { it.refresh() }
+
     private fun record(id: Long, chartId: String, score: Long, at: Long, difficulty: Difficulty = Difficulty.HARD) =
         ScoreRecord(id, chartId, difficulty, score, 0.9f, 1, 1, 0, 0, at)
 
@@ -76,14 +90,14 @@ class HomeViewModelTest {
     @Test
     fun continueIsTheLastMatchWithItsRecord() = runTest {
         val records = mutableListOf(record(1, "a", 900, at = 1), record(2, "a", 300, at = 5))
-        val vm = HomeViewModel(FakeScores(records, emptyList()), FakeCharts("a"), images = null)
+        val vm = opened(FakeScores(records, emptyList()), FakeCharts("a"))
 
         assertEquals(HomeMatch("a", "Título a", "Artista a", Difficulty.HARD, best = 900), vm.uiState.value.last)
     }
 
     @Test
     fun withoutMatchesThereIsNothingToShow() = runTest {
-        val vm = HomeViewModel(FakeScores(mutableListOf(), emptyList()), FakeCharts("a"), images = null)
+        val vm = opened(FakeScores(mutableListOf(), emptyList()), FakeCharts("a"))
 
         assertEquals(HomeUiState(), vm.uiState.value)
     }
@@ -92,7 +106,7 @@ class HomeViewModelTest {
     @Test
     fun continueWithADeletedChartIsHidden() = runTest {
         val records = mutableListOf(record(1, "gone", 900, at = 1))
-        val vm = HomeViewModel(FakeScores(records, records), FakeCharts("a"), images = null)
+        val vm = opened(FakeScores(records, records), FakeCharts("a"))
 
         assertEquals(HomeUiState(), vm.uiState.value)
     }
@@ -102,7 +116,7 @@ class HomeViewModelTest {
     fun recentBestsAreUpToThreeWithTheirTitles() = runTest {
         val bests = listOf(record(4, "d", 40, 9), record(3, "c", 30, 8), record(2, "b", 20, 7), record(1, "a", 10, 6))
         val scores = FakeScores(bests.toMutableList(), bests)
-        val vm = HomeViewModel(scores, FakeCharts("a", "b", "c", "d"), images = null)
+        val vm = opened(scores, FakeCharts("a", "b", "c", "d"))
 
         assertEquals(HomeViewModel.RECENT_BESTS, scores.recentLimit)
         assertEquals(
@@ -115,11 +129,33 @@ class HomeViewModelTest {
     @Test
     fun refreshPicksTheNewMatch() = runTest {
         val records = mutableListOf(record(1, "a", 900, at = 1))
-        val vm = HomeViewModel(FakeScores(records, emptyList()), FakeCharts("a", "b"), images = null)
+        val vm = opened(FakeScores(records, emptyList()), FakeCharts("a", "b"))
 
         records += record(2, "b", 500, at = 2)
         vm.refresh()
 
         assertEquals("b", vm.uiState.value.last?.chartId)
+    }
+}
+
+/** A tela inicial com o ViewModel de verdade: abrir lê o banco uma vez só. */
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "pt-rBR")
+class HomeScreenRefreshTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun openingTheHomeReadsTheDatabaseOnce() {
+        val scores = FakeScores(mutableListOf(), emptyList())
+        val vm = HomeViewModel(scores, FakeCharts(), images = null)
+        composeRule.setContent {
+            RiffTheme {
+                HomeScreen(vm, onSolo = {}, onRanking = {}, onSettings = {}, onReport = {}, onContinue = { _, _ -> })
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(1, scores.lastCalls)
     }
 }
