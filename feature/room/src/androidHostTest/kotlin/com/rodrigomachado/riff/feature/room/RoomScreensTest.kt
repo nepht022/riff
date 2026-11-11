@@ -1,8 +1,12 @@
 package com.rodrigomachado.riff.feature.room
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -10,6 +14,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,10 +26,12 @@ import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.core.room.SongStatus
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -175,8 +182,9 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Começar").assertIsNotEnabled()
-        composeRule.onNodeWithText("Fique pronto para começar").assertExists()
-        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos").assertDoesNotExist()
+        // O aviso vem na linha do que falta ("2 prontos · Fique pronto para começar").
+        composeRule.onNodeWithText("Fique pronto para começar", substring = true).assertExists()
+        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -205,7 +213,7 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Through the Fire").assertExists()
-        composeRule.onNodeWithText("Trocar música").assertDoesNotExist() // só o dono troca
+        composeRule.onNodeWithText("Trocar").assertDoesNotExist() // só o dono troca
         composeRule.onNodeWithText("Médio").assertDoesNotExist()
         composeRule.onNode(readyButton).assertIsNotEnabled() // sem dificuldade ainda
         composeRule.onNodeWithText("Expert").performScrollTo().performClick()
@@ -221,9 +229,10 @@ class RoomScreensTest {
         val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana", ready = true).withPlayer("Bia", ready = true)
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has, canStart = true))
 
-        composeRule.onNodeWithText("Trocar música").assertExists()
-        composeRule.onNodeWithText("Não estou pronto").performScrollTo().performClick()
-        composeRule.onNodeWithText("Começar").performScrollTo().assertIsEnabled().performClick()
+        composeRule.onNodeWithText("Trocar").assertExists()
+        // Pronto e Começar ficam fixos embaixo, fora da rolagem.
+        composeRule.onNodeWithText("Não estou pronto").performClick()
+        composeRule.onNodeWithText("Começar").assertIsEnabled().performClick()
 
         assertEquals(listOf("ready", "start"), events)
     }
@@ -234,7 +243,9 @@ class RoomScreensTest {
             .withPlayer("Ana", ready = true).withPlayer("Bia", ready = true).withPlayer("Caio")
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has, canStart = true))
 
-        composeRule.onNodeWithText("Começar com quem está pronto").assertExists()
+        // O aviso vem na linha do que falta; o botão continua "Começar".
+        composeRule.onNodeWithText("Começar com quem está pronto", substring = true).assertExists()
+        composeRule.onNodeWithText("Começar").assertIsEnabled()
     }
 
     @Test
@@ -272,6 +283,85 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Começando…").assertExists()
-        composeRule.onNodeWithText("Trocar música").assertIsNotEnabled()
+        composeRule.onNodeWithText("Trocar").assertIsNotEnabled()
+    }
+
+    // ---- Design novo ----
+
+    /** Compartilhar abre o "Compartilhar" do sistema com o convite e o código. */
+    @Test
+    fun shareSendsTheCodeText() {
+        lateinit var context: Context
+        composeRule.setContent {
+            context = LocalContext.current
+            RiffTheme { RoomLobbyContent(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia")), "KQZX", onLeave = {}) }
+        }
+
+        composeRule.onNodeWithContentDescription("Compartilhar o código").performClick()
+        composeRule.waitForIdle()
+
+        val chooser = shadowOf(context as Activity).nextStartedActivity
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        @Suppress("DEPRECATION") // o getParcelableExtra com a classe só existe a partir do Android 13
+        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        assertEquals(Intent.ACTION_SEND, send.action)
+        assertEquals("text/plain", send.type)
+        assertEquals("Entra na minha sala do Riff: KQZX", send.getStringExtra(Intent.EXTRA_TEXT))
+        composeRule.onNodeWithText("Código copiado").assertDoesNotExist() // no celular, nada é copiado
+    }
+
+    /** A linha do que falta: quantos prontos e por quem a sala espera (baixando, ainda não pronto, a música). */
+    @Test
+    fun whatIsMissingLine() {
+        var state by mutableStateOf(
+            RoomLobbyUiState.Ready(
+                sampleRoom("Rodrigo", "Ana", "Bruno_88").withSong()
+                    .withPlayer("Rodrigo", ready = true)
+                    .withPlayer("Ana", ready = true)
+                    .withPlayer("Bruno_88", song = SongStatus.DOWNLOADING, difficulty = null),
+                mySong = MySong.Has,
+                canStart = true,
+            ),
+        )
+        composeRule.setContent { RiffTheme { RoomLobbyContent(state, "KQZX", onLeave = {}, actions = actions) } }
+
+        composeRule.onNodeWithText("2 prontos · esperando Bruno_88 terminar de baixar").assertExists()
+
+        state = RoomLobbyUiState.Ready(
+            sampleRoom("Rodrigo", "Ana", "Bruno_88").withSong()
+                .withPlayer("Rodrigo", ready = true)
+                .withPlayer("Ana")
+                .withPlayer("Bruno_88"),
+            mySong = MySong.Has,
+        )
+        val line = "1 pronto · esperando Ana e Bruno_88 ficarem prontos · Precisa de pelo menos 2 prontos"
+        composeRule.onNodeWithText(line).assertExists()
+
+        state = RoomLobbyUiState.Ready(sampleRoom("Ana", "Rodrigo", me = "Rodrigo"))
+        composeRule.onNodeWithText("Esperando Ana escolher a música").assertExists()
+    }
+
+    /** O topo: "Sair da sala", o código pequeno e o compartilhar; logo abaixo, os jogadores contados. */
+    @Test
+    fun topShowsTheSmallCodeAndThePlayerCount() {
+        showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia", "Caio")))
+
+        composeRule.onNodeWithText("SALA").assertExists()
+        composeRule.onNodeWithText("KQZX").assertExists()
+        composeRule.onNodeWithText("Jogadores · 3 de 4").assertExists()
+        composeRule.onNodeWithText("Código da sala").assertDoesNotExist() // o código grande saiu
+    }
+
+    /** Pronto e Começar lado a lado, Pronto à esquerda. */
+    @Test
+    fun readyAndStartSideBySide() {
+        val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana").withPlayer("Bia", ready = true)
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        val ready = composeRule.onNode(readyButton).fetchSemanticsNode().boundsInRoot
+        val start = composeRule.onNodeWithText("Começar").fetchSemanticsNode().boundsInRoot
+        assertTrue("na mesma linha: $ready / $start", ready.bottom > start.top && start.bottom > ready.top)
+        assertTrue("Pronto à esquerda: $ready / $start", ready.right <= start.left)
+        composeRule.onNodeWithText("Sua dificuldade").assertExists()
     }
 }

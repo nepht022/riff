@@ -81,8 +81,11 @@ fun ChartThumb(chartId: String, title: String, size: Dp, images: ChartArtImages?
     }
 }
 
-/** As cores das capas sem imagem: vermelho, tinta e marrom do tema; o papel das iniciais se lê nas três. */
-private val ThumbPalette = listOf(RiffColors.TourRed, RiffColors.Ink, RiffColors.StampWarning)
+/**
+ * As cores das capas sem imagem: vermelho, marrom e verde do tema. O papel das iniciais se lê nas três (≥ 4,5:1) e o
+ * quadrado aparece tanto no palco escuro quanto no cartão de papel (a tinta quase sumia no palco).
+ */
+private val ThumbPalette = listOf(RiffColors.TourRed, RiffColors.StampWarning, RiffColors.StampSuccess)
 
 /** A cor do mapa sem imagem: a mesma para o mesmo [chartId] (hash próprio, igual em toda plataforma e execução). */
 internal fun thumbColor(chartId: String): Color {

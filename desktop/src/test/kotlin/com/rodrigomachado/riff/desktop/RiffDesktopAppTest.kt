@@ -22,6 +22,11 @@ import com.rodrigomachado.riff.core.data.folder.pcUri
 import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import com.rodrigomachado.riff.core.room.Room
+import com.rodrigomachado.riff.core.room.RoomDevice
+import com.rodrigomachado.riff.core.room.RoomPlayer
+import com.rodrigomachado.riff.core.room.RoomSong
+import com.rodrigomachado.riff.core.room.SongStatus
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -29,6 +34,9 @@ import com.rodrigomachado.riff.desktop.pad.NoPadSource
 import com.rodrigomachado.riff.feature.home.HomeTestTags
 import com.rodrigomachado.riff.feature.results.ResultsContent
 import com.rodrigomachado.riff.feature.results.ResultsUiState
+import com.rodrigomachado.riff.feature.room.MySong
+import com.rodrigomachado.riff.feature.room.RoomLobbyContent
+import com.rodrigomachado.riff.feature.room.RoomLobbyUiState
 import io.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -168,6 +176,55 @@ class RiffDesktopAppTest {
         composeRule.onNodeWithText("antes: 398.120").assertExists()
         composeRule.onRoot()
             .captureRoboImage("src/test/screenshots/Results_desktop.png", roborazziOptions = TextRasterTolerance)
+    }
+
+    /**
+     * A sala do PC na janela padrão (1024×768): a coluna no meio, o topo com "Sair da sala", o código pequeno e o
+     * copiar; os jogadores, a música com a capa (as iniciais: o mapa não existe aqui), a dificuldade, a linha do que
+     * falta, Pronto e Começar lado a lado e a barra de teclas no rodapé. O conteúdo direto, como o app o mostra.
+     */
+    @Test
+    fun roomScreenshot() {
+        DesktopLocale.applyDefault()
+        val players = listOf("Rodrigo", "Ana", "Bruno_88").mapIndexed { i, name ->
+            RoomPlayer(
+                uid = name,
+                name = name,
+                device = if (i == 0) RoomDevice.PC else RoomDevice.PHONE,
+                joinedAt = i.toLong(),
+                seenAt = i.toLong(),
+                gone = false,
+                difficulty = Difficulty.EXPERT.takeIf { i < 2 },
+                ready = i < 2,
+                song = if (i < 2) SongStatus.HAS else SongStatus.DOWNLOADING,
+            )
+        }
+        val song = RoomSong(
+            chartId = "fogo",
+            title = "Through the Fire and Flames",
+            artist = "DragonForce",
+            difficulties = Difficulty.entries.toSet(),
+            durationMs = null,
+            encore = null,
+        )
+        val room = Room("KQZX", owner = "Rodrigo", players = players, me = "Rodrigo", song = song)
+        composeRule.setContent {
+            RiffTheme {
+                CompositionLocalProvider(LocalGamepad provides graph.gamepad) {
+                    StageBackground(Modifier.fillMaxSize()) {
+                        RoomLobbyContent(
+                            RoomLobbyUiState.Ready(room, mySong = MySong.Has, canStart = true),
+                            "KQZX",
+                            onLeave = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("2 prontos · esperando Bruno_88 terminar de baixar").assertExists()
+        composeRule.onRoot()
+            .captureRoboImage("src/test/screenshots/Room_desktop.png", roborazziOptions = TextRasterTolerance)
     }
 
     private companion object {

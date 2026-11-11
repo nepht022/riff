@@ -346,9 +346,12 @@ class DesktopGraph(
 
     fun roomJoinViewModel() = RoomJoinViewModel(room, roomPlayerName)
 
-    /** A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa. */
+    /**
+     * A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa; a capa, das
+     * capas pequenas.
+     */
     fun roomLobbyViewModel(code: String) =
-        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
+        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader), chartThumbs)
 
     /** O Resultado da sala [code], rodada [round], lido da sala que a presença já observa. */
     fun roomResultsViewModel(code: String, round: Int) =

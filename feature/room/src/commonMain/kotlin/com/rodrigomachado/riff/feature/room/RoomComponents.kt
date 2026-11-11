@@ -2,16 +2,13 @@ package com.rodrigomachado.riff.feature.room
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.room.resources.Res
@@ -24,14 +21,12 @@ import org.jetbrains.compose.resources.stringResource
 object RoomTestTags {
     /** A caixa do código da sala. */
     const val CODE = "room_code"
-}
 
-/** O botão de texto do topo (Voltar, Sair da sala), sem som: a navegação toca o de voltar ao sair da tela. */
-@Composable
-internal fun TopTextButton(text: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.focusHighlight(CircleShape)) {
-        Text(text, color = RiffColors.Paper)
-    }
+    /** A linha do que falta na sala ("2 prontos · esperando…"). */
+    const val MISSING = "room_missing"
+
+    /** A barra de teclas da sala (só no PC). */
+    const val KEY_HINTS = "room_key_hints"
 }
 
 /** O erro carimbado em vermelho escuro (vermelho do pôster sobre o preto não carrega texto). */

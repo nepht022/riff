@@ -7,6 +7,7 @@ import com.rodrigomachado.riff.core.data.download.ChartDownloader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.room.RoomPresence
 import com.rodrigomachado.riff.core.room.RoomRepository
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -23,7 +24,8 @@ class HiltRoomJoinViewModel @Inject constructor(repository: RoomRepository, rank
 
 /**
  * O [RoomLobbyViewModel] criado pelo Hilt no celular, com o código da rota; a música é conferida na biblioteca (o
- * repositório de mapas) e baixada do Encore pelo download da pesquisa.
+ * repositório de mapas) e baixada do Encore pelo download da pesquisa; a capa vem das capas pequenas do app
+ * ([ChartThumbImages]).
  */
 @HiltViewModel
 class HiltRoomLobbyViewModel @Inject constructor(
@@ -32,10 +34,12 @@ class HiltRoomLobbyViewModel @Inject constructor(
     charts: ChartRepository,
     downloads: EncoreDownloads,
     downloader: ChartDownloader,
+    thumbs: ChartThumbImages,
 ) : RoomLobbyViewModel(
     checkNotNull(savedStateHandle["code"]),
     repository,
     RoomSongCheck.of(charts, downloads, downloader),
+    thumbs,
 )
 
 /**

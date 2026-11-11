@@ -3,11 +3,15 @@ package com.rodrigomachado.riff.feature.room
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -15,39 +19,40 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.room.Room
 import com.rodrigomachado.riff.core.room.RoomDevice
 import com.rodrigomachado.riff.core.room.RoomPlayer
 import com.rodrigomachado.riff.core.room.SongStatus
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
+import com.rodrigomachado.riff.core.ui.component.KeyHintBar
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.difficultyName
+import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.menuKeys
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
-import com.rodrigomachado.riff.core.ui.theme.oswald
 import com.rodrigomachado.riff.feature.room.resources.Res
 import com.rodrigomachado.riff.feature.room.resources.room_back
-import com.rodrigomachado.riff.feature.room.resources.room_code
 import com.rodrigomachado.riff.feature.room.resources.room_downloading
 import com.rodrigomachado.riff.feature.room.resources.room_ended
 import com.rodrigomachado.riff.feature.room.resources.room_gone
 import com.rodrigomachado.riff.feature.room.resources.room_gone_description
-import com.rodrigomachado.riff.feature.room.resources.room_leave
 import com.rodrigomachado.riff.feature.room.resources.room_owner
 import com.rodrigomachado.riff.feature.room.resources.room_pc
 import com.rodrigomachado.riff.feature.room.resources.room_phone
+import com.rodrigomachado.riff.feature.room.resources.room_players
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_choosing
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_missing
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_ready
@@ -87,10 +92,14 @@ fun RoomLobbyScreen(
         onDownload = viewModel::download,
         onStart = viewModel::start,
     )
-    RoomLobbyContent(state, code, viewModel::leave, modifier, actions)
+    RoomLobbyContent(state, code, viewModel::leave, modifier, actions, viewModel.images)
 }
 
-/** O código grande, a música, a minha dificuldade e o Pronto, o Começar do dono, os jogadores (até 4) e o Sair. */
+/**
+ * A sala, de cima para baixo: "Sair da sala", o código pequeno e o compartilhar; os jogadores (até 4); a música (com
+ * a capa, de [images]) e a minha dificuldade; a linha do que falta; e, fixos embaixo, Pronto e o Começar do dono lado
+ * a lado. No PC (janela larga) a coluna fica no meio e, com o `LocalGamepad`, a barra de teclas vai no rodapé.
+ */
 @Composable
 fun RoomLobbyContent(
     state: RoomLobbyUiState,
@@ -98,62 +107,70 @@ fun RoomLobbyContent(
     onLeave: () -> Unit,
     modifier: Modifier = Modifier,
     actions: RoomLobbyActions = RoomLobbyActions(),
+    images: ChartArtImages? = null,
 ) {
-    Column(
-        modifier.fillMaxSize().menuKeys(onLeave).verticalScroll(rememberScrollState()).padding(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        if (state == RoomLobbyUiState.Ended) {
-            Ended(onLeave)
-            return@Column
-        }
-        TopTextButton(stringResource(Res.string.room_leave), onLeave)
-        CodeHeader(code)
-        when (state) {
-            RoomLobbyUiState.Loading -> CircularProgressIndicator(
-                color = RiffColors.Paper,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
-
-            RoomLobbyUiState.NoConnection -> RoomErrorText(RoomError.NO_CONNECTION)
-
-            is RoomLobbyUiState.Ready -> {
-                SongSection(state.room, actions.onChooseSong, state.chooseFailed)
-                MySongSection(state, actions)
-                // O Começar antes da lista: com a música e 4 jogadores, ele ainda aparece sem rolar a tela.
-                StartSection(state, actions.onStart)
-                Players(state.room)
+    val pad = LocalGamepad.current
+    BoxWithConstraints(modifier.fillMaxSize().menuKeys(onLeave)) {
+        // O widthIn vem antes do fillMaxWidth: estica até o máximo do PC, nunca além.
+        val width = if (maxWidth >= WIDE_MIN_WIDTH) Modifier.widthIn(max = WIDE_CONTENT) else Modifier
+        Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.weight(1f).align(Alignment.CenterHorizontally).then(width).fillMaxWidth()
+                    .padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                if (state == RoomLobbyUiState.Ended) {
+                    Ended(onLeave)
+                } else {
+                    // Com fonte grande, os botões fixos tomariam a tela: vão para o fim da rolagem, um sobre o outro.
+                    val pinned = LocalDensity.current.fontScale < LARGE_FONT_SCALE
+                    LobbyTop(code, onLeave)
+                    Column(
+                        Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                    ) {
+                        LobbyBody(state, actions, images)
+                        if (!pinned && state is RoomLobbyUiState.Ready) LobbyButtons(state, actions, stacked = true)
+                    }
+                    if (pinned && state is RoomLobbyUiState.Ready) LobbyButtons(state, actions)
+                }
             }
-
-            RoomLobbyUiState.Ended -> Unit
+            if (pad != null) {
+                val connected by pad.connected.collectAsState()
+                KeyHintBar(roomKeys(), connected, Modifier.testTag(RoomTestTags.KEY_HINTS))
+            }
         }
     }
 }
 
+/** O meio da sala (o que rola): carregando, sem conexão, ou os jogadores, a música e a linha do que falta. */
 @Composable
-private fun CodeHeader(code: String) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            stringResource(Res.string.room_code),
-            style = MaterialTheme.typography.titleMedium,
-            color = RiffColors.PaperDim,
-        )
-        Text(
-            code,
-            style = TextStyle(
-                fontFamily = oswald(),
-                fontWeight = FontWeight.SemiBold,
-                fontSize = CODE_SIZE,
-                letterSpacing = CODE_SPACING,
-            ),
+private fun ColumnScope.LobbyBody(state: RoomLobbyUiState, actions: RoomLobbyActions, images: ChartArtImages?) {
+    when (state) {
+        RoomLobbyUiState.Loading -> CircularProgressIndicator(
             color = RiffColors.Paper,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
+
+        RoomLobbyUiState.NoConnection -> RoomErrorText(RoomError.NO_CONNECTION)
+
+        is RoomLobbyUiState.Ready -> {
+            Players(state.room)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                SongSection(state.room, actions.onChooseSong, state.chooseFailed, images)
+                MySongSection(state, actions)
+            }
+            MissingLine(state, Modifier.fillMaxWidth())
+        }
+
+        RoomLobbyUiState.Ended -> Unit
     }
 }
 
 @Composable
 private fun Players(room: Room) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        SectionLabel(stringResource(Res.string.room_players, room.players.size, MAX_PLAYERS))
         room.players.forEach { player ->
             PlayerCard(
                 player,
@@ -167,7 +184,6 @@ private fun Players(room: Room) {
                 stringResource(Res.string.room_waiting),
                 style = MaterialTheme.typography.bodyLarge,
                 color = RiffColors.PaperDim,
-                modifier = Modifier.padding(top = Spacing.sm),
             )
         }
     }
@@ -181,16 +197,21 @@ private fun Players(room: Room) {
 @Composable
 private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean, withSong: Boolean) {
     val shape = MaterialTheme.shapes.small
-    Row(
+    // Com fonte grande, os carimbos descem para baixo do nome em vez de espremê-lo.
+    FlowRow(
         Modifier.fillMaxWidth()
             .background(if (player.gone) RiffColors.PaperDim else RiffColors.Paper, shape)
             .border(ME_BORDER, if (me) RiffColors.TourRed else Color.Transparent, shape)
             .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        itemVerticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Column(Modifier.weight(1f).alpha(if (player.gone) GONE_ALPHA else 1f)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(Modifier.padding(end = Spacing.sm).alpha(if (player.gone) GONE_ALPHA else 1f)) {
+            FlowRow(
+                itemVerticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 Text(player.name, style = MaterialTheme.typography.titleMedium, color = RiffColors.Ink)
                 if (me) {
                     Text(
@@ -210,16 +231,18 @@ private fun PlayerCard(player: RoomPlayer, owner: Boolean, me: Boolean, withSong
                 color = RiffColors.Ink.copy(alpha = SECONDARY_ALPHA),
             )
         }
-        if (withSong && !player.gone) SongStamp(player)
-        if (player.gone) {
-            val description = stringResource(Res.string.room_gone_description, player.name)
-            Stamp(
-                stringResource(Res.string.room_gone),
-                RiffColors.StampWarning,
-                Modifier.semantics { contentDescription = description },
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+            if (withSong && !player.gone) SongStamp(player)
+            if (player.gone) {
+                val description = stringResource(Res.string.room_gone_description, player.name)
+                Stamp(
+                    stringResource(Res.string.room_gone),
+                    RiffColors.StampWarning,
+                    Modifier.semantics { contentDescription = description },
+                )
+            }
+            if (owner) Stamp(stringResource(Res.string.room_owner), RiffColors.TourRed)
         }
-        if (owner) Stamp(stringResource(Res.string.room_owner), RiffColors.TourRed)
     }
 }
 
@@ -259,5 +282,10 @@ private const val MAX_PLAYERS = 4
 private const val GONE_ALPHA = 0.6f
 private const val SECONDARY_ALPHA = 0.7f
 private val ME_BORDER = 3.dp
-private val CODE_SIZE = 72.sp
-private val CODE_SPACING = 12.sp
+private val WIDE_MIN_WIDTH = 800.dp
+
+/** A partir desta escala da fonte do sistema, Pronto e Começar deixam de ficar fixos embaixo. */
+private const val LARGE_FONT_SCALE = 1.3f
+
+/** A coluna da sala no PC: a mesma largura da Biblioteca. */
+private val WIDE_CONTENT = 760.dp

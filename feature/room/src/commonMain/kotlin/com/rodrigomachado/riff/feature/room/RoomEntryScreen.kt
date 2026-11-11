@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
@@ -83,7 +84,7 @@ fun RoomEntryContent(
         modifier.fillMaxSize().menuKeys(onBack).verticalScroll(rememberScrollState()).padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        TopTextButton(stringResource(Res.string.room_back), onBack)
+        BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
         PosterTitle(stringResource(Res.string.room_title), style = MaterialTheme.typography.displayMedium)
         val enabled = !state.creating
         BigTile(

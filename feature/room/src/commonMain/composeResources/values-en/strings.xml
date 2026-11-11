@@ -19,9 +19,9 @@
     <string name="room_loading">Loading…</string>
     <string name="room_ended">The room is over.</string>
     <string name="room_choose_song">Choose song</string>
-    <string name="room_change_song">Change song</string>
+    <string name="room_change_song">Change</string>
     <string name="room_no_song">No song chosen</string>
-    <string name="room_difficulty">Difficulty</string>
+    <string name="room_difficulty">Your difficulty</string>
     <string name="room_ready">Ready</string>
     <string name="room_not_ready">Not ready</string>
     <string name="room_start">Start</string>
@@ -48,4 +48,28 @@
     <string name="room_results_empty">The scores of this round are no longer in the room.</string>
     <string name="room_results_accuracy">Accuracy %1$s</string>
     <string name="room_results_max_combo">Max combo %1$d</string>
+    <string name="room_code_small">ROOM</string>
+    <string name="room_share">Share the code</string>
+    <string name="room_copy">Copy the code</string>
+    <string name="room_copied">Code copied</string>
+    <string name="room_share_text">Join my Riff room: %1$s</string>
+    <string name="room_players">Players · %1$d of %2$d</string>
+    <string name="room_song">Song</string>
+    <plurals name="room_ready_count">
+        <item quantity="one">%1$d ready</item>
+        <item quantity="other">%1$d ready</item>
+    </plurals>
+    <plurals name="room_waiting_download">
+        <item quantity="one">waiting for %1$s to finish downloading</item>
+        <item quantity="other">waiting for %1$s to finish downloading</item>
+    </plurals>
+    <plurals name="room_waiting_ready">
+        <item quantity="one">waiting for %1$s to get ready</item>
+        <item quantity="other">waiting for %1$s to get ready</item>
+    </plurals>
+    <string name="room_waiting_song">waiting for %1$s to choose the song</string>
+    <string name="room_and">%1$s and %2$s</string>
+    <string name="room_keys_move">Move</string>
+    <string name="room_keys_choose">Choose</string>
+    <string name="room_keys_leave">Leave room</string>
 </resources>

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.room.RoomCodes
+import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.input.menuKeys
@@ -87,7 +88,7 @@ fun RoomJoinContent(
         modifier.fillMaxSize().menuKeys(onBack).verticalScroll(rememberScrollState()).padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        TopTextButton(stringResource(Res.string.room_back), onBack)
+        BackRow(onBack = onBack, text = stringResource(Res.string.room_back))
         PosterTitle(stringResource(Res.string.room_join_with_code), style = MaterialTheme.typography.displaySmall)
         Text(
             stringResource(Res.string.room_code),
