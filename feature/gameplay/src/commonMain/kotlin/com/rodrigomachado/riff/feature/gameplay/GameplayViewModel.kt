@@ -109,6 +109,8 @@ open class GameplayViewModel(
     private val rankingTable: (Settings) -> RankingTable = { RankingTable.PHONE },
     private val matchStart: MatchStart? = null,
     private val liveBoard: LiveBoard? = null,
+    /** O log de depuração do começo junto (ver [matchSyncLog]); os testes trocam. */
+    private val syncLog: (String) -> Unit = ::matchSyncLog,
 ) : ViewModel() {
     private val state = MutableStateFlow<GameplayUiState>(GameplayUiState.Loading)
     val uiState: StateFlow<GameplayUiState> = state.asStateFlow()
@@ -132,6 +134,11 @@ open class GameplayViewModel(
 
     // O app pode ir para segundo plano enquanto a música carrega: a partida começa pausada.
     private var pauseRequested = false
+
+    // Partida de sala: quando a sessão começou (no relógio da partida) e o instante combinado, até o som sair (o log
+    // do atraso, ver [logSoundStart]).
+    private var soundAskedAt: Long? = null
+    private var agreedStartAt = 0L
 
     // Partida de sala: a sala já sabe que acabou para mim (saí, não abriu ou terminou); avisa uma vez só.
     private var roomDone = false
@@ -204,6 +211,11 @@ open class GameplayViewModel(
      * devolvido pelo [MatchStart] (no relógio da partida), esperando em passos pelo [timeSource] (o `delay` sozinho
      * pode acordar antes); com o começo já passado, começa na posição da música de agora (a dos outros). O foco de
      * áudio é pedido como sempre, mas perdê-lo não pausa.
+     *
+     * Sabido o instante, o player é aquecido ([SongPlayer.warmUp]): o arranque do som (no PC, ~650 ms na primeira
+     * vez) passa durante a contagem, não depois do instante. Perto dele, a latência que o player aquecido informa
+     * ([SongPlayer.outputLatencyMs], até [MAX_OUTPUT_LATENCY_MS]) adianta o começo na mesma quantidade, para o som
+     * sair no instante; sem ela, começa no instante, só com a calibração de sempre no relógio da música (Decisão 5b).
      */
     private suspend fun startInRoom(
         room: MatchStart,
@@ -216,20 +228,50 @@ open class GameplayViewModel(
         val startAt = room.awaitStart()
         // Carregou depois do começo (o começo já passou): começa onde os outros estão, por mais atrasado que seja. No
         // horário, do começo (a espera abaixo pode acordar uns milissegundos depois: não vale um reposicionamento).
+        // Atrasado, nada de aquecer: o reposicionamento abre outra saída, fria.
         val late = timeSource.nowMs() > startAt
+        if (!late) player?.warmUp()
         val counting = waiting.copy(waitingForStart = false, countdownEndsAt = startAt)
         state.value = counting
-        while (true) {
-            val left = startAt - timeSource.nowMs()
-            if (left <= 0) break
-            delay(left)
-        }
+        waitUntil(startAt - MAX_OUTPUT_LATENCY_MS)
+        val latency = if (late) null else player?.outputLatencyMs
+        waitUntil(startAt - (latency?.coerceIn(0, MAX_OUTPUT_LATENCY_MS) ?: 0))
         // Saiu enquanto contava (a tela já foi): nada de tocar num player liberado.
         if (player == null) return counting
-        session.start(fromMs = if (late) timeSource.nowMs() - startAt else 0)
+        val now = timeSource.nowMs()
+        session.start(fromMs = if (late) now - startAt else 0)
+        syncLog("começo: latência informada=${latency ?: "?"} ms, start() ${now - startAt} ms do instante combinado")
+        soundAskedAt = now
+        agreedStartAt = startAt
         interruptions = interruptionsFactory.create().also { it.start(onInterrupted = {}, onBusy = {}) }
         startPublishing(session.engine)
         return counting
+    }
+
+    /** Espera até o instante [at] do relógio da partida (em passos: o `delay` pode acordar antes). */
+    private suspend fun waitUntil(at: Long) {
+        while (true) {
+            val left = at - timeSource.nowMs()
+            if (left <= 0) return
+            delay(left)
+        }
+    }
+
+    /**
+     * Partida de sala, nos primeiros quadros: quando o som sai (o player deixa de estar arrancando), registra no log
+     * quanto ele levou desde o `start()` e onde caiu em relação ao instante combinado (com a precisão de um quadro).
+     */
+    private fun logSoundStart() {
+        val asked = soundAskedAt ?: return
+        val song = player
+        if (song == null) {
+            soundAskedAt = null
+            return
+        }
+        if (song.isStarting || !song.isPlaying) return
+        val now = timeSource.nowMs()
+        soundAskedAt = null
+        syncLog("som saiu ${now - asked} ms depois do start(), ${now - agreedStartAt} ms do instante combinado")
     }
 
     /** O meu placar ao vivo já no começo (os outros me veem desde o 0); depois, pelos quadros ([onFrame]). */
@@ -241,12 +283,14 @@ open class GameplayViewModel(
     }
 
     /**
-     * A cada quadro da partida (depois de ela avançar): na de sala, publica o meu placar se já passou
+     * A cada quadro da partida (depois de ela avançar): na de sala, registra quando o som saiu ([logSoundStart]) e
+     * publica o meu placar se já passou
      * [LIVE_PUBLISH_EVERY_MS] desde o último. Barato e na thread da tela: só monta o placar e entrega ao
      * [LiveBoard.publish], que envia fora dela. Sem quadros (o app em segundo plano), não publica: os outros veem
      * "sem conexão", como a presença.
      */
     fun onFrame() {
+        logSoundStart()
         val board = liveBoard ?: return
         val engine = liveEngine ?: return
         if (finishing) return
@@ -390,6 +434,14 @@ open class GameplayViewModel(
         release()
         // A tela fechou sem o Sair (o Voltar durante o carregamento, o Android fechando): também saí da rodada.
         leave()
+    }
+
+    companion object {
+        /**
+         * O máximo que a partida de sala adianta a música pela latência informada pelo player: acima disso é leitura
+         * errada da saída (o PC mediu ~75 ms; o celular, dezenas de ms).
+         */
+        const val MAX_OUTPUT_LATENCY_MS = 300L
     }
 }
 

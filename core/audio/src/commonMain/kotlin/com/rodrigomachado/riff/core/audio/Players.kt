@@ -25,6 +25,19 @@ interface SongPlayer {
     val isStarting: Boolean get() = false
 
     val isCompleted: Boolean
+
+    /**
+     * Aquece a saída antes do primeiro [play] (partida de sala): a saída começa a tocar silêncio, já pronta, para o
+     * [play] no instante combinado não esperar o arranque do som (no PC, centenas de ms na primeira vez). A posição
+     * fica em 0 e [isPlaying] falso até o [play]. Quem não sabe aquecer ignora.
+     */
+    fun warmUp() = Unit
+
+    /**
+     * Aquecida ([warmUp]) e já tocando o silêncio: quanto o som do [play] leva até o alto-falante, em ms (o silêncio
+     * ainda na fila da saída). null = não se sabe (sem aquecer, ainda arrancando, ou o player não informa).
+     */
+    val outputLatencyMs: Long? get() = null
 }
 
 /** Sons de acerto e erro, tocados no instante do toque. */

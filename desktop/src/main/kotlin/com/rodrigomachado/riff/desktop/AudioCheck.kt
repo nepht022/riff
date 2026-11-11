@@ -18,7 +18,8 @@ import kotlin.math.abs
 /**
  * Mede o áudio no PC: `./scripts/gw :desktop:runAudioCheck --args="<pasta do mapa ou .sng>"`. Toca 20 s cortando e
  * devolvendo a guitarra a cada 2 s (faixas separadas) e imprime, a cada segundo, a deriva entre o relógio e a
- * posição da música (o relógio da partida), além do tempo até o som sair.
+ * posição da música (o relógio da partida), além do tempo até o som sair. Depois, com um player novo aquecido
+ * ([SongPlayer.warmUp], como na partida de sala), o tempo do play até o som e a latência que o player informa.
  */
 fun main(args: Array<String>) = runBlocking {
     // O Gradle separa o --args nos espaços: o caminho volta inteiro.
@@ -28,15 +29,32 @@ fun main(args: Array<String>) = runBlocking {
     val randomRead = FileRandomReadOpener()
     val audio = ChartAudioFinder.find(SngFolderSource(FileFolderSource(), randomRead).listChildren(folder))
         ?: error("sem áudio em $path")
-    val player: SongPlayer = when (audio) {
-        is ChartAudio.Stems -> DesktopPlayers.stemPlayers(randomRead).create(audio.guitarUri, audio.backingUris)
-        is ChartAudio.Single -> DesktopPlayers.songPlayers(randomRead).create()
+    val create: () -> SongPlayer = {
+        when (audio) {
+            is ChartAudio.Stems -> DesktopPlayers.stemPlayers(randomRead).create(audio.guitarUri, audio.backingUris)
+            is ChartAudio.Single -> DesktopPlayers.songPlayers(randomRead).create()
+        }
     }
+    val uri = (audio as? ChartAudio.Single)?.uri ?: ""
     println("Áudio: $audio")
     println("Buffer da saída: ${JavaSoundSink.BUFFER_FRAMES * MS_PER_S / SAMPLE_RATE} ms")
-    player.prepare((audio as? ChartAudio.Single)?.uri ?: "")
+    val player = create().also { it.prepare(uri) }
     measure(player)
     player.release()
+    val warm = create().also { it.prepare(uri) }
+    measureWarm(warm)
+    warm.release()
+}
+
+/** Aquecido 1 s antes (a partida de sala aquece uns 3 s antes do começo): do play até o som sair. */
+private suspend fun measureWarm(player: SongPlayer) {
+    player.warmUp()
+    kotlinx.coroutines.delay(MS_PER_S.toLong())
+    println("Aquecido: latência informada ${player.outputLatencyMs} ms")
+    val asked = System.nanoTime()
+    player.play()
+    waitForSound(player)
+    println("Aquecido, até o som sair: ${(System.nanoTime() - asked) / NS_PER_MS} ms")
 }
 
 private suspend fun measure(player: SongPlayer) {

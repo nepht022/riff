@@ -25,3 +25,9 @@ expect fun GameBackHandler(enabled: Boolean, onBack: () -> Unit)
 /** A tela não apaga durante a partida: no celular, a tela acesa; no PC, nada. */
 @Composable
 expect fun KeepScreenOn()
+
+/**
+ * Log de depuração do começo junto da partida de sala (só números: offset, ida e volta, latência, atraso do som; nada
+ * pessoal). No celular, o logcat com a tag `RiffSync`; no PC, a saída de erro (`RiffSync: ...`).
+ */
+expect fun matchSyncLog(message: String)

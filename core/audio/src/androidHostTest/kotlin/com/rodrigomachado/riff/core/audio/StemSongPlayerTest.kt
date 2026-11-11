@@ -428,4 +428,75 @@ class StemSongPlayerTest {
 
         assertTrue(sink.written > 0)
     }
+
+    /**
+     * Aquecida (partida de sala): a saída já começa a tocar silêncio, sem a música andar; o play só troca o silêncio
+     * pela música, que conta da posição 0 quando o silêncio da fila acaba de sair.
+     */
+    @Test
+    fun warmUpPlaysSilenceAndTheMusicStartsRightAfterIt() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+
+        player.warmUp()
+        assertTrue(sink.started)
+        player.renderOnce()
+        player.renderOnce()
+        assertTrue(sink.lastBlock.all { it == 0f }) // silêncio
+        assertFalse(player.isPlaying)
+        assertEquals(0L, player.positionMs)
+        assertEquals(0, sources.getValue("guitar.ogg").position) // a música não andou
+        val silence = sink.written
+
+        sink.started = false
+        player.play()
+        assertFalse(sink.started) // a saída já estava tocando: não recomeça
+        player.renderOnce()
+        assertEquals(0.5f, sink.lastBlock[0], 1e-6f) // a música, logo depois do silêncio
+
+        sink.playedFrames = silence - 1
+        assertTrue(player.isStarting) // o silêncio ainda saindo
+        assertEquals(0L, player.positionMs)
+        sink.playedFrames = silence + 441
+        assertFalse(player.isStarting)
+        assertEquals(10L, player.positionMs) // só a música conta
+    }
+
+    /** O que falta do silêncio na fila da saída é quanto o som do play leva até o alto-falante. */
+    @Test
+    fun warmedUpOutputReportsItsLatency() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        assertEquals(null, player.outputLatencyMs) // sem aquecer, não se sabe
+
+        player.warmUp()
+        repeat(8) { player.renderOnce() }
+        sink.isPresenting = false
+        assertEquals(null, player.outputLatencyMs) // ainda arrancando: não se sabe
+        sink.isPresenting = true
+        sink.playedFrames = sink.written - 4_410 // 100 ms de silêncio ainda na fila
+
+        assertEquals(100L, player.outputLatencyMs)
+        player.play()
+        assertEquals(null, player.outputLatencyMs) // depois do play, já não é a latência do começo
+    }
+
+    /** Aquecer só vale antes do primeiro play: depois, a música já tem posição (e a partida sozinha nem aquece). */
+    @Test
+    fun warmUpAfterPlayingDoesNothing() {
+        sources["guitar.ogg"] = FakeSource()
+        sources["song.ogg"] = FakeSource()
+        val player = prepared()
+        player.play()
+        player.renderOnce()
+        player.pause()
+        sink.started = false
+
+        player.warmUp()
+
+        assertFalse(sink.started)
+        assertEquals(null, player.outputLatencyMs)
+    }
 }

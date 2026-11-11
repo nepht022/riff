@@ -50,8 +50,11 @@ class RoomMatchStartTest {
         startAt: Long? = null,
     ) = fake.seedRoom("ABCD", owner, players.toList(), state = state, round = 1, songJson = SONG, startAt = startAt)
 
+    /** O log de depuração do começo junto. */
+    private val logged = mutableListOf<String>()
+
     private fun matchStart(uid: String = "u1") =
-        RoomMatchStart("ABCD", 1, fake.repository(uid, deviceClock = wallClock), gameClock)
+        RoomMatchStart("ABCD", 1, fake.repository(uid, deviceClock = wallClock), gameClock, log = { logged += it })
 
     private fun room() = fake.get("salas/ABCD") as JSONObject?
 
@@ -74,6 +77,27 @@ class RoomMatchStartTest {
         // O começo é 3 s depois de agora no servidor: no relógio da partida, 3 s depois de agora também, mesmo com o
         // relógio de parede 5 min atrasado.
         assertEquals(gameClock() + 3_000, at)
+    }
+
+    /** O offset e a ida e volta da medida usada vão para o log de depuração (só números), para o teste do usuário. */
+    @Test
+    fun theClockMeasureIsLogged() = runTest {
+        seed(
+            player("u1", loadedRound = 1),
+            player("bia", loadedRound = 1),
+            owner = "bia",
+            state = "partida",
+            startAt = now + 3_000,
+        )
+        val start = matchStart()
+        start.loaded()
+
+        start.awaitStart()
+
+        val line = logged.single()
+        assertTrue(line, line.contains("offset=$DEVICE_BEHIND_MS ms"))
+        assertTrue(line, line.contains("ida e volta=0 ms"))
+        assertTrue(line, line.contains("começo em 3000 ms"))
     }
 
     /**

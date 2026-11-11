@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.room.RoomClock
 import com.rodrigomachado.riff.core.room.RoomRepository
 import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.feature.gameplay.MatchStart
+import com.rodrigomachado.riff.feature.gameplay.matchSyncLog
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +28,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * hora do servidor para ele: `clock() + (inicio − serverNow())`, lendo os dois relógios no mesmo momento. O relógio de
  * parede errado o offset compensa; já o relógio de parede acertado (pela rede) depois da medida mudaria o começo na
  * mesma quantidade, porque o `serverNow()` é o relógio de parede mais o offset medido antes: por isso o [awaitStart]
- * mede de novo com o `inicio` já em mãos (3 idas e voltas, bem antes dos 3 s até o começo), e só sem internet fica
- * com a medida do [loaded].
+ * mede de novo com o `inicio` já em mãos (5 idas e voltas, a mediana das 3 mais rápidas, bem antes dos 3 s até o
+ * começo), e só sem internet fica com a medida do [loaded]. A medida usada (offset e ida e volta) e quanto falta para
+ * o começo vão para o [log] de depuração (só números).
  *
  * Sem começo combinado (a sala acabou, a rodada voltou à sala ou passou, sem internet, ou nada em [MAX_WAIT_MS]), a
  * partida começa já: ela nunca fica presa esperando.
@@ -38,6 +40,7 @@ class RoomMatchStart(
     private val round: Int,
     private val repository: RoomRepository,
     private val clock: () -> Long,
+    private val log: (String) -> Unit = ::matchSyncLog,
 ) : MatchStart {
     @Volatile
     private var roomClock: RoomClock? = null
@@ -53,8 +56,18 @@ class RoomMatchStart(
 
     override suspend fun awaitStart(): Long {
         val serverStart = withTimeoutOrNull(MAX_WAIT_MS) { agreedStart() } ?: return clock()
-        val server = measure() ?: roomClock ?: return clock()
-        return clock() + (serverStart - server.serverNow())
+        val fresh = measure()
+        val server = fresh ?: roomClock
+        if (server == null) {
+            log("relógio: sem medida (sem internet): começa já")
+            return clock()
+        }
+        val untilStart = serverStart - server.serverNow()
+        log(
+            "relógio: offset=${server.offsetMs} ms, ida e volta=${server.roundTripMs} ms" +
+                (if (fresh == null) " (a do carregou)" else "") + ", começo em $untilStart ms",
+        )
+        return clock() + untilStart
     }
 
     override suspend fun left() {

@@ -299,21 +299,28 @@ class RoomRepository(
     suspend fun backToLobby(code: String) = quietly { db.patch(RoomFormat.path(code), RoundFormat.backToLobby()) }
 
     /**
-     * Mede a diferença entre o relógio do servidor e o deste aparelho: 3 vezes grava o `vistoEm` (a hora do
-     * servidor) e lê de volta; `offset = vistoEm − (t0 + t1) / 2`, ficando com a ida e volta mais rápida (a de menor
-     * erro). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida (sem internet, recusado), lança
-     * [NoConnection].
+     * Mede a diferença entre o relógio do servidor e o deste aparelho: 5 vezes grava o `vistoEm` (a hora do
+     * servidor) e lê de volta; cada medida dá `offset = vistoEm − (t0 + t1) / 2`, com erro de até meia ida e volta.
+     * Fica com a mediana das 3 idas e voltas mais rápidas (a mais rápida sozinha pode ter a demora toda de um lado
+     * só; a mediana descarta o pior das três). Guarda o offset para as contas de tempo da rodada. Sem nenhuma medida
+     * (sem internet, recusado), lança [NoConnection]; com menos de 3, fica com a mais rápida.
      */
-    suspend fun measureClock(code: String): RoomClock = RoomClock(measureOffset(code), clock)
+    suspend fun measureClock(code: String): RoomClock {
+        val chosen = measureOffset(code)
+        return RoomClock(chosen.offsetMs, clock, chosen.roundTripMs)
+    }
 
-    private suspend fun measureOffset(code: String): Long {
+    /** Uma medida do relógio do servidor: a ida e volta e o offset que ela deu. */
+    private class ClockSample(val roundTripMs: Long, val offsetMs: Long)
+
+    private suspend fun measureOffset(code: String): ClockSample {
         val me = try {
             auth.uid()
         } catch (e: RoomHttpError) {
             throw NoConnection(e)
         }
         val path = RoomFormat.path(code)
-        var best: Pair<Long, Long>? = null // ida e volta, offset
+        val samples = mutableListOf<ClockSample>()
         repeat(CLOCK_TRIES) {
             val t0 = clock()
             val seen = try {
@@ -325,15 +332,17 @@ class RoomRepository(
                 null
             }
             val t1 = clock()
-            if (seen != null && (best == null || t1 - t0 < best.first)) {
-                best = t1 - t0 to seen.toLong() - (t0 + t1) / 2
-            }
+            if (seen != null) samples += ClockSample(t1 - t0, seen.toLong() - (t0 + t1) / 2)
         }
-        return (best?.second ?: throw NoConnection()).also { offset = it }
+        val fastest = samples.sortedBy { it.roundTripMs }.take(CLOCK_MEDIAN_OF)
+        if (fastest.isEmpty()) throw NoConnection()
+        val chosen = if (fastest.size < CLOCK_MEDIAN_OF) fastest.first() else fastest.sortedBy { it.offsetMs }[1]
+        offset = chosen.offsetMs
+        return chosen
     }
 
     /** A hora do servidor agora, pelo último offset medido (mede se ainda não mediu). */
-    private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code))
+    private suspend fun serverNow(code: String): Long = clock() + (offset ?: measureOffset(code).offsetMs)
 
     private fun forget(code: String) {
         synchronized(firstReady) { firstReady.remove(code) }
@@ -527,7 +536,8 @@ class RoomRepository(
         const val NULL_ETAG = "null_etag"
         const val CREATE_TRIES = 10
         const val JOIN_TRIES = 5
-        const val CLOCK_TRIES = 3
+        const val CLOCK_TRIES = 5
+        const val CLOCK_MEDIAN_OF = 3
         const val MARK_TRIES = 2
         const val RECHECK_MS = 5_000L
         const val VANISHED_MS = 5 * 60_000L

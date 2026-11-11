@@ -8,6 +8,10 @@ actual val playsByTouch = false
 
 actual fun touchUptimeMs(): Long = System.nanoTime() / NANOS_PER_MS
 
+actual fun matchSyncLog(message: String) {
+    System.err.println("RiffSync: $message")
+}
+
 @Composable
 actual fun systemAnimationsReduced(): Boolean = false
 

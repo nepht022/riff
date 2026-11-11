@@ -21,6 +21,17 @@ class FakeSongPlayer : SongPlayer {
     override var isStarting: Boolean = false
     val seeks = mutableListOf<Long>()
 
+    /** Quantas vezes a partida aqueceu o player ([warmUp]) e a latência que ele informa depois disso. */
+    var warmUps = 0
+    var latencyWhenWarm: Long? = null
+
+    override val outputLatencyMs: Long? get() = if (warmUps > 0 && !isPlaying) latencyWhenWarm else null
+
+    override fun warmUp() {
+        checkNotReleased()
+        warmUps++
+    }
+
     // Como o MediaPlayer de verdade: usar depois de liberado é um erro.
     override var positionMs: Long = 0
         get() = field.also { checkNotReleased() }
