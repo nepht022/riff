@@ -3,6 +3,7 @@ package com.rodrigomachado.riff.core.data.game
 import com.rodrigomachado.riff.core.data.importer.FakeChartRepository
 import com.rodrigomachado.riff.core.data.importer.FakeFolderSource
 import com.rodrigomachado.riff.core.model.Chart
+import com.rodrigomachado.riff.core.model.ChartArtUnavailableException
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -10,6 +11,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChartArtLoaderTest {
@@ -42,12 +44,17 @@ class ChartArtLoaderTest {
     }
 
     @Test
-    fun noImageOrNoChartGivesNothing() = runTest {
+    fun noImageGivesNothing() = runTest {
         source.file("raiz/M/song.ogg", "música")
         chart("raiz/M")
 
         assertNull(loader().load("id"))
-        assertNull(loader().load("outro"))
+    }
+
+    /** Mapa fora do banco (ainda vai ser baixado): não deu para procurar, o que é diferente de "sem imagem". */
+    @Test
+    fun aChartNotInTheLibraryCannotBeLookedUp() = runTest {
+        assertTrue(runCatching { loader().load("outro") }.exceptionOrNull() is ChartArtUnavailableException)
     }
 
     @Test
@@ -79,11 +86,11 @@ class ChartArtLoaderTest {
     }
 
     @Test
-    fun aFolderThatCannotBeReadGivesNothing() = runTest {
+    fun aFolderThatCannotBeReadCannotBeLookedUp() = runTest {
         source.file("raiz/M/background.jpg", "fundo")
         source.revoked += "raiz/M"
         chart("raiz/M")
 
-        assertNull(loader().load("id"))
+        assertTrue(runCatching { loader().load("id") }.exceptionOrNull() is ChartArtUnavailableException)
     }
 }

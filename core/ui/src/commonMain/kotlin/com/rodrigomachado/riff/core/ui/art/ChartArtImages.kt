@@ -1,6 +1,7 @@
 package com.rodrigomachado.riff.core.ui.art
 
 import androidx.compose.ui.graphics.ImageBitmap
+import com.rodrigomachado.riff.core.model.ChartArtUnavailableException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,9 @@ const val CHART_THUMB_CACHE_SIZE = 64
  * As capas das listas (Biblioteca, Resultado, sala, tela inicial): lidas de [source] em [dispatcher] (nunca na
  * thread da tela) e guardadas por mapa, as [capacity] usadas por último, para a lista não reler a imagem ao rolar.
  * "Sem imagem" e "imagem que não abre" também ficam guardados (as iniciais, sem tentar de novo); um cancelamento
- * (o item saiu da tela no meio da leitura), não. [source] deve decodificar já reduzida (é capa, não fundo).
+ * (o item saiu da tela no meio da leitura) e o "não deu para procurar" ([ChartArtUnavailableException]: o mapa
+ * ainda não chegou, a pasta perdeu o acesso), não. [clear] esquece tudo (ao fim de cada importação). [source] deve
+ * decodificar já reduzida (é capa, não fundo).
  */
 class ChartThumbImages(
     private val source: ChartArtImages,
@@ -45,13 +48,14 @@ class ChartThumbImages(
     private class Entry(val image: ImageBitmap?)
 
     /**
-     * Os guardados, na ordem do uso (o primeiro é o usado há mais tempo). Sem `equals` de propósito: o StateFlow
-     * ignora um valor igual ao atual, e o mesmo mapa só reordenado é igual.
+     * Os guardados, na ordem do uso (o primeiro é o usado há mais tempo), e quantas vezes a memória foi esquecida
+     * ([clear]): uma leitura começada antes não grava o que leu da pasta antiga. Sem `equals` de propósito: o
+     * StateFlow ignora um valor igual ao atual, e o mesmo mapa só reordenado é igual.
      */
-    private class Snapshot(val entries: Map<String, Entry>)
+    private class Snapshot(val entries: Map<String, Entry>, val generation: Int)
 
     // Trocado de uma vez, imutável (seguro entre threads, e o [cached] lê sem esperar).
-    private val state = MutableStateFlow(Snapshot(emptyMap()))
+    private val state = MutableStateFlow(Snapshot(emptyMap(), generation = 0))
 
     /** A capa já na memória, sem ler nada (a primeira imagem da composição, sem piscar as iniciais ao rolar). */
     fun cached(chartId: String): ImageBitmap? = state.value.entries[chartId]?.image
@@ -61,13 +65,31 @@ class ChartThumbImages(
             keep(chartId, entry)
             return entry.image
         }
-        val image = withContext(dispatcher) { source.loadOrNull(chartId) }
-        keep(chartId, Entry(image))
-        return image
+        val generation = state.value.generation
+        val entry = withContext(dispatcher) { read(chartId) } ?: return null
+        keep(chartId, entry, generation)
+        return entry.image
     }
 
-    private fun keep(chartId: String, entry: Entry) = state.update { current ->
-        val updated = current.entries - chartId + (chartId to entry)
-        Snapshot(if (updated.size > capacity) updated - updated.keys.first() else updated)
+    /** Esquece as capas guardadas (a importação pode ter trazido mapas e imagens novos). */
+    fun clear() = state.update { Snapshot(emptyMap(), it.generation + 1) }
+
+    /** O que [source] tem do mapa, ou null quando não deu para procurar (não vai para a memória). */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private suspend fun read(chartId: String): Entry? = try {
+        Entry(source.load(chartId))
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: ChartArtUnavailableException) {
+        null
+    } catch (e: Exception) {
+        Entry(null)
     }
+
+    private fun keep(chartId: String, entry: Entry, generation: Int = state.value.generation) =
+        state.update { current ->
+            if (current.generation != generation) return@update current
+            val updated = current.entries - chartId + (chartId to entry)
+            Snapshot(if (updated.size > capacity) updated - updated.keys.first() else updated, generation)
+        }
 }

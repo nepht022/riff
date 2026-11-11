@@ -42,13 +42,21 @@ private const val INITIALS_SCALE = 0.4f
  * A capa de um mapa num quadrado de [size]: a imagem do mapa (cortada ao meio) quando [images] a tem; sem ela (sem
  * leitor, sem imagem, imagem que não abre, ou enquanto lê), as iniciais do [title] em papel sobre uma cor fixa do
  * mapa. É enfeite: o título vem ao lado, então os leitores de tela não a anunciam. Com um [ChartThumbImages], a capa
- * já guardada aparece na primeira composição (sem piscar ao rolar a lista).
+ * já guardada aparece na primeira composição (sem piscar ao rolar a lista). Quando [refresh] muda (a música chegou
+ * na sala), a capa é pedida de novo.
  */
 @Composable
-fun ChartThumb(chartId: String, title: String, size: Dp, images: ChartArtImages?, modifier: Modifier = Modifier) {
+fun ChartThumb(
+    chartId: String,
+    title: String,
+    size: Dp,
+    images: ChartArtImages?,
+    modifier: Modifier = Modifier,
+    refresh: Any? = null,
+) {
     // O estado é do mapa: outro mapa no mesmo lugar (lista que muda) começa sem a capa do anterior.
     var art by remember(chartId, images) { mutableStateOf((images as? ChartThumbImages)?.cached(chartId)) }
-    LaunchedEffect(chartId, images) {
+    LaunchedEffect(chartId, images, refresh) {
         if (images != null) art = images.loadOrNull(chartId)
     }
     Box(

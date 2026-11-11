@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,10 +22,14 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import com.rodrigomachado.riff.core.model.ChartArtUnavailableException
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.room.Room
 import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.core.room.SongStatus
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
+import com.rodrigomachado.riff.core.ui.component.ChartThumbTestTags
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,6 +39,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
@@ -363,5 +370,37 @@ class RoomScreensTest {
         assertTrue("na mesma linha: $ready / $start", ready.bottom > start.top && start.bottom > ready.top)
         assertTrue("Pronto à esquerda: $ready / $start", ready.right <= start.left)
         composeRule.onNodeWithText("Sua dificuldade").assertExists()
+    }
+
+    /**
+     * O convidado sem a música: a capa é pedida antes do download (não dá para procurar: o mapa não está no banco) e,
+     * quando a música chega, é pedida de novo e aparece.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // a imagem de verdade (o padrão do Robolectric não cria o bitmap)
+    fun theCoverAppearsWhenTheSongIsDownloadedAfterTheFirstAsk() {
+        val image = ImageBitmap(8, 8)
+        var downloaded = false
+        val images = ChartThumbImages(
+            ChartArtImages { if (downloaded) image else throw ChartArtUnavailableException("ainda não baixou") },
+        )
+        val room = sampleRoom("Ana", "Bia", me = "Bia").withSong()
+        var state by mutableStateOf(RoomLobbyUiState.Ready(room, mySong = MySong.Downloading(0.5f)))
+        composeRule.setContent {
+            RiffTheme { RoomLobbyContent(state, "KQZX", onLeave = {}, actions = actions, images = images) }
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(ChartThumbTestTags.ART).assertDoesNotExist()
+
+        downloaded = true
+        state = state.copy(mySong = MySong.Has)
+
+        composeRule.waitUntil(WAIT_MS) {
+            composeRule.onAllNodesWithTag(ChartThumbTestTags.ART).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    private companion object {
+        const val WAIT_MS = 5_000L
     }
 }

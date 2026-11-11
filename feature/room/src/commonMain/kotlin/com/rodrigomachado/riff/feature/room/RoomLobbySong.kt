@@ -77,7 +77,8 @@ data class RoomLobbyActions(
 
 /**
  * A música escolhida num cartão de papel (capa, título e artista; para o dono, "Trocar") ou "Nenhuma música
- * escolhida" (para o dono, "Escolher música"), e o aviso quando a escolha não foi gravada ([chooseFailed]).
+ * escolhida" (para o dono, "Escolher música"), e o aviso quando a escolha não foi gravada ([chooseFailed]). A capa é
+ * pedida de novo quando [mySong] muda (o convidado que baixou a música passa a ter a imagem).
  */
 @Composable
 internal fun SongSection(
@@ -85,6 +86,7 @@ internal fun SongSection(
     onChooseSong: () -> Unit,
     chooseFailed: Boolean = false,
     images: ChartArtImages? = null,
+    mySong: MySong? = null,
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         SectionLabel(stringResource(Res.string.room_song))
@@ -109,7 +111,7 @@ internal fun SongSection(
                 )
             }
         } else {
-            SongCard(song, onChooseSong.takeIf { room.iAmOwner }, lobby, images)
+            SongCard(song, onChooseSong.takeIf { room.iAmOwner }, lobby, images, mySong)
         }
         if (room.iAmOwner && chooseFailed) Note(stringResource(Res.string.room_choose_failed), RiffColors.PaperDim)
     }
@@ -117,7 +119,13 @@ internal fun SongSection(
 
 /** O cartão da música: capa, título e artista em tinta sobre o papel; com [onChange] (o dono), o "Trocar". */
 @Composable
-private fun SongCard(song: RoomSong, onChange: (() -> Unit)?, enabled: Boolean, images: ChartArtImages?) {
+private fun SongCard(
+    song: RoomSong,
+    onChange: (() -> Unit)?,
+    enabled: Boolean,
+    images: ChartArtImages?,
+    mySong: MySong?,
+) {
     Row(
         Modifier.fillMaxWidth()
             .background(RiffColors.Paper, MaterialTheme.shapes.small)
@@ -125,7 +133,8 @@ private fun SongCard(song: RoomSong, onChange: (() -> Unit)?, enabled: Boolean, 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        ChartThumb(song.chartId, song.title, COVER, images)
+        // Pede de novo quando a música chega (não a cada passo do download: antes dela, não dá para procurar).
+        ChartThumb(song.chartId, song.title, COVER, images, refresh = mySong == MySong.Has)
         Column(Modifier.weight(1f)) {
             Text(
                 song.title,

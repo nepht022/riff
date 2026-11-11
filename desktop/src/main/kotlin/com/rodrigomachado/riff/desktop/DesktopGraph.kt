@@ -31,7 +31,9 @@ import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.game.FolderChartArtLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
+import com.rodrigomachado.riff.core.data.importer.ChartImportListeners
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
+import com.rodrigomachado.riff.core.data.importer.NotifyingChartImporter
 import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
 import com.rodrigomachado.riff.core.data.ranking.AppsScriptRankingRepository
 import com.rodrigomachado.riff.core.data.ranking.DataStorePlayerStore
@@ -164,9 +166,13 @@ class DesktopGraph(
     val settings: SettingsRepository = PreferencesSettingsRepository(preferences)
     val languages = DesktopAppLanguageStore(File(dataDir, LANGUAGE_FILE))
     val libraryFolderStore: LibraryFolderStore = PreferencesLibraryFolderStore(preferences)
-    val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
+
+    // Ao fim de cada importação (Reimportar, Trocar pasta, download), as capas guardadas se esquecem.
+    private val importListeners = ChartImportListeners()
+    private val folderImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
     }
+    val chartImporter = NotifyingChartImporter(folderImporter, importListeners)
     private val audioProbe = FolderChartAudioProbe(folderSource, charts, io)
 
     // A guitarra separada por IA: `separacoes` na pasta de dados (uma pasta por música, como no celular), a fila no
@@ -263,6 +269,7 @@ class DesktopGraph(
 
     /** As capas das listas (Biblioteca, Resultado, sala, tela inicial): pequenas e numa memória só para o app. */
     internal val chartThumbs = ChartThumbImages(DecodedChartArtImages(chartArtLoader, ChartArtDecoder.THUMB_MAX_SIDE))
+        .also { importListeners.add(it::clear) }
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
 
     // O ranking, como no celular: o nome e a chave do PC nas preferências, o histórico do banco do PC e a fila no

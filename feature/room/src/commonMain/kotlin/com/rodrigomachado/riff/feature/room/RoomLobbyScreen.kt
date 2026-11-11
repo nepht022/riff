@@ -157,7 +157,7 @@ private fun ColumnScope.LobbyBody(state: RoomLobbyUiState, actions: RoomLobbyAct
         is RoomLobbyUiState.Ready -> {
             Players(state.room)
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                SongSection(state.room, actions.onChooseSong, state.chooseFailed, images)
+                SongSection(state.room, actions.onChooseSong, state.chooseFailed, images, state.mySong)
                 MySongSection(state, actions)
             }
             MissingLine(state, Modifier.fillMaxWidth())
