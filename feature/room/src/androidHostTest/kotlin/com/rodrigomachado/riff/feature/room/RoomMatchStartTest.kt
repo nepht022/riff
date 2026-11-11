@@ -139,7 +139,8 @@ class RoomMatchStartTest {
         val expected = gameClock() + 2_000
         // a ida do PATCH e a volta do GET levam 200 ms cada: o carimbo do servidor cai no meio da ida e volta
         fake.onTrip = { method, _, arriving ->
-            if ((method == "PATCH" && arriving) || (method == "GET" && !arriving)) now += 200
+            val slowLeg = if (arriving) method == "PATCH" else method == "GET"
+            if (slowLeg) now += 200
         }
         val measuresBefore = clockMeasures()
 

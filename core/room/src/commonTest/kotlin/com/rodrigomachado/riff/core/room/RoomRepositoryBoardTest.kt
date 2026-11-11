@@ -205,7 +205,8 @@ class RoomRepositoryBoardTest : JsonTest() {
             songJson = SONG_JSON,
         )
         fake.seedScore("ABCD", 1, "u1", points = 10)
-        fake.refuse = { it.method == "PATCH" && it.body.orEmpty().contains("placar/") }
+        // pelas chaves (o org.json do Android escreve a barra como "\/")
+        fake.refuse = { it.method == "PATCH" && keys(JSONObject(it.body!!)).any { key -> key.startsWith("placar/") } }
 
         assertTrue(fake.repository().startRound("ABCD"))
 

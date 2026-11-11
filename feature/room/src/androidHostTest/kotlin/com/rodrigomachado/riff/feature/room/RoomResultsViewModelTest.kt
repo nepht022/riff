@@ -66,10 +66,10 @@ class RoomResultsViewModelTest {
         leftRound = leftRound,
     )
 
-    /** A tela aberta (alguém olhando o estado), lendo a sala como a presença lê: o streaming do repositório. */
-    /** A hora do servidor estimada que o Resultado usa para o fim da rodada (null = ainda sem medir). */
+    // A hora do servidor estimada que o Resultado usa para o fim da rodada (null = ainda sem medir).
     private var serverNow: Long? = null
 
+    /** A tela aberta (alguém olhando o estado), lendo a sala como a presença lê: o streaming do repositório. */
     private fun TestScope.opened(round: Int = 1): RoomResultsViewModel {
         val repository = fake.repository("u1")
         val vm = RoomResultsViewModel("ABCD", round, flow { emitAll(repository.observe("ABCD")) }) { serverNow }

@@ -364,7 +364,7 @@ class RoomRepository(
 
     /**
      * A hora do servidor estimada pela medida mais rápida desta vez já passou do prazo. Sem nenhuma ainda, mede: o
-     * último offset pode ter ficado errado (o relógio de parede acertado depois dele), e é por isso que se mede de novo.
+     * último offset pode ter ficado errado (o relógio de parede acertado depois dele), e por isso se mede de novo.
      */
     private fun pastDeadline(samples: List<ClockSample>, untilServer: Long?): Boolean {
         val known = samples.minByOrNull { it.roundTripMs }?.offsetMs ?: return false
