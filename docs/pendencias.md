@@ -108,7 +108,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
   - Miniaturas: a capa (`album.*`) antes do fundo, lado maior 192 e no máximo 3 leituras ao mesmo tempo.
   - Menores: a dificuldade do "Continuar" nunca é cortada com fonte grande; barra de teclas das Configurações do PC diz "Abas, opções e valores"; chips da Biblioteca como grupo de escolha única; tela inicial lê o banco uma vez ao abrir; a linha do que falta na sala é anunciada pelo leitor de tela.
 - **Revisão final, pendente:**
-  - M5 resolvido: opção B escolhida pelo usuário em 2026-11-11. O cartão da Biblioteca mostra à direita quatro quadradinhos (Fácil, Médio, Difícil, Expert; cheios os que o mapa tem) e, abaixo, o ícone de guitarra quando o mapa já veio com ela ou o selo "IA" quando foi separada pela IA (com as duas, só o ícone do mapa).
+  - M5 resolvido: opção A escolhida pelo usuário em 2026-11-11 (etiqueta da dificuldade mais alta + GUITARRA/IA). O cartão da Biblioteca mostra à direita a etiqueta cinza-papel da dificuldade mais alta do mapa (o leitor de tela lê "Até Expert") e, abaixo, "GUITARRA" com contorno de tinta quando o mapa já veio com a guitarra ou o selo "IA" quando ela foi separada pela IA (com as duas, só "GUITARRA").
   - M7: as consultas novas (recorde por mapa, últimos recordes, última partida) não têm índice próprio no banco. Na escala do app levam milissegundos (estimativa da revisão, não medida); um índice exigiria migração do Room.
 
 ## Multiplayer M3: placar ao vivo e Resultado da sala (2026-11-11)

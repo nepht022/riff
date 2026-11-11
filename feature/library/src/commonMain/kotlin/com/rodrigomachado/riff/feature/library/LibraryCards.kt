@@ -39,7 +39,7 @@ import java.text.NumberFormat
 
 /**
  * O cartão de um mapa: a capa, o título, artista · duração e o recorde ([best], o maior em qualquer dificuldade) ou
- * "Ainda sem recorde"; à direita, as dificuldades e a guitarra do mapa ou o selo "IA" ([aiSeparated], ver [CardSide]).
+ * "Ainda sem recorde"; à direita, a dificuldade mais alta e "GUITARRA" ou o selo "IA" ([aiSeparated], ver [CardSide]).
  */
 @Composable
 @Suppress("LongParameterList") // o mapa, o que se mostra dele e o toque

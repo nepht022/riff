@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -11,7 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** O lado direito do cartão (opção B): os quadradinhos das dificuldades e a guitarra do mapa ou "IA". */
+/** O lado direito do cartão (opção A): a etiqueta da dificuldade mais alta e "GUITARRA" ou "IA". */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class LibraryCardTest {
@@ -34,28 +35,30 @@ class LibraryCardTest {
     private fun library(vararg charts: Chart, ai: Set<String> = emptySet()) =
         LibraryUiState(isLoading = false, hasFolder = true, charts = charts.toList(), aiSeparated = ai)
 
-    /** Os quadradinhos preenchidos são as dificuldades do mapa; o leitor de tela lê uma frase só, na ordem. */
+    /** A etiqueta mostra só a dificuldade mais alta, em maiúsculas; o leitor de tela lê "Até Médio". */
     @Test
-    fun difficultySquaresShowWhatTheChartHas() {
-        val levels = setOf(Difficulty.HARD, Difficulty.EASY, Difficulty.MEDIUM)
-        show(library(chart("a", difficulties = levels), chart("b", difficulties = setOf(Difficulty.EXPERT))))
+    fun highestDifficultyTagShowsTheTopOne() {
+        show(library(chart("a", difficulties = setOf(Difficulty.MEDIUM, Difficulty.EASY))))
 
-        composeRule.onNodeWithContentDescription("Dificuldades: Fácil, Médio e Difícil").assertExists()
-        composeRule.onNodeWithContentDescription("Dificuldades: Expert").assertExists()
+        composeRule.onNodeWithText("MÉDIO").assertExists()
+        composeRule.onNodeWithContentDescription("Até Médio").assertExists()
+        composeRule.onNodeWithText("FÁCIL").assertDoesNotExist()
     }
 
     @Test
     @Config(qualifiers = "en")
-    fun inEnglishTheDifficultiesReadInEnglish() {
-        show(library(chart("a", difficulties = setOf(Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD))))
+    fun inEnglishTheTagReadsInEnglish() {
+        show(library(chart("a", difficulties = setOf(Difficulty.EASY, Difficulty.EXPERT))))
 
-        composeRule.onNodeWithContentDescription("Difficulties: Easy, Medium and Hard").assertExists()
+        composeRule.onNodeWithText("EXPERT").assertExists()
+        composeRule.onNodeWithContentDescription("Up to Expert").assertExists()
     }
 
     @Test
-    fun ownGuitarShowsTheGuitarIcon() {
+    fun ownGuitarShowsTheGuitarTag() {
         show(library(chart("a").copy(separateGuitar = true)))
 
+        composeRule.onNodeWithText("GUITARRA").assertExists()
         composeRule.onNodeWithContentDescription("Guitarra do mapa").assertExists()
         composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertDoesNotExist()
     }
@@ -65,15 +68,15 @@ class LibraryCardTest {
         show(library(chart("a"), ai = setOf("a")))
 
         composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertExists()
-        composeRule.onNodeWithContentDescription("Guitarra do mapa").assertDoesNotExist()
+        composeRule.onNodeWithText("GUITARRA").assertDoesNotExist()
     }
 
-    /** Com as duas coisas, só o ícone do mapa: ele já tem a guitarra. */
+    /** Com as duas coisas, só "GUITARRA": o mapa já tem a guitarra. */
     @Test
     fun ownGuitarWinsOverAi() {
         show(library(chart("a").copy(separateGuitar = true), ai = setOf("a")))
 
-        composeRule.onNodeWithContentDescription("Guitarra do mapa").assertExists()
+        composeRule.onNodeWithText("GUITARRA").assertExists()
         composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertDoesNotExist()
     }
 }

@@ -454,9 +454,9 @@ class LibraryContentTest {
         assertEquals(listOf("difficulty:a:EXPERT"), events)
     }
 
-    /** A guitarra que veio com o mapa tem o ícone dela (não o selo "IA") e entra no chip "Guitarra separada". */
+    /** A guitarra que veio com o mapa tem a etiqueta "GUITARRA" (não o selo "IA") e entra no chip da guitarra. */
     @Test
-    fun aChartThatCameWithItsOwnGuitarShowsTheGuitarIconNotTheAiSeal() {
+    fun aChartThatCameWithItsOwnGuitarShowsTheGuitarTagNotTheAiSeal() {
         showWithPrompt(
             LibraryUiState(
                 isLoading = false,
@@ -466,6 +466,7 @@ class LibraryContentTest {
         )
 
         composeRule.onNodeWithContentDescription("Guitarra separada pela IA").assertDoesNotExist()
+        composeRule.onNodeWithText("GUITARRA").assertExists()
         composeRule.onNodeWithContentDescription("Guitarra do mapa").assertExists()
         composeRule.onNodeWithText("Guitarra separada").performClick()
         composeRule.onNodeWithText("Música").assertExists()

@@ -80,8 +80,8 @@
     <string name="library_record">Record %1$s · %2$s</string>
     <string name="library_no_record">No record yet</string>
     <string name="library_ai_seal">AI</string>
-    <string name="library_difficulties">Difficulties: %1$s</string>
-    <string name="library_list_last">%1$s and %2$s</string>
+    <string name="library_up_to">Up to %1$s</string>
+    <string name="library_guitar_tag">Guitar</string>
     <string name="library_own_guitar">Guitar from the chart</string>
     <string name="library_keys_move">Move</string>
     <string name="library_keys_choose">Choose</string>
