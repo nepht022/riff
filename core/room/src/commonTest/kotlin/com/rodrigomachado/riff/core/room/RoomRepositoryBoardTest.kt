@@ -170,6 +170,30 @@ class RoomRepositoryBoardTest : JsonTest() {
         assertEquals(listOf("bia"), observed().boardOf(2).map { it.uid })
     }
 
+    /**
+     * As regras antigas (sem o `placar`, não republicadas) recusam o PATCH inteiro com a deleção dele: o Começar
+     * tenta de novo sem ela, e a rodada começa (o placar antigo fica no banco).
+     */
+    @Test
+    fun startRoundWithTheOldRulesStartsWithoutTheDeletion() = runTest {
+        fake.seedRoom(
+            "ABCD",
+            owner = "u1",
+            players = listOf(player("u1"), player("bia")),
+            round = 2,
+            songJson = SONG_JSON,
+        )
+        fake.seedScore("ABCD", 1, "u1", points = 10)
+        fake.refuse = { it.method == "PATCH" && it.body.orEmpty().contains("placar/") }
+
+        assertTrue(fake.repository().startRound("ABCD"))
+
+        assertEquals("contagem", fake.get("salas/ABCD/estado"))
+        assertEquals(3, fake.get("salas/ABCD/rodada"))
+        assertEquals(setOf("estado", "rodada", "inicio", "atividadeEm"), keys(JSONObject(fake.writes.last().body!!)))
+        assertEquals(setOf("1"), keys(fake.get("salas/ABCD/placar") as JSONObject))
+    }
+
     @Test
     fun startRoundOfTheFirstTwoRoundsDeletesNothing() = runTest {
         val writes = mutableListOf<FirebaseWrite>()

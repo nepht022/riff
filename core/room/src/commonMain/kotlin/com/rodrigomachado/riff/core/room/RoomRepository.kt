@@ -218,7 +218,7 @@ class RoomRepository(
             val now = serverNow(code)
             room.canStart(now).also { can ->
                 if (can) {
-                    db.patch(path, RoundFormat.startRound(room.round + 1))
+                    patchStartRound(path, RoundFormat.startRound(room.round + 1))
                     countdownSince(code, room.round + 1, now)
                 }
             }
@@ -227,6 +227,20 @@ class RoomRepository(
         false
     } catch (_: RoomHttpError) {
         false
+    }
+
+    /**
+     * O PATCH do Começar. Recusado com a deleção do placar antigo (as regras de antes da M3, sem o `placar`, ainda
+     * não republicadas: recusam o PATCH inteiro), tenta de novo sem ela: a rodada começa e o placar antigo fica.
+     */
+    private suspend fun patchStartRound(path: String, values: Map<String, Any?>) {
+        try {
+            db.patch(path, values)
+        } catch (e: RoomHttpError) {
+            val withoutBoard = values.filterKeys { !it.startsWith("${ScoreFormat.BOARD}/") }
+            if (e.code !in REFUSED || withoutBoard.size == values.size) throw e
+            db.patch(path, withoutBoard)
+        }
     }
 
     /**
