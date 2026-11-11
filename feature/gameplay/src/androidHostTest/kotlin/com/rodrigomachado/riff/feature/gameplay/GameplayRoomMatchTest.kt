@@ -23,12 +23,14 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         var finishedCalls = 0
         var playingWhenLoaded: Boolean? = null
         var preparedWhenLoaded: String? = null
+        var warmUpsWhenLoaded: Int? = null
         val start = CompletableDeferred<Long>()
 
         override suspend fun loaded() {
             loadedCalls++
             playingWhenLoaded = player.isPlaying
             preparedWhenLoaded = player.preparedUri
+            warmUpsWhenLoaded = player.warmUps
         }
 
         override suspend fun awaitStart(): Long = start.await()
@@ -222,18 +224,16 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
 
     /**
      * O player aquecido informa 120 ms do play até o alto-falante: a sessão começa 120 ms antes do instante
-     * combinado, para o som sair nele (Decisão 5b). Aquece logo que o instante chega, bem antes dele.
+     * combinado, para o som sair nele (Decisão 5b). Aquecido ao carregar, bem antes dele.
      */
     @Test
     fun outputLatencyStartsTheSongEarlier() = runTest {
         player.latencyWhenWarm = 120
         loader.result = { playable() }
         val viewModel = roomViewModel(match, clock())
-        assertEquals(0, player.warmUps) // esperando os outros: ainda não
 
         match.start.complete(5_000)
         runCurrent()
-        assertEquals(1, player.warmUps)
 
         advanceTimeBy(4_879)
         assertFalse(player.isPlaying)
@@ -243,6 +243,27 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         assertEquals(4_880L, testScheduler.currentTime)
         assertTrue(player.seeks.isEmpty()) // do começo
         assertEquals(5_000L, viewModel.ready().countdownEndsAt) // a contagem continua até o instante
+    }
+
+    /**
+     * Aquece logo depois de carregar, sem esperar o começo: as medidas do relógio no `awaitStart` comem a janela
+     * antes do instante, e o arranque do som (~650 ms no PC) fica fora dela. O silêncio não se ouve.
+     */
+    @Test
+    fun warmsUpRightAfterLoading() = runTest {
+        player.latencyWhenWarm = 120
+        loader.result = { playable() }
+        val viewModel = roomViewModel(match, clock())
+
+        assertEquals(0, match.warmUpsWhenLoaded) // o carregou primeiro (os outros esperam por ele)
+        assertEquals(1, player.warmUps) // e já aquecido, ainda esperando o começo
+        assertTrue(viewModel.ready().waitingForStart)
+
+        match.start.complete(5_000)
+        advanceTimeBy(5_000)
+        runCurrent()
+        assertEquals(1, player.warmUps) // uma vez só
+        assertTrue(player.isPlaying)
     }
 
     /** Sem a latência informada (o MediaPlayer, ou a saída ainda arrancando): no instante, com a calibração só. */
@@ -279,9 +300,12 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         assertTrue(player.isPlaying)
     }
 
-    /** O começo já passou: começa já, na posição dos outros, sem aquecer (o reposicionamento abre outra saída). */
+    /**
+     * O começo já passou: começa já, na posição dos outros. O aquecimento (feito ao carregar) não vale: o
+     * reposicionamento abre outra saída, fria, e a latência dele não é usada.
+     */
     @Test
-    fun aLateStartDoesNotWarmUp() = runTest {
+    fun aLateStartSeeksPastTheWarmUp() = runTest {
         player.latencyWhenWarm = 120
         loader.result = { playable() }
         advanceTimeBy(10_000)
@@ -290,8 +314,9 @@ class GameplayRoomMatchTest : GameplayViewModelTestBase() {
         match.start.complete(5_000)
         runCurrent()
 
-        assertEquals(0, player.warmUps)
+        assertEquals(1, player.warmUps) // aqueceu ao carregar, e só
         assertEquals(listOf(5_000L), player.seeks)
+        assertEquals(10_000L, testScheduler.currentTime) // sem adiantar pela latência
     }
 
     @Test

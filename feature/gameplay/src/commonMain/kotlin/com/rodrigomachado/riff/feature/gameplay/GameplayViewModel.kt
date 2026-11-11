@@ -212,8 +212,10 @@ open class GameplayViewModel(
      * pode acordar antes); com o começo já passado, começa na posição da música de agora (a dos outros). O foco de
      * áudio é pedido como sempre, mas perdê-lo não pausa.
      *
-     * Sabido o instante, o player é aquecido ([SongPlayer.warmUp]): o arranque do som (no PC, ~650 ms na primeira
-     * vez) passa durante a contagem, não depois do instante. Perto dele, a latência que o player aquecido informa
+     * Logo depois do carregou (sem esperar o instante), o player é aquecido ([SongPlayer.warmUp]): o arranque do som
+     * (no PC, ~650 ms na primeira vez) passa enquanto espera os outros e mede o relógio, não depois do instante; o
+     * silêncio não se ouve. Atrasado, o reposicionamento abre outra saída, fria, e descarta o aquecimento (e a
+     * latência dele não vale). Perto do instante, a latência que o player aquecido informa
      * ([SongPlayer.outputLatencyMs], até [MAX_OUTPUT_LATENCY_MS]) adianta o começo na mesma quantidade, para o som
      * sair no instante; sem ela, começa no instante, só com a calibração de sempre no relógio da música (Decisão 5b).
      */
@@ -225,12 +227,11 @@ open class GameplayViewModel(
         val waiting = ready.copy(inRoom = true, waitingForStart = true)
         state.value = waiting
         room.loaded()
+        player?.warmUp()
         val startAt = room.awaitStart()
         // Carregou depois do começo (o começo já passou): começa onde os outros estão, por mais atrasado que seja. No
         // horário, do começo (a espera abaixo pode acordar uns milissegundos depois: não vale um reposicionamento).
-        // Atrasado, nada de aquecer: o reposicionamento abre outra saída, fria.
         val late = timeSource.nowMs() > startAt
-        if (!late) player?.warmUp()
         val counting = waiting.copy(waitingForStart = false, countdownEndsAt = startAt)
         state.value = counting
         waitUntil(startAt - MAX_OUTPUT_LATENCY_MS)
