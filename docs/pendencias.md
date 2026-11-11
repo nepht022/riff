@@ -102,6 +102,15 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - No celular, nome longo cortado na linha com "sem conexão" (bloco de 128 dp).
 - O Resultado da sala mostra "Rodada N" e não o título (o dono pode trocar de música sem mudar a rodada).
 - Sincronia: arquivo único no celular (`MediaPlayer`) não aquece nem informa latência (~155 ms de arranque); a latência do mixer do Windows fica de fora; com internet lenta e menos de ~650 ms até o começo, o aquecimento do PC pode não terminar (log `latência informada=?`).
+- Sem republicar as regras (as antigas, sem o `placar`): o placar ao vivo e o Resultado da sala ficam vazios (os envios são recusados) e o placar de duas rodadas atrás não é apagado; a rodada começa assim mesmo (o Começar recusado com a deleção tenta de novo sem ela).
+- O `estado: "fim"` da especificação não é gravado: o fim da rodada é calculado em cada aparelho (`RoundBoard.roundOver`: todos terminaram ou saíram, ou 10 s depois do fim da música); o Resultado da sala para de esperar por ele (conferindo a cada 1 s, pela hora do servidor da última medida do relógio).
+- **Revisão final (2026-11-11), corrigido:**
+  - Quem terminou e depois saiu (da rodada ou da sala) fica na posição e no pódio, sem o "saiu".
+  - A partida de sala aquece o player logo depois do carregou (não depois do `inicio`): o arranque do som passa enquanto espera os outros. As medidas do relógio do `awaitStart` param quando falta menos de 1 s para o começo (rede lenta) e ficam com as que deu tempo (a primeira sempre é feita).
+  - O `isStarting` da partida sozinho não lê a posição da saída a cada quadro.
+  - O batimento grava o `vistoEm` antes de reenviar os placares guardados (envio lento não atrasa a presença).
+  - A precisão do placar ao vivo é sobre as notas que já passaram (BOM vale meia); no fim, a do mapa inteiro.
+  - Um erro inesperado no envio do placar ao vivo só vai para o log (`RiffRoom`), sem derrubar o app.
 
 ## Multiplayer M2: música e começo juntos (2026-11-10)
 
