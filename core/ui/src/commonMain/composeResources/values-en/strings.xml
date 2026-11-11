@@ -18,4 +18,5 @@
     <string name="ui_separation_open_count">Guitar separation: %1$d left</string>
     <string name="ui_separation_close">Close</string>
     <string name="ui_separation_ok">OK</string>
+    <string name="ui_back">Back</string>
 </resources>

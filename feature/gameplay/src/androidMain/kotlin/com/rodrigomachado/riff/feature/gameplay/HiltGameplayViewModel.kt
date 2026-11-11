@@ -13,6 +13,7 @@ import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.ranking.RankingRepository
 import com.rodrigomachado.riff.core.game.TimeSource
 import com.rodrigomachado.riff.core.model.Difficulty
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

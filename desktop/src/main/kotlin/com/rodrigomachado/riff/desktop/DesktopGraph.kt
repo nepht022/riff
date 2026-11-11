@@ -63,6 +63,7 @@ import com.rodrigomachado.riff.core.separation.DemucsModelFactory
 import com.rodrigomachado.riff.core.separation.DesktopSeparation
 import com.rodrigomachado.riff.core.separation.DesktopSeparationScheduler
 import com.rodrigomachado.riff.core.separation.SeparationProgress
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
 import com.rodrigomachado.riff.core.ui.component.SeparationControls
 import com.rodrigomachado.riff.desktop.pad.GlfwGamepad
 import com.rodrigomachado.riff.desktop.pad.GlfwPadSource
@@ -70,6 +71,7 @@ import com.rodrigomachado.riff.desktop.pad.PadSource
 import com.rodrigomachado.riff.feature.calibration.AudioClickTrackPlayer
 import com.rodrigomachado.riff.feature.calibration.CalibrationViewModel
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
+import com.rodrigomachado.riff.feature.gameplay.ChartArtDecoder
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
@@ -253,7 +255,11 @@ class DesktopGraph(
     private val stemPlayers = DesktopPlayers.stemPlayers(randomRead, audioOut)
     internal val trackLoader = FolderChartTrackLoader(folderSource, charts, separations, io)
     private val chartOffsets = RoomChartOffsetRepository(database.chartOffsetDao())
-    private val chartArt = DecodedChartArtImages(FolderChartArtLoader(folderSource, charts, io))
+    private val chartArtLoader = FolderChartArtLoader(folderSource, charts, io)
+    private val chartArt = DecodedChartArtImages(chartArtLoader)
+
+    /** As capas das listas (Biblioteca, Resultado, sala, tela inicial): pequenas e numa memória só para o app. */
+    internal val chartThumbs = ChartThumbImages(DecodedChartArtImages(chartArtLoader, ChartArtDecoder.THUMB_MAX_SIDE))
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
 
     // O ranking, como no celular: o nome e a chave do PC nas preferências, o histórico do banco do PC e a fila no
