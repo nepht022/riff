@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.desktop
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -24,6 +25,7 @@ import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.EXPERT
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.LEAVE_ROOM
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.MAX_PRESSES
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.ME
+import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.NOT_READY
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.READY_BUTTON
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.START
 import com.rodrigomachado.riff.feature.gameplay.GameplayTestTags
@@ -152,6 +154,9 @@ class DesktopRoomMatchFlowTest {
         composeRule.waitUntil(TIMEOUT_MS) { firebase.get("salas/$code/jogadores/$ME/pronto") == true }
         room.guestGetsReady(code)
         composeRule.waitUntilAtLeastOneExists(hasText(START) and isEnabled(), TIMEOUT_MS)
+        // O foco continua no "Não estou pronto"; o Começar fica ao lado, à direita.
+        composeRule.onNode(hasText(NOT_READY) and hasClickAction()).assertIsFocused()
+        room.press(Key.DirectionRight)
         room.pressUntilFocused(hasText(START))
         composeRule.mainClock.autoAdvance = false
         match.pressKeys { pressKey(Key.Enter) }
