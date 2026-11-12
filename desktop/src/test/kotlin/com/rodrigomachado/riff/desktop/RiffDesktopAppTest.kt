@@ -48,18 +48,13 @@ import java.io.File
 import java.util.Locale
 
 /**
- * O Skia do PC suaviza o contorno das letras, dos ícones e das bordas de um jeito no Windows e de outro no Linux do
- * CI. No Windows, onde as referências são gravadas e conferidas antes de cada merge, até 1% passa. No Linux a
- * diferença é só de suavização, mas com o design novo (mais texto, o carimbo inclinado) chega a 1,5–4% dos pixels
- * (medido em 2026-11-12 nas 4 telas destes testes); lá o limite é 10%, que ainda pega uma tela quebrada (um painel
- * sumido, o layout trocado). Os textos são conferidos pelos testes de conteúdo; as screenshots do celular seguem
- * exatas.
+ * Até 1% de diferença passa (a suavização das letras varia entre máquinas); layout e cores continuam conferidos, e
+ * os textos são conferidos pelos testes de conteúdo. As screenshots do PC são comparadas só no Windows, onde são
+ * gravadas: no Linux do CI o Skia suaviza letras e bordas de outro jeito (1,5–4% das telas, medido em 2026-11-12) e
+ * os símbolos de fora das fontes do app mudam de tamanho.
  */
-private val TextRasterTolerance = RoborazziOptions(
-    compareOptions = RoborazziOptions.CompareOptions(
-        changeThreshold = if (System.getProperty("os.name").lowercase().startsWith("windows")) 0.01f else 0.10f,
-    ),
-)
+private val TextRasterTolerance =
+    RoborazziOptions(compareOptions = RoborazziOptions.CompareOptions(changeThreshold = 0.01f))
 
 @OptIn(ExperimentalTestApi::class)
 class RiffDesktopAppTest {
