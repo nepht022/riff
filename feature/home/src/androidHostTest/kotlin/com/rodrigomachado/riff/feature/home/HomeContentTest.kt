@@ -11,9 +11,11 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.ui.input.Gamepad
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
@@ -207,6 +209,40 @@ class HomeContentTest {
         composeRule.onNodeWithText("✕").assertExists()
         // O "Continuar" é do celular.
         composeRule.onNodeWithTag(HomeTestTags.CONTINUE).assertDoesNotExist()
+    }
+
+    /** No PC, os quadros crescem com a janela: quase metade da altura, como no protótipo (340 de 720). */
+    @Test
+    @Config(qualifiers = "pt-rBR-w1280dp-h720dp")
+    fun pcTilesFillAlmostHalfTheHeight() {
+        show(roomOn = true, pad = PadOn)
+
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val solo = composeRule.onNodeWithTag(HomeTestTags.SOLO).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val share = solo.height / root.height
+        assertTrue("os quadros ocupam ${share * 100}% da altura", share in 0.42f..0.5f)
+    }
+
+    /** Na janela mínima do PC (800×500, a barra de título fora), tudo cabe ou rola: nada cortado. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w800dp-h460dp")
+    fun pcSmallestWindowReachesEveryTile() {
+        show(roomOn = true, pad = PadOn)
+
+        listOf(HomeTestTags.SOLO, HomeTestTags.ROOM, HomeTestTags.RANKING).forEach {
+            composeRule.onNodeWithTag(it).performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onNodeWithText("Os melhores de cada música").assertIsDisplayed()
+    }
+
+    /** A escala da tela do PC: a do protótipo em 1280×720, com limites para a janela mínima e para telas 4K. */
+    @Test
+    fun pcScaleFollowsTheWindowWithinLimits() {
+        assertEquals(1f, wideHomeScale(1280.dp, 690.dp), 0.01f)
+        assertEquals(0.7f, wideHomeScale(800.dp, 460.dp), 0.001f)
+        assertEquals(1.8f, wideHomeScale(3840.dp, 2100.dp), 0.001f)
+        // O lado mais apertado manda.
+        assertEquals(wideHomeScale(1600.dp, 600.dp), wideHomeScale(2000.dp, 600.dp), 0.001f)
     }
 
     /** No celular não há barra de teclas, nem deitado. */

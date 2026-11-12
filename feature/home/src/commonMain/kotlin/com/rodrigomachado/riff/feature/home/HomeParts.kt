@@ -30,10 +30,14 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isUnspecified
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.art.ChartArtImages
@@ -60,7 +64,7 @@ import java.text.NumberFormat
  * "em breve" sem o Firebase configurado.
  */
 @Composable
-internal fun RoomTile(onRoom: (() -> Unit)?, wide: Boolean, modifier: Modifier) {
+internal fun RoomTile(onRoom: (() -> Unit)?, wide: Boolean, modifier: Modifier, look: TileLook = TileLook()) {
     if (onRoom != null) {
         ModeTile(
             stringResource(Res.string.home_room),
@@ -69,6 +73,7 @@ internal fun RoomTile(onRoom: (() -> Unit)?, wide: Boolean, modifier: Modifier) 
             colors = RiffColors.Paper to RiffColors.Ink,
             onClick = onRoom,
             modifier = modifier,
+            look = look,
         )
     } else {
         ModeTile(
@@ -79,13 +84,27 @@ internal fun RoomTile(onRoom: (() -> Unit)?, wide: Boolean, modifier: Modifier) 
             onClick = null,
             modifier = modifier,
             description = stringResource(Res.string.home_room_coming_soon),
+            look = look,
         )
     }
 }
 
 /**
+ * As medidas de dentro de um quadro: o ícone, o título e a linha de apoio (sem tamanho, os do tema) e a sombra dura.
+ * O padrão é o do celular; o PC passa as suas, que crescem com a janela.
+ */
+internal data class TileLook(
+    val icon: Dp = TILE_ICON,
+    val title: TextUnit = TextUnit.Unspecified,
+    val note: TextUnit = TextUnit.Unspecified,
+    val shadow: Dp = SHADOW,
+    val gap: Dp = 0.dp,
+)
+
+/**
  * Quadro alto da tela inicial, com a linha de apoio [note] embaixo do título; sem [onClick], desligado ("em breve")
- * e lido por [description]. [outlined]: o contorno de papel, para o quadro escuro não sumir no fundo.
+ * e lido por [description]. [outlined]: o contorno de papel, para o quadro escuro não sumir no fundo; [look]: as
+ * medidas de dentro.
  */
 @Composable
 @Suppress("LongParameterList") // texto, ícone, cores e o estado desligado de cada quadro
@@ -98,6 +117,7 @@ internal fun ModeTile(
     modifier: Modifier,
     description: String = title,
     outlined: Boolean = false,
+    look: TileLook = TileLook(),
 ) {
     val (background, content) = colors
     val action = if (onClick == null) {
@@ -115,7 +135,7 @@ internal fun ModeTile(
     Column(
         modifier
             // Sombra dura deslocada, como os cartazes do app.
-            .drawBehind { drawRect(Color.Black, Offset(SHADOW.toPx(), SHADOW.toPx()), size) }
+            .drawBehind { drawRect(Color.Black, Offset(look.shadow.toPx(), look.shadow.toPx()), size) }
             .background(background, MaterialTheme.shapes.small)
             .then(outline)
             .then(action)
@@ -123,18 +143,27 @@ internal fun ModeTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        HomeIcon(Modifier.size(TILE_ICON), content, icon)
+        HomeIcon(Modifier.padding(bottom = look.gap).size(look.icon), content, icon)
         Text(
             title,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineSmall.sized(look.title),
             color = content,
             textAlign = TextAlign.Center,
         )
         note?.let {
-            Text(it, style = MaterialTheme.typography.labelMedium, color = content, textAlign = TextAlign.Center)
+            Text(
+                it,
+                style = MaterialTheme.typography.labelMedium.sized(look.note),
+                color = content,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
+
+/** O estilo com o tamanho [size] (e a altura da linha proporcional); sem tamanho, o próprio estilo. */
+internal fun TextStyle.sized(size: TextUnit): TextStyle =
+    if (size.isUnspecified) this else copy(fontSize = size, lineHeight = size * LINE_HEIGHT)
 
 /**
  * "Continuar": a última partida (capa, título, artista · dificuldade e o recorde); tocar abre a partida dessa música
@@ -259,6 +288,7 @@ private fun formatScore(score: Long): String {
 }
 
 private val RoomBackground = Color(0xFF3A2E28)
+private const val LINE_HEIGHT = 1.2f
 private val TILE_ICON = 40.dp
 private val SHADOW = 4.dp
 private val OUTLINE = 1.dp

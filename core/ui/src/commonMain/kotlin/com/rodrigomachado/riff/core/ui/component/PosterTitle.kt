@@ -11,13 +11,17 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 
 private val RedShadow = 3.dp
-private val BlackShadow = 6.dp
+private const val BLACK_FACTOR = 2
 
-/** Letreiro de pôster: texto em papel com sombras duras vermelha e preta. Lido uma vez só, como título. */
+/**
+ * Letreiro de pôster: texto em papel com sombras duras vermelha e preta (a preta com o dobro do deslocamento da
+ * [redShadow]). Lido uma vez só, como título.
+ */
 @Composable
 fun PosterTitle(
     text: String,
@@ -25,19 +29,22 @@ fun PosterTitle(
     style: TextStyle = MaterialTheme.typography.displayMedium,
     /** Lido como título pelo TalkBack. O placar usa o mesmo visual sem ser título. */
     heading: Boolean = true,
+    /** O deslocamento da sombra vermelha (a tela inicial do PC cresce com a janela). */
+    redShadow: Dp = RedShadow,
 ) {
-    Box(modifier.padding(end = BlackShadow, bottom = BlackShadow)) {
+    val blackShadow = redShadow * BLACK_FACTOR
+    Box(modifier.padding(end = blackShadow, bottom = blackShadow)) {
         Text(
             text,
             style = style,
             color = RiffColors.Ink,
-            modifier = Modifier.offset(BlackShadow, BlackShadow).clearAndSetSemantics {},
+            modifier = Modifier.offset(blackShadow, blackShadow).clearAndSetSemantics {},
         )
         Text(
             text,
             style = style,
             color = RiffColors.TourRed,
-            modifier = Modifier.offset(RedShadow, RedShadow).clearAndSetSemantics {},
+            modifier = Modifier.offset(redShadow, redShadow).clearAndSetSemantics {},
         )
         Text(
             text,
