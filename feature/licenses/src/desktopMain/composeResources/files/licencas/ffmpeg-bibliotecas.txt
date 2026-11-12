@@ -19,6 +19,10 @@ https://github.com/bytedeco/javacpp-presets/blob/1.5.14/ffmpeg/cppbuild.sh
 O x264 e o x265 (GPL) são baixados pela receita mas NÃO entram neste
 FFmpeg (sem --enable-gpl).
 
+Cópia do código-fonte junto do instalador: na página de cada versão do Riff,
+https://github.com/nepht022/riff/releases, os arquivos "fonte-*" (ver o
+fonte-LEIAME.txt) trazem, sem mudança, o código-fonte usado no instalador.
+
 Patentes: além dos direitos autorais (as licenças abaixo), alguns formatos
 de áudio e vídeo podem ter patentes em alguns países, e as licenças de
 software livre não dão licença de patente de terceiros. Este FFmpeg traz,

@@ -70,6 +70,18 @@ class DesktopLicenseSourceTest {
         listOf("MP3", "AMR", "H.264").forEach { assertTrue("$it no aviso de patentes", text.contains(it)) }
     }
 
+    /** GPL 2 e LGPL: a cópia do código-fonte vai junto do instalador, na página de cada versão no GitHub. */
+    @Test
+    fun copyleftNoticesPointToTheSourceNextToTheInstaller() = runBlocking {
+        val content = source.content().associateBy { it.name }
+
+        for (name in listOf("OpenJDK (Java do app)", "FFmpeg", "Bibliotecas dentro do FFmpeg")) {
+            val text = content.getValue(name).text.orEmpty()
+            assertTrue("$name aponta a página das versões", text.contains("https://github.com/nepht022/riff/releases"))
+            assertTrue("$name cita os arquivos fonte-", text.contains("fonte-"))
+        }
+    }
+
     @Test
     fun theFfmpegNoticeSaysWhereTheSourceIs() = runBlocking {
         val text = source.content().single { it.name == "FFmpeg" }.text.orEmpty()

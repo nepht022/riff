@@ -10,6 +10,10 @@ SOURCE do arquivo release desse Java) e https://github.com/adoptium/temurin-buil
 (commit e6ba7dec3d07); projeto:
 https://projects.eclipse.org/projects/adoptium.temurin
 
+Cópia do código-fonte junto do instalador: na página de cada versão do Riff,
+https://github.com/nepht022/riff/releases, os arquivos "fonte-*" (ver o
+fonte-LEIAME.txt) trazem, sem mudança, o código-fonte usado no instalador.
+
 Os textos legais completos já vão dentro do app instalado, na pasta
 runtime\legal (uma pasta por módulo do Java). Os avisos de terceiros que o
 próprio OpenJDK lista ali são:
