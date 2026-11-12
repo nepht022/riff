@@ -15,7 +15,6 @@
     <string name="room_pc">PC</string>
     <string name="room_gone">gone</string>
     <string name="room_gone_description">Did %1$s leave the room?</string>
-    <string name="room_waiting">Waiting for players…</string>
     <string name="room_loading">Loading…</string>
     <string name="room_ended">The room is over.</string>
     <string name="room_choose_song">Choose song</string>
@@ -67,6 +66,7 @@
         <item quantity="one">waiting for %1$s to get ready</item>
         <item quantity="other">waiting for %1$s to get ready</item>
     </plurals>
+    <string name="room_waiting_players">waiting for more players to join</string>
     <string name="room_waiting_song">waiting for %1$s to choose the song</string>
     <string name="room_and">%1$s and %2$s</string>
     <string name="room_keys_move">Move</string>

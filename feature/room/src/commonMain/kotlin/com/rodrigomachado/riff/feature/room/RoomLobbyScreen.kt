@@ -56,7 +56,6 @@ import com.rodrigomachado.riff.feature.room.resources.room_players
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_choosing
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_missing
 import com.rodrigomachado.riff.feature.room.resources.room_stamp_ready
-import com.rodrigomachado.riff.feature.room.resources.room_waiting
 import com.rodrigomachado.riff.feature.room.resources.room_you
 import org.jetbrains.compose.resources.stringResource
 
@@ -177,13 +176,6 @@ private fun Players(room: Room) {
                 owner = player.uid == room.owner,
                 me = player.uid == room.me,
                 withSong = room.song != null,
-            )
-        }
-        if (room.players.size < MAX_PLAYERS) {
-            Text(
-                stringResource(Res.string.room_waiting),
-                style = MaterialTheme.typography.bodyLarge,
-                color = RiffColors.PaperDim,
             )
         }
     }

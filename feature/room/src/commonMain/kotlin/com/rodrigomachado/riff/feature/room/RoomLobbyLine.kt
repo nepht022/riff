@@ -19,6 +19,7 @@ import com.rodrigomachado.riff.feature.room.resources.room_ready_count
 import com.rodrigomachado.riff.feature.room.resources.room_start_with_ready
 import com.rodrigomachado.riff.feature.room.resources.room_starting
 import com.rodrigomachado.riff.feature.room.resources.room_waiting_download
+import com.rodrigomachado.riff.feature.room.resources.room_waiting_players
 import com.rodrigomachado.riff.feature.room.resources.room_waiting_ready
 import com.rodrigomachado.riff.feature.room.resources.room_waiting_song
 import org.jetbrains.compose.resources.pluralStringResource
@@ -41,6 +42,9 @@ internal sealed interface LobbyNeed {
     /** Sem música, para quem não é o dono: "esperando Ana escolher a música". */
     data class Song(val owner: String) : LobbyNeed
 
+    /** Só eu na sala: "esperando mais jogadores entrarem". */
+    data object MorePlayers : LobbyNeed
+
     /** Os avisos do Começar do dono: ficar pronto, ou os 2 prontos. */
     data class Hint(val hint: StartHint) : LobbyNeed
 
@@ -50,8 +54,9 @@ internal sealed interface LobbyNeed {
 
 /**
  * O que falta para a rodada começar, na ordem da linha: quantos estão prontos, por quem a sala espera (primeiro quem
- * baixa a música, senão quem não está pronto; eu mesmo não entro: o meu lado aparece no meio da tela) e os avisos do
- * dono. Quem sumiu ou está sem a música (sem o Encore) não é esperado.
+ * baixa a música, senão quem não está pronto; eu mesmo não entro: o meu lado aparece no meio da tela; sozinho, por
+ * mais jogadores) e os avisos do dono (sozinho, sem o "2 prontos": esperar jogadores já diz isso). Quem sumiu ou está
+ * sem a música (sem o Encore) não é esperado.
  */
 internal fun RoomLobbyUiState.Ready.whatIsMissing(): List<LobbyNeed> {
     if (starting) return listOf(LobbyNeed.Starting)
@@ -71,7 +76,9 @@ internal fun RoomLobbyUiState.Ready.whatIsMissing(): List<LobbyNeed> {
                 notReady.isNotEmpty() -> add(LobbyNeed.NotReady(notReady.map { it.name }))
             }
         }
-        startHint?.let { add(LobbyNeed.Hint(it)) }
+        val alone = others.isEmpty()
+        if (alone) add(LobbyNeed.MorePlayers)
+        startHint?.takeUnless { alone && it == StartHint.NEED_TWO }?.let { add(LobbyNeed.Hint(it)) }
         if (withWhoIsReady) add(LobbyNeed.WithWhoIsReady)
     }
 }
@@ -104,6 +111,8 @@ private fun LobbyNeed.text(): String = when (this) {
     is LobbyNeed.NotReady -> pluralStringResource(Res.plurals.room_waiting_ready, names.size, names(names))
 
     is LobbyNeed.Song -> stringResource(Res.string.room_waiting_song, owner)
+
+    LobbyNeed.MorePlayers -> stringResource(Res.string.room_waiting_players)
 
     is LobbyNeed.Hint -> when (hint) {
         StartHint.BE_READY -> stringResource(Res.string.room_be_ready)

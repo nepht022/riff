@@ -51,6 +51,7 @@ import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import com.rodrigomachado.riff.core.ui.component.ChartThumb
 import com.rodrigomachado.riff.core.ui.component.PosterButton
+import com.rodrigomachado.riff.core.ui.component.PosterButtonDefaults
 import com.rodrigomachado.riff.core.ui.component.difficultyName
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
@@ -264,15 +265,16 @@ internal fun LobbyButtons(state: RoomLobbyUiState.Ready, actions: RoomLobbyActio
     val showStart = state.room.iAmOwner && !state.starting
     if (!showReady && !showStart) return
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // O cartaz vermelho só cresce pela largura mínima: ela é a parte de cada um (menos a sombra).
+        // O cartaz vermelho só cresce pela largura mínima: ela é a parte maior (menos a sombra); com o peso, cada um
+        // fica na sua parte.
         val count = if (stacked || !(showReady && showStart)) 1 else 2
-        val share = (maxWidth - Spacing.md * (count - 1)) / count - BUTTON_SHADOW
-        val buttons: @Composable (Modifier) -> Unit = {
-            LobbyButtonPair(state, actions, ButtonsShown(showReady, showStart), it, share)
+        val share = (maxWidth - Spacing.md * (count - 1)) * (READY_WEIGHT / (READY_WEIGHT + count - 1)) - BUTTON_SHADOW
+        val buttons: @Composable (Modifier, Modifier) -> Unit = { ready, start ->
+            LobbyButtonPair(state, actions, ButtonsShown(showReady, showStart), ready to start, share)
         }
         if (stacked) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                buttons(Modifier.fillMaxWidth())
+                buttons(Modifier.fillMaxWidth(), Modifier.fillMaxWidth())
             }
         } else {
             Row(
@@ -280,7 +282,8 @@ internal fun LobbyButtons(state: RoomLobbyUiState.Ready, actions: RoomLobbyActio
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                buttons(Modifier.weight(1f))
+                // "Não estou pronto" é bem mais comprido que "Começar": ganha mais da linha, para caber numa só.
+                buttons(Modifier.weight(READY_WEIGHT), Modifier.weight(1f))
             }
         }
     }
@@ -290,29 +293,67 @@ internal fun LobbyButtons(state: RoomLobbyUiState.Ready, actions: RoomLobbyActio
 private class ButtonsShown(val ready: Boolean, val start: Boolean)
 
 /**
- * Os botões de baixo, cada um com [each] (o peso na fileira, ou a largura toda na pilha) e o cartaz com a largura
- * mínima [width].
+ * Os botões de baixo, cada um com o seu modificador em [each] (Pronto, Começar: o peso na fileira, ou a largura toda
+ * na pilha) e o cartaz com a largura mínima [width].
  */
 @Composable
 private fun LobbyButtonPair(
     state: RoomLobbyUiState.Ready,
     actions: RoomLobbyActions,
     shown: ButtonsShown,
-    each: Modifier,
+    each: Pair<Modifier, Modifier>,
     width: Dp,
 ) {
     val lobby = state.room.state == RoomState.LOBBY
-    if (shown.ready) ReadyButton(state, actions.onToggleReady, lobby, each, width)
+    val (readyEach, startEach) = each
+    if (shown.ready) ReadyButton(state, actions.onToggleReady, lobby, readyEach, width)
     if (shown.start) {
-        PosterButton(
-            stringResource(Res.string.room_start),
-            onClick = actions.onStart,
-            modifier = each,
-            enabled = state.canStart,
-            sound = MenuSound.CONFIRM,
-            minWidth = width,
+        val start = stringResource(Res.string.room_start)
+        if (state.canStart) {
+            PosterButton(
+                start,
+                onClick = actions.onStart,
+                modifier = startEach,
+                sound = MenuSound.CONFIRM,
+                minWidth = width,
+                textStyle = PosterButtonDefaults.pairTextStyle(),
+                horizontalPadding = PosterButtonDefaults.PairPadding,
+            )
+        } else {
+            DisabledStartButton(start, startEach.fillMaxHeight())
+        }
+    }
+}
+
+/**
+ * O Começar desligado: tinta com contorno e texto em papel apagado (contraste 6,9:1, legível), em vez do cartaz
+ * vermelho transparente, que some no fundo. Sem a sombra nem a inclinação do cartaz: não é para apertar.
+ */
+@Composable
+private fun DisabledStartButton(text: String, modifier: Modifier) {
+    Box(
+        modifier
+            .padding(end = BUTTON_SHADOW, bottom = BUTTON_SHADOW)
+            .background(DisabledStartColors.background)
+            .border(DISABLED_BORDER, DisabledStartColors.content)
+            .clickable(enabled = false, role = Role.Button, onClick = {})
+            .defaultMinSize(minHeight = MIN_TOUCH)
+            .padding(horizontal = PosterButtonDefaults.PairPadding, vertical = Spacing.sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text,
+            style = PosterButtonDefaults.pairTextStyle(),
+            color = DisabledStartColors.content,
+            textAlign = TextAlign.Center,
         )
     }
+}
+
+/** As cores do Começar desligado: o texto e o contorno ([content]) sobre o fundo ([background]). */
+internal object DisabledStartColors {
+    val content = RiffColors.PaperDim
+    val background = RiffColors.Ink
 }
 
 /**
@@ -354,6 +395,8 @@ private fun ReadyButton(
             enabled = enabled,
             sound = MenuSound.CONFIRM,
             minWidth = width,
+            textStyle = PosterButtonDefaults.pairTextStyle(),
+            horizontalPadding = PosterButtonDefaults.PairPadding,
         )
     }
 }
@@ -370,10 +413,11 @@ private fun PaperButton(text: String, onClick: () -> Unit, enabled: Boolean, mod
             .focusHighlight(RectangleShape)
             .clickable(enabled = enabled, role = Role.Button, onClick = withMenuSound(MenuSound.CONFIRM, onClick))
             .defaultMinSize(minHeight = MIN_TOUCH)
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            .padding(horizontal = PosterButtonDefaults.PairPadding, vertical = Spacing.sm),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = MaterialTheme.typography.titleLarge, color = RiffColors.Ink, textAlign = TextAlign.Center)
+        // O rótulo de botões lado a lado: "Não estou pronto" cabe numa linha em 360 dp.
+        Text(text, style = PosterButtonDefaults.pairTextStyle(), color = RiffColors.Ink, textAlign = TextAlign.Center)
     }
 }
 
@@ -399,6 +443,8 @@ private const val SECONDARY_ALPHA = 0.7f
 private val CHIP_BORDER = 1.dp
 private val COVER = 56.dp
 private val MIN_TOUCH = 48.dp
+private const val READY_WEIGHT = 1.4f
+private val DISABLED_BORDER = 2.dp
 
 /** A sombra do cartaz (a do PosterButton), fora da largura mínima. */
 private val BUTTON_SHADOW = 5.dp
