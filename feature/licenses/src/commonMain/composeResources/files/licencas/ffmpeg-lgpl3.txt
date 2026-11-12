@@ -13,6 +13,10 @@ Código-fonte exato do FFmpeg que vai no app:
 - O jar com as bibliotecas compiladas: org.bytedeco:ffmpeg:8.1.2-1.5.14
   (Maven Central), com o código-fonte do JavaCPP em
   https://github.com/bytedeco/javacpp/tree/1.5.14
+Cópia do código-fonte junto do instalador: na página de cada versão do Riff,
+https://github.com/nepht022/riff/releases, os arquivos "fonte-*" (ver o
+fonte-LEIAME.txt) trazem, sem mudança, o código-fonte usado no instalador.
+
 No PC, as bibliotecas ligadas dentro do FFmpeg estão em "Bibliotecas dentro
 do FFmpeg".
 

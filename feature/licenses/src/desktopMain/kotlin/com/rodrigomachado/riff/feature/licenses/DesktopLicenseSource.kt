@@ -56,6 +56,13 @@ class DesktopLicenseSource(private val librariesJson: () -> String?) : LicenseSo
                 "GPL 2.0 com Classpath Exception",
                 "openjdk-gpl2-ce.txt",
             ),
+            // As DLLs do Visual C++ e do UCRT (no runtime\\bin do Java e no jar do JavaCPP): código da Microsoft.
+            ManualItem(
+                "Microsoft Visual C++ e UCRT",
+                "Microsoft Corporation",
+                "Distributable Code (Visual Studio)",
+                "microsoft-vcpp.txt",
+            ),
             // Dentro do skiko-windows-x64.dll: o Skia (com as bibliotecas dele) e o ICU (icudtl.dat).
             ManualItem("Skia", "Google", "BSD 3-Clause", "skia.txt"),
             ManualItem("ICU", "Unicode, Inc.", "Unicode License v3", "icu.txt"),

@@ -203,7 +203,7 @@ O mesmo código do celular, com Compose Multiplatform: `:core:ui`, `:core:databa
 ./scripts/gw :desktop:packageMsi            # o instalador
 ```
 
-Publicar no GitHub Releases é só quando for pedido: `gh release create v<versão> desktop/build/compose/binaries/main/msi/Riff-<versão>.msi --title "Riff <versão>" --notes-file <notas>`.
+Publicar no GitHub Releases é só quando for pedido: `gh release create v<versão> desktop/build/compose/binaries/main/msi/Riff-<versão>.msi --title "Riff <versão>" --notes-file <notas>`. **Junto do `.msi` vão sempre os arquivos `fonte-*`** (o código-fonte do OpenJDK/Temurin, do FFmpeg, do LAME e do JavaCPP nas versões do instalador, com `fonte-LEIAME.txt` e `fonte-SHA256SUMS.txt`, como na v0.6.0): a GPL 2 e a LGPL pedem o código-fonte junto do binário, e os avisos do app apontam para a página da versão. Se o Temurin ou o FFmpeg mudarem de versão, baixe os novos (o commit do Temurin está no `SOURCE` de `runtime/release`).
 
 ### Comandos
 

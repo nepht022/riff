@@ -1,0 +1,25 @@
+Microsoft Visual C++ e Universal C Runtime (UCRT)
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+O app do PC leva as bibliotecas de execução do Visual C++ e o Universal C
+Runtime da Microsoft, que o Java e o código nativo precisam para rodar no
+Windows. Elas são redistribuídas como "Distributable Code", sem mudança, nos
+termos de licença do Microsoft Visual Studio (Visual C++ Redistributable) e
+do Windows SDK (UCRT para instalação junto do app):
+https://visualstudio.microsoft.com/license-terms/
+https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files
+
+Onde estão:
+- runtime\bin (vindas com o Java Eclipse Temurin 21): vcruntime140.dll,
+  vcruntime140_1.dll, msvcp140.dll, ucrtbase.dll e os api-ms-win-*.dll.
+- dentro do jar org.bytedeco:javacpp:1.5.14:windows-x86_64 (usado pelo
+  FFmpeg): vcruntime140.dll, vcruntime140_1.dll, vcruntime140_threads.dll,
+  msvcp140.dll, msvcp140_1.dll, msvcp140_2.dll, concrt140.dll,
+  vcomp140.dll, libomp140.x86_64.dll, ucrtbase.dll e os api-ms-win-*.dll.
+
+Estes arquivos continuam sendo da Microsoft: não são software livre e não
+estão sob a licença do Riff nem de outra biblioteca desta lista. Não é
+permitido alterá-los, fazer engenharia reversa deles nem distribuí-los
+separados do app, a não ser onde a lei permitir. A Microsoft não dá suporte
+nem garantia para eles por meio do Riff.
