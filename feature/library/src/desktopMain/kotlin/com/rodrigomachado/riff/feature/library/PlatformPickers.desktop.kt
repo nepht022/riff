@@ -21,3 +21,9 @@ actual fun rememberFolderPicker(onPicked: (String?) -> Unit): () -> Unit {
 
 @Composable
 actual fun rememberNotificationPermissionThen(action: () -> Unit): () -> Unit = action
+
+@Composable
+actual fun LibraryBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit
+
+@Composable
+actual fun keyboardOpen(): Boolean = false

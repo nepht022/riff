@@ -2,8 +2,12 @@ package com.rodrigomachado.riff.feature.library
 
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.Composable
 
 @Composable
@@ -25,3 +29,10 @@ actual fun rememberNotificationPermissionThen(action: () -> Unit): () -> Unit {
         }
     }
 }
+
+@Composable
+actual fun LibraryBackHandler(enabled: Boolean, onBack: () -> Unit) = BackHandler(enabled = enabled, onBack = onBack)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+actual fun keyboardOpen(): Boolean = WindowInsets.isImeVisible

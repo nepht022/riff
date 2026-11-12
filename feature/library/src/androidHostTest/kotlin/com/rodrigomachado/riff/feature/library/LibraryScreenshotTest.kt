@@ -168,7 +168,7 @@ class LibraryScreenshotTest {
         )
     }
 
-    /** Fonte em 200% no modo Selecionar: a barra de baixo quebra as linhas sem cortar texto. */
+    /** Fonte em 200% no modo Selecionar: a barra de baixo numa linha só (rola de lado), com cartões à vista. */
     @Test
     @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h640dp-xhdpi", fontScale = 2f)
     fun selectingWithALargeFont() = snapshot("LargeFont_library_selecting") {
@@ -188,7 +188,27 @@ class LibraryScreenshotTest {
         )
     }
 
-    /** A escolha de música da sala: "Escolher música", sem "+ Mapas". */
+    /** Fonte em 200% com o celular deitado: a barra da seleção numa linha só, e a lista continua à vista. */
+    @Test
+    @Config(sdk = [35], qualifiers = "pt-rBR-w640dp-h360dp-land-xhdpi", fontScale = 2f)
+    fun selectingWithALargeFontLandscape() = snapshot("LargeFont_library_selecting_land") {
+        LibraryContent(
+            state = LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = LIST,
+                deletion = DeletionState(selecting = true, selected = setOf("1", "3")),
+                separableSelected = 2,
+            ),
+            onPickFolder = {},
+            onRescan = {},
+            onReportDismissed = {},
+            onPlay = { _, _ -> },
+            onBack = {},
+        )
+    }
+
+    /** A escolha de música da sala: "Escolher música", sem "+ Mapas" e sem o X (na sala não se exclui). */
     @Test
     fun pickForTheRoom() = snapshot("Library_pick") {
         LibraryContent(

@@ -1,10 +1,17 @@
 package com.rodrigomachado.riff.feature.library
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -12,7 +19,12 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.component.LocalMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -90,6 +102,101 @@ class LibraryDeletionTest {
 
         assertEquals(listOf("delete:a"), events)
         assertEquals(listOf(MenuSound.NAVIGATE), sounds)
+        composeRule.onNodeWithText("Música A").performClick()
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+        assertEquals(listOf("delete:a"), events)
+    }
+
+    /**
+     * A área de toque do X fica quase toda fora do cartão: um toque no canto de cima à direita, já dentro do cartão
+     * (a 20 dp de cada borda), joga em vez de pedir para excluir.
+     */
+    @Test
+    fun tappingNearTheCardCornerPlaysInsteadOfDeleting() {
+        showDeletion(LibraryUiState(isLoading = false, hasFolder = true, charts = listOf(two[0])))
+        // O nó do cartão (o toque junta o texto ao cartão): o canto de cima à direita dele.
+        val card = composeRule.onNodeWithText("Música A").getUnclippedBoundsInRoot()
+        val corner = DpOffset(card.right, card.top)
+
+        composeRule.onRoot().performTouchInput {
+            click(with(density) { Offset((corner.x - 20.dp).toPx(), (corner.y + 20.dp).toPx()) })
+        }
+
+        assertTrue("o toque no cartão pediu para excluir: $events", events.none { it.startsWith("delete") })
+        composeRule.onNodeWithText("Escolha a dificuldade").assertExists()
+    }
+
+    /** Com muitos mapas, o último rola até ficar inteiro acima da barra (a barra não o esconde). */
+    @Test
+    fun theLastCardScrollsAboveTheBar() {
+        val many = (1..12).map { chart("m$it", title = "Música $it") }
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = many,
+                deletion = DeletionState(selecting = true, selected = setOf("m1")),
+            ),
+        )
+
+        composeRule.onNodeWithTag(LibraryTestTags.LIST).performScrollToNode(hasText("Música 12"))
+
+        val last = composeRule.onNodeWithText("Música 12").getUnclippedBoundsInRoot()
+        val bar = composeRule.onNodeWithTag(LibraryTestTags.SELECTION_BAR).getUnclippedBoundsInRoot()
+        assertTrue("o último cartão ficou atrás da barra", last.bottom <= bar.top)
+        composeRule.onNodeWithText("Música 12").assertIsDisplayed()
+    }
+
+    /** Com a fonte em dobro, a barra fica compacta (até 40% da tela), com o Excluir à vista primeiro. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h640dp", fontScale = 2f)
+    fun withALargeFontTheBarStaysCompact() {
+        composeRule.setContent {
+            RiffTheme {
+                LibraryContent(
+                    state = LibraryUiState(
+                        isLoading = false,
+                        hasFolder = true,
+                        charts = two,
+                        deletion = DeletionState(selecting = true, selected = setOf("a")),
+                        separableSelected = 1,
+                    ),
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> },
+                    onBack = {},
+                    deletion = DeletionCallbacks(onDeleteSelected = { events += "deleteSelected" }),
+                )
+            }
+        }
+
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val bar = composeRule.onNodeWithTag(LibraryTestTags.SELECTION_BAR).getUnclippedBoundsInRoot()
+        val barHeight = bar.bottom - bar.top
+        val rootHeight = root.bottom - root.top
+        assertTrue("a barra ocupa $barHeight de $rootHeight", barHeight <= rootHeight * 0.4f)
+        composeRule.onNodeWithText("Excluir (1)").assertIsDisplayed().performClick()
+        // As outras ações continuam na mesma linha (rolando de lado).
+        composeRule.onNodeWithText("Separar (1)").assertExists()
+        composeRule.onNodeWithText("Cancelar").assertExists()
+        assertEquals(listOf("deleteSelected"), events)
+    }
+
+    /** O "N marcadas" avisa o leitor de tela quando muda. */
+    @Test
+    fun theCountIsALiveRegion() {
+        showDeletion(
+            LibraryUiState(
+                isLoading = false,
+                hasFolder = true,
+                charts = two,
+                deletion = DeletionState(selecting = true, selected = setOf("a")),
+            ),
+        )
+
+        composeRule.onNodeWithText("1 marcada")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
     }
 
     /** No modo Selecionar o X some (fica a caixa de marcar) e as ações vão para a barra fixa embaixo da lista. */
