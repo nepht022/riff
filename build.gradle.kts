@@ -38,6 +38,15 @@ subprojects {
     }
 }
 
+// Os testes rodam em português do Brasil em qualquer máquina, como na de quem desenvolve: os do PC leem os textos do
+// app no idioma da JVM, e o Linux do CI é em inglês. Os do celular escolhem o idioma pelo Robolectric (@Config).
+subprojects {
+    tasks.withType<Test>().configureEach {
+        systemProperty("user.language", "pt")
+        systemProperty("user.country", "BR")
+    }
+}
+
 dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
     kover(project(":core:chart"))
