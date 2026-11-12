@@ -2,6 +2,8 @@
 
 # Riff
 
+[![CI](https://github.com/nepht022/riff/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nepht022/riff/actions/workflows/ci.yml)
+
 Jogo de ritmo no estilo Guitar Hero para **Android e Windows**, com **multiplayer** de até 4 pessoas (celular e PC juntos). As notas vêm de mapas do Clone Hero que você importa ou baixa do Encore, e a música vem da pasta do mapa. Se a pasta traz a guitarra separada (ou a IA do Riff a separou), ela some quando você erra e volta quando acerta, como no Guitar Hero; sem ela, a música toca inteira e o acerto fica em silêncio.
 
 Projeto pessoal, gratuito e sem anúncios; não está na Play Store nem na Microsoft Store.
@@ -176,7 +178,8 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   scripts/testar_regras_sala.sh        # regras do Firebase no emulador (Node e um JDK 11+ do Windows; RIFF_JDK)
   ```
 
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes do celular e do PC, screenshots do celular (as do PC são comparadas só no Windows; veja [Screenshots](#screenshots)), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os scripts em Node, as regras do Firebase e o instalador do PC rodam só na máquina de quem desenvolve.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes do celular e do PC, screenshots do celular (as do PC são comparadas só no Windows; veja [Screenshots](#screenshots)), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Roda tudo até o fim (`--continue`) e lista todas as falhas de uma vez; quando falha, guarda as comparações das screenshots e os relatórios dos testes no artefato `falhas-ci`. Os scripts em Node, as regras do Firebase, a comparação das screenshots do PC e o instalador do PC rodam só na máquina de quem desenvolve (Windows). Depois de cada push na `main`, o resultado do CI é conferido (`gh run list`).
+- **Idioma dos testes:** todos rodam em português do Brasil em qualquer máquina (`user.language`/`user.country` no `build.gradle.kts` da raiz): os do PC leem os textos do app no idioma da JVM, e o Linux do CI é em inglês. Os do celular escolhem o idioma pelo Robolectric (`@Config(qualifiers = "pt-rBR")`).
 - **Antes de publicar uma versão:** `verifyDistributable` (as 7 conferências dentro do app empacotado) e a conferência de que nenhum segredo (`local.properties`, chave de assinatura, chaves do Firebase) vai no envio.
 
 ### Processo de cada mudança
@@ -193,7 +196,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 Passam ao rodar de novo sozinhos (efeito de carga ou do Windows):
 
 - `lintAnalyzeDebugUnitTest` (crash do analisador do lint);
-- `ResamplingPcmSourceTest` (tempo, sob carga);
+- `ResamplingPcmSourceTest` (tempo, sob carga; mede a melhor de 3 voltas, com limite de 4 s e de 6 s no CI);
 - `SettingsContentTest` (espera ociosa do Compose, sob carga);
 - `MigrationTest` (FileNotFound no esquema JSON recém-gerado na primeira compilação);
 - `DesktopSeparationSchedulerTest` e `DesktopGameplayFlowTest` (tempo, sob carga pesada);
