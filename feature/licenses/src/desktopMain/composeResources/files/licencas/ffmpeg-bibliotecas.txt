@@ -19,6 +19,17 @@ https://github.com/bytedeco/javacpp-presets/blob/1.5.14/ffmpeg/cppbuild.sh
 O x264 e o x265 (GPL) são baixados pela receita mas NÃO entram neste
 FFmpeg (sem --enable-gpl).
 
+Patentes: além dos direitos autorais (as licenças abaixo), alguns formatos
+de áudio e vídeo podem ter patentes em alguns países, e as licenças de
+software livre não dão licença de patente de terceiros. Este FFmpeg traz,
+entre outros, codificadores e leitores de MP3 (as patentes do MP3 venceram e
+o licenciamento acabou em 2017), AMR (opencore-amr e vo-amrwbenc) e H.264
+(OpenH264 compilado a partir do código-fonte, que não tem a licença de
+patente que a Cisco dá só aos binários baixados dela). O Riff usa o FFmpeg
+só para ler o áudio das músicas dos mapas; os codificadores e os formatos de
+vídeo vêm junto porque fazem parte deste build, mas o app não os usa. Isto
+não é aconselhamento jurídico.
+
 Cada texto abaixo foi copiado do arquivo de licença do projeto, na versão
 usada pelo build (fonte indicada em cada seção).
 
