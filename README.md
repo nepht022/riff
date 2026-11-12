@@ -176,7 +176,7 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   scripts/testar_regras_sala.sh        # regras do Firebase no emulador (Node e um JDK 11+ do Windows; RIFF_JDK)
   ```
 
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes do celular e do PC, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os scripts em Node, as regras do Firebase e o instalador do PC rodam só na máquina de quem desenvolve.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes do celular e do PC, screenshots do celular (as do PC são comparadas só no Windows; veja [Screenshots](#screenshots)), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os scripts em Node, as regras do Firebase e o instalador do PC rodam só na máquina de quem desenvolve.
 - **Antes de publicar uma versão:** `verifyDistributable` (as 7 conferências dentro do app empacotado) e a conferência de que nenhum segredo (`local.properties`, chave de assinatura, chaves do Firebase) vai no envio.
 
 ### Processo de cada mudança
@@ -291,7 +291,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 
 Os testes de tela só rodam de novo quando o código muda: depois de trocar só uma referência, use `--rerun` na tarefa de teste para comparar de verdade.
 
-Rode o `verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
+Rode o `verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm` antes de commitar mudanças de UI (no Windows). O CI compara de novo só as do celular, que são exatas: no Linux o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele). As do PC (Skia) saem diferentes no Linux (letras e bordas suavizadas de outro jeito, 1,5–4% das telas, e os símbolos de fora das fontes do app com outro tamanho): no CI os testes do PC rodam, mas sem comparar as imagens. Quando o CI falha, ele guarda as comparações e os relatórios no artefato `falhas-ci` da execução.
 
 ### Desempenho
 

@@ -26,14 +26,26 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v5
       # Os screenshots do celular são comparados exatos: no Linux o Robolectric desenha as telas iguais às
-      # referências gravadas no Windows (conferido em 2026-10-30).
-      # Módulos multiplataforma (celular e PC): testes Android em testAndroidHostTest, do PC em desktopTest/test,
-      # screenshots em verifyRoborazziAndroidHostTest (Android), verifyRoborazziDesktop (o lado PC dos módulos) e
-      # verifyRoborazziJvm (o app do PC); as do PC com 1% de tolerância
-      # para a suavização das letras); lint de todos eles em lintMultiplatform.
+      # referências gravadas no Windows (conferido em 2026-10-30). As do PC (Skia) não: no Linux as letras e bordas
+      # saem suavizadas de outro jeito (1,5–4% das telas, 2026-11-12) e os símbolos de fora das fontes do app mudam de
+      # tamanho. Por isso o CI roda todos os testes do PC (desktopTest e test) sem comparar as imagens dele
+      # (verifyRoborazziDesktop/Jvm ficam para o Windows, antes de cada merge).
       - name: Lint, testes, screenshots e build
         run: >-
           ./gradlew detekt lintDebug lintMultiplatform
           test testAndroidHostTest desktopTest
-          verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm
-          koverVerify assembleDebug
+          verifyRoborazziAndroidHostTest
+          koverVerify assembleDebug --continue
+      # Quando algo falha, guarda as comparações das screenshots (referência, atual e diferença) e os relatórios dos
+      # testes, para ver o que mudou sem repetir no Windows.
+      - name: Comparações e relatórios (se falhar)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: falhas-ci
+          path: |
+            **/build/outputs/roborazzi/**
+            **/build/reports/tests/**
+            **/build/test-results/**/*.xml
+          retention-days: 7
+          if-no-files-found: ignore

@@ -6,13 +6,25 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 class KeyHintBarTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // O "Voltar" vem dos textos do app, no idioma da máquina: fixa o português (o Linux do CI é em inglês).
+    private val locale = Locale.getDefault()
+
+    @Before
+    fun portuguese() = Locale.setDefault(Locale.forLanguageTag("pt-BR"))
+
+    @After
+    fun restore() = Locale.setDefault(locale)
 
     private val hints = listOf(
         KeyHint("← →", pad = null, label = "Mover"),

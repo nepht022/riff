@@ -48,9 +48,10 @@ import java.io.File
 import java.util.Locale
 
 /**
- * O Skia do PC suaviza o contorno das letras de um jeito no Windows e de outro no Linux do CI (0,39% dos pixels da
- * tela inicial, todos nos textos, medido em 2026-10-31). Até 1% passa; layout e cores continuam conferidos, e os
- * textos são conferidos pelos testes de conteúdo. As screenshots do celular seguem exatas.
+ * Até 1% de diferença passa (a suavização das letras varia entre máquinas); layout e cores continuam conferidos, e
+ * os textos são conferidos pelos testes de conteúdo. As screenshots do PC são comparadas só no Windows, onde são
+ * gravadas: no Linux do CI o Skia suaviza letras e bordas de outro jeito (1,5–4% das telas, medido em 2026-11-12) e
+ * os símbolos de fora das fontes do app mudam de tamanho.
  */
 private val TextRasterTolerance =
     RoborazziOptions(compareOptions = RoborazziOptions.CompareOptions(changeThreshold = 0.01f))
