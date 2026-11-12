@@ -172,7 +172,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 ## Biblioteca: X em cada música e barra de seleção (2026-11-12)
 
 - Opção D aprovada pelo usuário (protótipo `Pictures/Riff comparar/excluir-separar.html`); revisão final feita, achados importantes corrigidos (sala sem X/Selecionar, Esc/○/voltar cancelam a seleção, foco no PC depois do diálogo, barra compacta com fonte grande/tela baixa e escondida com o teclado aberto, área de toque do X quase toda fora do cartão).
-- Teste do usuário (celular e PC): pendente.
+- Teste do usuário no celular e no PC aceito em 2026-11-12 ("testado no pc e celular").
 - Excluir uma música que só está **na fila** de separação não a tira da fila (a que está separando é cancelada); conferir que o trabalho ignora o mapa sumido ou chamar `scheduler.remove` no `onDeleteConfirmed`.
 - Com o desenho de ponta a ponta (edge-to-edge), o fundo da barra não passa por baixo da barra de navegação (o `safeDrawingPadding` é aplicado no NavHost).
 - A barra de teclas do PC não diz "→ Excluir"; o X só se descobre tentando →.
