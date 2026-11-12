@@ -291,7 +291,7 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 
 Os testes de tela só rodam de novo quando o código muda: depois de trocar só uma referência, use `--rerun` na tarefa de teste para comparar de verdade.
 
-Rode o `verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm` antes de commitar mudanças de UI; o CI compara de novo a cada push. A comparação é exata: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele).
+Rode o `verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm` antes de commitar mudanças de UI; o CI compara de novo a cada push. As do celular são exatas: no Linux do CI o Robolectric desenha as telas iguais às gravadas no Windows (as fontes do app vêm junto com ele). As do PC (Skia) suavizam letras e bordas de outro jeito no Linux: as peças comparam com 1% de tolerância, e as telas inteiras do app do PC com 1% no Windows e 10% no CI (lá a diferença de suavização chega a 4%). A conferência fina das telas do PC é a do Windows, antes de cada merge. Quando o CI falha, ele guarda as comparações (referência, atual e diferença) no artefato `falhas-ci` da execução.
 
 ### Desempenho
 

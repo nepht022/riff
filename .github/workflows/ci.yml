@@ -29,8 +29,9 @@ jobs:
       # referências gravadas no Windows (conferido em 2026-10-30).
       # Módulos multiplataforma (celular e PC): testes Android em testAndroidHostTest, do PC em desktopTest/test,
       # screenshots em verifyRoborazziAndroidHostTest (Android), verifyRoborazziDesktop (o lado PC dos módulos) e
-      # verifyRoborazziJvm (o app do PC); as do PC com 1% de tolerância
-      # para a suavização das letras); lint de todos eles em lintMultiplatform.
+      # verifyRoborazziJvm (o app do PC); as do PC com tolerância para a suavização das letras, que no Linux é
+      # diferente da do Windows (1% nas peças, 10% nas telas inteiras do app do PC); lint de todos eles em
+      # lintMultiplatform.
       - name: Lint, testes, screenshots e build
         run: >-
           ./gradlew detekt lintDebug lintMultiplatform
