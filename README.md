@@ -142,7 +142,7 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 ## Qualidade e testes (QA)
 
-O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo motivo certo, depois vem o código mínimo que o faz passar, e no fim roda a suíte inteira. Números de 2026-10-20: **~1.100 testes** em 163 arquivos, **55 screenshots** de referência e 26 testes do script do ranking.
+O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo motivo certo, depois vem o código mínimo que o faz passar, e no fim roda a suíte inteira. Números de 2026-11-12: **~1.680 testes** em Kotlin (285 arquivos, celular e PC), **110 screenshots** de referência (celular e PC), 48 testes do script do ranking, 3 do script do Reportar e 53 das regras do Firebase da Sala.
 
 ### Camadas de teste
 
@@ -151,7 +151,11 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
 | Unidade (JVM) | motor do jogo (julgamento, combo, pontuação, relógio), leitura de mapas (`.chart`, `.mid`, `.sng`, `song.ini`), fila de separações, ranking | `core/*/src/test` |
 | Robolectric | ViewModels, repositórios, players de áudio, WorkManager da separação, Room | `core/*/src/test`, `feature/*/src/test` |
 | Interface (Compose) | cada tela e cada estado (sem pasta, sem mapa, separando, pausa, áudio ocupado, erros), cliques, sons do menu, textos em pt e en | `feature/*/src/test/*ContentTest.kt` |
-| Screenshots (Roborazzi) | o visual de cada tela comparado pixel a pixel com a referência | `*/src/test/screenshots` |
+| Screenshots (Roborazzi) | o visual de cada tela comparado pixel a pixel com a referência, no celular (inclusive fonte grande e celular deitado) e no PC | `*/src/test/screenshots` (as do PC em `desktop/src/test/screenshots` e `core/ui/src/test/screenshots/desktop`) |
+| PC (Compose Desktop) | o app do PC de ponta a ponta: navegação só por teclado e só por controle (foco, Esc, menus, X da Biblioteca), partida com teclado e palheta, controles configuráveis, fila da IA | `desktop/src/test`, `feature/*/src/desktopTest` |
+| Sala (multiplayer) | sala, vagas, prontos, começo junto, relógio do servidor e placar ao vivo contra um Firebase falso (`:core:room:testing`); nenhum teste usa o Firebase de verdade | `core/room/src/commonTest`, `feature/room/src/androidHostTest` e `feature/room/src/test` |
+| Regras do Firebase | as regras do banco da Sala no emulador do Firebase (quem pode criar, entrar, escrever o placar, apagar) | `scripts/testar_regras_sala.sh` (`firebase/rules.test.mjs`) |
+| Instalador do PC | dentro do app empacotado: ONNX Runtime, modelo, FFmpeg, SQLite, GLFW, conexão segura e números em português | `./scripts/gw :desktop:verifyDistributable` |
 | Migração do banco | cada versão do esquema do Room migra sem perder dados (casamentos, ajustes, recordes) | `core/database/src/test/.../MigrationTest.kt` |
 | Golden da IA | a separação da guitarra (Demucs em ONNX) reproduz a saída de referência | `core/separation/src/test` |
 | Script do ranking | o Apps Script roda em Node com uma planilha falsa que imita as conversões do Google Planilhas | `node scripts/ranking_apps_script.test.js` |
@@ -169,17 +173,20 @@ O Riff é feito com **TDD**: cada mudança começa por um teste que falha pelo m
   ./scripts/gw test testDebugUnitTest testAndroidHostTest desktopTest detekt lint lintMultiplatform koverVerify verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm :app:assembleDebug :app:assembleRelease --continue
   node scripts/ranking_apps_script.test.js
   node scripts/relatos_apps_script.test.js
+  scripts/testar_regras_sala.sh        # regras do Firebase no emulador (Node e um JDK 11+ do Windows; RIFF_JDK)
   ```
 
-- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): detekt, lint, testes do celular e do PC, screenshots (do celular e do PC), Kover e o APK de debug a cada push na `main` e em pull requests. O modelo da IA vem do Git LFS, com cache. Os scripts em Node, as regras do Firebase e o instalador do PC rodam só na máquina de quem desenvolve.
+- **Antes de publicar uma versão:** `verifyDistributable` (as 7 conferências dentro do app empacotado) e a conferência de que nenhum segredo (`local.properties`, chave de assinatura, chaves do Firebase) vai no envio.
 
 ### Processo de cada mudança
 
 1. **Especificação e plano** para mudanças grandes (`docs/superpowers/specs` e `docs/superpowers/plans`). As mudanças pequenas são combinadas na conversa.
 2. **TDD** tarefa a tarefa, com um registro das decisões tomadas no caminho.
 3. **Revisão final** da branch inteira por um revisor independente (outro modelo, sem o contexto de quem implementou). Problemas críticos e importantes são corrigidos com um teste que falha primeiro; os menores vão para `docs/pendencias.md`.
-4. **Aceite no aparelho** (Galaxy S25) antes do merge, com registro temporário quando o problema é de tempo (sincronia, fila).
-5. O **README** e o **Baseline Profile** são atualizados junto com a mudança.
+4. **Aceite no aparelho** antes do merge: no celular (Galaxy S25, o APK de release por cima, sem apagar dados) e no PC, com registro temporário quando o problema é de tempo (sincronia, fila, começo junto da Sala).
+5. **Mudanças visuais** começam por protótipos aprovados (com as opções lado a lado quando há escolha) antes de mexer no código.
+6. O **README** e o **Baseline Profile** são atualizados junto com a mudança.
 
 ### Testes instáveis conhecidos
 
@@ -188,7 +195,9 @@ Passam ao rodar de novo sozinhos (efeito de carga ou do Windows):
 - `lintAnalyzeDebugUnitTest` (crash do analisador do lint);
 - `ResamplingPcmSourceTest` (tempo, sob carga);
 - `SettingsContentTest` (espera ociosa do Compose, sob carga);
-- `MigrationTest` (FileNotFound no esquema JSON recém-gerado na primeira compilação).
+- `MigrationTest` (FileNotFound no esquema JSON recém-gerado na primeira compilação);
+- `DesktopSeparationSchedulerTest` e `DesktopGameplayFlowTest` (tempo, sob carga pesada);
+- `GuitarSeparatorGoldenTest` ("bad allocation" do ONNX Runtime com a memória apertada pela suíte inteira).
 
 Pendências e pontos menores das revisões ficam em `docs/pendencias.md`.
 
