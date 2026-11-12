@@ -30,7 +30,7 @@ android {
     namespace = "com.rodrigomachado.riff"
     defaultConfig {
         applicationId = "com.rodrigomachado.riff"
-        versionCode = 7
+        versionCode = 8
         // A versão mora no gradle.properties: o Reportar do PC lê a mesma.
         versionName = providers.gradleProperty("riff.versionName").get()
         // Só celulares (ARM): as bibliotecas x86 do ONNX Runtime (~80 MB) servem apenas a emuladores e PCs.
