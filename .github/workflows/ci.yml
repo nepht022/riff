@@ -37,3 +37,16 @@ jobs:
           test testAndroidHostTest desktopTest
           verifyRoborazziAndroidHostTest verifyRoborazziDesktop verifyRoborazziJvm
           koverVerify assembleDebug
+      # Quando algo falha, guarda as comparações das screenshots (referência, atual e diferença) e os relatórios dos
+      # testes, para ver o que mudou sem repetir no Windows.
+      - name: Comparações e relatórios (se falhar)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: falhas-ci
+          path: |
+            **/build/outputs/roborazzi/**
+            **/build/reports/tests/**
+            **/build/test-results/**/*.xml
+          retention-days: 7
+          if-no-files-found: ignore
