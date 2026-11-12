@@ -42,6 +42,7 @@ import com.rodrigomachado.riff.core.ui.component.BadgeTone
 import com.rodrigomachado.riff.core.ui.component.ChartThumb
 import com.rodrigomachado.riff.core.ui.component.KeyHint
 import com.rodrigomachado.riff.core.ui.component.PosterButton
+import com.rodrigomachado.riff.core.ui.component.PosterButtonDefaults
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.ResultGrade
 import com.rodrigomachado.riff.core.ui.component.StatusBadge
@@ -256,8 +257,8 @@ private fun StatBlock(label: String, value: String, modifier: Modifier) {
 }
 
 /**
- * Embaixo, lado a lado: o de voltar (papel) à esquerda e o principal (vermelho, "Jogar de novo" ou "Ver a sala") à
- * direita, da mesma largura.
+ * Embaixo, lado a lado: o de voltar (contorno de papel) à esquerda e o principal (vermelho, "Jogar de novo" ou "Ver
+ * a sala") à direita, da mesma largura; o rótulo menor de botões lado a lado, para caber numa linha no celular.
  */
 @Composable
 internal fun ResultsButtons(actions: ResultsActions) {
@@ -269,7 +270,7 @@ internal fun ResultsButtons(actions: ResultsActions) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Sem som próprio: o de voltar toca na navegação (a tela sai da pilha), venha a volta de onde vier.
-            PaperButton(actions.back.label, actions.back.onClick, Modifier.weight(1f).fillMaxHeight())
+            OutlineButton(actions.back.label, actions.back.onClick, Modifier.weight(1f).fillMaxHeight())
             actions.main?.let {
                 PosterButton(
                     it.label,
@@ -277,27 +278,36 @@ internal fun ResultsButtons(actions: ResultsActions) {
                     modifier = Modifier.weight(1f),
                     sound = MenuSound.CONFIRM,
                     minWidth = half - BUTTON_SHADOW,
+                    textStyle = PosterButtonDefaults.pairTextStyle(),
+                    horizontalPadding = PosterButtonDefaults.PairPadding,
                 )
             }
         }
     }
 }
 
-/** O botão secundário de pôster: papel com texto em tinta e sombra dura, sem inclinação. */
+/**
+ * O botão secundário: contorno de papel sem fundo, texto em papel, sem inclinação nem sombra (a margem de baixo
+ * acompanha a sombra do cartaz ao lado, para os dois ficarem na mesma altura).
+ */
 @Composable
-private fun PaperButton(text: String, onClick: () -> Unit, modifier: Modifier) {
+private fun OutlineButton(text: String, onClick: () -> Unit, modifier: Modifier) {
     Box(
         modifier
-            .padding(end = BUTTON_SHADOW, bottom = BUTTON_SHADOW)
-            .drawBehind { drawRect(RiffColors.Ink, Offset(BUTTON_SHADOW.toPx(), BUTTON_SHADOW.toPx()), size) }
-            .background(RiffColors.Paper)
+            .padding(bottom = BUTTON_SHADOW)
+            .border(BUTTON_OUTLINE, RiffColors.Paper)
             .focusHighlight(RectangleShape)
             .clickable(role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = BUTTON_MIN_HEIGHT)
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            .padding(horizontal = PosterButtonDefaults.PairPadding, vertical = Spacing.sm),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = MaterialTheme.typography.titleLarge, color = RiffColors.Ink, textAlign = TextAlign.Center)
+        Text(
+            text,
+            style = PosterButtonDefaults.pairTextStyle(),
+            color = RiffColors.Paper,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -328,3 +338,4 @@ private val BAR_LINE = 1.dp
 private val BLOCK_SHADOW = 4.dp
 private val BUTTON_SHADOW = 5.dp
 private val BUTTON_MIN_HEIGHT = 48.dp
+private val BUTTON_OUTLINE = 2.dp

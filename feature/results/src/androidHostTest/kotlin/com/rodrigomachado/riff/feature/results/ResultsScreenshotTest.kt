@@ -1,10 +1,14 @@
 package com.rodrigomachado.riff.feature.results
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.rodrigomachado.riff.core.ui.component.StageBackground
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.core.ui.theme.Spacing
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -81,6 +85,28 @@ class ResultsScreenshotTest {
             }
         }
     }
+
+    /**
+     * Fonte do sistema em 200%: os botões de baixo (fora da primeira tela da de cima), lado a lado; o rótulo pode
+     * quebrar, mas não é cortado.
+     */
+    @Test
+    @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h640dp-xhdpi", fontScale = 2f)
+    fun buttonsWithALargeFont() {
+        captureRoboImage("src/test/screenshots/LargeFont_results_buttons.png") {
+            RiffTheme {
+                StageBackground(Modifier.fillMaxSize()) {
+                    Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                        ResultsButtons(actions("Voltar", "Jogar de novo"))
+                        ResultsButtons(actions("Voltar à sala", "Ver a sala"))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun actions(back: String, main: String) =
+        ResultsActions(ResultsButton(back) {}, ResultsButton(main) {}, onSeeRanking = {}, onChooseName = {})
 
     @Test
     fun rankingPlaced() = card(

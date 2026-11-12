@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
 import com.rodrigomachado.riff.core.data.ranking.SubmitStatus
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.MenuSound
@@ -30,6 +32,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
@@ -371,6 +374,34 @@ class ResultsContentTest {
         val again = composeRule.onNodeWithText("Jogar de novo").fetchSemanticsNode().boundsInRoot
         assertTrue("os dois na mesma linha: $back / $again", back.bottom > again.top && again.bottom > back.top)
         assertTrue("Voltar à esquerda: $back / $again", back.right <= again.left)
+    }
+
+    /** No celular (360 dp), os rótulos dos dois botões lado a lado cabem numa linha cada. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h780dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // a medida do texto de verdade
+    fun buttonLabelsFitOneLineOnThePhone() {
+        composeRule.setContent {
+            RiffTheme {
+                ResultsContent(
+                    ResultsUiState.Ready(record(2, 48_300), "Música", "Banda", false),
+                    onPlayAgain = { _, _ -> },
+                    onDone = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Jogar de novo").performScrollTo()
+        assertEquals(1, lineCount("Jogar de novo"))
+        assertEquals(1, lineCount("Voltar"))
+    }
+
+    /** As linhas que o texto [text] ocupou na tela. */
+    private fun lineCount(text: String): Int {
+        val node = composeRule.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
+        val layouts = mutableListOf<TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        return layouts.single().lineCount
     }
 
     /** Na partida de sala: "Voltar à sala" e "Ver a sala", lado a lado, sem "Jogar de novo". */
