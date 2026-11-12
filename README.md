@@ -2,18 +2,37 @@
 
 # Riff
 
-Jogo de ritmo para Android no estilo Guitar Hero, feito para uso pessoal (não é publicado na Play Store; veja a seção 3 da especificação). As notas vêm de mapas do Clone Hero que você mesmo importa ou baixa do Encore, e a música vem da pasta do mapa. Se a pasta traz a guitarra separada (ou a IA do Riff a separou), ela some quando você erra e volta quando acerta, como no Guitar Hero; sem ela, a música toca inteira e o acerto fica em silêncio. Ao continuar depois de uma pausa, a pista volta 0,5 s, como uma fita, para você retomar no ritmo.
+Jogo de ritmo no estilo Guitar Hero para **Android e Windows**, com **multiplayer** de até 4 pessoas (celular e PC juntos). As notas vêm de mapas do Clone Hero que você importa ou baixa do Encore, e a música vem da pasta do mapa. Se a pasta traz a guitarra separada (ou a IA do Riff a separou), ela some quando você erra e volta quando acerta, como no Guitar Hero; sem ela, a música toca inteira e o acerto fica em silêncio.
 
-A tela inicial tem **Sozinho** (a Biblioteca), **Sala** (o multiplayer com amigos, em breve) e o **Ranking**, com **Reportar** e **Configurações** nos cantos do topo. Até a versão 0.4.0 havia também um modo que tocava junto com o Spotify; ele saiu na 0.5.0, que prepara o Riff para o Windows e o multiplayer (a 0.4.0 continua nos Releases).
+Projeto pessoal, gratuito e sem anúncios; não está na Play Store nem na Microsoft Store.
+
+## Baixar
+
+Tudo fica em **[Releases](https://github.com/nepht022/riff/releases/latest)**:
+
+- **Celular (Android 8 ou mais novo, ARM):** baixe o `Riff-<versão>.apk`, abra no celular e permita "instalar apps desconhecidos". Uma versão nova instala por cima e mantém recordes, mapas e ajustes.
+- **PC (Windows 10/11, 64 bits):** baixe o `Riff-<versão>.msi` e abra. O instalador não tem assinatura digital, então o Windows avisa que o app é desconhecido: "Mais informações" → "Executar assim mesmo". Instala só para o seu usuário, sem pedir administrador, e o Java vem junto. Os dados ficam em `%APPDATA%\Riff` e continuam ao atualizar ou desinstalar.
+- Os arquivos `fonte-*` de cada versão são o código-fonte do software livre que vai no instalador do PC (Java, FFmpeg, LAME); não precisa baixar para jogar.
+
+## O que tem
+
+- **Sozinho:** a Biblioteca com os seus mapas (capas, filtro, "Guitarra separada" e "Com recorde"), a partida e o Resultado com nota (S, A, B, C) e recorde.
+- **Sala:** crie uma sala e mande o código de 4 letras; até 4 pessoas, no celular e no PC. O dono escolhe a música, cada um escolhe a dificuldade, a música começa junta em todos, com placar ao vivo e a classificação da sala no fim.
+- **Ranking online:** três tabelas (Celular, PC com palheta, PC sem palheta) e o mesmo nome em vários aparelhos.
+- **Pesquisa no Encore:** procura e baixa mapas da comunidade direto no app.
+- **Guitarra separada por IA:** separa a guitarra de qualquer música no próprio aparelho, sem internet.
+- **No PC:** teclado (como no Clone Hero) ou controle (base de PS3), teclas configuráveis e tudo navegável sem mouse.
+- Visual da pista personalizável, calibração do atraso do áudio, Português e English.
+
+Até a versão 0.4.0 havia também um modo que tocava junto com o Spotify; ele saiu na 0.5.0 (a 0.4.0 continua nos Releases).
+
+**Documentação do projeto:**
 
 - Especificação: `docs/superpowers/specs/2026-10-05-riff-design.md` (e as especificações de cada etapa na mesma pasta)
 - Planos: `docs/superpowers/plans/`
 - Pendências conhecidas: `docs/pendencias.md`
 
-
-**Instalar:** baixe o `Riff-<versão>.apk` em **Releases** (à direita na página do repositório), abra no celular Android (8 ou mais novo) e permita "instalar apps desconhecidos".
-
-## Instalar e configurar
+## Compilar e configurar (para desenvolver)
 
 ### Requisitos
 
@@ -36,7 +55,9 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 1. Suba `versionCode` e `versionName` em `app/build.gradle.kts` (a versão nova só instala por cima de uma mais antiga).
 2. `./scripts/gw :app:assembleRelease` e envie `app/build/outputs/apk/release/app-release.apk` (~190 MB, só celulares ARM, Android 8+). A pessoa precisa permitir "instalar apps desconhecidos" para o app que abrir o arquivo.
-3. Funciona sem nada além do APK: biblioteca, pesquisa no Encore, guitarra separada por IA, ranking e Reportar (os endereços dos scripts vão dentro do APK).
+3. Funciona sem nada além do APK: biblioteca, pesquisa no Encore, guitarra separada por IA, ranking, Reportar e Sala (os endereços dos scripts e do Firebase vão dentro do APK).
+
+**Compilando você mesmo:** os endereços do ranking, do Reportar e da Sala ficam no `local.properties` (fora do git) e não vêm com o código. Sem eles, o app funciona inteiro para jogar sozinho, e essas três partes avisam que não estão configuradas. Para ter as suas, siga [Reportar problemas](#reportar-problemas), [Ranking online](#ranking-online) e `docs/firebase.md`.
 
 
 ## Importar mapas
@@ -47,7 +68,7 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
    - o áudio: `song.ogg`, `.opus`, `.mp3` ou `.wav`.
 3. **Guitarra separada:** se a subpasta tiver `guitar.*` e pelo menos uma faixa de acompanhamento (`song`, `rhythm`, `bass`, `drums`, `drums_1` a `drums_4`, `vocals`, `vocals_1`, `vocals_2`, `keys`, `crowd`), o Riff toca todas juntas e corta só a guitarra no erro.
 4. Mapas `.sng` (o pacote do Encore e do YARG, um arquivo por música) são lidos direto: é só colocar o arquivo na pasta.
-5. **Excluir:** o **X** vermelho de cada mapa apaga a pasta dele (ou o `.sng`) do celular, junto com a guitarra separada pela IA e o recorde; **Selecionar** marca vários para excluir de uma vez, e o ícone de caixas na mesma linha marca (ou desmarca) todos. Sempre pede confirmação e não dá para desfazer. Mapas soltos direto na pasta da biblioteca não têm o X (apagar a pasta deles apagaria a biblioteca inteira).
+5. **Excluir:** o **X** vermelho no canto de cada música apaga a pasta dela (ou o `.sng`), junto com a guitarra separada pela IA e o recorde. No PC, com a música em foco, a seta **→** leva ao X. Para várias de uma vez: **⋮ → Selecionar**, marque as músicas e use a barra de baixo (**Excluir (n)**, **Separar (n)**, **Marcar todas** e **Cancelar**); Esc, ○ ou o voltar do celular também cancelam. Sempre pede confirmação e não dá para desfazer. Mapas soltos direto na pasta da biblioteca não têm o X (apagar a pasta deles apagaria a biblioteca inteira), e a escolha da música da Sala não tem X.
 6. Não use mapas da Harmonix/Neversoft (rips de Rock Band ou Guitar Hero): são conteúdo protegido. Prefira mapas feitos pela comunidade.
 
 ## Pesquisar e baixar mapas
@@ -91,7 +112,9 @@ Crie a chave uma vez com `keytool -genkeypair -keystore ~/.android/riff-release.
 
 ## Sala (multiplayer)
 
-Em construção (projeto 3; especificação em `docs/superpowers/specs/2026-11-05-riff-multiplayer-design.md`). Na M1: **Sala** na tela inicial (celular e PC) → **Criar sala** (código de 4 letras, sem I, L e O) ou **Entrar com código**; a sala mostra ao vivo até 4 jogadores (nome do ranking, aparelho, dono, "sumiu" depois de 60 s sem sinal); sair passa o dono ao jogador mais antigo, e o último a sair apaga a sala. Na M2: o dono escolhe a música (**Escolher música** abre a Biblioteca); cada jogador vê se tem a música (do Encore: **Baixar do Encore**; sem ela, fica de fora da rodada), escolhe a própria dificuldade e marca **Pronto**; **Começar** liga com 2 ou mais prontos (ou 30 s depois do primeiro Pronto, com quem está pronto). A partida começa junta: cada aparelho carrega, o dono marca o começo 3 s depois de todos carregarem (ou 15 s, com quem carregou), e cada um converte a hora do servidor para o próprio relógio (medido pelo `vistoEm` lido de volta). Sem pausa na partida de sala (Esc/Start/Voltar perguntam "Sair da partida?" com a música seguindo); o Resultado é o de sempre, com "Voltar à sala". Na M3: **placar ao vivo** minimizado na partida de sala (até 4 linhas "posição · nome · pontos", a sua como "Você", as linhas deslizando quando alguém passa; "saiu" por último e "sem conexão" depois de 15 s sem pontos; celular em cima à esquerda, PC na coluna da esquerda), cada aparelho grava o próprio placar a cada 1 s fora da thread da tela e o final ao terminar (reenvia quando a internet volta); **Resultado da sala** ("Ver a sala" no Resultado: pódio e classificação com pontos, precisão e maior combo, ao vivo até todos terminarem). Começo mais junto: relógio pela mediana das 3 mais rápidas de 5 medidas, e o player aquecido antes do instante (no PC o primeiro som levava 270–660 ms; aquecido, ~80 ms) com a latência informada descontada. Log de sincronia: tag `RiffSync` (`adb logcat -s RiffSync`; no PC, na saída de erro do `./scripts/gw :desktop:run`).
+**Como jogar:** na tela inicial, **Sala** → **Criar sala** mostra um código de 4 letras (compartilhe pelo botão ao lado dele) e os amigos entram em **Entrar com código**. Até 4 pessoas, no celular e no PC. O dono toca em **Escolher música**; quem não tem a música pode baixá-la do Encore (se ela for de lá). Cada um escolhe a própria dificuldade e marca **Pronto**, e o dono toca em **Começar** (com 2 ou mais prontos). A música começa junta em todos, com o placar da sala ao vivo; no fim, **Ver a sala** mostra o pódio. Precisa de internet.
+
+**Como funciona por dentro** (especificação em `docs/superpowers/specs/2026-11-05-riff-multiplayer-design.md`). Na M1: **Sala** na tela inicial (celular e PC) → **Criar sala** (código de 4 letras, sem I, L e O) ou **Entrar com código**; a sala mostra ao vivo até 4 jogadores (nome do ranking, aparelho, dono, "sumiu" depois de 60 s sem sinal); sair passa o dono ao jogador mais antigo, e o último a sair apaga a sala. Na M2: o dono escolhe a música (**Escolher música** abre a Biblioteca); cada jogador vê se tem a música (do Encore: **Baixar do Encore**; sem ela, fica de fora da rodada), escolhe a própria dificuldade e marca **Pronto**; **Começar** liga com 2 ou mais prontos (ou 30 s depois do primeiro Pronto, com quem está pronto). A partida começa junta: cada aparelho carrega, o dono marca o começo 3 s depois de todos carregarem (ou 15 s, com quem carregou), e cada um converte a hora do servidor para o próprio relógio (medido pelo `vistoEm` lido de volta). Sem pausa na partida de sala (Esc/Start/Voltar perguntam "Sair da partida?" com a música seguindo); o Resultado é o de sempre, com "Voltar à sala". Na M3: **placar ao vivo** minimizado na partida de sala (até 4 linhas "posição · nome · pontos", a sua como "Você", as linhas deslizando quando alguém passa; "saiu" por último e "sem conexão" depois de 15 s sem pontos; celular em cima à esquerda, PC na coluna da esquerda), cada aparelho grava o próprio placar a cada 1 s fora da thread da tela e o final ao terminar (reenvia quando a internet volta); **Resultado da sala** ("Ver a sala" no Resultado: pódio e classificação com pontos, precisão e maior combo, ao vivo até todos terminarem). Começo mais junto: relógio pela mediana das 3 mais rápidas de 5 medidas, e o player aquecido antes do instante (no PC o primeiro som levava 270–660 ms; aquecido, ~80 ms) com a latência informada descontada. Log de sincronia: tag `RiffSync` (`adb logcat -s RiffSync`; no PC, na saída de erro do `./scripts/gw :desktop:run`).
 
 - Servidor: Firebase gratuito (login anônimo + Realtime Database), pela API REST e o streaming SSE, sem SDK (o mesmo código no celular e no PC). Criar o projeto e publicar as regras: `docs/firebase.md`. Sem `firebase.apiKey`/`firebase.dbUrl` no `local.properties`, a Sala fica "em breve".
 - Regras do banco em `firebase/database.rules.json`, testadas no emulador: `scripts/testar_regras_sala.sh` (ver `firebase/README.md`). O limite de 4 é garantido por vagas (`vagas/v1..v4`); a sala parada há mais de 2 h é apagada por quem sortear o mesmo código.
@@ -241,7 +264,10 @@ O Robolectric não funciona quando o caminho do `~/.m2` tem espaço (ele codific
 | `:feature:ranking` | Pedido do nome, músicas com pontuação e placar do ranking online |
 | `:feature:report` | Reportar problema ou sugestão |
 | `:feature:licenses` | Licenças e privacidade (lista das bibliotecas pelo AboutLibraries) |
-| `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala (em breve), Ranking, Reportar e Configurações |
+| `:feature:home` | Multiplataforma. Tela inicial: Sozinho, Sala, Ranking, Reportar e Configurações |
+| `:core:room` | Multiplataforma. Cliente do Firebase (REST + SSE, login anônimo), `RoomRepository`, relógio do servidor e presença |
+| `:core:room:testing` | Firebase falso usado nos testes |
+| `:feature:room` | Multiplataforma. Telas da Sala: entrar, sala, placar ao vivo e resultado da sala |
 | `:desktop` | O Riff no PC (Windows): tela inicial, Biblioteca, pesquisa no Encore, partida, Resultado, Configurações, Calibração, Reportar, Licenças, guitarra por IA, ranking e o instalador `.msi` (`./scripts/gw :desktop:run`, `:desktop:packageMsi`) |
 | `:baselineprofile` | Percursos automáticos (UiAutomator) que geram o Baseline Profile e medem abertura e partida (Macrobenchmark) |
 
@@ -312,7 +338,7 @@ Na medição anterior (2026-10-09, perfil de abertura igual ao geral e a partida
 
 ## Status
 
-O roteiro da especificação principal está concluído (2026-10-09): fundação, identidade visual, biblioteca, gameplay, integração com o Spotify (até a 0.4.0), guitarra separada, configurações, calibração e polimento. A 0.5.0 tira o Spotify e abre na tela inicial nova; os próximos passos são o Riff no Windows (teclado e controle) e o multiplayer por código de sala.
+O roteiro da especificação principal está concluído (2026-10-09). Depois vieram: a 0.5.0 sem o Spotify e com a tela inicial nova; o Riff no Windows (teclado, controle, ranking com três tabelas e o instalador `.msi`); o multiplayer por código de sala; o visual novo (0.6.0); e a Biblioteca com o X em cada música e a barra de seleção (0.6.2).
 
 Pendências conhecidas (detalhes em `docs/pendencias.md`): pontos menores das revisões finais. As ideias para depois também estão lá.
 
