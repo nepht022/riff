@@ -96,7 +96,7 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 
 ## Design novo, celular e PC (2026-11-11)
 
-- Aplicado a partir dos protótipos aprovados pelo usuário: tela inicial (celular com "Continuar" e "Últimos recordes"; PC com três quadros), Biblioteca (menu ⋮, "+ Mapas", filtro sempre à mostra, chips, capas, recorde por mapa, X só no Selecionar), Resultado (nota S/A/B/C por precisão: 98/90/80%, "antes: N", barra de precisão, blocos), sala (código pequeno com compartilhar, linha do que falta), Configurações do PC (abas em coluna) e barra de teclas em todas as telas do PC (menos a partida). Teste real do usuário: pendente.
+- Aplicado a partir dos protótipos aprovados pelo usuário: tela inicial (celular com "Continuar" e "Últimos recordes"; PC com três quadros), Biblioteca (menu ⋮, "+ Mapas", filtro sempre à mostra, chips, capas, recorde por mapa, X só no Selecionar), Resultado (nota S/A/B/C por precisão: 98/90/80%, "antes: N", barra de precisão, blocos), sala (código pequeno com compartilhar, linha do que falta), Configurações do PC (abas em coluna) e barra de teclas em todas as telas do PC (menos a partida). Teste do usuário no PC em 2026-11-11: "gostei do resultado"; celular não relatado.
 - Capas sem imagem: iniciais sobre vermelho, marrom ou verde do tema (a tinta sumia no palco).
 - No PC, a partir do filtro da Biblioteca, ↓ cai em "Com recorde" (busca 2D do Compose); ←/→ andam nos chips.
 - A pausa da partida mostra a barra de teclas, mas sem teste automático.
