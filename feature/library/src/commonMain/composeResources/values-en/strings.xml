@@ -52,6 +52,11 @@
     <string name="library_delete_selected">Delete (%1$d)</string>
     <string name="library_select_all">Select all</string>
     <string name="library_select_none">Clear all</string>
+    <string name="library_selected_none">None selected</string>
+    <plurals name="library_selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
     <string name="library_delete_cancel">Cancel</string>
     <string name="library_delete_one">Delete %1$s</string>
     <string name="library_delete">Delete</string>

@@ -50,8 +50,13 @@
     <string name="library_ai_separated">Guitarra separada pela IA</string>
     <string name="library_select">Selecionar</string>
     <string name="library_delete_selected">Excluir (%1$d)</string>
-    <string name="library_select_all">Selecionar todos</string>
-    <string name="library_select_none">Desmarcar todos</string>
+    <string name="library_select_all">Marcar todas</string>
+    <string name="library_select_none">Desmarcar todas</string>
+    <string name="library_selected_none">Nenhuma marcada</string>
+    <plurals name="library_selected_count">
+        <item quantity="one">%1$d marcada</item>
+        <item quantity="other">%1$d marcadas</item>
+    </plurals>
     <string name="library_delete_cancel">Cancelar</string>
     <string name="library_delete_one">Excluir %1$s</string>
     <string name="library_delete">Excluir</string>

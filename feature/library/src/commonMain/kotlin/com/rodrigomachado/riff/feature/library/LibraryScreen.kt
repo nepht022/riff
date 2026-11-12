@@ -78,6 +78,9 @@ object LibraryTestTags {
     const val LIST = "library_list"
     const val FILTER = "library_filter"
 
+    /** A barra fixa embaixo, no modo Selecionar. */
+    const val SELECTION_BAR = "library_selection_bar"
+
     /** A barra de teclas do PC. */
     const val KEY_HINTS = "library_key_hints"
 }
@@ -167,6 +170,10 @@ fun LibraryContent(
     var filter by rememberSaveable { mutableStateOf("") }
     var chip by rememberSaveable { mutableStateOf(LibraryChip.ALL) }
     val clearFilter = Modifier.escapeClosesFilter(filter.isNotEmpty()) { filter = "" }
+    // Só a lista filtrada é calculada aqui; o resto do estado (seleção, importação, aviso) é sempre o atual.
+    val shown = remember(state.charts, state.aiSeparated, state.bests, filter, chip) {
+        state.charts.matching(filter).filter { chip.accepts(it, state) }
+    }
     val pad = LocalGamepad.current
     val menu = LibraryMenuActions(
         onRescan = onRescan.takeIf { state.hasFolder },
@@ -186,11 +193,26 @@ fun LibraryContent(
                 TitleRow(pickForRoom, onSearch)
                 LibraryBody(state, onPickFolder, onRescan) {
                     val list = ListFilter(filter, chip, onFilter = { filter = it }, onChip = { chip = it })
-                    ChartList(state, list, images, onReportDismissed, deletion) { chart ->
+                    ChartList(state, shown, list, images, onReportDismissed, deletion) { chart ->
                         playMenuSound(MenuSound.NAVIGATE)
                         choosingId = chart.id
                     }
                 }
+            }
+            // Fora da lista (a lista termina acima dela): sempre à vista durante a seleção.
+            if (state.deletion.selecting) {
+                // O "todos" é o que está à mostra (filtro e chip), na caixa e ao tocar nela.
+                val deletable = shown.filter { it.id !in state.protectedIds }
+                val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
+                SelectionBar(
+                    selected = state.deletion.selected.size,
+                    separable = state.separableSelected,
+                    visible = shown.map { it.id },
+                    allSelected = allSelected,
+                    callbacks = deletion,
+                    modifier = Modifier.testTag(LibraryTestTags.SELECTION_BAR),
+                    contentWidth = width,
+                )
             }
             if (pad != null) {
                 val connected by pad.connected.collectAsState()
@@ -273,22 +295,20 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
 }
 
 /**
- * O filtro, os chips e, rolando com eles (a fonte grande não espreme a lista), a seleção, o aviso da importação e os
- * cartões. Só a lista filtrada é calculada aqui; o resto do estado (seleção, importação, aviso) é sempre o atual.
+ * O filtro, os chips e, rolando com eles (a fonte grande não espreme a lista), o aviso da importação e os cartões
+ * ([charts]: os do filtro e do chip). As ações da seleção ficam fora, na barra de baixo ([SelectionBar]).
  */
 @Composable
 @Suppress("LongParameterList") // o estado, o filtro, as capas e o que a lista faz
 private fun ChartList(
     state: LibraryUiState,
+    charts: List<Chart>,
     filter: ListFilter,
     images: ChartArtImages?,
     onReportDismissed: () -> Unit,
     deletion: DeletionCallbacks,
     onChartClick: (Chart) -> Unit,
 ) {
-    val charts = remember(state.charts, state.aiSeparated, state.bests, filter.text, filter.chip) {
-        state.charts.matching(filter.text).filter { filter.chip.accepts(it, state) }
-    }
     LazyColumn(
         modifier = Modifier.testTag(LibraryTestTags.LIST),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -296,15 +316,6 @@ private fun ChartList(
     ) {
         item(key = "filter") { FilterField(filter.text, filter.onFilter) }
         item(key = "chips") { LibraryChips(filter.chip, state.charts.size, filter.onChip) }
-        if (state.deletion.selecting) {
-            item(key = "selection") {
-                // O "todos" é o que está à mostra (filtro e chip), na caixa e ao tocar nela.
-                val deletable = charts.filter { it.id !in state.protectedIds }
-                val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
-                val visible = charts.map { it.id }
-                SelectionActions(state.deletion.selected.size, state.separableSelected, visible, allSelected, deletion)
-            }
-        }
         state.report?.let { item(key = "report") { ImportReportCard(it, onReportDismissed) } }
         if (charts.isEmpty() && state.charts.isNotEmpty()) {
             item(key = "none") {

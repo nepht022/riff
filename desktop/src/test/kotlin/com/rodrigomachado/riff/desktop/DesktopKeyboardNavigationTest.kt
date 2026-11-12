@@ -232,6 +232,54 @@ class DesktopKeyboardNavigationTest {
         pressUntilFocused(Key.DirectionDown, hasText("Selecionar"), into = MENU)
         press(Key.Enter, into = MENU)
         composeRule.waitUntilAtLeastOneExists(hasText("Cancelar"), TIMEOUT_MS)
+        composeRule.onNodeWithContentDescription("Excluir ${chartTitle(1)}").assertDoesNotExist()
+    }
+
+    /**
+     * O X de cada cartão e a barra da seleção só pelo teclado (o controle manda as mesmas teclas). O caminho até o X:
+     * com o cartão focado, → vai ao X dele (Enter pede a confirmação, Esc a fecha) e ← volta ao cartão; ↑/↓ andam
+     * de cartão em cartão sem parar nos X. No modo Selecionar, ↓ do último cartão desce à barra fixa embaixo: Marcar
+     * todas, Separar, Excluir e Cancelar.
+     */
+    @Test
+    fun pcKeyboardReachesTheXAndTheBottomBar() {
+        openLibrary(FILTER_CHARTS)
+        val first = hasText(chartTitle(1))
+        val firstX = hasContentDescription("Excluir ${chartTitle(1)}")
+        pressUntilFocused(Key.DirectionDown, first, max = FILTER_TO_LIST_PRESSES + EXTRA_PRESSES)
+
+        press(Key.DirectionDown)
+        assertTrue("↓ do cartão parou num X", focused(hasText(chartTitle(2))))
+        press(Key.DirectionUp)
+        assertTrue("↑ do cartão parou num X", focused(first))
+        press(Key.DirectionRight)
+        assertTrue("→ do cartão não foi ao X dele", focused(firstX))
+        press(Key.Enter)
+        composeRule.waitUntilAtLeastOneExists(hasText("Excluir \u201c${chartTitle(1)}\u201d?"), TIMEOUT_MS)
+        press(Key.Escape, into = DELETE_DIALOG)
+        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasText("Excluir \u201c${chartTitle(1)}\u201d?")) }
+        composeRule.onNodeWithText(chartTitle(1)).assertExists()
+        pressUntilFocused(Key.DirectionDown, first, max = FILTER_TO_LIST_PRESSES + EXTRA_PRESSES)
+        pressUntilFocused(Key.DirectionRight, firstX, max = 1)
+        press(Key.DirectionLeft)
+        assertTrue("← do X não voltou ao cartão", focused(first))
+
+        pressUntilFocused(Key.DirectionUp, hasContentDescription("Mais opções"), max = MAX_PRESSES * 2)
+        press(Key.Enter)
+        composeRule.waitUntilAtLeastOneExists(hasText("Selecionar"), TIMEOUT_MS)
+        pressUntilFocused(Key.DirectionDown, hasText("Selecionar"), into = MENU)
+        press(Key.Enter, into = MENU)
+        composeRule.waitUntilAtLeastOneExists(hasText("Cancelar"), TIMEOUT_MS)
+        pressUntilFocused(Key.DirectionDown, first, max = FILTER_TO_LIST_PRESSES + EXTRA_PRESSES)
+        press(Key.Enter) // marca o primeiro
+        composeRule.waitUntilAtLeastOneExists(hasText("1 marcada"), TIMEOUT_MS)
+
+        pressUntilFocused(Key.DirectionDown, hasText("Marcar todas"), max = FILTER_CHARTS + EXTRA_PRESSES)
+        press(Key.DirectionDown) // da linha de cima da barra à de baixo
+        pressUntilFocused(Key.DirectionLeft, hasText("Excluir (1)"))
+        pressUntilFocused(Key.DirectionRight, hasText("Cancelar"))
+        press(Key.Enter)
+        composeRule.waitUntil(TIMEOUT_MS) { !exists(hasText("1 marcada")) }
         composeRule.onNodeWithContentDescription("Excluir ${chartTitle(1)}").assertExists()
     }
 
@@ -386,11 +434,16 @@ class DesktopKeyboardNavigationTest {
 
         /** A raiz do diálogo de idioma (o do "Fechar") e a do app (a que não tem o diálogo). */
         val LANGUAGE_DIALOG = isRoot() and hasAnyDescendant(hasText("Fechar"))
-        val APP = isRoot() and !hasAnyDescendant(hasText("Fechar")) and !hasAnyDescendant(hasText("Trocar pasta"))
+        val APP = isRoot() and !hasAnyDescendant(hasText("Fechar")) and !hasAnyDescendant(hasText("Trocar pasta")) and
+            !hasAnyDescendant(hasText(DELETE_WARNING, substring = true))
+
+        /** A raiz da confirmação de excluir (um diálogo, com a própria raiz). */
+        val DELETE_DIALOG = isRoot() and hasAnyDescendant(hasText(DELETE_WARNING, substring = true))
 
         /** A raiz do menu ⋮ da Biblioteca (um popup, com a própria raiz). */
         val MENU = isRoot() and hasAnyDescendant(hasText("Trocar pasta"))
         const val MAX_PRESSES = 8
+        const val DELETE_WARNING = "Não dá para desfazer"
         const val CHART_COUNT = 30
         const val TARGET_CHART = 25
         const val FILTER_CHARTS = 3
