@@ -7,9 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
@@ -18,21 +17,31 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rodrigomachado.riff.core.model.MenuSound
-import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.menuKeys
@@ -48,12 +57,8 @@ import com.rodrigomachado.riff.feature.library.resources.library_delete_nested
 import com.rodrigomachado.riff.feature.library.resources.library_delete_ok
 import com.rodrigomachado.riff.feature.library.resources.library_delete_one
 import com.rodrigomachado.riff.feature.library.resources.library_delete_permission
-import com.rodrigomachado.riff.feature.library.resources.library_delete_selected
 import com.rodrigomachado.riff.feature.library.resources.library_delete_title_many
 import com.rodrigomachado.riff.feature.library.resources.library_delete_title_one
-import com.rodrigomachado.riff.feature.library.resources.library_select_all
-import com.rodrigomachado.riff.feature.library.resources.library_select_none
-import com.rodrigomachado.riff.feature.library.resources.library_separate_selected
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -74,96 +79,47 @@ class DeletionCallbacks(
 )
 
 /**
- * Acima da lista, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos (os [visible]: só os mapas à
- * mostra); embaixo, Separar (n) põe na fila da IA as selecionadas que precisam.
+ * Os mesmos callbacks, avisando quando o X de um mapa pede para excluir ([onAsked]: o mapa e o vizinho que fica no
+ * lugar dele em [ids], o seguinte ou, no fim, o anterior) e quando o diálogo fecha ([onClosed]: excluiu ou desistiu).
  */
-@Composable
-internal fun SelectionActions(
-    selected: Int,
-    separable: Int,
-    visible: List<String>,
-    allSelected: Boolean,
-    callbacks: DeletionCallbacks,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        DeleteRow(selected, allSelected, callbacks) { callbacks.onToggleAll(visible) }
-        PosterButton(
-            stringResource(Res.string.library_separate_selected, separable),
-            onClick = callbacks.onSeparateSelected,
-            enabled = separable > 0,
-            sound = MenuSound.CONFIRM,
-        )
-    }
-}
-
-@Composable
-private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks, onToggleAll: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PosterButton(
-            stringResource(Res.string.library_delete_selected, selected),
-            onClick = callbacks.onDeleteSelected,
-            enabled = selected > 0,
-            sound = MenuSound.NAVIGATE,
-        )
-        TextButton(
-            onClick = withMenuSound(MenuSound.BACK, callbacks.onCancelSelecting),
-            modifier = Modifier.focusHighlight(CircleShape),
-        ) {
-            Text(stringResource(Res.string.library_delete_cancel), color = RiffColors.Paper)
-        }
-        Spacer(Modifier.weight(1f))
-        SelectAll(allSelected, onToggleAll)
-    }
-}
-
-/** Duas caixas empilhadas com o visto; cheia de vermelho quando todos já estão marcados. */
-@Composable
-private fun SelectAll(allSelected: Boolean, onClick: () -> Unit) {
-    val description = stringResource(if (allSelected) Res.string.library_select_none else Res.string.library_select_all)
-    Box(
-        Modifier
-            .size(48.dp)
-            .focusHighlight()
-            .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
-            .semantics {
-                contentDescription = description
-                role = Role.Button
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.size(26.dp)) {
-            val stroke = 2.dp.toPx()
-            val box = size.width * 0.74f
-            val gap = size.width - box
-            val corner = CornerRadius(3.dp.toPx())
-            // A caixa de trás, só o canto à mostra.
-            drawRoundRect(RiffColors.Paper, Offset(gap, 0f), Size(box, box), corner, style = Stroke(stroke))
-            val front = Offset(0f, gap)
-            drawRoundRect(RiffColors.StageBlack, front, Size(box, box), corner)
-            if (allSelected) {
-                drawRoundRect(RiffColors.TourRed, front, Size(box, box), corner)
-            } else {
-                drawRoundRect(RiffColors.Paper, front, Size(box, box), corner, style = Stroke(stroke))
-            }
-            val check = Path().apply {
-                moveTo(box * 0.22f, gap + box * 0.52f)
-                lineTo(box * 0.42f, gap + box * 0.72f)
-                lineTo(box * 0.78f, gap + box * 0.30f)
-            }
-            drawPath(check, RiffColors.Paper, style = Stroke(stroke, cap = StrokeCap.Round))
-        }
-    }
+internal fun DeletionCallbacks.refocusing(
+    ids: List<String>,
+    onAsked: (origin: String, neighbor: String?) -> Unit,
+    onClosed: (confirmed: Boolean) -> Unit,
+): DeletionCallbacks {
+    val base = this
+    return DeletionCallbacks(
+        onDelete = { id ->
+            val i = ids.indexOf(id)
+            onAsked(id, ids.getOrNull(i + 1) ?: ids.getOrNull(i - 1))
+            base.onDelete(id)
+        },
+        onStartSelecting = base.onStartSelecting,
+        onToggle = base.onToggle,
+        onCancelSelecting = base.onCancelSelecting,
+        onToggleAll = base.onToggleAll,
+        onDeleteSelected = base.onDeleteSelected,
+        onSeparateSelected = base.onSeparateSelected,
+        onConfirm = {
+            onClosed(true)
+            base.onConfirm()
+        },
+        onDismiss = {
+            onClosed(false)
+            base.onDismiss()
+        },
+        onFailureShown = base.onFailureShown,
+    )
 }
 
 /**
- * O cartão; no modo Selecionar ([selecting]), com a caixa de marcar e o X vermelho no canto (fora dele, nada de
- * apagar: tocar no cartão só joga). O mapa solto na raiz ([canDelete] falso) não tem nenhum dos dois.
+ * O cartão. Fora do modo Selecionar, com o X vermelho no canto (sempre à vista; tocar no cartão joga). No modo
+ * Selecionar ([selecting]), sem o X: a caixa de marcar à esquerda, e tocar no cartão marca. Sem [canDelete] (o mapa
+ * solto na raiz, ou a escolha da música da sala) não tem nenhum dos dois. [focusMe]: o cartão recebe o foco (no PC,
+ * depois do diálogo de excluir) e avisa por [onFocused].
  */
 @Composable
+@Suppress("LongParameterList") // o mapa, a seleção e o cartão
 internal fun DeletableChart(
     title: String,
     chartId: String,
@@ -171,10 +127,12 @@ internal fun DeletableChart(
     selected: Boolean,
     canDelete: Boolean,
     callbacks: DeletionCallbacks,
+    focusMe: Boolean = false,
+    onFocused: () -> Unit = {},
     card: @Composable (Modifier, onClickOverride: (() -> Unit)?) -> Unit,
 ) {
     if (!selecting) {
-        card(Modifier, null)
+        ChartWithX(title, canDelete, focusMe, onFocused, onDelete = { callbacks.onDelete(chartId) }) { card(it, null) }
         return
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -187,20 +145,87 @@ internal fun DeletableChart(
         )
         Box(Modifier.weight(1f)) {
             card(Modifier, if (canDelete) ({ callbacks.onToggle(chartId) }) else ({}))
-            if (canDelete) DeleteX(title, Modifier.align(Alignment.TopEnd)) { callbacks.onDelete(chartId) }
         }
     }
 }
 
-/** X vermelho num círculo, no canto do cartão. */
+/**
+ * O cartão com o X no canto de cima à direita (o cartão desce e encolhe um pouco para o X caber na linha da lista).
+ * No PC o X fica fora do caminho de ↑/↓ (que andam de cartão em cartão): só → com o cartão focado o alcança, e o X
+ * volta a ficar fora do caminho quando perde o foco.
+ */
 @Composable
-private fun DeleteX(title: String, modifier: Modifier, onClick: () -> Unit) {
+@Suppress("LongParameterList") // o mapa, o foco e o cartão
+private fun ChartWithX(
+    title: String,
+    canDelete: Boolean,
+    focusMe: Boolean,
+    onFocused: () -> Unit,
+    onDelete: () -> Unit,
+    card: @Composable (Modifier) -> Unit,
+) {
+    var armed by remember { mutableStateOf(false) }
+    val x = remember { FocusRequester() }
+    val cardFocus = remember { FocusRequester() }
+    var xFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (!armed) return@LaunchedEffect
+        x.requestFocus()
+        // Se o X não pegou o foco (o cartão saiu da tela no meio), ele volta a ficar fora do caminho de ↑/↓.
+        withFrameNanos {}
+        if (!xFocused) armed = false
+    }
+    LaunchedEffect(focusMe) {
+        if (focusMe) {
+            cardFocus.requestFocus()
+            onFocused()
+        }
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .onKeyEvent { event ->
+                // Também no celular com teclado ou controle: ↓ e Tab nunca param no X.
+                val arm = canDelete && !armed && event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight
+                if (arm) armed = true
+                arm
+            },
+    ) {
+        // Sem X (mapa solto na raiz, escolha da sala), o cartão ocupa a linha toda.
+        val room = if (canDelete) Modifier.padding(top = X_OVERHANG, end = X_OVERHANG) else Modifier
+        card(Modifier.focusRequester(cardFocus).then(room))
+        if (canDelete) {
+            DeleteX(
+                title,
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .focusProperties { canFocus = armed }
+                    .focusRequester(x),
+                onFocus = { now ->
+                    xFocused = now
+                    if (!now) armed = false
+                },
+                onClick = onDelete,
+            )
+        }
+    }
+}
+
+/**
+ * X vermelho num círculo, no canto do cartão; a área de toque (44 dp) é maior que o círculo e fica quase toda fora do
+ * cartão (só 16 dp entram nele: tocar no canto do cartão joga).
+ */
+@Composable
+private fun DeleteX(title: String, modifier: Modifier, onFocus: (Boolean) -> Unit, onClick: () -> Unit) {
     val description = stringResource(Res.string.library_delete_one, title)
+    var focused by remember { mutableStateOf(false) }
     Box(
         modifier
-            .offset(x = 6.dp, y = (-6).dp)
-            .size(32.dp)
-            .background(RiffColors.TourRed, CircleShape)
+            .size(X_TOUCH)
+            .onFocusChanged {
+                if (focused != it.isFocused) onFocus(it.isFocused)
+                focused = it.isFocused
+            }
             .focusHighlight(CircleShape)
             .clickable(onClick = withMenuSound(MenuSound.NAVIGATE, onClick))
             .semantics {
@@ -209,13 +234,27 @@ private fun DeleteX(title: String, modifier: Modifier, onClick: () -> Unit) {
             },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(12.dp)) {
-            val stroke = 2.5.dp.toPx()
-            drawLine(RiffColors.Paper, Offset.Zero, Offset(size.width, size.height), stroke, StrokeCap.Round)
-            drawLine(RiffColors.Paper, Offset(size.width, 0f), Offset(0f, size.height), stroke, StrokeCap.Round)
+        Box(
+            Modifier
+                .size(X_CIRCLE)
+                .background(RiffColors.StageBlack, CircleShape)
+                .padding(2.dp)
+                .background(RiffColors.TourRed, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.size(11.dp)) {
+                val stroke = 2.5.dp.toPx()
+                drawLine(RiffColors.Paper, Offset.Zero, Offset(size.width, size.height), stroke, StrokeCap.Round)
+                drawLine(RiffColors.Paper, Offset(size.width, 0f), Offset(0f, size.height), stroke, StrokeCap.Round)
+            }
         }
     }
 }
+
+/** O quanto o X passa do canto do cartão (o cartão desce e encolhe isso para o X caber na linha). */
+private val X_OVERHANG = 28.dp
+private val X_TOUCH = 44.dp
+private val X_CIRCLE = 30.dp
 
 /** A confirmação, o pedido de permissão e o aviso de falha. */
 @Composable

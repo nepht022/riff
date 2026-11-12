@@ -22,7 +22,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A Biblioteca do design novo: o menu ⋮, os chips, o cartão com o recorde e os X só no modo Selecionar. */
+/**
+ * A Biblioteca do design novo: o menu ⋮, os chips, o cartão com o recorde e o X em cada cartão fora do modo
+ * Selecionar.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class LibraryDesignTest {
@@ -140,9 +143,9 @@ class LibraryDesignTest {
         assertEquals(List(6) { MenuSound.NAVIGATE }, sounds)
     }
 
-    /** Os X de apagar só aparecem no modo Selecionar (fora dele, tocar no cartão só joga). */
+    /** O X de apagar fica sempre à vista fora do modo Selecionar e some nele (lá, a caixa de marcar). */
     @Test
-    fun deleteOnlyInSelectMode() {
+    fun theXShowsOutsideSelectingAndHidesInside() {
         var state by mutableStateOf(LibraryUiState(isLoading = false, hasFolder = true, charts = two))
         composeRule.setContent {
             RiffTheme {
@@ -161,10 +164,10 @@ class LibraryDesignTest {
             }
         }
 
-        composeRule.onAllNodesWithContentDescription("Excluir", substring = true).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Excluir Música A").performClick()
         openMenu()
         composeRule.onNodeWithText("Selecionar").performClick()
-        composeRule.onNodeWithContentDescription("Excluir Música A").performClick()
+        composeRule.onAllNodesWithContentDescription("Excluir", substring = true).assertCountEquals(0)
 
         assertEquals(listOf("delete:a"), events)
     }

@@ -1,6 +1,9 @@
 package com.rodrigomachado.riff.feature.library
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.rodrigomachado.riff.core.model.Difficulty
@@ -55,5 +58,35 @@ class LibraryPickTest {
 
         assertEquals("a" to Difficulty.HARD, played)
         assertEquals(0, asked)
+    }
+
+    /**
+     * Na escolha da sala não se exclui nada: sem X nos cartões e sem "Selecionar" no ⋮ (apagar a música que a sala
+     * já escolheu deixaria a sala dizendo que todos têm a música, e o Começar abriria um mapa que não existe mais).
+     */
+    @Test
+    fun thePickerHasNoXAndNoSelect() {
+        composeRule.setContent {
+            RiffTheme {
+                LibraryContent(
+                    state = LibraryUiState(
+                        isLoading = false,
+                        hasFolder = true,
+                        charts = listOf(chart("a", title = "Música"), chart("b", title = "Outra")),
+                    ),
+                    onPickFolder = {},
+                    onRescan = {},
+                    onReportDismissed = {},
+                    onPlay = { _, _ -> },
+                    onBack = {},
+                    pickForRoom = true,
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithContentDescription("Excluir", substring = true).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Mais opções").performClick()
+        composeRule.onNodeWithText("Trocar pasta").assertExists()
+        composeRule.onNodeWithText("Selecionar").assertDoesNotExist()
     }
 }

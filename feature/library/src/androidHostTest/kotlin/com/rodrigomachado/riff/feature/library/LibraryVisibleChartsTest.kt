@@ -5,8 +5,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** O filtro e os chips da Biblioteca: o que está à mostra é o "todos" do Selecionar todos. */
+/** O filtro e os chips da Biblioteca: o que está à mostra é o "todos" do Marcar todas. */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
 class LibraryVisibleChartsTest {
@@ -54,7 +54,7 @@ class LibraryVisibleChartsTest {
         show(LibraryUiState(isLoading = false, hasFolder = true, charts = songs, deletion = selecting))
 
         composeRule.onNodeWithTag(LibraryTestTags.FILTER).performTextReplacement("nirv")
-        composeRule.onNodeWithContentDescription("Selecionar todos").performClick()
+        composeRule.onNodeWithText("Marcar todas").performClick()
 
         assertEquals(listOf(listOf("a")), toggled)
     }

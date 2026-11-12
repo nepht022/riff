@@ -45,6 +45,16 @@ internal fun Modifier.escapeClosesFilter(filtering: Boolean, onClose: () -> Unit
     }
 }
 
+/** No PC, Esc durante a seleção cancela a seleção (antes do Esc da tela, que sairia da Biblioteca). */
+internal fun Modifier.escapeCancelsSelection(selecting: Boolean, onCancel: () -> Unit): Modifier {
+    if (!menuKeysEnabled) return this
+    return onPreviewKeyEvent { event ->
+        if (!selecting || event.key != Key.Escape) return@onPreviewKeyEvent false
+        if (event.type == KeyEventType.KeyDown) onCancel()
+        true
+    }
+}
+
 private val ACCENTS = Regex("\\p{Mn}+")
 
 private fun String.folded() = Normalizer.normalize(trim(), Normalizer.Form.NFD).replace(ACCENTS, "").lowercase()

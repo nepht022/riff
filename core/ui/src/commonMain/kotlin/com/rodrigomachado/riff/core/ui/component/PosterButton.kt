@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -67,6 +68,11 @@ fun PosterButton(
     textStyle: TextStyle = MaterialTheme.typography.titleLarge,
     /** A margem dos lados do rótulo; lado a lado, [PosterButtonDefaults.PairPadding]. */
     horizontalPadding: Dp = Spacing.lg,
+    /** O fundo e o rótulo: o vermelho do pôster ou, no secundário, papel com tinta. */
+    containerColor: Color = RiffColors.TourRed,
+    contentColor: Color = RiffColors.Paper,
+    /** O botão ocupa a largura mínima que o pai der (barra com botões de largura igual); sem isso, a do rótulo. */
+    fillWidth: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -77,6 +83,7 @@ fun PosterButton(
             .rotate(TILT_DEGREES)
             .alpha(if (enabled) 1f else DISABLED_ALPHA)
             .padding(end = ShadowOffset, bottom = ShadowOffset),
+        propagateMinConstraints = fillWidth,
     ) {
         if (!pressed) {
             Box(Modifier.matchParentSize().offset(ShadowOffset, ShadowOffset).background(RiffColors.Ink))
@@ -84,7 +91,7 @@ fun PosterButton(
         Box(
             Modifier
                 .offset(shift, shift)
-                .background(RiffColors.TourRed)
+                .background(containerColor)
                 .focusHighlight(RectangleShape)
                 .clickable(
                     interactionSource = interactionSource,
@@ -100,7 +107,7 @@ fun PosterButton(
             Text(
                 text,
                 style = textStyle,
-                color = RiffColors.Paper,
+                color = contentColor,
                 textAlign = TextAlign.Center, // rótulo que quebra em duas linhas continua centralizado
             )
         }

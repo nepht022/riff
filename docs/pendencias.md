@@ -169,6 +169,16 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - A identidade da Sala no celular saiu do `riff_settings` para a pasta `no_backup` (fora do backup); quem já tinha usado a Sala ganha outra conta anônima na primeira vez, e as chaves antigas (`room_uid`, `room_refresh_token`) ficam esquecidas no `riff_settings` (que vai no backup) até uma limpeza.
 - Instáveis sob carga vistos na suíte de 2026-11-09 (passam sozinhos): `DesktopGameplayFlowTest.theLibraryPlaysASongToTheResultsAndBackWithoutStackingScreens` (palheta sem acerto) e `GuitarSeparatorGoldenTest.guitarAndRestMatchTheOriginalDemucs` (ORT "bad allocation").
 
+## Biblioteca: X em cada música e barra de seleção (2026-11-12)
+
+- Opção D aprovada pelo usuário (protótipo `Pictures/Riff comparar/excluir-separar.html`); revisão final feita, achados importantes corrigidos (sala sem X/Selecionar, Esc/○/voltar cancelam a seleção, foco no PC depois do diálogo, barra compacta com fonte grande/tela baixa e escondida com o teclado aberto, área de toque do X quase toda fora do cartão).
+- Teste do usuário no celular e no PC aceito em 2026-11-12 ("testado no pc e celular").
+- Excluir uma música que só está **na fila** de separação não a tira da fila (a que está separando é cancelada); conferir que o trabalho ignora o mapa sumido ou chamar `scheduler.remove` no `onDeleteConfirmed`.
+- Com o desenho de ponta a ponta (edge-to-edge), o fundo da barra não passa por baixo da barra de navegação (o `safeDrawingPadding` é aplicado no NavHost).
+- A barra de teclas do PC não diz "→ Excluir"; o X só se descobre tentando →.
+- Barra compacta: decidida pela escala da fonte (≥ 1,5) ou altura < 420 dp, não pela altura real da barra; com a barra compacta rolando de lado, o Separar/Cancelar podem ficar fora da tela sem indicação.
+- Um teste com `LocalDensity` trocado dentro do `setContent` (fonte 2×) travou o Robolectric até estourar a memória; trocado por `@Config(fontScale = 2f)`. Não visto no app.
+
 ## Riff no Windows, etapa 4e: instalador (2026-11-05)
 
 - **Conformidade (validação humana antes de distribuir):** revisto em 2026-11-12: aviso próprio para as DLLs do Visual C++/UCRT da Microsoft (`microsoft-vcpp.txt`) e aviso de patentes de codecs (MP3, AMR, H.264) nas "Bibliotecas dentro do FFmpeg"; os dois entram a partir do próximo `.msi` (o 0.6.0 publicado não os tem). Código-fonte da GPL 2 (OpenJDK) e da LGPL (FFmpeg, LAME) anexado à v0.6.0 no GitHub em 2026-11-12 (arquivos `fonte-*`); os avisos do app apontam para ele a partir do próximo `.msi`, e cada versão nova precisa levar os seus (README). Ainda em aberto: FreeType pela FTL; linhas de copyright tiradas de README/cabeçalho (OpenSSL, SRT, LAME, cabeçalhos do Vulkan); winpthreads do `master` e ICU do fork do Chromium (74-2). Nada disso foi visto por um advogado.

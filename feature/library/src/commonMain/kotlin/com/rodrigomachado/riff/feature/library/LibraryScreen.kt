@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +43,7 @@ import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.rememberMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
+import com.rodrigomachado.riff.core.ui.input.menuKeysEnabled
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.library.resources.Res
@@ -77,6 +79,9 @@ import org.jetbrains.compose.resources.stringResource
 object LibraryTestTags {
     const val LIST = "library_list"
     const val FILTER = "library_filter"
+
+    /** A barra fixa embaixo, no modo Selecionar. */
+    const val SELECTION_BAR = "library_selection_bar"
 
     /** A barra de teclas do PC. */
     const val KEY_HINTS = "library_key_hints"
@@ -167,13 +172,26 @@ fun LibraryContent(
     var filter by rememberSaveable { mutableStateOf("") }
     var chip by rememberSaveable { mutableStateOf(LibraryChip.ALL) }
     val clearFilter = Modifier.escapeClosesFilter(filter.isNotEmpty()) { filter = "" }
+    // Esc (PC), ○ e o voltar do celular, durante a seleção, cancelam a seleção em vez de sair da Biblioteca.
+    val cancelSelection = Modifier.escapeCancelsSelection(state.deletion.selecting, deletion.onCancelSelecting)
+    LibraryBackHandler(state.deletion.selecting, deletion.onCancelSelecting)
+    // Só a lista filtrada é calculada aqui; o resto do estado (seleção, importação, aviso) é sempre o atual.
+    val shown = remember(state.charts, state.aiSeparated, state.bests, filter, chip) {
+        state.charts.matching(filter).filter { chip.accepts(it, state) }
+    }
     val pad = LocalGamepad.current
     val menu = LibraryMenuActions(
         onRescan = onRescan.takeIf { state.hasFolder },
         onPickFolder = onPickFolder,
-        onSelect = deletion.onStartSelecting.takeIf { state.charts.isNotEmpty() && !state.deletion.selecting },
+        // Na escolha da sala não se exclui nada (nem X, nem Selecionar): a sala pode já ter escolhido a música.
+        onSelect = deletion.onStartSelecting.takeIf {
+            !pickForRoom && state.charts.isNotEmpty() && !state.deletion.selecting
+        },
     )
-    BoxWithConstraints(clearFilter.then(modifier).fillMaxSize()) {
+    val (refocus, callbacks) = rememberDeleteRefocus(deletion, shown)
+    BoxWithConstraints(clearFilter.then(cancelSelection).then(modifier).fillMaxSize()) {
+        // Fonte grande ou tela baixa (celular deitado): a barra da seleção vira uma linha só, que rola de lado.
+        val compactBar = LocalDensity.current.fontScale >= COMPACT_FONT_SCALE || maxHeight < COMPACT_HEIGHT
         // No PC (janela larga) a coluna fica no meio, sem esticar os cartões de ponta a ponta.
         // O widthIn vem antes do fillMaxWidth: estica até o máximo do PC, nunca além.
         val width = if (maxWidth >= WIDE_MIN_WIDTH) Modifier.widthIn(max = WIDE_CONTENT) else Modifier
@@ -186,12 +204,18 @@ fun LibraryContent(
                 TitleRow(pickForRoom, onSearch)
                 LibraryBody(state, onPickFolder, onRescan) {
                     val list = ListFilter(filter, chip, onFilter = { filter = it }, onChip = { chip = it })
-                    ChartList(state, list, images, onReportDismissed, deletion) { chart ->
+                    val focusTarget = refocus.target.takeIf { menuKeysEnabled && state.deletion.ask == null }
+                    val focus = ListFocus(focusTarget, refocus::done)
+                    val rows = ChartRows(allowDelete = !pickForRoom, callbacks, focus)
+                    ChartList(state, shown, list, images, onReportDismissed, rows) { chart ->
                         playMenuSound(MenuSound.NAVIGATE)
                         choosingId = chart.id
                     }
                 }
             }
+            // Fora da lista (a lista termina acima dela): sempre à vista durante a seleção.
+            // Com o teclado do celular aberto (digitando no filtro) a barra sai, para a lista não sumir.
+            if (state.deletion.selecting && !keyboardOpen()) SelectionBarFor(state, shown, callbacks, width, compactBar)
             if (pad != null) {
                 val connected by pad.connected.collectAsState()
                 KeyHintBar(libraryKeys(), connected, Modifier.testTag(LibraryTestTags.KEY_HINTS))
@@ -203,7 +227,7 @@ fun LibraryContent(
         DifficultyChoice(chart, onClose = { choosingId = null }, onChosen = chosen)
     }
     state.prompt?.let { SeparationPrompt(it, onSeparate, onPlayWithoutSeparating, onPromptDismissed) }
-    DeletionDialogs(state.deletion, deletion, onAllow = onPickFolder)
+    DeletionDialogs(state.deletion, callbacks, onAllow = onPickFolder)
 }
 
 /** O título ("Biblioteca" ou, na sala, "Escolher música") e, fora da sala, o "+ Mapas" (a pesquisa no Encore). */
@@ -218,6 +242,69 @@ private fun TitleRow(pickForRoom: Boolean, onSearch: () -> Unit) {
         if (!pickForRoom) MoreChartsButton(onSearch)
     }
 }
+
+/** A barra da seleção para os mapas à mostra ([shown]: "Marcar todas" vale só para eles). */
+@Composable
+private fun SelectionBarFor(
+    state: LibraryUiState,
+    shown: List<Chart>,
+    callbacks: DeletionCallbacks,
+    width: Modifier,
+    compact: Boolean,
+) {
+    val deletable = shown.filter { it.id !in state.protectedIds }
+    val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
+    SelectionBar(
+        selected = state.deletion.selected.size,
+        separable = state.separableSelected,
+        visible = shown.map { it.id },
+        allSelected = allSelected,
+        callbacks = callbacks,
+        modifier = Modifier.testTag(LibraryTestTags.SELECTION_BAR),
+        contentWidth = width,
+        compact = compact,
+    )
+}
+
+/**
+ * No PC, quando o diálogo de excluir fecha, o foco volta ao cartão (desistiu) ou vai ao vizinho (excluiu): [target] é
+ * o cartão a focar e [done] o limpa. Guardado uma vez só (sobrevive à lista mudando depois da exclusão).
+ */
+private class DeleteRefocus {
+    var deleting by mutableStateOf<Pair<String, String?>?>(null)
+    var target by mutableStateOf<String?>(null)
+
+    fun done() {
+        target = null
+    }
+}
+
+/** O [DeleteRefocus] da tela e os callbacks de exclusão que o avisam. */
+@Composable
+private fun rememberDeleteRefocus(
+    deletion: DeletionCallbacks,
+    shown: List<Chart>,
+): Pair<DeleteRefocus, DeletionCallbacks> {
+    val refocus = remember { DeleteRefocus() }
+    val ids = shown.map { it.id }
+    val callbacks = remember(deletion, ids) {
+        deletion.refocusing(
+            ids,
+            onAsked = { origin, neighbor -> refocus.deleting = origin to neighbor },
+            onClosed = { confirmed ->
+                refocus.deleting?.let { (origin, neighbor) -> refocus.target = if (confirmed) neighbor else origin }
+                refocus.deleting = null
+            },
+        )
+    }
+    return refocus to callbacks
+}
+
+/** O cartão que deve receber o foco ([target], no PC depois do diálogo de excluir) e o aviso de que já recebeu. */
+private class ListFocus(val target: String?, val onDone: () -> Unit)
+
+/** O que cada cartão da lista pode fazer: excluir ([allowDelete]; não na escolha da sala) e para onde vai o foco. */
+private class ChartRows(val allowDelete: Boolean, val callbacks: DeletionCallbacks, val focus: ListFocus)
 
 /** O filtro de texto e o chip escolhido (os dois guardados pela tela), e como mudá-los. */
 private class ListFilter(
@@ -273,22 +360,20 @@ private fun LibraryError(message: String, onRetry: () -> Unit) {
 }
 
 /**
- * O filtro, os chips e, rolando com eles (a fonte grande não espreme a lista), a seleção, o aviso da importação e os
- * cartões. Só a lista filtrada é calculada aqui; o resto do estado (seleção, importação, aviso) é sempre o atual.
+ * O filtro, os chips e, rolando com eles (a fonte grande não espreme a lista), o aviso da importação e os cartões
+ * ([charts]: os do filtro e do chip). As ações da seleção ficam fora, na barra de baixo ([SelectionBar]).
  */
 @Composable
 @Suppress("LongParameterList") // o estado, o filtro, as capas e o que a lista faz
 private fun ChartList(
     state: LibraryUiState,
+    charts: List<Chart>,
     filter: ListFilter,
     images: ChartArtImages?,
     onReportDismissed: () -> Unit,
-    deletion: DeletionCallbacks,
+    rows: ChartRows,
     onChartClick: (Chart) -> Unit,
 ) {
-    val charts = remember(state.charts, state.aiSeparated, state.bests, filter.text, filter.chip) {
-        state.charts.matching(filter.text).filter { filter.chip.accepts(it, state) }
-    }
     LazyColumn(
         modifier = Modifier.testTag(LibraryTestTags.LIST),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -296,15 +381,6 @@ private fun ChartList(
     ) {
         item(key = "filter") { FilterField(filter.text, filter.onFilter) }
         item(key = "chips") { LibraryChips(filter.chip, state.charts.size, filter.onChip) }
-        if (state.deletion.selecting) {
-            item(key = "selection") {
-                // O "todos" é o que está à mostra (filtro e chip), na caixa e ao tocar nela.
-                val deletable = charts.filter { it.id !in state.protectedIds }
-                val allSelected = deletable.isNotEmpty() && deletable.all { it.id in state.deletion.selected }
-                val visible = charts.map { it.id }
-                SelectionActions(state.deletion.selected.size, state.separableSelected, visible, allSelected, deletion)
-            }
-        }
         state.report?.let { item(key = "report") { ImportReportCard(it, onReportDismissed) } }
         if (charts.isEmpty() && state.charts.isNotEmpty()) {
             item(key = "none") {
@@ -323,8 +399,10 @@ private fun ChartList(
                 chartId = chart.id,
                 selecting = state.deletion.selecting,
                 selected = chart.id in state.deletion.selected,
-                canDelete = chart.id !in state.protectedIds,
-                callbacks = deletion,
+                canDelete = rows.allowDelete && chart.id !in state.protectedIds,
+                callbacks = rows.callbacks,
+                focusMe = chart.id == rows.focus.target,
+                onFocused = rows.focus.onDone,
             ) { modifier, onClickOverride ->
                 LibraryCard(
                     chart = chart,
@@ -403,3 +481,7 @@ private val WIDE_MIN_WIDTH = 800.dp
 
 /** A largura máxima da coluna no PC. */
 private val WIDE_CONTENT = 760.dp
+
+/** A partir desta escala da fonte, ou abaixo desta altura, a barra da seleção fica numa linha só. */
+private const val COMPACT_FONT_SCALE = 1.5f
+private val COMPACT_HEIGHT = 420.dp
