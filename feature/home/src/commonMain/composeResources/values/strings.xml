@@ -7,4 +7,18 @@
     <string name="home_ranking">★ Ranking</string>
     <string name="home_report">Reportar problema</string>
     <string name="home_settings">Configurações</string>
+    <string name="home_continue">Continuar</string>
+    <string name="home_record">Recorde %1$s</string>
+    <string name="home_recent_bests">Últimos recordes</string>
+    <string name="home_room_friends">com amigos</string>
+    <string name="home_solo_support">Biblioteca e Encore</string>
+    <string name="home_room_support">Até 4, celular e PC</string>
+    <string name="home_ranking_tile">Ranking</string>
+    <string name="home_ranking_support">Os melhores de cada música</string>
+    <string name="home_ranking_pc_strum">Tabela: PC com palheta</string>
+    <string name="home_ranking_pc_no_strum">Tabela: PC sem palheta</string>
+    <string name="home_ranking_phone">Tabela: celular</string>
+    <string name="home_report_short">Reportar</string>
+    <string name="home_keys_move">Mover</string>
+    <string name="home_keys_choose">Escolher</string>
 </resources>

@@ -63,7 +63,8 @@ class DeletionCallbacks(
     val onStartSelecting: () -> Unit = {},
     val onToggle: (String) -> Unit = {},
     val onCancelSelecting: () -> Unit = {},
-    val onToggleAll: () -> Unit = {},
+    /** Marcar (ou desmarcar) todos os mapas à mostra: os ids do filtro e do chip. */
+    val onToggleAll: (visible: List<String>) -> Unit = {},
     val onDeleteSelected: () -> Unit = {},
     /** "Separar (n)": põe na fila de separação as selecionadas que precisam da IA. */
     val onSeparateSelected: () -> Unit = {},
@@ -73,13 +74,19 @@ class DeletionCallbacks(
 )
 
 /**
- * Na linha do Reimportar, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos; embaixo, Separar (n)
- * põe na fila da IA as selecionadas que precisam.
+ * Acima da lista, durante a seleção: Excluir (n), Cancelar e, na ponta, marcar todos (os [visible]: só os mapas à
+ * mostra); embaixo, Separar (n) põe na fila da IA as selecionadas que precisam.
  */
 @Composable
-internal fun SelectionActions(selected: Int, separable: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
+internal fun SelectionActions(
+    selected: Int,
+    separable: Int,
+    visible: List<String>,
+    allSelected: Boolean,
+    callbacks: DeletionCallbacks,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        DeleteRow(selected, allSelected, callbacks)
+        DeleteRow(selected, allSelected, callbacks) { callbacks.onToggleAll(visible) }
         PosterButton(
             stringResource(Res.string.library_separate_selected, separable),
             onClick = callbacks.onSeparateSelected,
@@ -90,7 +97,7 @@ internal fun SelectionActions(selected: Int, separable: Int, allSelected: Boolea
 }
 
 @Composable
-private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks) {
+private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCallbacks, onToggleAll: () -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -109,7 +116,7 @@ private fun DeleteRow(selected: Int, allSelected: Boolean, callbacks: DeletionCa
             Text(stringResource(Res.string.library_delete_cancel), color = RiffColors.Paper)
         }
         Spacer(Modifier.weight(1f))
-        SelectAll(allSelected, callbacks.onToggleAll)
+        SelectAll(allSelected, onToggleAll)
     }
 }
 
@@ -152,7 +159,10 @@ private fun SelectAll(allSelected: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** O cartão com a caixa de marcar (seleção) ou com o X vermelho no canto. */
+/**
+ * O cartão; no modo Selecionar ([selecting]), com a caixa de marcar e o X vermelho no canto (fora dele, nada de
+ * apagar: tocar no cartão só joga). O mapa solto na raiz ([canDelete] falso) não tem nenhum dos dois.
+ */
 @Composable
 internal fun DeletableChart(
     title: String,
@@ -163,22 +173,22 @@ internal fun DeletableChart(
     callbacks: DeletionCallbacks,
     card: @Composable (Modifier, onClickOverride: (() -> Unit)?) -> Unit,
 ) {
-    if (selecting) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = selected,
-                onCheckedChange = if (canDelete) ({ callbacks.onToggle(chartId) }) else null,
-                enabled = canDelete,
-                colors = CheckboxDefaults.colors(checkedColor = RiffColors.TourRed, uncheckedColor = RiffColors.Paper),
-                modifier = Modifier.focusHighlight(),
-            )
-            card(Modifier.weight(1f), if (canDelete) ({ callbacks.onToggle(chartId) }) else ({}))
-        }
+    if (!selecting) {
+        card(Modifier, null)
         return
     }
-    Box {
-        card(Modifier, null)
-        if (canDelete) DeleteX(title, Modifier.align(Alignment.TopEnd)) { callbacks.onDelete(chartId) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            checked = selected,
+            onCheckedChange = if (canDelete) ({ callbacks.onToggle(chartId) }) else null,
+            enabled = canDelete,
+            colors = CheckboxDefaults.colors(checkedColor = RiffColors.TourRed, uncheckedColor = RiffColors.Paper),
+            modifier = Modifier.focusHighlight(),
+        )
+        Box(Modifier.weight(1f)) {
+            card(Modifier, if (canDelete) ({ callbacks.onToggle(chartId) }) else ({}))
+            if (canDelete) DeleteX(title, Modifier.align(Alignment.TopEnd)) { callbacks.onDelete(chartId) }
+        }
     }
 }
 

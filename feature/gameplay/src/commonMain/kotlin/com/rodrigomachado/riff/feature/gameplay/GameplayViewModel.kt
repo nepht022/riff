@@ -26,6 +26,8 @@ import com.rodrigomachado.riff.core.model.Judgment
 import com.rodrigomachado.riff.core.model.RankingTable
 import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.model.Settings
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
+import com.rodrigomachado.riff.core.ui.art.loadOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

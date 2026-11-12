@@ -35,10 +35,8 @@
         <item quantity="one">e mais %1$d pasta</item>
         <item quantity="other">e mais %1$d pastas</item>
     </plurals>
-    <string name="library_filter_open">Pesquisar na biblioteca</string>
     <string name="library_filter_hint">Música ou artista</string>
     <string name="library_filter_none">Nenhum mapa com esse nome</string>
-    <string name="library_search">Pesquisar Mapas</string>
     <string name="library_separate_title">Separar a guitarra com IA?</string>
     <string name="library_separate_message">Separar a guitarra faz com que o som da mesma suma ao errar notas e só apareça ao acertá-las, aumentando a imersão. O processo leva em torno de 3 minutos e pode esquentar o celular. As músicas com separação se mantêm armazenadas no dispositivo.</string>
     <string name="library_separate_low_memory">Pode não funcionar neste celular.</string>
@@ -49,7 +47,7 @@
     <string name="library_separate">Separar</string>
     <string name="library_play_without_separating">Sem separar</string>
     <string name="library_separate_guitar">Guitarra separada</string>
-    <string name="library_ai_separated">Guitarra separada IA</string>
+    <string name="library_ai_separated">Guitarra separada pela IA</string>
     <string name="library_select">Selecionar</string>
     <string name="library_delete_selected">Excluir (%1$d)</string>
     <string name="library_select_all">Selecionar todos</string>
@@ -74,4 +72,18 @@
         <item quantity="other">Não deu para excluir %1$d mapas.</item>
     </plurals>
     <string name="library_delete_ok">OK</string>
+    <string name="library_more_charts">+ Mapas</string>
+    <string name="library_more_options">Mais opções</string>
+    <string name="library_chip_all">Todas · %1$d</string>
+    <string name="library_chip_record">Com recorde</string>
+    <string name="library_chip_none">Nenhum mapa neste filtro</string>
+    <string name="library_record">Recorde %1$s · %2$s</string>
+    <string name="library_no_record">Ainda sem recorde</string>
+    <string name="library_ai_seal">IA</string>
+    <string name="library_up_to">Até %1$s</string>
+    <string name="library_guitar_tag">Guitarra</string>
+    <string name="library_own_guitar">Guitarra do mapa</string>
+    <string name="library_keys_move">Mover</string>
+    <string name="library_keys_choose">Escolher</string>
+    <string name="library_keys_back">Voltar</string>
 </resources>

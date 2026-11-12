@@ -5,6 +5,8 @@ import com.rodrigomachado.riff.core.database.ScoreDao
 import com.rodrigomachado.riff.core.database.ScoreEntity
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 interface ScoreRepository {
@@ -14,6 +16,21 @@ interface ScoreRepository {
     suspend fun get(id: Long): ScoreRecord?
 
     suspend fun best(chartId: String, difficulty: Difficulty): ScoreRecord?
+
+    /**
+     * O recorde da [difficulty] do mapa [chartId] de antes da partida [scoreId] (gravado antes dela; o "antes: N" do
+     * Resultado); null quando ela foi a primeira.
+     */
+    suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long): ScoreRecord?
+
+    /** A última partida jogada (o "Continuar" da tela inicial); null sem partidas. */
+    suspend fun last(): ScoreRecord?
+
+    /** Os recordes de hoje (um por mapa e dificuldade), do jogado por último ao mais antigo, até [limit]. */
+    suspend fun recentBests(limit: Int): List<ScoreRecord>
+
+    /** O maior recorde de cada mapa, em qualquer dificuldade (um por mapa jogado), acompanhando o banco. */
+    fun observeChartBests(): Flow<List<ScoreRecord>>
 }
 
 class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : ScoreRepository {
@@ -25,6 +42,16 @@ class RoomScoreRepository @Inject constructor(private val dao: ScoreDao) : Score
         chartId,
         difficulty.name,
     )?.toModel()
+
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long): ScoreRecord? =
+        dao.bestBefore(chartId, difficulty.name, scoreId)?.toModel()
+
+    override suspend fun last(): ScoreRecord? = dao.last()?.toModel()
+
+    override suspend fun recentBests(limit: Int): List<ScoreRecord> = dao.recentBests(limit).mapNotNull { it.toModel() }
+
+    override fun observeChartBests(): Flow<List<ScoreRecord>> =
+        dao.observeChartBests().map { rows -> rows.mapNotNull { it.toModel() } }
 }
 
 private fun ScoreRecord.toEntity() = ScoreEntity(

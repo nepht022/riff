@@ -26,6 +26,7 @@ import com.rodrigomachado.riff.feature.calibration.HiltCalibrationViewModel
 import com.rodrigomachado.riff.feature.gameplay.GameplayRoute
 import com.rodrigomachado.riff.feature.gameplay.GameplayScreen
 import com.rodrigomachado.riff.feature.gameplay.HiltGameplayViewModel
+import com.rodrigomachado.riff.feature.home.HiltHomeViewModel
 import com.rodrigomachado.riff.feature.home.HomeRoute
 import com.rodrigomachado.riff.feature.home.HomeScreen
 import com.rodrigomachado.riff.feature.library.HiltLibraryViewModel
@@ -127,7 +128,7 @@ private fun NavigationEffects(
 
 /**
  * A tela inicial: Sozinho abre a Biblioteca; Sala (só com o Firebase configurado, senão "em breve"), Ranking,
- * Configurações e Reportar.
+ * Configurações e Reportar; "Continuar" abre a partida da última música, na mesma dificuldade.
  */
 private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
     composable<HomeRoute> {
@@ -136,7 +137,11 @@ private fun NavGraphBuilder.homeDestination(navController: NavHostController) {
             onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
             onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
             onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+            onContinue = dropUnlessResumed { chartId, difficulty ->
+                navController.navigate(GameplayRoute(chartId, difficulty.name))
+            },
             onRoom = if (RoomSwitch.isOn) dropUnlessResumed { navController.navigate(RoomEntryRoute) } else null,
+            viewModel = hiltViewModel<HiltHomeViewModel>(),
         )
     }
 }

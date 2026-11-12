@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -118,13 +117,14 @@ private fun usageText(usage: SeparationUsage): String = if (usage.songs == 0) {
 @Composable
 private fun ActionRow(title: String, onClick: () -> Unit, value: String? = null, hint: String? = null) {
     Row(
-        Modifier.fillMaxWidth().focusHighlight().clickable(onClick = onClick).padding(vertical = Spacing.md),
+        Modifier.fillMaxWidth().focusHighlight().clickable(onClick = onClick)
+            .settingBlock(LocalWideSettings.current).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
-            hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = RiffColors.PaperDim) }
+            Text(title, style = rowTitleStyle(), color = RiffColors.Paper)
+            hint?.let { Text(it, style = rowHintStyle(), color = RiffColors.PaperDim) }
         }
-        value?.let { Text(it, style = MaterialTheme.typography.titleMedium, color = RiffColors.PaperDim) }
+        value?.let { Text(it, style = rowTitleStyle(), color = RiffColors.PaperDim) }
     }
 }

@@ -39,6 +39,7 @@ class LibraryViewModelTest {
     private val probe = FakeAudioProbe()
     private val settings = FakeSettingsRepository()
     private val deleter = FakeChartDeleter(repository)
+    private val scores = FakeScores()
     private val song = Chart("m", "Música", "Banda", null, null, null, "u", ChartFormat.CHART, setOf(Difficulty.EXPERT))
 
     @Before
@@ -58,9 +59,26 @@ class LibraryViewModelTest {
             probe,
             settings,
             deleter,
+            scores,
+            images = null,
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         return viewModel
+    }
+
+    /** O cartão mostra o maior recorde do mapa (o banco dá um por mapa) e acompanha uma partida nova. */
+    @Test
+    fun bestsComeFromTheScoresAndFollowNewMatches() = runTest {
+        val vm = viewModel()
+        scores.bests.value = listOf(score("a", Difficulty.HARD, 900))
+        assertEquals(mapOf("a" to ChartBest(900, Difficulty.HARD)), vm.uiState.value.bests)
+
+        scores.bests.value = listOf(score("a", Difficulty.EXPERT, 1_200), score("b", Difficulty.EASY, 10))
+
+        assertEquals(
+            mapOf("a" to ChartBest(1_200, Difficulty.EXPERT), "b" to ChartBest(10, Difficulty.EASY)),
+            vm.uiState.value.bests,
+        )
     }
 
     @Test
@@ -444,12 +462,39 @@ class LibraryViewModelTest {
         vm.onStartSelecting()
         vm.onToggleSelected("a")
 
-        vm.onToggleAll()
+        vm.onToggleAll(listOf("solto", "a", "b"))
         assertEquals(setOf("a", "b"), vm.uiState.value.deletion.selected)
 
-        vm.onToggleAll()
+        vm.onToggleAll(listOf("solto", "a", "b"))
         assertEquals(emptySet<String>(), vm.uiState.value.deletion.selected)
         assertEquals(true, vm.uiState.value.deletion.selecting)
+    }
+
+    /** Com o filtro (ou um chip), marcar todos só marca os mapas à mostra; o que já estava marcado fica. */
+    @Test
+    fun selectAllWithAFilterOnlyMarksTheVisible() = runTest {
+        libraryWith(at("a", "raiz/A"), at("b", "raiz/B"), at("c", "raiz/C"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("c")
+
+        vm.onToggleAll(listOf("a", "b"))
+
+        assertEquals(setOf("a", "b", "c"), vm.uiState.value.deletion.selected)
+    }
+
+    /** Tocar de novo desmarca só os à mostra (os de fora do filtro continuam marcados). */
+    @Test
+    fun selectAllAgainClearsOnlyTheVisible() = runTest {
+        libraryWith(at("a", "raiz/A"), at("b", "raiz/B"), at("c", "raiz/C"))
+        val vm = viewModel()
+        vm.onStartSelecting()
+        vm.onToggleSelected("c")
+        vm.onToggleAll(listOf("a", "b"))
+
+        vm.onToggleAll(listOf("a", "b"))
+
+        assertEquals(setOf("c"), vm.uiState.value.deletion.selected)
     }
 
     @Test

@@ -31,7 +31,9 @@ import com.rodrigomachado.riff.core.data.folder.SngFolderSource
 import com.rodrigomachado.riff.core.data.game.FolderChartArtLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
+import com.rodrigomachado.riff.core.data.importer.ChartImportListeners
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
+import com.rodrigomachado.riff.core.data.importer.NotifyingChartImporter
 import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
 import com.rodrigomachado.riff.core.data.ranking.AppsScriptRankingRepository
 import com.rodrigomachado.riff.core.data.ranking.DataStorePlayerStore
@@ -63,6 +65,7 @@ import com.rodrigomachado.riff.core.separation.DemucsModelFactory
 import com.rodrigomachado.riff.core.separation.DesktopSeparation
 import com.rodrigomachado.riff.core.separation.DesktopSeparationScheduler
 import com.rodrigomachado.riff.core.separation.SeparationProgress
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
 import com.rodrigomachado.riff.core.ui.component.SeparationControls
 import com.rodrigomachado.riff.desktop.pad.GlfwGamepad
 import com.rodrigomachado.riff.desktop.pad.GlfwPadSource
@@ -72,6 +75,7 @@ import com.rodrigomachado.riff.feature.calibration.CalibrationViewModel
 import com.rodrigomachado.riff.feature.calibration.ClickTrackPlayer
 import com.rodrigomachado.riff.feature.gameplay.DecodedChartArtImages
 import com.rodrigomachado.riff.feature.gameplay.GameplayViewModel
+import com.rodrigomachado.riff.feature.home.HomeViewModel
 import com.rodrigomachado.riff.feature.library.LibraryViewModel
 import com.rodrigomachado.riff.feature.licenses.DesktopLicenseSource
 import com.rodrigomachado.riff.feature.licenses.LicensesViewModel
@@ -161,9 +165,13 @@ class DesktopGraph(
     val settings: SettingsRepository = PreferencesSettingsRepository(preferences)
     val languages = DesktopAppLanguageStore(File(dataDir, LANGUAGE_FILE))
     val libraryFolderStore: LibraryFolderStore = PreferencesLibraryFolderStore(preferences)
-    val chartImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
+
+    // Ao fim de cada importação (Reimportar, Trocar pasta, download), as capas guardadas se esquecem.
+    private val importListeners = ChartImportListeners()
+    private val folderImporter = FolderChartImporter(folderSource, charts, io, FolderChartImporter.MAX_FILE_BYTES) {
         System.currentTimeMillis()
     }
+    val chartImporter = NotifyingChartImporter(folderImporter, importListeners)
     private val audioProbe = FolderChartAudioProbe(folderSource, charts, io)
 
     // A guitarra separada por IA: `separacoes` na pasta de dados (uma pasta por música, como no celular), a fila no
@@ -222,6 +230,8 @@ class DesktopGraph(
         probe = audioProbe,
         settings = settings,
         deleter = FolderChartDeleter(charts, FileFolderWriter(), libraryFolderStore, separations, io),
+        scores = scores,
+        images = chartThumbs,
     )
 
     // A pesquisa no Encore: baixa para "Baixados pelo Riff" na pasta da biblioteca e importa o pacote na hora.
@@ -253,7 +263,12 @@ class DesktopGraph(
     private val stemPlayers = DesktopPlayers.stemPlayers(randomRead, audioOut)
     internal val trackLoader = FolderChartTrackLoader(folderSource, charts, separations, io)
     private val chartOffsets = RoomChartOffsetRepository(database.chartOffsetDao())
-    private val chartArt = DecodedChartArtImages(FolderChartArtLoader(folderSource, charts, io))
+    private val chartArtLoader = FolderChartArtLoader(folderSource, charts, io)
+    private val chartArt = DecodedChartArtImages(chartArtLoader)
+
+    /** As capas das listas (Biblioteca, Resultado, sala, tela inicial): pequenas e numa memória só para o app. */
+    internal val chartThumbs = ChartThumbImages(DecodedChartArtImages.thumbs(chartArtLoader))
+        .also { importListeners.add(it::clear) }
     private val clock = TimeSource { System.nanoTime() / NANOS_PER_MS }
 
     // O ranking, como no celular: o nome e a chave do PC nas preferências, o histórico do banco do PC e a fila no
@@ -298,7 +313,10 @@ class DesktopGraph(
             liveBoard = roomCode?.let { RoomLiveBoard(it, round, room, roomPresence.room) },
         )
 
-    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking)
+    /** A tela inicial: as partidas do banco do PC e as capas das listas. */
+    fun homeViewModel() = HomeViewModel(scores, charts, chartThumbs)
+
+    fun resultsViewModel(scoreId: Long) = ResultsViewModel(scoreId, scores, charts, ranking, chartThumbs)
 
     fun settingsViewModel() = SettingsViewModel(settings, separations, languages, ranking, sfx)
 
@@ -334,9 +352,12 @@ class DesktopGraph(
 
     fun roomJoinViewModel() = RoomJoinViewModel(room, roomPlayerName)
 
-    /** A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa. */
+    /**
+     * A sala: a música é conferida na biblioteca do PC e baixada do Encore pelo download da pesquisa; a capa, das
+     * capas pequenas.
+     */
     fun roomLobbyViewModel(code: String) =
-        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader))
+        RoomLobbyViewModel(code, room, RoomSongCheck.of(charts, encoreDownloads, downloader), chartThumbs)
 
     /** O Resultado da sala [code], rodada [round], lido da sala que a presença já observa. */
     fun roomResultsViewModel(code: String, round: Int) =

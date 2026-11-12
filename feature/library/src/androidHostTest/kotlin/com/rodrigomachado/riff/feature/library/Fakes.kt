@@ -4,6 +4,7 @@ import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
+import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SeparatedFiles
 import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.SettingsRepository
@@ -18,6 +19,7 @@ import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.QueuedSeparation
+import com.rodrigomachado.riff.core.model.ScoreRecord
 import com.rodrigomachado.riff.core.model.SeparationStatus
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
@@ -167,4 +169,19 @@ class FakeChartDeleter(private val charts: FakeChartRepository) : ChartDeleter {
         charts.remove(ok)
         return DeletionResult(deleted = ok.size, failed = chartIds.size - ok.size)
     }
+}
+
+fun score(chartId: String, difficulty: Difficulty, points: Long) =
+    ScoreRecord(0, chartId, difficulty, points, 0.9f, 10, 10, 0, 0, 0)
+
+/** Só o recorde de cada mapa (o que a Biblioteca lê), controlável por [bests]. */
+class FakeScores : ScoreRepository {
+    val bests = MutableStateFlow(emptyList<ScoreRecord>())
+    override suspend fun save(record: ScoreRecord) = error("não usado na biblioteca")
+    override suspend fun get(id: Long) = null
+    override suspend fun best(chartId: String, difficulty: Difficulty) = null
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long) = null
+    override suspend fun last() = null
+    override suspend fun recentBests(limit: Int) = emptyList<ScoreRecord>()
+    override fun observeChartBests(): Flow<List<ScoreRecord>> = bests
 }

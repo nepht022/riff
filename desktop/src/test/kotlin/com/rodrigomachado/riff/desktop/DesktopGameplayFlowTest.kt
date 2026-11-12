@@ -2,8 +2,11 @@ package com.rodrigomachado.riff.desktop
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +17,7 @@ import com.rodrigomachado.riff.desktop.DesktopMatch.Companion.STAGE
 import com.rodrigomachado.riff.desktop.DesktopMatch.Companion.TIMEOUT_MS
 import com.rodrigomachado.riff.feature.gameplay.GameplayTestTags
 import com.rodrigomachado.riff.feature.library.LibraryTestTags
+import com.rodrigomachado.riff.feature.results.ResultsTestTags
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -71,9 +75,50 @@ class DesktopGameplayFlowTest {
         // Outra partida até o fim; do Resultado, Voltar leva à Biblioteca.
         match.startTheSong()
         match.playUntil(hasText(PLAY_AGAIN))
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText(BACK))
+        // O botão (a barra de teclas do PC também diz "Voltar", do Esc).
+        composeRule.clickOnWindowThread(composeRule.onNode(BACK_BUTTON))
         composeRule.waitUntilAtLeastOneExists(hasTestTag(LibraryTestTags.LIST), TIMEOUT_MS)
         composeRule.onNodeWithText(PLAY_AGAIN).assertDoesNotExist()
         composeRule.onNodeWithTag(GameplayTestTags.STAGE).assertDoesNotExist()
+    }
+
+    /**
+     * O Resultado só pelo teclado (o controle manda as mesmas teclas): ↓ chega à linha dos botões, → e ← andam entre
+     * "Voltar" e "Jogar de novo" (lado a lado), Enter no Voltar volta à Biblioteca. A barra de teclas fica no rodapé.
+     */
+    @Test
+    fun pcKeyboardReachesTheResultButtons() {
+        match.openApp()
+        match.openLibrary()
+        match.startTheSong()
+        match.playUntil(hasText(PLAY_AGAIN))
+        composeRule.onNodeWithTag(ResultsTestTags.KEY_HINTS).assertExists()
+
+        pressUntilFocused(Key.DirectionDown, hasText(PLAY_AGAIN) or BACK_BUTTON)
+        pressUntilFocused(Key.DirectionRight, hasText(PLAY_AGAIN))
+        pressUntilFocused(Key.DirectionLeft, BACK_BUTTON)
+        press(Key.Enter)
+
+        composeRule.waitUntilAtLeastOneExists(hasTestTag(LibraryTestTags.LIST), TIMEOUT_MS)
+        composeRule.onNodeWithText(PLAY_AGAIN).assertDoesNotExist()
+    }
+
+    private fun press(key: Key) {
+        match.pressKeys { pressKey(key) }
+        composeRule.waitForIdle()
+    }
+
+    private fun pressUntilFocused(key: Key, matcher: SemanticsMatcher) {
+        repeat(MAX_PRESSES) {
+            if (match.exists(matcher and isFocused())) return
+            press(key)
+        }
+        assertTrue("${matcher.description} não ficou com o foco", match.exists(matcher and isFocused()))
+    }
+
+    private companion object {
+        /** O "Voltar" que é botão (não o rótulo do Esc na barra de teclas). */
+        val BACK_BUTTON = hasText(BACK) and hasClickAction()
+        const val MAX_PRESSES = 10
     }
 }

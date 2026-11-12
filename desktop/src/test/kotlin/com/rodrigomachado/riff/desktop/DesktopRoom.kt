@@ -137,6 +137,7 @@ internal class DesktopRoom(private val composeRule: ComposeContentTestRule, priv
         const val LEAVE_ROOM = "Sair da sala"
         const val CHOOSE_SONG = "Escolher música"
         const val READY = "Pronto"
+        const val NOT_READY = "Não estou pronto"
         const val START = "Começar"
         const val EXPERT = "Expert"
         const val BACK_TO_ROOM = "Voltar à sala"

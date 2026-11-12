@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.desktop
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -82,7 +83,7 @@ class DesktopControlsFlowTest {
 
     /** Volta à tela inicial, abre a partida e toca a primeira nota assim; ela tem de virar acerto. */
     private fun playTheFirstNote(fret: Key, strum: Key?) {
-        composeRule.clickOnWindowThread(composeRule.onNodeWithText("Voltar"))
+        composeRule.clickOnWindowThread(composeRule.onNode(hasText("Voltar") and hasClickAction()))
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
         match.openLibrary()
         match.startTheSong()

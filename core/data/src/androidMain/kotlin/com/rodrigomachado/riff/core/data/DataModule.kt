@@ -18,8 +18,10 @@ import com.rodrigomachado.riff.core.data.game.ChartTrackLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartArtLoader
 import com.rodrigomachado.riff.core.data.game.FolderChartAudioProbe
 import com.rodrigomachado.riff.core.data.game.FolderChartTrackLoader
+import com.rodrigomachado.riff.core.data.importer.ChartImportListeners
 import com.rodrigomachado.riff.core.data.importer.ChartImporter
 import com.rodrigomachado.riff.core.data.importer.FolderChartImporter
+import com.rodrigomachado.riff.core.data.importer.NotifyingChartImporter
 import com.rodrigomachado.riff.core.data.library.ChartDeleter
 import com.rodrigomachado.riff.core.data.library.FolderChartDeleter
 import dagger.Binds
@@ -101,17 +103,22 @@ object DataProvidesModule {
     @Provides
     fun folderSource(saf: SafFolderSource, opener: RandomReadOpener): FolderSource = SngFolderSource(saf, opener)
 
+    /** A importação avisa os [listeners] ao fim (as capas guardadas se esquecem). */
     @Provides
     fun chartImporter(
         source: FolderSource,
         repository: ChartRepository,
         @IoDispatcher dispatcher: CoroutineDispatcher,
-    ): ChartImporter = FolderChartImporter(
-        source,
-        repository,
-        dispatcher,
-        FolderChartImporter.MAX_FILE_BYTES,
-        System::currentTimeMillis,
+        listeners: ChartImportListeners,
+    ): ChartImporter = NotifyingChartImporter(
+        FolderChartImporter(
+            source,
+            repository,
+            dispatcher,
+            FolderChartImporter.MAX_FILE_BYTES,
+            System::currentTimeMillis,
+        ),
+        listeners,
     )
 }
 

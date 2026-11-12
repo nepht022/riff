@@ -7,6 +7,8 @@ import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.ChartFormat
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.ScoreRecord
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,15 @@ class FakeScores(private val records: List<ScoreRecord>) : ScoreRepository {
     override suspend fun get(id: Long) = records.firstOrNull { it.id == id }
 
     override suspend fun best(chartId: String, difficulty: Difficulty) = records.maxByOrNull { it.score }
+
+    override suspend fun bestBefore(chartId: String, difficulty: Difficulty, scoreId: Long) =
+        records.filter { it.id < scoreId }.maxByOrNull { it.score }
+
+    override suspend fun last() = records.maxByOrNull { it.playedAtEpochMs }
+
+    override suspend fun recentBests(limit: Int) = emptyList<ScoreRecord>()
+
+    override fun observeChartBests() = kotlinx.coroutines.flow.flowOf(emptyList<ScoreRecord>())
 }
 
 /** Ranking falso: guarda as partidas enviadas e devolve o status que o teste definir. */
@@ -86,16 +97,45 @@ class ResultsViewModelTest {
 
     private val ranking = RecordingRanking()
 
-    private fun viewModel(scoreId: Long, records: List<ScoreRecord>) =
-        HiltResultsViewModel(SavedStateHandle(mapOf("scoreId" to scoreId)), FakeScores(records), FakeCharts(), ranking)
+    private fun viewModel(scoreId: Long, records: List<ScoreRecord>) = HiltResultsViewModel(
+        SavedStateHandle(mapOf("scoreId" to scoreId)),
+        FakeScores(records),
+        FakeCharts(),
+        ranking,
+        ChartThumbImages(ChartArtImages { null }),
+    )
 
     @Test
     fun highestScoreIsANewBest() = runTest {
         val state = viewModel(2, listOf(record(1, 500), record(2, 900))).uiState.value
         assertEquals(
-            ResultsUiState.Ready(record(2, 900), "Música", "Banda", isNewBest = true, rankingOn = true),
+            ResultsUiState.Ready(
+                record(2, 900),
+                "Música",
+                "Banda",
+                isNewBest = true,
+                rankingOn = true,
+                previousBest = 500,
+            ),
             state,
         )
+    }
+
+    /** O "antes: N": o recorde de antes desta partida (as que vieram depois não contam). */
+    @Test
+    fun previousBestIsTheBestBeforeThisMatch() = runTest {
+        val first = viewModel(1, listOf(record(1, 500))).uiState.value as ResultsUiState.Ready
+        assertEquals("a primeira partida não tem recorde anterior", null, first.previousBest)
+
+        val third = viewModel(3, listOf(record(1, 500), record(2, 700), record(3, 900))).uiState.value
+        assertEquals(700L, (third as ResultsUiState.Ready).previousBest)
+    }
+
+    /** Sem recorde novo, nada de "antes". */
+    @Test
+    fun noPreviousBestWithoutANewRecord() = runTest {
+        val state = viewModel(1, listOf(record(1, 500), record(2, 900))).uiState.value as ResultsUiState.Ready
+        assertEquals(null, state.previousBest)
     }
 
     @Test

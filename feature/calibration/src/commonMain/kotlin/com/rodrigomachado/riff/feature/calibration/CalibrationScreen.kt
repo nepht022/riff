@@ -32,9 +32,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
+import com.rodrigomachado.riff.core.ui.component.KeyHint
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.OnWindowFocusLost
@@ -50,6 +56,10 @@ import com.rodrigomachado.riff.feature.calibration.resources.calibration_audio_f
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_back
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_instructions
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_instructions_keys
+import com.rodrigomachado.riff.feature.calibration.resources.calibration_keys_any_button
+import com.rodrigomachado.riff.feature.calibration.resources.calibration_keys_any_key
+import com.rodrigomachado.riff.feature.calibration.resources.calibration_keys_stop
+import com.rodrigomachado.riff.feature.calibration.resources.calibration_keys_tap
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_less
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_measuring
 import com.rodrigomachado.riff.feature.calibration.resources.calibration_measuring_keys
@@ -110,45 +120,62 @@ fun CalibrationContent(
 ) {
     val instructions =
         if (tapsByTouch) Res.string.calibration_instructions else Res.string.calibration_instructions_keys
-    // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
-            TextButton(
-                onClick = onDone,
-                modifier = Modifier.focusHighlight(CircleShape),
-            ) { Text(stringResource(Res.string.calibration_back), color = RiffColors.Paper) }
-            PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                when (state) {
-                    CalibrationUiState.Instructions -> Message(
-                        stringResource(instructions),
-                        stringResource(Res.string.calibration_start),
-                        onStart,
-                    ) {
-                        TextButton(onClick = onReset, modifier = Modifier.focusHighlight(CircleShape)) {
-                            Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
+    // Na janela larga do PC, uma coluna no meio; no celular, a tela toda. No PC, as teclas no rodapé.
+    WithPcKeyHints(calibrationKeys(measuring = state is CalibrationUiState.Measuring), modifier) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
+                BackRow(onBack = onDone, text = stringResource(Res.string.calibration_back))
+                PosterTitle(stringResource(Res.string.calibration_title), style = MaterialTheme.typography.displaySmall)
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    when (state) {
+                        CalibrationUiState.Instructions -> Message(
+                            stringResource(instructions),
+                            stringResource(Res.string.calibration_start),
+                            onStart,
+                        ) {
+                            TextButton(onClick = onReset, modifier = Modifier.focusHighlight(CircleShape)) {
+                                Text(stringResource(Res.string.calibration_reset), color = RiffColors.Paper)
+                            }
                         }
+
+                        is CalibrationUiState.Measuring -> TapArea(state.taps, onTap, onCancel)
+
+                        is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
+
+                        CalibrationUiState.Unstable -> Message(
+                            stringResource(Res.string.calibration_unstable),
+                            stringResource(Res.string.calibration_repeat),
+                            onStart,
+                        )
+
+                        CalibrationUiState.AudioFailed -> Message(
+                            stringResource(Res.string.calibration_audio_failed),
+                            stringResource(Res.string.calibration_retry),
+                            onStart,
+                        )
                     }
-
-                    is CalibrationUiState.Measuring -> TapArea(state.taps, onTap, onCancel)
-
-                    is CalibrationUiState.Result -> ResultPanel(state.latencyMs, onNudge, onSave, onStart)
-
-                    CalibrationUiState.Unstable -> Message(
-                        stringResource(Res.string.calibration_unstable),
-                        stringResource(Res.string.calibration_repeat),
-                        onStart,
-                    )
-
-                    CalibrationUiState.AudioFailed -> Message(
-                        stringResource(Res.string.calibration_audio_failed),
-                        stringResource(Res.string.calibration_retry),
-                        onStart,
-                    )
                 }
             }
         }
     }
+}
+
+/**
+ * As teclas da calibração no PC: medindo, qualquer tecla (ou botão do controle) junto com a batida e Esc (○) para;
+ * fora da medição, as de sempre.
+ */
+@Composable
+private fun calibrationKeys(measuring: Boolean): List<KeyHint> = if (measuring) {
+    listOf(
+        KeyHint(
+            stringResource(Res.string.calibration_keys_any_key),
+            pad = stringResource(Res.string.calibration_keys_any_button),
+            label = stringResource(Res.string.calibration_keys_tap),
+        ),
+        backHint(stringResource(Res.string.calibration_keys_stop)),
+    )
+} else {
+    listOf(moveHint(), chooseHint(), backHint())
 }
 
 @Composable

@@ -6,6 +6,7 @@ import com.rodrigomachado.riff.core.data.AiSeparationRepository
 import com.rodrigomachado.riff.core.data.AiSeparationState
 import com.rodrigomachado.riff.core.data.ChartRepository
 import com.rodrigomachado.riff.core.data.LibraryFolderStore
+import com.rodrigomachado.riff.core.data.ScoreRepository
 import com.rodrigomachado.riff.core.data.SeparationScheduler
 import com.rodrigomachado.riff.core.data.SettingsRepository
 import com.rodrigomachado.riff.core.data.folder.FolderAccess
@@ -20,12 +21,14 @@ import com.rodrigomachado.riff.core.model.Chart
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.model.QueuedSeparation
 import com.rodrigomachado.riff.core.model.SeparationStatus
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -51,7 +54,12 @@ data class LibraryUiState(
     val protectedIds: Set<String> = emptySet(),
     /** Das selecionadas, quantas dá para pôr na fila de separação ("Separar (n)"). */
     val separableSelected: Int = 0,
+    /** O maior recorde de cada mapa jogado, em qualquer dificuldade ("Recorde N · Dificuldade" no cartão). */
+    val bests: Map<String, ChartBest> = emptyMap(),
 )
+
+/** O recorde de um mapa: os pontos e a dificuldade em que foi feito. */
+data class ChartBest(val score: Long, val difficulty: Difficulty)
 
 data class DeletionState(
     val selecting: Boolean = false,
@@ -85,6 +93,7 @@ private data class Extras(
     val separated: Set<String>,
     val deletion: DeletionState,
     val separationBusy: Set<String>,
+    val bests: Map<String, ChartBest>,
 )
 
 /** As selecionadas que precisam da IA, na ordem da lista: sem guitarra do mapa, sem separação, fora da fila. */
@@ -99,7 +108,11 @@ private data class ImportState(
     val importFailed: Boolean = false,
 )
 
-@Suppress("TooManyFunctions") // importação, exclusão e a pergunta da separação dividem o mesmo estado
+/**
+ * A Biblioteca: os mapas, a importação da pasta, a exclusão, a pergunta da separação e o recorde de cada mapa
+ * ([scores]). [images]: as capas das listas (as pequenas, guardadas na memória).
+ */
+@Suppress("TooManyFunctions", "LongParameterList") // importação, exclusão e separação dividem o mesmo estado
 open class LibraryViewModel(
     chartRepository: ChartRepository,
     private val folderStore: LibraryFolderStore,
@@ -110,6 +123,8 @@ open class LibraryViewModel(
     private val probe: ChartAudioProbe,
     private val settings: SettingsRepository,
     private val deleter: ChartDeleter,
+    scores: ScoreRepository,
+    val images: ChartArtImages?,
 ) : ViewModel() {
     private val importState = MutableStateFlow(ImportState())
     private val promptState = MutableStateFlow(PromptState())
@@ -119,7 +134,11 @@ open class LibraryViewModel(
     private val separationBusyIds = combine(scheduler.status, scheduler.queue) { status, queue ->
         queue.map { it.chartId }.toSet() + listOfNotNull((status as? SeparationStatus.Running)?.chartId)
     }
-    private val extras = combine(promptState, separations.separatedIds, deletionState, separationBusyIds, ::Extras)
+    private val bests = scores.observeChartBests().map { records ->
+        records.associate { it.chartId to ChartBest(it.score, it.difficulty) }
+    }
+    private val extras =
+        combine(promptState, separations.separatedIds, deletionState, separationBusyIds, bests, ::Extras)
 
     val uiState: StateFlow<LibraryUiState> =
         combine(
@@ -144,6 +163,7 @@ open class LibraryViewModel(
                 deletion = deletion,
                 protectedIds = charts.filter { LibraryFolders.isRoot(it.folderUri, rootUri) }.map { it.id }.toSet(),
                 separableSelected = separable(charts, deletion.selected, separated, extras.separationBusy).size,
+                bests = extras.bests,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
@@ -223,10 +243,18 @@ open class LibraryViewModel(
         it.copy(selected = if (chartId in it.selected) it.selected - chartId else it.selected + chartId)
     }
 
-    /** Marca todos os mapas que dá para excluir; com todos já marcados, desmarca. */
-    fun onToggleAll() = deletionState.update { deletion ->
-        val deletable = uiState.value.let { state -> state.charts.map { it.id }.filter { it !in state.protectedIds } }
-        deletion.copy(selected = if (deletion.selected.containsAll(deletable)) emptySet() else deletable.toSet())
+    /**
+     * Marca os mapas à mostra ([visible]: os do filtro e do chip) que dá para excluir; com todos eles já marcados,
+     * desmarca esses. Os marcados fora do filtro ficam como estão.
+     */
+    fun onToggleAll(visible: List<String>) = deletionState.update { deletion ->
+        val deletable = visible.filter { it !in uiState.value.protectedIds }.toSet()
+        val selected = if (deletion.selected.containsAll(deletable)) {
+            deletion.selected - deletable
+        } else {
+            deletion.selected + deletable
+        }
+        deletion.copy(selected = selected)
     }
 
     fun onCancelSelecting() {

@@ -21,4 +21,10 @@
         <item quantity="other">Resultado: %1$s pontos, precisão de %2$s.</item>
     </plurals>
     <string name="results_new_best_spoken">Novo recorde!</string>
+    <string name="results_grade">NOTA</string>
+    <string name="results_grade_spoken">Nota %1$s</string>
+    <string name="results_previous_best">antes: %1$s</string>
+    <string name="results_keys_move">Mover</string>
+    <string name="results_keys_choose">Escolher</string>
+    <string name="results_keys_back">Voltar</string>
 </resources>

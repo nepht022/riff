@@ -1,31 +1,52 @@
 package com.rodrigomachado.riff.feature.room
 
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.TextLayoutResult
+import com.rodrigomachado.riff.core.model.ChartArtUnavailableException
 import com.rodrigomachado.riff.core.model.Difficulty
 import com.rodrigomachado.riff.core.room.Room
 import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.core.room.SongStatus
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
+import com.rodrigomachado.riff.core.ui.art.ChartThumbImages
+import com.rodrigomachado.riff.core.ui.component.ChartThumbTestTags
 import com.rodrigomachado.riff.core.ui.theme.RiffTheme
+import com.rodrigomachado.riff.core.ui.theme.contrastRatio
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR")
@@ -110,18 +131,55 @@ class RoomScreensTest {
         composeRule.onNodeWithText("Celular").assertExists()
         composeRule.onNodeWithText("PC").assertExists()
         composeRule.onNodeWithText("sumiu").assertExists()
-        composeRule.onNodeWithText("Aguardando jogadores…").assertExists()
+        // O "Aguardando jogadores…" solto embaixo da lista saiu (o protótipo não tem; sozinho, vai na linha do que
+        // falta).
+        composeRule.onNodeWithText("Aguardando jogadores…").assertDoesNotExist()
         composeRule.onNodeWithText("Sair da sala").performClick()
 
         assertEquals(listOf("leave"), events)
     }
 
+    /** Sozinho na sala, a linha do que falta espera mais jogadores (no lugar do "2 prontos"); com outro, não. */
     @Test
-    fun aFullRoomStopsWaiting() {
-        val room = sampleRoom("Ana", "Bia", "Caio", "Duda")
-        composeRule.setContent { RiffTheme { RoomLobbyContent(RoomLobbyUiState.Ready(room), "KQZX", onLeave = {}) } }
+    fun aloneTheLineWaitsForMorePlayers() {
+        var state by mutableStateOf(RoomLobbyUiState.Ready(sampleRoom("Ana")))
+        composeRule.setContent { RiffTheme { RoomLobbyContent(state, "KQZX", onLeave = {}, actions = actions) } }
 
-        composeRule.onNodeWithText("Aguardando jogadores…").assertDoesNotExist()
+        composeRule.onNodeWithText("Esperando mais jogadores entrarem").assertExists()
+        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos", substring = true).assertDoesNotExist()
+
+        state = RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia"))
+        composeRule.onNodeWithText("mais jogadores", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos").assertExists()
+    }
+
+    /**
+     * O Começar desligado é legível: o texto em papel apagado sobre tinta passa de 4,5:1 (antes, o cartaz vermelho a
+     * 45% de opacidade).
+     */
+    @Test
+    fun theDisabledStartIsReadable() {
+        showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia")))
+
+        composeRule.onNodeWithText("Começar").assertIsNotEnabled()
+        val ratio = contrastRatio(DisabledStartColors.content, DisabledStartColors.background)
+        assertTrue("contraste $ratio", ratio >= 4.5f)
+    }
+
+    /** No celular (360 dp), "Não estou pronto" e "Começar" lado a lado, cada um numa linha. */
+    @Test
+    @Config(qualifiers = "pt-rBR-w360dp-h780dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // a medida do texto de verdade
+    fun notReadyFitsOneLineOnThePhone() {
+        val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana", ready = true).withPlayer("Bia")
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        listOf("Não estou pronto", "Começar").forEach { text ->
+            val node = composeRule.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
+            val layouts = mutableListOf<TextLayoutResult>()
+            node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            assertEquals(text, 1, layouts.single().lineCount)
+        }
     }
 
     @Test
@@ -175,8 +233,9 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Começar").assertIsNotEnabled()
-        composeRule.onNodeWithText("Fique pronto para começar").assertExists()
-        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos").assertDoesNotExist()
+        // O aviso vem na linha do que falta ("2 prontos · Fique pronto para começar").
+        composeRule.onNodeWithText("Fique pronto para começar", substring = true).assertExists()
+        composeRule.onNodeWithText("Precisa de pelo menos 2 prontos", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -205,7 +264,7 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Through the Fire").assertExists()
-        composeRule.onNodeWithText("Trocar música").assertDoesNotExist() // só o dono troca
+        composeRule.onNodeWithText("Trocar").assertDoesNotExist() // só o dono troca
         composeRule.onNodeWithText("Médio").assertDoesNotExist()
         composeRule.onNode(readyButton).assertIsNotEnabled() // sem dificuldade ainda
         composeRule.onNodeWithText("Expert").performScrollTo().performClick()
@@ -221,9 +280,10 @@ class RoomScreensTest {
         val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana", ready = true).withPlayer("Bia", ready = true)
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has, canStart = true))
 
-        composeRule.onNodeWithText("Trocar música").assertExists()
-        composeRule.onNodeWithText("Não estou pronto").performScrollTo().performClick()
-        composeRule.onNodeWithText("Começar").performScrollTo().assertIsEnabled().performClick()
+        composeRule.onNodeWithText("Trocar").assertExists()
+        // Pronto e Começar ficam fixos embaixo, fora da rolagem.
+        composeRule.onNodeWithText("Não estou pronto").performClick()
+        composeRule.onNodeWithText("Começar").assertIsEnabled().performClick()
 
         assertEquals(listOf("ready", "start"), events)
     }
@@ -234,7 +294,9 @@ class RoomScreensTest {
             .withPlayer("Ana", ready = true).withPlayer("Bia", ready = true).withPlayer("Caio")
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has, canStart = true))
 
-        composeRule.onNodeWithText("Começar com quem está pronto").assertExists()
+        // O aviso vem na linha do que falta; o botão continua "Começar".
+        composeRule.onNodeWithText("Começar com quem está pronto", substring = true).assertExists()
+        composeRule.onNodeWithText("Começar").assertIsEnabled()
     }
 
     @Test
@@ -272,6 +334,127 @@ class RoomScreensTest {
         showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
 
         composeRule.onNodeWithText("Começando…").assertExists()
-        composeRule.onNodeWithText("Trocar música").assertIsNotEnabled()
+        composeRule.onNodeWithText("Trocar").assertIsNotEnabled()
+    }
+
+    // ---- Design novo ----
+
+    /** Compartilhar abre o "Compartilhar" do sistema com o convite e o código. */
+    @Test
+    fun shareSendsTheCodeText() {
+        lateinit var context: Context
+        composeRule.setContent {
+            context = LocalContext.current
+            RiffTheme { RoomLobbyContent(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia")), "KQZX", onLeave = {}) }
+        }
+
+        composeRule.onNodeWithContentDescription("Compartilhar o código").performClick()
+        composeRule.waitForIdle()
+
+        val chooser = shadowOf(context as Activity).nextStartedActivity
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        @Suppress("DEPRECATION") // o getParcelableExtra com a classe só existe a partir do Android 13
+        val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+        assertEquals(Intent.ACTION_SEND, send.action)
+        assertEquals("text/plain", send.type)
+        assertEquals("Entra na minha sala do Riff: KQZX", send.getStringExtra(Intent.EXTRA_TEXT))
+        composeRule.onNodeWithText("Código copiado").assertDoesNotExist() // no celular, nada é copiado
+    }
+
+    /** A linha do que falta: quantos prontos e por quem a sala espera (baixando, ainda não pronto, a música). */
+    @Test
+    fun whatIsMissingLine() {
+        var state by mutableStateOf(
+            RoomLobbyUiState.Ready(
+                sampleRoom("Rodrigo", "Ana", "Bruno_88").withSong()
+                    .withPlayer("Rodrigo", ready = true)
+                    .withPlayer("Ana", ready = true)
+                    .withPlayer("Bruno_88", song = SongStatus.DOWNLOADING, difficulty = null),
+                mySong = MySong.Has,
+                canStart = true,
+            ),
+        )
+        composeRule.setContent { RiffTheme { RoomLobbyContent(state, "KQZX", onLeave = {}, actions = actions) } }
+
+        composeRule.onNodeWithText("2 prontos · esperando Bruno_88 terminar de baixar").assertExists()
+
+        state = RoomLobbyUiState.Ready(
+            sampleRoom("Rodrigo", "Ana", "Bruno_88").withSong()
+                .withPlayer("Rodrigo", ready = true)
+                .withPlayer("Ana")
+                .withPlayer("Bruno_88"),
+            mySong = MySong.Has,
+        )
+        val line = "1 pronto · esperando Ana e Bruno_88 ficarem prontos · Precisa de pelo menos 2 prontos"
+        composeRule.onNodeWithText(line).assertExists()
+
+        state = RoomLobbyUiState.Ready(sampleRoom("Ana", "Rodrigo", me = "Rodrigo"))
+        composeRule.onNodeWithText("Esperando Ana escolher a música").assertExists()
+    }
+
+    /** O topo: "Sair da sala", o código pequeno e o compartilhar; logo abaixo, os jogadores contados. */
+    @Test
+    fun topShowsTheSmallCodeAndThePlayerCount() {
+        showLobby(RoomLobbyUiState.Ready(sampleRoom("Ana", "Bia", "Caio")))
+
+        composeRule.onNodeWithText("SALA").assertExists()
+        composeRule.onNodeWithText("KQZX").assertExists()
+        composeRule.onNodeWithText("Jogadores · 3 de 4").assertExists()
+        composeRule.onNodeWithText("Código da sala").assertDoesNotExist() // o código grande saiu
+    }
+
+    /** Pronto e Começar lado a lado, Pronto à esquerda. */
+    @Test
+    fun readyAndStartSideBySide() {
+        val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana").withPlayer("Bia", ready = true)
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        val ready = composeRule.onNode(readyButton).fetchSemanticsNode().boundsInRoot
+        val start = composeRule.onNodeWithText("Começar").fetchSemanticsNode().boundsInRoot
+        assertTrue("na mesma linha: $ready / $start", ready.bottom > start.top && start.bottom > ready.top)
+        assertTrue("Pronto à esquerda: $ready / $start", ready.right <= start.left)
+        composeRule.onNodeWithText("Sua dificuldade").assertExists()
+    }
+
+    /**
+     * O convidado sem a música: a capa é pedida antes do download (não dá para procurar: o mapa não está no banco) e,
+     * quando a música chega, é pedida de novo e aparece.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE) // a imagem de verdade (o padrão do Robolectric não cria o bitmap)
+    fun theCoverAppearsWhenTheSongIsDownloadedAfterTheFirstAsk() {
+        val image = ImageBitmap(8, 8)
+        var downloaded = false
+        val images = ChartThumbImages(
+            ChartArtImages { if (downloaded) image else throw ChartArtUnavailableException("ainda não baixou") },
+        )
+        val room = sampleRoom("Ana", "Bia", me = "Bia").withSong()
+        var state by mutableStateOf(RoomLobbyUiState.Ready(room, mySong = MySong.Downloading(0.5f)))
+        composeRule.setContent {
+            RiffTheme { RoomLobbyContent(state, "KQZX", onLeave = {}, actions = actions, images = images) }
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(ChartThumbTestTags.ART).assertDoesNotExist()
+
+        downloaded = true
+        state = state.copy(mySong = MySong.Has)
+
+        composeRule.waitUntil(WAIT_MS) {
+            composeRule.onAllNodesWithTag(ChartThumbTestTags.ART).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    /** A linha do que falta muda sozinha (alguém fica pronto): o leitor de tela anuncia sem interromper. */
+    @Test
+    fun theMissingLineIsAnnounced() {
+        val room = sampleRoom("Ana", "Bia").withSong().withPlayer("Ana", ready = true)
+        showLobby(RoomLobbyUiState.Ready(room, mySong = MySong.Has))
+
+        composeRule.onNodeWithTag(RoomTestTags.MISSING)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+    }
+
+    private companion object {
+        const val WAIT_MS = 5_000L
     }
 }

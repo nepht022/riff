@@ -12,10 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.MenuSound
+import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
+import com.rodrigomachado.riff.core.ui.component.backHint
+import com.rodrigomachado.riff.core.ui.component.chooseHint
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
+import com.rodrigomachado.riff.core.ui.component.moveHint
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -52,28 +55,28 @@ fun LicensesContent(state: LicensesUiState, onBack: () -> Unit, modifier: Modifi
     // Os abertos ficam aqui: o texto de cada um vira itens da lista, desenhados só quando aparecem.
     var opened by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val toggle = { key: String -> opened = if (key in opened) opened - key else opened + key }
-    LazyColumn(
-        modifier.fillMaxSize(),
-        contentPadding = PaddingValues(Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        // Sem som aqui: a navegação toca o de voltar ao sair da tela.
-        item {
-            TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
-                Text(stringResource(Res.string.licenses_back), color = RiffColors.Paper)
+    WithPcKeyHints(listOf(moveHint("↑ ↓"), chooseHint(), backHint()), modifier) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            // Sem som aqui: a navegação toca o de voltar ao sair da tela.
+            item { BackRow(onBack = onBack, text = stringResource(Res.string.licenses_back)) }
+            item {
+                PosterTitle(stringResource(Res.string.licenses_title), style = MaterialTheme.typography.displaySmall)
             }
+            item { Heading(stringResource(Res.string.licenses_privacy)) }
+            item {
+                Text(
+                    stringResource(privacyText),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = RiffColors.Paper,
+                )
+            }
+            entries(contentTitle, state.content, opened, toggle)
+            entries(librariesTitle, state.libraries, opened, toggle)
         }
-        item { PosterTitle(stringResource(Res.string.licenses_title), style = MaterialTheme.typography.displaySmall) }
-        item { Heading(stringResource(Res.string.licenses_privacy)) }
-        item {
-            Text(
-                stringResource(privacyText),
-                style = MaterialTheme.typography.bodyMedium,
-                color = RiffColors.Paper,
-            )
-        }
-        entries(contentTitle, state.content, opened, toggle)
-        entries(librariesTitle, state.libraries, opened, toggle)
     }
 }
 

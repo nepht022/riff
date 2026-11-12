@@ -2,6 +2,7 @@ package com.rodrigomachado.riff.feature.gameplay
 
 import android.os.SystemClock
 import com.rodrigomachado.riff.core.game.TimeSource
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

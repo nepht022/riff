@@ -94,6 +94,23 @@ Os da calibração já resolvidos saíram da lista (retrocesso pausado, retomada
 - Dependência `lifecycle-process` sem uso no `app/build.gradle.kts`; comentários que ainda citam o Spotify em `RiffNavHost.kt`, `RiffApplication.kt`, `DifficultyDialog.kt` e `PlayerName.kt`; "⏭ na pausa" na triagem abaixo.
 - O `MigrationTest` da versão 13 não preenche `chart_difficulties` nem `encore_charts` antes de migrar.
 
+## Design novo, celular e PC (2026-11-11)
+
+- Aplicado a partir dos protótipos aprovados pelo usuário: tela inicial (celular com "Continuar" e "Últimos recordes"; PC com três quadros), Biblioteca (menu ⋮, "+ Mapas", filtro sempre à mostra, chips, capas, recorde por mapa, X só no Selecionar), Resultado (nota S/A/B/C por precisão: 98/90/80%, "antes: N", barra de precisão, blocos), sala (código pequeno com compartilhar, linha do que falta), Configurações do PC (abas em coluna) e barra de teclas em todas as telas do PC (menos a partida). Teste do usuário no PC em 2026-11-11: "gostei do resultado"; celular não relatado.
+- Capas sem imagem: iniciais sobre vermelho, marrom ou verde do tema (a tinta sumia no palco).
+- No PC, a partir do filtro da Biblioteca, ↓ cai em "Com recorde" (busca 2D do Compose); ←/→ andam nos chips.
+- A pausa da partida mostra a barra de teclas, mas sem teste automático.
+- "Continuar" e "Últimos recordes" só no celular (no PC os três quadros ocupam a tela, como no protótipo).
+- **Revisão final (2026-11-11), corrigido:**
+  - Capa pedida antes de a música existir (convidado da sala que ainda vai baixar do Encore) não fica guardada como "sem imagem": o "não deu para procurar" (mapa fora da biblioteca, pasta sem acesso) não vai para a memória das capas, a memória se esquece ao fim de cada importação (Reimportar, Trocar pasta, download) e o cartão da sala pede a capa de novo quando a música chega.
+  - "Selecionar todos" com filtro ou chip marca (e desmarca) só os mapas à mostra.
+  - O foco do teclado/controle continua no botão ao apertar Pronto (e "Não estou pronto"); o Começar fica à direita.
+  - Miniaturas: a capa (`album.*`) antes do fundo, lado maior 192 e no máximo 3 leituras ao mesmo tempo.
+  - Menores: a dificuldade do "Continuar" nunca é cortada com fonte grande; barra de teclas das Configurações do PC diz "Abas, opções e valores"; chips da Biblioteca como grupo de escolha única; tela inicial lê o banco uma vez ao abrir; a linha do que falta na sala é anunciada pelo leitor de tela.
+- **Revisão final, pendente:**
+  - M5 resolvido: opção A escolhida pelo usuário em 2026-11-11 (etiqueta da dificuldade mais alta + GUITARRA/IA). O cartão da Biblioteca mostra à direita a etiqueta cinza-papel da dificuldade mais alta do mapa (o leitor de tela lê "Até Expert") e, abaixo, "GUITARRA" com contorno de tinta quando o mapa já veio com a guitarra ou o selo "IA" quando ela foi separada pela IA (com as duas, só "GUITARRA").
+  - M7: as consultas novas (recorde por mapa, últimos recordes, última partida) não têm índice próprio no banco. Na escala do app levam milissegundos (estimativa da revisão, não medida); um índice exigiria migração do Room.
+
 ## Multiplayer M3: placar ao vivo e Resultado da sala (2026-11-11)
 
 - Regras do placar republicadas pelo usuário e teste real aceito em 2026-11-11 (PC e celular): o placar ao vivo mostrou os dois e trocou de posição. O começo ficou mais junto que na M2 e o Resultado da sala igual nos dois (relato do usuário, 2026-11-11).

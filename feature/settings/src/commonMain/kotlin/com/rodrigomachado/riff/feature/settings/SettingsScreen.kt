@@ -2,28 +2,21 @@ package com.rodrigomachado.riff.feature.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rodrigomachado.riff.core.model.AppLanguage
 import com.rodrigomachado.riff.core.model.ControlAction
@@ -39,18 +33,15 @@ import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.model.SeparationUsage
 import com.rodrigomachado.riff.core.model.Settings
 import com.rodrigomachado.riff.core.ui.component.LoadingState
-import com.rodrigomachado.riff.core.ui.component.PosterTitle
-import com.rodrigomachado.riff.core.ui.component.SeparationIndicator
+import com.rodrigomachado.riff.core.ui.component.WithPcKeyHints
 import com.rodrigomachado.riff.core.ui.component.focusHighlight
 import com.rodrigomachado.riff.core.ui.component.withMenuSound
 import com.rodrigomachado.riff.core.ui.input.LocalGamepad
 import com.rodrigomachado.riff.core.ui.input.upDownLeave
 import com.rodrigomachado.riff.core.ui.stage.HighwayTexture
-import com.rodrigomachado.riff.core.ui.theme.MenuColumnMaxWidth
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
 import com.rodrigomachado.riff.feature.settings.resources.Res
-import com.rodrigomachado.riff.feature.settings.resources.settings_back
 import com.rodrigomachado.riff.feature.settings.resources.settings_calibrate
 import com.rodrigomachado.riff.feature.settings.resources.settings_chart_image
 import com.rodrigomachado.riff.feature.settings.resources.settings_chart_image_hint
@@ -63,7 +54,6 @@ import com.rodrigomachado.riff.feature.settings.resources.settings_menu_sounds_h
 import com.rodrigomachado.riff.feature.settings.resources.settings_miss_volume
 import com.rodrigomachado.riff.feature.settings.resources.settings_not_calibrated
 import com.rodrigomachado.riff.feature.settings.resources.settings_note_speed
-import com.rodrigomachado.riff.feature.settings.resources.settings_title
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -81,6 +71,12 @@ object SettingsTestTags {
     const val QUEUE_PREFETCH = "settings_queue_prefetch"
     const val QUEUE_DELETE = "settings_queue_delete"
     const val QUEUE_MOBILE_DATA = "settings_queue_mobile_data"
+
+    /** A coluna das abas à esquerda (só na janela larga do PC). */
+    const val TABS_COLUMN = "settings_tabs_column"
+
+    /** As opções da aba aberta, à direita da coluna das abas (só na janela larga do PC). */
+    const val OPTIONS = "settings_options"
 }
 
 @Composable
@@ -178,64 +174,50 @@ fun SettingsContent(
     var tab by rememberSaveable { mutableStateOf(initialTab.takeIf { it in tabs } ?: tabs.first()) }
     // O idioma em que a tela está: no celular acompanha também uma troca feita nas configurações do sistema.
     val language = currentAppLanguage()
-    // Na janela larga do PC, uma coluna no meio; no celular, a tela toda.
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = MenuColumnMaxWidth).fillMaxSize().padding(horizontal = Spacing.md)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack, modifier = Modifier.focusHighlight(CircleShape)) {
-                    Text(stringResource(Res.string.settings_back), color = RiffColors.Paper)
-                }
-                Spacer(Modifier.weight(1f))
-                SeparationIndicator()
-            }
-            PosterTitle(stringResource(Res.string.settings_title), style = MaterialTheme.typography.displaySmall)
-            SettingsTabBar(tabs, tab, onSelect = { tab = it })
-            // Cada aba começa do topo.
-            key(tab) {
-                Column(
-                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    when (tab) {
-                        SettingsTab.GENERAL -> GeneralTab(
-                            language,
-                            onLanguage,
-                            settings.menuSounds,
-                            onMenuSounds,
-                            rankingName,
-                            onRankingName,
-                            onLicenses,
-                        )
+    // O conteúdo da aba aberta; [wide] = no PC largo (as licenças ficam no pé da coluna das abas, não na Geral).
+    val tabContent: @Composable (wide: Boolean) -> Unit = { wide ->
+        when (tab) {
+            SettingsTab.GENERAL -> GeneralTab(
+                language,
+                onLanguage,
+                settings.menuSounds,
+                onMenuSounds,
+                rankingName,
+                onRankingName,
+                onLicenses.takeUnless { wide },
+            )
 
-                        SettingsTab.SOUNDS -> SoundsTab(
-                            settings,
-                            onMasterVolume,
-                            onMissVolume,
-                            onPreviewMiss,
-                        )
+            SettingsTab.SOUNDS -> SoundsTab(settings, onMasterVolume, onMissVolume, onPreviewMiss)
 
-                        SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
+            SettingsTab.GAME -> GameTab(settings, onNoteSpeed, onLeftHanded, onCalibrate)
 
-                        SettingsTab.CONTROLS -> ControlsTab(
-                            settings.controls,
-                            padConnected,
-                            onStrum,
-                            onControlKey,
-                            onControlPad,
-                            onControlDefaults,
-                        )
+            SettingsTab.CONTROLS -> ControlsTab(
+                settings.controls,
+                padConnected,
+                onStrum,
+                onControlKey,
+                onControlPad,
+                onControlDefaults,
+            )
 
-                        SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
+            SettingsTab.TRACK_LOOK -> TrackLookTab(settings, onTrackLook, onShowChartImage)
 
-                        SettingsTab.AI -> AiSeparationSection(
-                            separationUsage,
-                            onDeleteSeparations,
-                            settings,
-                            onAskAlways,
-                            onSeparateOnlyCharging,
-                        )
-                    }
-                }
+            SettingsTab.AI -> AiSeparationSection(
+                separationUsage,
+                onDeleteSeparations,
+                settings,
+                onAskAlways,
+                onSeparateOnlyCharging,
+            )
+        }
+    }
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val wide = maxWidth >= WIDE_MIN_WIDTH
+        WithPcKeyHints(if (wide) wideSettingsKeys() else phoneSettingsKeys()) {
+            if (wide) {
+                WideSettings(tabs, tab, { tab = it }, onBack, onLicenses) { tabContent(true) }
+            } else {
+                PhoneSettings(tabs, tab, { tab = it }, onBack) { tabContent(false) }
             }
         }
     }
@@ -329,12 +311,13 @@ private fun SettingSlider(
 ) {
     var dragging by remember { mutableStateOf<Float?>(null) }
     val shown = dragging ?: value
-    Column {
+    val wide = LocalWideSettings.current
+    Column(Modifier.settingBlock(wide).padding(top = if (wide) Spacing.md else 0.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
-            Text(text(shown), style = MaterialTheme.typography.titleMedium, color = RiffColors.Paper)
+            Text(label, style = rowTitleStyle(), color = RiffColors.Paper)
+            Text(text(shown), style = rowTitleStyle(), color = RiffColors.Paper)
         }
-        hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = RiffColors.PaperDim) }
+        hint?.let { Text(it, style = rowHintStyle(), color = RiffColors.PaperDim) }
         Slider(
             value = shown,
             onValueChange = { dragging = it },
@@ -361,18 +344,18 @@ private fun CalibrationRow(audioOffsetMs: Int, onCalibrate: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().focusHighlight().clickable(
             onClick = withMenuSound(MenuSound.NAVIGATE, onCalibrate),
-        ).padding(vertical = Spacing.md),
+        ).settingBlock(LocalWideSettings.current).padding(vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             stringResource(Res.string.settings_calibrate),
-            style = MaterialTheme.typography.titleMedium,
+            style = rowTitleStyle(),
             color = RiffColors.Paper,
             modifier = Modifier.weight(1f),
         )
         Text(
             if (audioOffsetMs == 0) stringResource(Res.string.settings_not_calibrated) else "${-audioOffsetMs} ms",
-            style = MaterialTheme.typography.titleMedium,
+            style = rowTitleStyle(),
             color = RiffColors.PaperDim,
         )
     }
@@ -404,19 +387,21 @@ internal fun SwitchRow(
     /** Do interruptor (o que pega o foco): por exemplo, para as setas do PC acharem ele. */
     switchModifier: Modifier = Modifier,
 ) {
+    val wide = LocalWideSettings.current
     Row(
-        Modifier.fillMaxWidth().padding(vertical = Spacing.sm).alpha(if (enabled) 1f else DISABLED_ALPHA),
+        Modifier.fillMaxWidth().settingBlock(wide).padding(vertical = if (wide) Spacing.md else Spacing.sm)
+            .alpha(if (enabled) 1f else DISABLED_ALPHA),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = if (wide) Spacing.md else 0.dp)) {
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium,
+                style = rowTitleStyle(),
                 color = RiffColors.Paper,
             )
             Text(
                 hint,
-                style = MaterialTheme.typography.bodySmall,
+                style = rowHintStyle(),
                 color = RiffColors.PaperDim,
             )
         }

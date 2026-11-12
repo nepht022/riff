@@ -12,6 +12,7 @@ import com.rodrigomachado.riff.core.room.RoomRepository
 import com.rodrigomachado.riff.core.room.RoomSong
 import com.rodrigomachado.riff.core.room.RoomState
 import com.rodrigomachado.riff.core.room.SongStatus
+import com.rodrigomachado.riff.core.ui.art.ChartArtImages
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -106,13 +107,15 @@ data class MatchTicket(val chartId: String, val difficulty: Difficulty, val roun
  * Na M2, a música: a cada música nova o app confere na biblioteca ([songs]) se a tem e grava o próprio estado (a
  * dificuldade fica se a música nova também a tem; o Pronto volta a "não"); sem ela, baixa do Encore quando a música
  * veio de lá. O dono escolhe a música ([chooseSong]) e começa ([start]); quando a sala entra em contagem numa rodada
- * nova com este jogador pronto, o [navigateToMatch] pede para abrir a partida.
+ * nova com este jogador pronto, o [navigateToMatch] pede para abrir a partida. [images]: a capa da música (sem ela, as
+ * iniciais).
  */
 @Suppress("TooManyFunctions") // uma função por botão da sala, mais a conferência da música
 open class RoomLobbyViewModel(
     private val code: String,
     private val repository: RoomRepository,
     private val songs: RoomSongCheck = RoomSongCheck.NONE,
+    val images: ChartArtImages? = null,
 ) : ViewModel() {
     private val leaving = MutableStateFlow(false)
     private val done = MutableStateFlow(false)
@@ -329,4 +332,4 @@ private const val MIN_READY = 2
 private fun Room.player(uid: String): RoomPlayer? = players.firstOrNull { it.uid == uid }
 
 /** Pronto para tocar: marcou Pronto, tem a música e escolheu a dificuldade (como o `RoomRound`). */
-private fun RoomPlayer.isReady() = ready && song == SongStatus.HAS && difficulty != null
+internal fun RoomPlayer.isReady() = ready && song == SongStatus.HAS && difficulty != null

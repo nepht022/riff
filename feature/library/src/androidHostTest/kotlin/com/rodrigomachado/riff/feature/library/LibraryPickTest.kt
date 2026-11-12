@@ -23,7 +23,7 @@ class LibraryPickTest {
 
     /**
      * No modo de escolha da sala, o toque abre o diálogo de dificuldade de sempre e a escolha volta direto (sem a
-     * pergunta da separação, que é para jogar agora); o título é "Escolher música" e não há Pesquisar.
+     * pergunta da separação, que é para jogar agora); o título é "Escolher música" e não há "+ Mapas".
      */
     @Test
     fun ownerPicksASongFromTheLibrary() {
@@ -49,7 +49,7 @@ class LibraryPickTest {
         }
 
         composeRule.onNodeWithText("Escolher música").assertExists()
-        composeRule.onNodeWithText("Pesquisar Mapas").assertDoesNotExist()
+        composeRule.onNodeWithText("+ Mapas").assertDoesNotExist()
         composeRule.onNodeWithText("Música").performClick()
         composeRule.onNodeWithText("Difícil").performClick()
 

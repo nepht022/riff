@@ -80,6 +80,17 @@ class RoomScreenshotTest {
         lobby(room, MySong.Missing(canDownload = true))
     }
 
+    /** Fonte do sistema em 200%: a sala rola, nada cortado; Pronto e Começar continuam embaixo. */
+    @Test
+    @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h640dp-xhdpi", fontScale = 2f)
+    fun lobbyLargeFont() = snapshot("LargeFont_room") {
+        val room = sampleRoom("Rodrigo", "Ana", "Bruno_88", pcs = setOf("Bruno_88")).withSong()
+            .withPlayer("Rodrigo", ready = true)
+            .withPlayer("Ana", ready = true)
+            .withPlayer("Bruno_88", song = SongStatus.DOWNLOADING, difficulty = null)
+        lobby(room, MySong.Has)
+    }
+
     /** O Resultado da sala com 4: o pódio dos 3 primeiros e a classificação, o próprio em segundo. */
     @Test
     fun roomResultsFour() = snapshot("Room_results_4") { RoomResultsContent(sampleResults(4), onBackToRoom = {}) }

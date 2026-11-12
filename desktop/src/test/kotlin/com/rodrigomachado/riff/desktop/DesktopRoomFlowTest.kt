@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -47,6 +48,7 @@ class DesktopRoomFlowTest {
     private val match = DesktopMatch(composeRule, temp)
     private val script = FakeRankingScript()
     private val firebase = FakeFirebase(clock = System::currentTimeMillis, uid = ME)
+    private val clipboard = FakeClipboard()
 
     @After
     fun close() = match.close()
@@ -194,9 +196,29 @@ class DesktopRoomFlowTest {
         composeRule.waitUntilAtLeastOneExists(hasTestTag(HomeTestTags.SOLO), TIMEOUT_MS)
     }
 
+    /**
+     * Só o teclado: as setas chegam ao botão do código (no PC, "Copiar o código"; no topo, à direita do "Sair da
+     * sala": ↑ até ele e →) e o Enter copia o código para a área de transferência e diz "Código copiado".
+     */
+    @Test
+    fun pcShareCopiesTheCode() {
+        openWithRoom()
+        val code = createByClick()
+        composeRule.onNodeWithText(COPIED).assertDoesNotExist()
+
+        pressUntilFocused(hasText(LEAVE))
+        press(Key.DirectionRight)
+        assertTrue("→ não chegou ao copiar (está em ${focusedNow()})", focused(hasContentDescription(COPY)))
+        press(Key.Enter)
+
+        composeRule.waitUntilAtLeastOneExists(hasText(COPIED), TIMEOUT_MS)
+        assertEquals(code, clipboard.text)
+        composeRule.onNode(hasTestTag(RoomTestTags.KEY_HINTS)).assertExists() // a barra de teclas do PC
+    }
+
     /** O app com a Sala ligada no Firebase falso e o nome do ranking já escolhido. */
     private fun openWithRoom() {
-        match.openApp(ranking = script, room = firebase)
+        match.openApp(ranking = script, room = firebase, clipboard = clipboard)
         runBlocking { match.graph.ranking.register(NAME) }
         composeRule.waitForIdle()
     }
@@ -266,6 +288,8 @@ class DesktopRoomFlowTest {
         const val BACK = "Voltar"
         const val LEAVE = "Sair da sala"
         const val YOU = "você"
+        const val COPY = "Copiar o código"
+        const val COPIED = "Código copiado"
         const val OWNER = "Dono"
         const val PC = "PC"
         const val PHONE = "Celular"

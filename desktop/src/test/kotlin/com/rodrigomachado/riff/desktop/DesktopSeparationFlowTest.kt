@@ -254,7 +254,8 @@ class DesktopSeparationFlowTest {
         composeRule.clickOnWindowThread(composeRule.onNodeWithContentDescription("Configurações"))
         composeRule.waitUntilAtLeastOneExists(hasText("Geral"), TIMEOUT_MS)
         pressUntilFocused(Key.DirectionDown, hasText("Geral"))
-        pressUntilFocused(Key.DirectionRight, hasText(AI_TAB))
+        // As abas numa coluna à esquerda (PC largo): ↓ desce até a da IA; → passa às opções.
+        pressUntilFocused(Key.DirectionDown, hasText(AI_TAB))
         press(Key.Enter)
 
         composeRule.waitUntilAtLeastOneExists(hasText("1 música · ", substring = true), TIMEOUT_MS)
@@ -262,6 +263,7 @@ class DesktopSeparationFlowTest {
         composeRule.onNodeWithTag(SettingsTestTags.ONLY_CHARGING).assertDoesNotExist()
         composeRule.onNodeWithText("Separar só carregando").assertDoesNotExist()
 
+        press(Key.DirectionRight)
         pressUntilFocused(Key.DirectionDown, hasText("Apagar separações"))
         press(Key.Enter)
         val confirm = dialogWith(hasText("Apagar as guitarras separadas pela IA?", substring = true))

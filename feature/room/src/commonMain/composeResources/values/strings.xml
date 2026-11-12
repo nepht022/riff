@@ -15,13 +15,12 @@
     <string name="room_pc">PC</string>
     <string name="room_gone">sumiu</string>
     <string name="room_gone_description">%1$s saiu da sala?</string>
-    <string name="room_waiting">Aguardando jogadores…</string>
     <string name="room_loading">Carregando…</string>
     <string name="room_ended">A sala acabou.</string>
     <string name="room_choose_song">Escolher música</string>
-    <string name="room_change_song">Trocar música</string>
+    <string name="room_change_song">Trocar</string>
     <string name="room_no_song">Nenhuma música escolhida</string>
-    <string name="room_difficulty">Dificuldade</string>
+    <string name="room_difficulty">Sua dificuldade</string>
     <string name="room_ready">Pronto</string>
     <string name="room_not_ready">Não estou pronto</string>
     <string name="room_start">Começar</string>
@@ -48,4 +47,31 @@
     <string name="room_results_empty">O placar desta rodada não está mais na sala.</string>
     <string name="room_results_accuracy">Precisão %1$s</string>
     <string name="room_results_max_combo">Maior combo %1$d</string>
+    <string name="room_code_small">SALA</string>
+    <string name="room_share">Compartilhar o código</string>
+    <string name="room_copy">Copiar o código</string>
+    <string name="room_copied">Código copiado</string>
+    <string name="room_share_text">Entra na minha sala do Riff: %1$s</string>
+    <string name="room_players">Jogadores · %1$d de %2$d</string>
+    <string name="room_song">Música</string>
+    <plurals name="room_ready_count">
+        <item quantity="one">%1$d pronto</item>
+        <item quantity="other">%1$d prontos</item>
+    </plurals>
+    <plurals name="room_waiting_download">
+        <item quantity="one">esperando %1$s terminar de baixar</item>
+        <item quantity="other">esperando %1$s terminarem de baixar</item>
+    </plurals>
+    <plurals name="room_waiting_ready">
+        <item quantity="one">esperando %1$s ficar pronto</item>
+        <item quantity="other">esperando %1$s ficarem prontos</item>
+    </plurals>
+    <string name="room_waiting_players">esperando mais jogadores entrarem</string>
+    <string name="room_waiting_song">esperando %1$s escolher a música</string>
+    <string name="room_and">%1$s e %2$s</string>
+    <string name="room_keys_move">Mover</string>
+    <string name="room_keys_choose">Escolher</string>
+    <string name="room_keys_leave">Sair da sala</string>
+    <string name="room_keys_code">Código</string>
+    <string name="room_keys_erase">Apagar</string>
 </resources>

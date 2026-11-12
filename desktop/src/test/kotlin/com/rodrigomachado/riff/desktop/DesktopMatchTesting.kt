@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -82,7 +84,8 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
      * desligado, como sem `ranking.url`); sem [askForName], o pedido do nome da primeira abertura já foi respondido com
      * "Agora não" (como a pergunta da separação: o pedido do nome tem os seus testes). A Sala fala com o Firebase falso
      * [room]; sem ele, fica sem configuração ("em breve"), e um Firebase falso sem internet garante que nada sai.
-     * A música do mapa tem [songMs] (as duas notas continuam em 1 s e 1,5 s).
+     * A música do mapa tem [songMs] (as duas notas continuam em 1 s e 1,5 s). Com [clipboard], o app copia nela (e
+     * não na área de transferência do sistema).
      */
     fun openApp(
         pad: PadSource = NoPadSource,
@@ -93,6 +96,7 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
         askForName: Boolean = false,
         room: FakeFirebase? = null,
         songMs: Int = SONG_MS,
+        clipboard: Clipboard? = null,
     ): DesktopGraph {
         val charts = temp.newFolder("mapas")
         File(charts, "Tom do PC").apply { mkdirs() }.run {
@@ -129,7 +133,10 @@ internal class DesktopMatch(private val composeRule: ComposeContentTestRule, pri
             // A janela do teste não disputa o foco do sistema: sem isso a partida pausaria como num Alt+Tab.
             val real = LocalWindowInfo.current
             val focused = remember(real) { FocusedWindow(real).also { window = it } }
-            CompositionLocalProvider(LocalWindowInfo provides focused) { RiffDesktopApp(graph, sendMenuKey) }
+            val copies = clipboard ?: LocalClipboard.current
+            CompositionLocalProvider(LocalWindowInfo provides focused, LocalClipboard provides copies) {
+                RiffDesktopApp(graph, sendMenuKey)
+            }
         }
         return graph
     }

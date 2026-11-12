@@ -22,9 +22,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rodrigomachado.riff.core.model.MenuSound
 import com.rodrigomachado.riff.core.ui.theme.RiffColors
 import com.rodrigomachado.riff.core.ui.theme.Spacing
@@ -34,6 +36,17 @@ private val PressDepth = 3.dp
 private val FocusRingWidth = 3.dp
 private const val TILT_DEGREES = -1f
 private const val DISABLED_ALPHA = 0.45f
+
+/**
+ * Medidas para dois botões lado a lado no celular (Resultado, sala): o rótulo um pouco menor e menos margem, para
+ * "Jogar de novo" e "Não estou pronto" caberem numa linha em 360 dp (com fonte grande, quebram sem cortar).
+ */
+object PosterButtonDefaults {
+    val PairPadding = Spacing.sm
+
+    @Composable
+    fun pairTextStyle(): TextStyle = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp, lineHeight = 24.sp)
+}
 
 object PosterButtonTestTags {
     /** Contorno que aparece com o foco do teclado ou do controle. */
@@ -50,6 +63,10 @@ fun PosterButton(
     sound: MenuSound? = null,
     /** Largura mínima: botões que se revezam no mesmo lugar (Jogar / Escolher mapa) ficam do mesmo tamanho. */
     minWidth: Dp = 48.dp,
+    /** O rótulo; dois botões lado a lado no celular usam [PosterButtonDefaults.pairTextStyle]. */
+    textStyle: TextStyle = MaterialTheme.typography.titleLarge,
+    /** A margem dos lados do rótulo; lado a lado, [PosterButtonDefaults.PairPadding]. */
+    horizontalPadding: Dp = Spacing.lg,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -77,12 +94,12 @@ fun PosterButton(
                     onClick = withMenuSound(sound, onClick),
                 )
                 .defaultMinSize(minWidth = minWidth, minHeight = 48.dp)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                .padding(horizontal = horizontalPadding, vertical = Spacing.sm),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text,
-                style = MaterialTheme.typography.titleLarge,
+                style = textStyle,
                 color = RiffColors.Paper,
                 textAlign = TextAlign.Center, // rótulo que quebra em duas linhas continua centralizado
             )

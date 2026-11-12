@@ -157,9 +157,15 @@ private fun DesktopScreens(
                     onRanking = dropUnlessResumed { navController.navigate(RankingRoute) },
                     onSettings = dropUnlessResumed { navController.navigate(SettingsRoute) },
                     onReport = dropUnlessResumed { navController.navigate(ReportRoute) },
+                    onContinue = dropUnlessResumed { chartId, difficulty ->
+                        navController.navigate(GameplayRoute(chartId, difficulty.name))
+                    },
                     onRoom = if (graph.roomOn) dropUnlessResumed { navController.navigate(RoomEntryRoute) } else null,
                     // Na tela inicial o Esc não faz nada (fechar o jogo é pela janela).
                     modifier = Modifier.menuKeys(onBack = null),
+                    // O quadro do Ranking diz a tabela do modo atual ("Tocar com palheta").
+                    rankingTable = currentTable(),
+                    viewModel = viewModel { graph.homeViewModel() },
                 )
             }
             composable<LibraryRoute> {

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.rodrigomachado.riff.core.ui.component.BackRow
 import com.rodrigomachado.riff.core.ui.component.PosterButton
 import com.rodrigomachado.riff.core.ui.component.PosterTitle
 import com.rodrigomachado.riff.core.ui.component.StageBackground
@@ -29,6 +30,20 @@ class LargeFontScreenshotTest {
                     Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
                         PosterTitle("RIFF")
                         PosterButton("Importar pasta", onClick = {})
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun backRowAtDoubleFontScale() {
+        captureRoboImage("src/test/screenshots/LargeFont_back_row.png") {
+            RiffTheme {
+                StageBackground {
+                    Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                        BackRow(onBack = {})
+                        BackRow(text = "Sair da sala", onBack = {})
                     }
                 }
             }

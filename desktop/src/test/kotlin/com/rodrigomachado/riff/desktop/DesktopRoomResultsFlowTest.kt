@@ -2,10 +2,14 @@ package com.rodrigomachado.riff.desktop
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.rodrigomachado.riff.core.room.RoundScore
+import com.rodrigomachado.riff.core.ui.component.KeyHintTestTags
 import com.rodrigomachado.riff.desktop.DesktopMatch.Companion.TIMEOUT_MS
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.BACK_TO_ROOM
 import com.rodrigomachado.riff.desktop.DesktopRoom.Companion.CREATE
@@ -20,7 +24,7 @@ import org.junit.rules.TemporaryFolder
 /**
  * O Resultado da sala no app do PC (o dono), com um convidado no celular pelo Firebase falso: depois da partida de
  * sala, "Ver a sala" abre a classificação da rodada, que atualiza quando o placar final do convidado chega atrasado;
- * "Voltar à sala" volta à sala sem deixar telas empilhadas; tudo só com o teclado.
+ * "Voltar à sala" volta à sala sem deixar telas empilhadas; tudo só com o teclado, com a barra de teclas no rodapé.
  */
 @OptIn(ExperimentalTestApi::class)
 class DesktopRoomResultsFlowTest {
@@ -41,12 +45,17 @@ class DesktopRoomResultsFlowTest {
         val code = room.openRoomWithAGuest()
         room.playingRoomMatch(code)
 
-        // O Resultado de sempre (a música acabou): "Ver a sala" pelas setas e Enter.
+        // O Resultado de sempre (a música acabou): "Ver a sala" pelas setas e Enter. "Voltar à sala" e "Ver a sala"
+        // ficam lado a lado: ↓ chega à linha deles, → vai ao "Ver a sala".
         match.playUntil(hasText(SEE_ROOM))
+        room.pressUntilFocused(hasText(SEE_ROOM) or hasText(BACK_TO_ROOM))
+        if (!match.exists(hasText(SEE_ROOM) and isFocused())) room.press(Key.DirectionRight)
         room.pressUntilFocused(hasText(SEE_ROOM))
         room.press(Key.Enter)
         composeRule.waitUntilAtLeastOneExists(hasText(ROOM_RESULTS), TIMEOUT_MS)
         composeRule.waitUntilAtLeastOneExists(hasText(GUEST_NAME), TIMEOUT_MS)
+        // A barra de teclas do PC no rodapé do Resultado da sala.
+        composeRule.onNode(hasText("Voltar") and hasAnyAncestor(hasTestTag(KeyHintTestTags.BAR))).assertExists()
 
         // O final do convidado chega depois (conexão ruim): a classificação atualiza com a tela aberta.
         runBlocking {
